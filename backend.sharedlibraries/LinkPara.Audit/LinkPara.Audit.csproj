@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net7.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>disable</Nullable>
+	<GeneratePackageOnBuild>True</GeneratePackageOnBuild>
+	<PackageId>LinkPara.Audit</PackageId>
+	<Version>1.0.0</Version>
+	<Authors>Linktera</Authors>
+	<Company>Linktera</Company>
+	<Description>
+	  Audit Log library
+	</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="MassTransit" Version="8.0.5" />
+    <PackageReference Include="Microsoft.AspNetCore.Http.Abstractions" Version="2.2.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\LinkPara.ContextProvider\LinkPara.ContextProvider.csproj" />
+    <ProjectReference Include="..\LinkPara.SystemUser\LinkPara.SystemUser.csproj" />
+  </ItemGroup>
+
+</Project>

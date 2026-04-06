@@ -1,0 +1,4 @@
+
+INSERT INTO core."parameter"
+(id, group_code, parameter_code, parameter_value, create_date, update_date, created_by, last_modified_by, record_status)
+VALUES('e805110e-0634-491b-880b-145c5defb28f'::uuid, 'IntegrationLoggerState', 'PosnetVpos', 'True', '2024-05-17 14:06:52.264', '2024-05-17 14:11:57.329', '2506e4ba-c50e-463d-96b9-aaf8824e5d2f', '4949bb05-aa7f-441f-a561-40031918ba2e', 'Active') ON CONFLICT DO NOTHING;

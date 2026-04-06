@@ -1,0 +1,74 @@
+using LinkPara.Documents.Application;
+using LinkPara.Documents.Infrastructure;
+using LinkPara.Documents.Infrastructure.Persistence;
+using MediatR;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Moq;
+using NUnit.Framework;
+
+namespace LinkPara.Documents.IntegrationTests;
+
+[SetUpFixture]
+public class Testing
+{
+   private static IConfigurationRoot _configuration;
+   public static IServiceScopeFactory _scopeFactory;
+
+   [OneTimeSetUp]
+   public void RunBeforeAnyTests()
+   {
+      var builder = new ConfigurationBuilder()
+          .SetBasePath(Directory.GetCurrentDirectory())
+          .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
+          .AddEnvironmentVariables();
+
+      _configuration = builder.Build();
+
+      var services = new ServiceCollection();
+
+      services.AddSingleton(Mock.Of<IWebHostEnvironment>(w =>
+          w.EnvironmentName == "Development" &&
+          w.ApplicationName == "LinkPara.Documents.API"));
+
+      services.AddLogging();
+      services.AddEndpointsApiExplorer();
+      services.AddApplication();
+      services.AddInfrastructure(_configuration);
+
+      _scopeFactory = services.BuildServiceProvider().GetRequiredService<IServiceScopeFactory>();
+   }
+
+   public static async Task<TResponse> SendAsync<TResponse>(IRequest<TResponse> request)
+   {
+      using var scope = _scopeFactory.CreateScope();
+
+      var mediator = scope.ServiceProvider.GetRequiredService<ISender>();
+
+      return await mediator.Send(request);
+   }
+
+   public static async Task<TEntity> FindAsync<TEntity>(params object[] keyValues)
+       where TEntity : class
+   {
+      using var scope = _scopeFactory.CreateScope();
+
+      var context = scope.ServiceProvider.GetRequiredService<DocumentDbContext>();
+
+      return await context.FindAsync<TEntity>(keyValues);
+   }
+
+   public static async Task AddAsync<TEntity>(TEntity entity)
+       where TEntity : class
+   {
+      using var scope = _scopeFactory.CreateScope();
+
+      var context = scope.ServiceProvider.GetRequiredService<DocumentDbContext>();
+
+      context.Add(entity);
+
+      await context.SaveChangesAsync();
+   }
+
+}

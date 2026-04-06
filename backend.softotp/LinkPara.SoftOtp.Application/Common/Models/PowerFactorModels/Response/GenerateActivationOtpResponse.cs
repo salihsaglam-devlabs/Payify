@@ -1,0 +1,6 @@
+namespace LinkPara.SoftOtp.Application.Common.Models.PowerFactorModels.Response;
+
+public class GenerateActivationOtpResponse : PowerFactorResponseBase
+{
+    public string Otp { get; set; }
+}

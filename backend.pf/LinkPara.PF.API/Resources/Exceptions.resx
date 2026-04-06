@@ -1,0 +1,327 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <!-- 
+    Microsoft ResX Schema 
+    
+    Version 2.0
+    
+    The primary goals of this format is to allow a simple XML format 
+    that is mostly human readable. The generation and parsing of the 
+    various data types are done through the TypeConverter classes 
+    associated with the data types.
+    
+    Example:
+    
+    ... ado.net/XML headers & schema ...
+    <resheader name="resmimetype">text/microsoft-resx</resheader>
+    <resheader name="version">2.0</resheader>
+    <resheader name="reader">System.Resources.ResXResourceReader, System.Windows.Forms, ...</resheader>
+    <resheader name="writer">System.Resources.ResXResourceWriter, System.Windows.Forms, ...</resheader>
+    <data name="Name1"><value>this is my long string</value><comment>this is a comment</comment></data>
+    <data name="Color1" type="System.Drawing.Color, System.Drawing">Blue</data>
+    <data name="Bitmap1" mimetype="application/x-microsoft.net.object.binary.base64">
+        <value>[base64 mime encoded serialized .NET Framework object]</value>
+    </data>
+    <data name="Icon1" type="System.Drawing.Icon, System.Drawing" mimetype="application/x-microsoft.net.object.bytearray.base64">
+        <value>[base64 mime encoded string representing a byte array form of the .NET Framework object]</value>
+        <comment>This is a comment</comment>
+    </data>
+                
+    There are any number of "resheader" rows that contain simple 
+    name/value pairs.
+    
+    Each data row contains a name, and value. The row also contains a 
+    type or mimetype. Type corresponds to a .NET class that support 
+    text/value conversion through the TypeConverter architecture. 
+    Classes that don't support this are serialized and stored with the 
+    mimetype set.
+    
+    The mimetype is used for serialized objects, and tells the 
+    ResXResourceReader how to depersist the object. This is currently not 
+    extensible. For a given mimetype the value must be set accordingly:
+    
+    Note - application/x-microsoft.net.object.binary.base64 is the format 
+    that the ResXResourceWriter will generate, however the reader can 
+    read any of the formats listed below.
+    
+    mimetype: application/x-microsoft.net.object.binary.base64
+    value   : The object must be serialized with 
+            : System.Runtime.Serialization.Formatters.Binary.BinaryFormatter
+            : and then encoded with base64 encoding.
+    
+    mimetype: application/x-microsoft.net.object.soap.base64
+    value   : The object must be serialized with 
+            : System.Runtime.Serialization.Formatters.Soap.SoapFormatter
+            : and then encoded with base64 encoding.
+
+    mimetype: application/x-microsoft.net.object.bytearray.base64
+    value   : The object must be serialized into a byte array 
+            : using a System.ComponentModel.TypeConverter
+            : and then encoded with base64 encoding.
+    -->
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="metadata">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" />
+              </xsd:sequence>
+              <xsd:attribute name="name" use="required" type="xsd:string" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="assembly">
+            <xsd:complexType>
+              <xsd:attribute name="alias" type="xsd:string" />
+              <xsd:attribute name="name" type="xsd:string" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1" />
+              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
+              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="AlreadyInUseException" xml:space="preserve">
+    <value>Already InUse !</value>
+  </data>
+  <data name="CostProfileHasActivePosException" xml:space="preserve">
+    <value>Cost Profile Has Active Pos!</value>
+  </data>
+  <data name="DailyLimitAmountExceeded" xml:space="preserve">
+    <value>Daily Limit Amount Exceeded!</value>
+  </data>
+  <data name="DailyLimitCountExceeded" xml:space="preserve">
+    <value>Daily Limit Count Exceeded!</value>
+  </data>
+  <data name="InvalidInstallmentException" xml:space="preserve">
+    <value>Invalid Installment!</value>
+  </data>
+  <data name="MerchantBusinessPartnerMaxCountException" xml:space="preserve">
+    <value>Merchant Business Max Count</value>
+  </data>
+  <data name="MonthlyLimitAmountExceeded" xml:space="preserve">
+    <value>Monthly Limit Amount Exceeded!</value>
+  </data>
+  <data name="MonthlyLimitCountExceeded" xml:space="preserve">
+    <value>Monthly Limit Count Exceeded!</value>
+  </data>
+  <data name="UserInBlacklistException" xml:space="preserve">
+    <value>We cannot process your request right now. For information, please send an e-mail to @@informationMail.</value>
+  </data>
+  <data name="DuplicateRecordException" xml:space="preserve">
+    <value>Duplicate Record Exists!</value>
+  </data>
+  <data name="InvalidActivationDateException" xml:space="preserve">
+    <value>Invalid Activation Date!</value>
+  </data>
+  <data name="DuplicateMerchantLimitException" xml:space="preserve">
+    <value>Duplicate Merchant Limit!</value>
+  </data>
+  <data name="MerchantLimitDailyMaxAmountExceededException" xml:space="preserve">
+    <value>Daily limit cannot be more than monthly limit!</value>
+  </data>
+  <data name="MerchantLimitMonthlyMaxAmountExceededException" xml:space="preserve">
+    <value>Monthly limit cannot be less than daily limit!</value>
+  </data>
+  <data name="IKSGeneralException" xml:space="preserve">
+    <value>Error occured while doing IKS service operation.</value>
+  </data>
+  <data name="DailyLimitCountExceededException" xml:space="preserve">
+    <value>DailyLimitCountExceededException</value>
+  </data>
+  <data name="DailyLimitAmountExceededException" xml:space="preserve">
+    <value>DailyLimitAmountExceededException</value>
+  </data>
+  <data name="MonthlyLimitAmountExceededException" xml:space="preserve">
+    <value>MonthlyLimitAmountExceededException</value>
+  </data>
+  <data name="MonthlyLimitCountExceededException" xml:space="preserve">
+    <value>MonthlyLimitCountExceededException</value>
+  </data>
+  <data name="CompanyHasAlreadyAnnulmentRecord" xml:space="preserve">
+    <value>Company Has Already an Annulment Record</value>
+  </data>
+  <data name="PayingTotalAmountIsLessZeroException" xml:space="preserve">
+    <value>Paying total amount is less zero!</value>
+  </data>
+  <data name="PostingUpdateBankNotPaymentWaitingException" xml:space="preserve">
+    <value>Payment isn't waiting.Don't Update Bank! </value>
+  </data>
+  <data name="IntegrationModeNotAllowedException" xml:space="preserve">
+    <value>Integration mode not allowed for this merchant!</value>
+  </data>
+  <data name="InvalidMerchantStatusException" xml:space="preserve">
+    <value>Invalid Merchant Status</value>
+  </data>
+  <data name="TransactionTypeNotValidForDeductionException" xml:space="preserve">
+    <value>Transaction type is not valid for deduction!</value>
+  </data>
+  <data name="TransactionCanBeChargebackOrSuspiciousException" xml:space="preserve">
+    <value>Transaction cannot be chargeback and suspicious at the same time!</value>
+  </data>
+  <data name="CannotDeleteDefaultDueProfileException" xml:space="preserve">
+    <value>Cannot delete default due profile!</value>
+  </data>
+  <data name="DueInUseException" xml:space="preserve">
+    <value>Due has active merchant!</value>
+  </data>
+  <data name="DueAlreadyActiveForMerchantException" xml:space="preserve">
+    <value>Due type already exists for this merchant!</value>
+  </data>
+  <data name="CannotReturnMerchantHasBlockedAmountException" xml:space="preserve">
+    <value>Return cannot be made because the merchant has blocked amount.Please unblock amount then return!</value>
+  </data>
+  <data name="NoReturnPaymentAllowedException" xml:space="preserve">
+    <value>There is no return authority for this merchant.</value>
+  </data>
+  <data name="DailyReturnAmountCannotGreaterAuthAmountException" xml:space="preserve">
+    <value>The daily refund amount cannot be greater than the total transaction amount.</value>
+  </data>
+  <data name="TransactionNotReturnableException" xml:space="preserve">
+    <value>Transaction is not returnable.</value>
+  </data>
+  <data name="InvalidReferenceNumberException" xml:space="preserve">
+    <value>Invalid transaction information.</value>
+  </data>
+  <data name="InvalidReturnAmountException" xml:space="preserve">
+    <value>Invalid return amount.</value>
+  </data>
+  <data name="VposNotFoundException" xml:space="preserve">
+    <value>Vpos not found. Please try again later.</value>
+  </data>
+  <data name="IbanValidationFailedException" xml:space="preserve">
+    <value>TC ID/Tax ID and IBAN does not match. Please check</value>
+  </data>
+  <data name="MerchantLimitExceeded" xml:space="preserve">
+    <value>Merchant Limit Exceeded!</value>
+  </data>
+  <data name="BankLimitExceededException" xml:space="preserve">
+    <value>Monthly limit cannot be less than total limit!</value>
+  </data>
+  <data name="MerchantCommercialTitleNotMatchException" xml:space="preserve">
+    <value>Invalid commercial title for Tax Number! </value>
+  </data>
+  <data name="OnUsVposAlreadyActiveException" xml:space="preserve">
+    <value>There is a vpos that already marked as on-us.</value>
+  </data>
+  <data name="PricingProfileItemAtLoss" xml:space="preserve">
+    <value>In order to avoid negative commission, the merchant commission rate must be minimum ({0}) and the number of merchant blocking days must be minimum ({1}).</value>
+  </data>
+  <data name="MerchantPricingAtLoss" xml:space="preserve">
+    <value>In order to avoid negative commission, the merchant commission rate must be minimum ({0}) and the number of merchant blocking days must be minimum ({1}).</value>
+  </data>
+  <data name="CostProfileItemAtLoss" xml:space="preserve">
+    <value>In order to avoid negative commission, the merchant commission rate must be minimum ({0}) and the number of merchant blocking days must be minimum ({1}).</value>
+  </data>
+  <data name="IdentityValidationFailedException" xml:space="preserve">
+    <value>Given Authorized Person Identity Values Are Not Valid. Please Check</value>
+  </data>
+  <data name="ActiveMerchantWalletRequiredException" xml:space="preserve">
+    <value>Active merchant wallet required!</value>
+  </data>
+  <data name="PotentialFraudException" xml:space="preserve">
+    <value>We are unable to process your transaction at the moment. For information, please send an e-mail to @@informationMail.</value>
+  </data>
+  <data name="InvalidMerchantStatementTypeException" xml:space="preserve">
+    <value>Invalid MerchantStatementType. Allowed values are Excel and PDF</value>
+  </data>
+  <data name="SubMerchantRemoveException" xml:space="preserve">
+    <value>User to be deactivated is the only active user of the submerchant. The user cannot be deactivated unless the submerchant status is set to passive.</value>
+  </data>
+  <data name="InvalidMerchantTypeException" xml:space="preserve">
+    <value>Invalid Merchant Type</value>
+  </data>
+  <data name="SubMerchantCountException" xml:space="preserve">
+    <value>Your active sub-dealer count has reached its maximum.</value>
+  </data>
+  <data name="SubMerchantUserCountException" xml:space="preserve">
+    <value>You have reached the maximum number of active users that can be created for the sub-dealer.</value>
+  </data>
+  <data name="ParentMerchantCommissionMustBeZeroException" xml:space="preserve">
+    <value>Must be zero when ProfileType is Standard.</value>
+  </data>
+  <data name="InvalidPricingProfileTypeException" xml:space="preserve">
+    <value>Invalid Pricing Profile Type</value>
+  </data>
+  <data name="InvalidCommissionRateException" xml:space="preserve">
+    <value>When ‘Pay to Main Merchant’ is selected, the sum of the commission rates must be 100!</value>
+  </data>
+  <data name="InvalidMerchantPricingProfileException" xml:space="preserve">
+    <value>A pricing profile compatible with the "Pay to Main Merchant" selection must be chosen!</value>
+  </data>
+  <data name="MultipleVposTypeNotAllowed" xml:space="preserve">
+    <value>When 'On-Us' is selected as the Transaction Type, the POS Type cannot be selected!</value>
+  </data>
+  <data name="MultipleVposTypeException" xml:space="preserve">
+    <value>Insurance payments cannot be combined with OnUs (wallet) payments.</value>
+  </data>
+  <data name="InvalidUpdateIksException" xml:space="preserve">
+    <value>Iks terminal update failed.</value>
+  </data>
+  <data name="InvalidPosTypeException" xml:space="preserve">
+    <value>If the product type is physical, you cannot add a Virtual Pos; if the product type is virtual, you cannot add a Physical Pos!</value>
+  </data>
+  <data name="InvalidUnacceptableStatusException" xml:space="preserve">
+    <value>Invalid unacceptable transaction status.</value>
+  </data>
+  <data name="DuplicateMerchantTransactionException" xml:space="preserve">
+    <value>Duplicate Merchant Transaction!</value>
+  </data>
+  <data name="InvalidTransactionTypeException" xml:space="preserve">
+    <value>Invalid transaction type</value>
+  </data>
+  <data name="TransactionHasChargebackOrSuspiciousException" xml:space="preserve">
+    <value>Transaction has chargeback or suspicious.</value>
+  </data>
+  <data name="ReferenceTransactionPostingCompletedException" xml:space="preserve">
+    <value>Reference transaction's posting already completed.</value>
+  </data>
+  <data name="CannotChangePosTypeException" xml:space="preserve">
+    <value>Product type cannot be changed!</value>
+  </data>
+  <data name="BatchHasUnacceptableTransactionException" xml:space="preserve">
+    <value>Batch has unacceptable transaction.</value>
+  </data>
+  <data name="MerchantTransactionUnavailableException" xml:space="preserve">
+    <value>Transaction is currently unavailable. Try again later.</value>
+  </data>
+  <data name="PaymentIsNotAllowedForMerchantException" xml:space="preserve">
+    <value>Payment is not allowed for merchant!</value>
+  </data>
+</root>

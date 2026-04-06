@@ -1,0 +1,36 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.4.33122.133
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{51EF8909-C722-40B3-B2B2-386112B0A716}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "LinkPara.PF.Pos.ApiGateway", "LinkPara.PF.Pos.ApiGateway\LinkPara.PF.Pos.ApiGateway.csproj", "{F52D69EF-3170-4499-A40D-252538C127F5}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "build", "build", "{4C6E2A01-3407-4788-BB84-58CA2699BBDB}"
+	ProjectSection(SolutionItems) = preProject
+		deployment.yaml = deployment.yaml
+		Dockerfile = Dockerfile
+	EndProjectSection
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{F52D69EF-3170-4499-A40D-252538C127F5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F52D69EF-3170-4499-A40D-252538C127F5}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F52D69EF-3170-4499-A40D-252538C127F5}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F52D69EF-3170-4499-A40D-252538C127F5}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{F52D69EF-3170-4499-A40D-252538C127F5} = {51EF8909-C722-40B3-B2B2-386112B0A716}
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {B2CBFC2A-8B26-4BC1-8BC8-590F2E83FA63}
+	EndGlobalSection
+EndGlobal

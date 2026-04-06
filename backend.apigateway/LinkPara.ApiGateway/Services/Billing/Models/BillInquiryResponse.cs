@@ -1,0 +1,6 @@
+﻿namespace LinkPara.ApiGateway.Services.Billing.Models;
+
+public class BillInquiryResponse : BillingTransaction
+{
+    public List<Bill> Bills { get; set; }
+}

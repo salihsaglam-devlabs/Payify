@@ -1,0 +1,16 @@
+﻿namespace LinkPara.Emoney.Domain.Enums;
+
+public enum OnUsPaymentStatus
+{
+    Pending,
+    Success,
+    Failed,
+    Expired,
+    Rejected,
+    Suspecious,
+    Chargeback,
+    Returned,
+    PartiallyReturned,
+    Canceled
+
+}

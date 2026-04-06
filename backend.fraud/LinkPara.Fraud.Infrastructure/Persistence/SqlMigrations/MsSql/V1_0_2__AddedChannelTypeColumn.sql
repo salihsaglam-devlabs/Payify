@@ -1,0 +1,11 @@
+﻿
+IF NOT EXISTS (
+    SELECT 1
+    FROM INFORMATION_SCHEMA.COLUMNS
+    WHERE TABLE_SCHEMA = 'Core'
+      AND TABLE_NAME = 'SearchLog'
+      AND COLUMN_NAME = 'ChannelType'
+)
+BEGIN
+    ALTER TABLE Core.SearchLog ADD ChannelType VARCHAR(200);
+END;

@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<root>
+    <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+        <xsd:element name="root" msdata:IsDataSet="true">
+            
+        </xsd:element>
+    </xsd:schema>
+    <resheader name="resmimetype">
+        <value>text/microsoft-resx</value>
+    </resheader>
+    <resheader name="version">
+        <value>1.3</value>
+    </resheader>
+    <resheader name="reader">
+        <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+    </resheader>
+    <resheader name="writer">
+        <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+    </resheader>
+    <data name="StartOneTouchTransactionException" xml:space="preserve">
+        <value>İşleminiz sırasında hata alındı. Lütfen daha sonra tekrar deneyin</value>
+    </data>
+    <data name="StartClientTransactionException" xml:space="preserve">
+        <value>İşleminiz sırasında hata alındı. Lütfen daha sonra tekrar deneyin</value>
+    </data>
+    <data name="OtpActivationFailedException" xml:space="preserve">
+        <value>Cihazınız aktive edilirken hata aldı.</value>
+    </data>
+    <data name="CheckTransactionApprovalException" xml:space="preserve">
+        <value>İşleminiz kontrol edilirken hata aldı.</value>
+    </data>
+    <data name="VerifyLoginFailedException" xml:space="preserve">
+        <value>Giriş sırasında hata oluştu. Lütfen daha sonra tekrar deneyin.</value>
+    </data>
+</root>

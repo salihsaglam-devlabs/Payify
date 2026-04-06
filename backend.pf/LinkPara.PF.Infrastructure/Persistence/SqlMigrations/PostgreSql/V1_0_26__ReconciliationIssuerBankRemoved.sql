@@ -1,0 +1,1 @@
+ALTER TABLE physical.reconciliation_transaction DROP COLUMN IF EXISTS issuer_bank_id;

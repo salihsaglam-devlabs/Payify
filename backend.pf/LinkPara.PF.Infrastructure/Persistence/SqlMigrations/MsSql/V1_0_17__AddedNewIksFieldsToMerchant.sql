@@ -1,0 +1,55 @@
+IF NOT EXISTS (
+    SELECT 1
+    FROM INFORMATION_SCHEMA.COLUMNS
+    WHERE TABLE_SCHEMA = 'Merchant'
+      AND TABLE_NAME = 'Merchant'
+      AND COLUMN_NAME = 'BranchCount'
+)
+BEGIN
+ALTER TABLE Merchant.[Merchant] ADD BranchCount INT NOT NULL DEFAULT 0;
+END
+
+IF NOT EXISTS (
+    SELECT 1
+    FROM INFORMATION_SCHEMA.COLUMNS
+    WHERE TABLE_SCHEMA = 'Merchant'
+      AND TABLE_NAME = 'Merchant'
+      AND COLUMN_NAME = 'EmployeeCount'
+)
+BEGIN
+ALTER TABLE Merchant.[Merchant] ADD EmployeeCount INT NOT NULL DEFAULT 0;
+END
+
+IF NOT EXISTS (
+    SELECT 1
+    FROM INFORMATION_SCHEMA.COLUMNS
+    WHERE TABLE_SCHEMA = 'Merchant'
+      AND TABLE_NAME = 'Merchant'
+      AND COLUMN_NAME = 'BusinessActivity'
+)
+BEGIN
+ALTER TABLE Merchant.[Merchant] ADD BusinessActivity VARCHAR(140) NOT NULL DEFAULT '';
+END
+
+IF NOT EXISTS (
+    SELECT 1
+    FROM INFORMATION_SCHEMA.COLUMNS
+    WHERE TABLE_SCHEMA = 'Merchant'
+      AND TABLE_NAME = 'Merchant'
+      AND COLUMN_NAME = 'BusinessModel'
+)
+BEGIN
+ALTER TABLE Merchant.[Merchant] ADD BusinessModel VARCHAR(50) NOT NULL DEFAULT '';
+END
+
+IF NOT EXISTS (
+    SELECT 1
+    FROM INFORMATION_SCHEMA.COLUMNS
+    WHERE TABLE_SCHEMA = 'Merchant'
+      AND TABLE_NAME = 'Merchant'
+      AND COLUMN_NAME = 'EstablishmentDate'
+)
+BEGIN
+ALTER TABLE Merchant.[Merchant]
+    ADD EstablishmentDate datetime2 NOT NULL DEFAULT ('1900-01-01');
+END

@@ -1,0 +1,19 @@
+﻿namespace LinkPara.Billing.Infrastructure.ExternalServices.Billing.SekerBank.Models;
+
+public enum SekerBankExceptions
+{
+    NOT_FOUND,
+    USER_NOT_AUTHORIZED,
+    INVALID_REQUEST,
+    USER_NOT_FOUND,
+    PAYMENT_CENTER_NOT_FOUND,
+    PASSIVE_ACCOUNT,
+    LOCKED_ACCOUNT,
+    IP_NOT_ALLOWED,
+    INVALID_INPUT,
+    INVALID_SUBS_NO_FORMAT,
+    PAYMENT_NOT_FOUND,
+    INVALID_DEBT,
+    UNEXPECTED_EXCEPTION,
+    BANKING_SIDE_EXCEPTION
+}

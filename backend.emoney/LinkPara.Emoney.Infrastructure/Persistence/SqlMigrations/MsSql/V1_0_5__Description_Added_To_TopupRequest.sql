@@ -1,0 +1,8 @@
+
+IF NOT EXISTS (
+    SELECT * FROM INFORMATION_SCHEMA.COLUMNS
+    WHERE TABLE_SCHEMA = 'Core' AND TABLE_NAME = 'CardTopupRequest' AND COLUMN_NAME = 'Description'
+)
+BEGIN
+    ALTER TABLE Core.CardTopupRequest ADD Description VARCHAR(300);
+END

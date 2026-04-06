@@ -1,0 +1,10 @@
+﻿using LinkPara.ApiGateway.Boa.Services.Pf.Models.Requests;
+using LinkPara.ApiGateway.Boa.Services.Pf.Models.Responses;
+using LinkPara.SharedModels.Pagination;
+
+namespace LinkPara.ApiGateway.Boa.Services.Pf.HttpClients;
+
+public interface IVposHttpClient
+{
+    Task<PaginatedList<VposDto>> GetFilterListAsync(GetFilterVposRequest request);
+}

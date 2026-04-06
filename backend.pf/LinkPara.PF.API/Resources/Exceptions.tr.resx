@@ -1,0 +1,327 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <!-- 
+    Microsoft ResX Schema 
+    
+    Version 2.0
+    
+    The primary goals of this format is to allow a simple XML format 
+    that is mostly human readable. The generation and parsing of the 
+    various data types are done through the TypeConverter classes 
+    associated with the data types.
+    
+    Example:
+    
+    ... ado.net/XML headers & schema ...
+    <resheader name="resmimetype">text/microsoft-resx</resheader>
+    <resheader name="version">2.0</resheader>
+    <resheader name="reader">System.Resources.ResXResourceReader, System.Windows.Forms, ...</resheader>
+    <resheader name="writer">System.Resources.ResXResourceWriter, System.Windows.Forms, ...</resheader>
+    <data name="Name1"><value>this is my long string</value><comment>this is a comment</comment></data>
+    <data name="Color1" type="System.Drawing.Color, System.Drawing">Blue</data>
+    <data name="Bitmap1" mimetype="application/x-microsoft.net.object.binary.base64">
+        <value>[base64 mime encoded serialized .NET Framework object]</value>
+    </data>
+    <data name="Icon1" type="System.Drawing.Icon, System.Drawing" mimetype="application/x-microsoft.net.object.bytearray.base64">
+        <value>[base64 mime encoded string representing a byte array form of the .NET Framework object]</value>
+        <comment>This is a comment</comment>
+    </data>
+                
+    There are any number of "resheader" rows that contain simple 
+    name/value pairs.
+    
+    Each data row contains a name, and value. The row also contains a 
+    type or mimetype. Type corresponds to a .NET class that support 
+    text/value conversion through the TypeConverter architecture. 
+    Classes that don't support this are serialized and stored with the 
+    mimetype set.
+    
+    The mimetype is used for serialized objects, and tells the 
+    ResXResourceReader how to depersist the object. This is currently not 
+    extensible. For a given mimetype the value must be set accordingly:
+    
+    Note - application/x-microsoft.net.object.binary.base64 is the format 
+    that the ResXResourceWriter will generate, however the reader can 
+    read any of the formats listed below.
+    
+    mimetype: application/x-microsoft.net.object.binary.base64
+    value   : The object must be serialized with 
+            : System.Runtime.Serialization.Formatters.Binary.BinaryFormatter
+            : and then encoded with base64 encoding.
+    
+    mimetype: application/x-microsoft.net.object.soap.base64
+    value   : The object must be serialized with 
+            : System.Runtime.Serialization.Formatters.Soap.SoapFormatter
+            : and then encoded with base64 encoding.
+
+    mimetype: application/x-microsoft.net.object.bytearray.base64
+    value   : The object must be serialized into a byte array 
+            : using a System.ComponentModel.TypeConverter
+            : and then encoded with base64 encoding.
+    -->
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="metadata">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" />
+              </xsd:sequence>
+              <xsd:attribute name="name" use="required" type="xsd:string" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="assembly">
+            <xsd:complexType>
+              <xsd:attribute name="alias" type="xsd:string" />
+              <xsd:attribute name="name" type="xsd:string" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1" />
+              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
+              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="AlreadyInUseException" xml:space="preserve">
+    <value>İlgili hesap kullanımda !</value>
+  </data>
+  <data name="CostProfileHasActivePosException" xml:space="preserve">
+    <value>Profilin bağlı olduğu pos aktif, profil pasif yapılamaz !</value>
+  </data>
+  <data name="DailyLimitAmountExceeded" xml:space="preserve">
+    <value>Günlük Limit Tutarı Aşıldı</value>
+  </data>
+  <data name="DailyLimitCountExceeded" xml:space="preserve">
+    <value>Günlük Limit Sayısı Aşıldı!</value>
+  </data>
+  <data name="InvalidInstallmentException" xml:space="preserve">
+    <value>Geçersiz Taksit Tanımı!</value>
+  </data>
+  <data name="MerchantBusinessPartnerMaxCountException" xml:space="preserve">
+    <value>Üye iş yeri ortağı maximum sayısı</value>
+  </data>
+  <data name="MonthlyLimitAmountExceeded" xml:space="preserve">
+    <value>Aylık Limit Tutarı Aşıldı!</value>
+  </data>
+  <data name="MonthlyLimitCountExceeded" xml:space="preserve">
+    <value>Aylık Limit Sayısı Aşıldı!</value>
+  </data>
+  <data name="UserInBlacklistException" xml:space="preserve">
+    <value>Şu an işleminizi gerçekleştiremiyoruz. Bilgi için @@informationMail adresine mail göndermenizi rica ederiz.</value>
+  </data>
+  <data name="DuplicateRecordException" xml:space="preserve">
+    <value>Mükerrer Bilgi!</value>
+  </data>
+  <data name="InvalidActivationDateException" xml:space="preserve">
+    <value>Aktivasyon tarihini ileri bir tarih giriniz !</value>
+  </data>
+  <data name="DuplicateMerchantLimitException" xml:space="preserve">
+    <value>İlgili İşlem Limiti tanımlıdır!</value>
+  </data>
+  <data name="MerchantLimitDailyMaxAmountExceededException" xml:space="preserve">
+    <value>Günlük limit, aylık limitten fazla olamaz!'</value>
+  </data>
+  <data name="MerchantLimitMonthlyMaxAmountExceededException" xml:space="preserve">
+    <value>Aylık limit, günlük limitten az olamaz!</value>
+  </data>
+  <data name="IKSGeneralException" xml:space="preserve">
+    <value>IKS hatası</value>
+  </data>
+  <data name="DailyLimitCountExceededException" xml:space="preserve">
+    <value>Günlük Limit Sayısı Aşıldı!</value>
+  </data>
+  <data name="DailyLimitAmountExceededException" xml:space="preserve">
+    <value>Günlük Limit Tutarı Aşıldı!</value>
+  </data>
+  <data name="MonthlyLimitAmountExceededException" xml:space="preserve">
+    <value>Aylık Limit Tutarı Aşıldı!</value>
+  </data>
+  <data name="MonthlyLimitCountExceededException" xml:space="preserve">
+    <value>Aylık Limit Sayısı Aşıldı!</value>
+  </data>
+  <data name="CompanyHasAlreadyAnnulmentRecord" xml:space="preserve">
+    <value>Firmanın fesih kaydı bulunmaktadır.</value>
+  </data>
+  <data name="PayingTotalAmountIsLessZeroException" xml:space="preserve">
+    <value>Üye işyeri toplam ödeme miktarı sıfırdan az !</value>
+  </data>
+  <data name="PostingUpdateBankNotPaymentWaitingException" xml:space="preserve">
+    <value>Ödeme bekleme aşamasında değil.Banka bilgisi güncellenemez!!</value>
+  </data>
+  <data name="IntegrationModeNotAllowedException" xml:space="preserve">
+    <value>Entegrasyon modu üye işyeri için desteklenmiyor!</value>
+  </data>
+  <data name="InvalidMerchantStatusException" xml:space="preserve">
+    <value>Geçersiz üye işyeri durumu</value>
+  </data>
+  <data name="TransactionTypeNotValidForDeductionException" xml:space="preserve">
+    <value>İşlem tipi kesinti için uygun değil!</value>
+  </data>
+  <data name="TransactionCanBeChargebackOrSuspiciousException" xml:space="preserve">
+    <value>İşlem aynı anda ters ibraz ve şüpheli olamaz!</value>
+  </data>
+  <data name="CannotDeleteDefaultDueProfileException" xml:space="preserve">
+    <value>Varsayılan aidat profilleri silinemez!</value>
+  </data>
+  <data name="DueInUseException" xml:space="preserve">
+    <value>Aidat profilinin aktif üye işyeri mevcut!</value>
+  </data>
+  <data name="DueAlreadyActiveForMerchantException" xml:space="preserve">
+    <value>Üye işyeri için bu aidat türü mevcut!</value>
+  </data>
+  <data name="CannotReturnMerchantHasBlockedAmountException" xml:space="preserve">
+    <value>Üye işyerinin blokede parası olduğu için iade yapılamaz. Lütfen blokeyi çözüp iade yapınız!</value>
+  </data>
+  <data name="NoReturnPaymentAllowedException" xml:space="preserve">
+    <value>Üye işyerinin iade yetkisi bulunmamaktadır.</value>
+  </data>
+  <data name="DailyReturnAmountCannotGreaterAuthAmountException" xml:space="preserve">
+    <value>Günlük iade tutarı toplam işlem tutarından büyük olamaz.</value>
+  </data>
+  <data name="TransactionNotReturnableException" xml:space="preserve">
+    <value>İşlem iade edilemez.</value>
+  </data>
+  <data name="InvalidReferenceNumberException" xml:space="preserve">
+    <value>Geçersiz işlem bilgisi.</value>
+  </data>
+  <data name="InvalidReturnAmountException" xml:space="preserve">
+    <value>Geçersiz iade tutarı mevcuttur.</value>
+  </data>
+  <data name="VposNotFoundException" xml:space="preserve">
+    <value>Üye iş yerine ait pos bulunamadı. Lütfen daha sonra tekrar deneyiniz.</value>
+  </data>
+  <data name="IbanValidationFailedException" xml:space="preserve">
+    <value>TCKN/VKN ve IBAN eşleşmemektedir. Lütfen kontrol ediniz.</value>
+  </data>
+  <data name="MerchantLimitExceeded" xml:space="preserve">
+    <value>Limit Tutarı Aşıldı!</value>
+  </data>
+  <data name="BankLimitExceededException" xml:space="preserve">
+    <value>Aylık limit, toplam limitten küçük olamaz!</value>
+  </data>
+  <data name="MerchantCommercialTitleNotMatchException" xml:space="preserve">
+    <value>Girilen Vkn'ye ait iş yeri ünvanı farklı girilmiştir!</value>
+  </data>
+  <data name="OnUsVposAlreadyActiveException" xml:space="preserve">
+    <value>Sistemde on-us işaretli pos bulunmaktadır.</value>
+  </data>
+  <data name="PricingProfileItemAtLoss" xml:space="preserve">
+    <value>Negatif komisyonla karşılaşılmaması adına, ÜİY komisyon oranının minimum ({0}) ve ÜİY bloke gün sayısının minimum ({1}) olması gerekmektedir.</value>
+  </data>
+  <data name="MerchantPricingAtLoss" xml:space="preserve">
+    <value>Negatif komisyonla karşılaşılmaması adına, ÜİY komisyon oranının minimum ({0}) ve ÜİY bloke gün sayısının minimum ({1}) olması gerekmektedir.</value>
+  </data>
+  <data name="CostProfileItemAtLoss" xml:space="preserve">
+    <value>Negatif komisyonla karşılaşılmaması adına, ÜİY komisyon oranının minimum ({0}) ve ÜİY bloke gün sayısının minimum ({1}) olması gerekmektedir.</value>
+  </data>
+  <data name="IdentityValidationFailedException" xml:space="preserve">
+    <value>Girilen Yetkili Kişi Kimlik Bilgileri Geçerli Değil. Kontrol Ediniz</value>
+  </data>
+  <data name="ActiveMerchantWalletRequiredException" xml:space="preserve">
+    <value>Aktif üye işyeri cüzdanı zorunludur!</value>
+  </data>
+  <data name="PotentialFraudException" xml:space="preserve">
+    <value>Şu an işleminizi gerçekleştiremiyoruz. Bilgi için @@informationMail adresine mail göndermenizi rica ederiz.</value>
+  </data>
+  <data name="InvalidMerchantStatementTypeException" xml:space="preserve">
+    <value>Geçersiz MerchantStatementType. İzin verilen değerler Excel ve PDF</value>
+  </data>
+  <data name="SubMerchantRemoveException" xml:space="preserve">
+    <value>Kullanım dışı bırakılmak istenen kullanıcı, alt bayinin tek aktif kullanıcısıdır. Alt bayi durumu pasife alınmadan kullanıcı, kullanım dışı bırakılamaz.</value>
+  </data>
+  <data name="InvalidMerchantTypeException" xml:space="preserve">
+    <value>Geçersiz üye işyeri tipi</value>
+  </data>
+  <data name="SubMerchantCountException" xml:space="preserve">
+    <value>Maksimum aktif alt bayi sayısına ulaştınız.</value>
+  </data>
+  <data name="SubMerchantUserCountException" xml:space="preserve">
+    <value>Alt bayi için oluşturulabilecek maksimum aktif kullanıcı sayısına ulaştınız.</value>
+  </data>
+  <data name="ParentMerchantCommissionMustBeZeroException" xml:space="preserve">
+    <value>Profil tipi standart olduğu durumda sıfır olmalı.</value>
+  </data>
+  <data name="InvalidPricingProfileTypeException" xml:space="preserve">
+    <value>Geçersiz üye işyeri ücretlendirme tipi</value>
+  </data>
+  <data name="InvalidCommissionRateException" xml:space="preserve">
+    <value>"Ana bayiye ödeme çıkılacak" seçiliyken komisyonlar toplamı 100 olmalıdır!</value>
+  </data>
+  <data name="InvalidMerchantPricingProfileException" xml:space="preserve">
+    <value>‘’Ana bayiye ödeme çıkılacak’’ seçimine uygun bir üye iş yeri maliyet profili seçilmelidir!</value>
+  </data>
+  <data name="MultipleVposTypeNotAllowed" xml:space="preserve">
+    <value>İşlem Tipi 'On-Us' seçildiğinde, POS Tipi seçilemez!</value>
+  </data>
+  <data name="MultipleVposTypeException" xml:space="preserve">
+    <value>Sigorta ödemesi OnUs (cüzdan) ile birlikte kullanılamaz.</value>
+  </data>
+  <data name="InvalidUpdateIksException" xml:space="preserve">
+    <value>Iks terminal güncelleme başarısız.</value>
+  </data>
+  <data name="InvalidPosTypeException" xml:space="preserve">
+    <value>Ürün tipi fiziksel ise Sanal Pos, ürün tipi sanal ise Fiziksel Pos ekleyemezsiniz!</value>
+  </data>
+  <data name="InvalidUnacceptableStatusException" xml:space="preserve">
+    <value>Geçersiz kabul edilemeyen işlem durumu.</value>
+  </data>
+  <data name="DuplicateMerchantTransactionException" xml:space="preserve">
+    <value>İlgili işlem sistemde mevcut!</value>
+  </data>
+  <data name="InvalidTransactionTypeException" xml:space="preserve">
+    <value>Geçersiz işlem tipi.</value>
+  </data>
+  <data name="TransactionHasChargebackOrSuspiciousException" xml:space="preserve">
+    <value>İşlem üzerinde chargeback/şüpheli işlem mevcut.</value>
+  </data>
+  <data name="ReferenceTransactionPostingCompletedException" xml:space="preserve">
+    <value>Referans işlemin hak edişi tamamlanmış.</value>
+  </data>
+  <data name="CannotChangePosTypeException" xml:space="preserve">
+    <value>Ürün tipi değiştirilemez!</value>
+  </data>
+  <data name="BatchHasUnacceptableTransactionException" xml:space="preserve">
+    <value>Gün sonu üzerinde kabul edilemeyen işlem mevcut.</value>
+  </data>
+  <data name="MerchantTransactionUnavailableException" xml:space="preserve">
+    <value>İşlem şu anda yapılamıyor. Lütfen daha sonra tekrar deneyin.</value>
+  </data>
+  <data name="PaymentIsNotAllowedForMerchantException" xml:space="preserve">
+    <value>Üye işyeri için ödeme yapılmasına izin verilmiyor!</value>
+  </data>
+</root>

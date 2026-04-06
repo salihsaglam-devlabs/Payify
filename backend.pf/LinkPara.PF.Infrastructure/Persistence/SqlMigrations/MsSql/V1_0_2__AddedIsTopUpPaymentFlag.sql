@@ -1,0 +1,24 @@
+﻿
+IF NOT EXISTS (
+    SELECT 1
+    FROM INFORMATION_SCHEMA.COLUMNS
+    WHERE TABLE_SCHEMA = 'Vpos'
+      AND TABLE_NAME = 'Vpos'
+      AND COLUMN_NAME = 'IsTopUpVpos'
+)
+BEGIN
+    ALTER TABLE Vpos.Vpos ADD IsTopUpVpos BIT;
+END
+GO
+
+IF NOT EXISTS (
+    SELECT 1
+    FROM INFORMATION_SCHEMA.COLUMNS
+    WHERE TABLE_SCHEMA = 'Merchant'
+      AND TABLE_NAME = 'Transaction'
+      AND COLUMN_NAME = 'IsTopUpPayment'
+)
+BEGIN
+    ALTER TABLE Merchant.[Transaction] ADD IsTopUpPayment BIT;
+END
+GO

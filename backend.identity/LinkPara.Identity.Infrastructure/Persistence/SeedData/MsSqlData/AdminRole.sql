@@ -1,0 +1,5 @@
+INSERT INTO Core.User (Id, FirstName, LastName, IdentityNumber, BirthDate, UserType, UserStatus, PhoneCode, CreateDate, UpdateDate, LastModifiedBy, CreatedBy, PasswordModifiedDate, RecordStatus, LoginLastActivityId, UserName, NormalizedUserName, Email, NormalizedEmail, EmailConfirmed, PasswordHash, SecurityStamp, ConcurrencyStamp, PhoneNumber, PhoneNumberConfirmed, TwoFactorEnabled, LockoutEnd, LockoutEnabled, AccessFailedCount)
+values  ('9d00b757-ff3d-41c0-91b5-e546c68aa32f', 'Admin', 'Admin', null, '-infinity', 'Internal', 'Active', '+90', '2023-08-02 00:08:19.107940', '-infinity', null, '00000000-0000-0000-0000-000000000000', '2023-09-05 12:41:28.588762', 'Active', null, 'U905555555555', 'U905555555555', 'admin@admin.com', 'ADMIN@ADMIN.COM', false, 'AQAAAAIAAYagAAAAEDgM7Z6n+tpeMDbSlZIR8R8z460mDKG3YU9JPe5azE/GNhTnvRJMRNUnQa5RU3jQ8w==', 'GSBYWGJQP57SFCRDLAGEEP4RB6F4CKWL', '626b7b77-8a23-421e-a551-1edd5f86d1e9', '5555555555', false, false, null, true, 0);
+
+INSERT INTO Core.UserRole (UserId, RoleId)
+values  ('9d00b757-ff3d-41c0-91b5-e546c68aa32f', '46a3175e-2914-4c8c-adf2-c8811bcacee9');

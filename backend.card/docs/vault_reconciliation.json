@@ -1,0 +1,22 @@
+{
+  "Alert": {
+    "BatchSize": 10000000,
+    "DefaultLanguage": "tr",
+    "Enabled": true,
+    "IncludeFailed": true,
+    "TemplateNameEn": "ReconciliationAlertTemplate_EN",
+    "TemplateNameTr": "ReconciliationAlertTemplate_TR",
+    "ToEmails": [
+      "operasyon@company.com"
+    ]
+  },
+  "Evaluate": {
+    "ChunkSize": 500,
+    "ClaimRetryCount": 3,
+    "ClaimTimeoutSeconds": 300
+  },
+  "Execute": {
+    "LeaseSeconds": 30,
+    "MaxEvaluations": 5000
+  }
+}

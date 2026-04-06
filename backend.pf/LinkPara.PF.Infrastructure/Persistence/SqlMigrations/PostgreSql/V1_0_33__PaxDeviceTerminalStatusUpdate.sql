@@ -1,0 +1,2 @@
+ALTER TABLE merchant.merchant_physical_pos ADD COLUMN IF NOT EXISTS device_terminal_last_activity timestamp without time zone NOT NULL DEFAULT TIMESTAMP '-infinity';
+ALTER TABLE merchant.merchant_physical_pos ADD COLUMN IF NOT EXISTS device_terminal_status character varying(50) NOT NULL DEFAULT 'Unknown'; 

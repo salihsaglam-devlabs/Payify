@@ -1,0 +1,31 @@
+pipeline {
+    agent any
+    triggers {
+        gitlabPush()
+    }
+    stages {
+        stage('Restore packages'){
+           steps{
+               sh 'dotnet restore LinkPara.SharedLibraries.sln'
+            }
+         }
+        stage('Clean'){
+           steps{
+               sh 'dotnet clean LinkPara.SharedLibraries.sln --configuration Release'
+            }
+         }
+        stage('Build'){
+           steps{
+               sh 'dotnet build LinkPara.SharedLibraries.sln --configuration Release --no-restore'
+            }
+         }
+        stage('Publish'){
+             steps {
+                sh "nuget sources add -name linkpara.packages -user gitlab+deploy-token-2 -password "R6fPYLE8SMSV56hx8uC-" -source https://gitlab.linktera.xyz/api/v4/projects/173/packages/nuget/index.json"
+                sh "nuget push LinkPara.EventBus.RabbitMQ.1.0.0.nupkg -source linkpara.packages"
+                sh "nuget push LinkPara.EventBus.1.0.0.nupkg -source linkpara.packages"
+             }
+        }
+        
+    }
+}

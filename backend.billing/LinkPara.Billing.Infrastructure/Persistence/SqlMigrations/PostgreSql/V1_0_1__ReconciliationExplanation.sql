@@ -1,0 +1,1 @@
+ALTER TABLE reconciliation.summary ADD IF NOT EXISTS explanation varchar(4000) NULL;

@@ -1,0 +1,1 @@
+INSERT INTO core.parameter (id, group_code, parameter_code, parameter_value, create_date, update_date, created_by, last_modified_by, record_status) VALUES ('635f8737-49c2-46d3-bd50-3f7efe3409dc', 'PFPaymentParameters', 'WaiveCommissionOnChargeback', '0', '2025-01-02 10:12:28.399420', '2025-01-02 10:12:28.399420', 'Batch', 'Batch', 'Active') ON CONFLICT DO NOTHING;

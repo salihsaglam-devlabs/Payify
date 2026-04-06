@@ -1,0 +1,21 @@
+﻿IF NOT EXISTS (
+    SELECT 1
+    FROM INFORMATION_SCHEMA.COLUMNS
+    WHERE TABLE_SCHEMA = 'Core'
+      AND TABLE_NAME = 'User'
+      AND COLUMN_NAME = 'ExternalCustomerId'
+)
+BEGIN
+    ALTER TABLE Core.[User] ADD ExternalCustomerId VARCHAR(400);
+END
+
+IF NOT EXISTS (
+    SELECT 1
+    FROM INFORMATION_SCHEMA.COLUMNS
+    WHERE TABLE_SCHEMA = 'Core'
+      AND TABLE_NAME = 'User'
+      AND COLUMN_NAME = 'ExternalPersonId'
+)
+BEGIN
+    ALTER TABLE Core.[User] ADD ExternalPersonId VARCHAR(400);
+END

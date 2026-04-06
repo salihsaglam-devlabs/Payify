@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>net8.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>disable</Nullable>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <PackageReference Include="LinkPara.Approval" Version="2.0.0" />
+      <PackageReference Include="LinkPara.Audit" Version="2.0.0" />
+      <PackageReference Include="LinkPara.Authentication" Version="2.0.0" />
+      <PackageReference Include="LinkPara.Cache" Version="2.0.0" />
+      <PackageReference Include="LinkPara.ContextProvider" Version="2.0.0" />
+      <PackageReference Include="LinkPara.HttpProviders" Version="2.0.0" />
+      <PackageReference Include="LinkPara.MappingExtensions" Version="2.0.0" />
+      <PackageReference Include="LinkPara.RateLimit" Version="2.0.0" />
+      <PackageReference Include="LinkPara.Security" Version="2.0.0" />
+      <PackageReference Include="LinkPara.SharedModels" Version="2.0.0" />
+      <PackageReference Include="LinkPara.SystemUser" Version="2.0.0" />
+    </ItemGroup>
+
+</Project>

@@ -1,0 +1,819 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <!-- 
+    Microsoft ResX Schema 
+    
+    Version 2.0
+    
+    The primary goals of this format is to allow a simple XML format 
+    that is mostly human readable. The generation and parsing of the 
+    various data types are done through the TypeConverter classes 
+    associated with the data types.
+    
+    Example:
+    
+    ... ado.net/XML headers & schema ...
+    <resheader name="resmimetype">text/microsoft-resx</resheader>
+    <resheader name="version">2.0</resheader>
+    <resheader name="reader">System.Resources.ResXResourceReader, System.Windows.Forms, ...</resheader>
+    <resheader name="writer">System.Resources.ResXResourceWriter, System.Windows.Forms, ...</resheader>
+    <data name="Name1"><value>this is my long string</value><comment>this is a comment</comment></data>
+    <data name="Color1" type="System.Drawing.Color, System.Drawing">Blue</data>
+    <data name="Bitmap1" mimetype="application/x-microsoft.net.object.binary.base64">
+        <value>[base64 mime encoded serialized .NET Framework object]</value>
+    </data>
+    <data name="Icon1" type="System.Drawing.Icon, System.Drawing" mimetype="application/x-microsoft.net.object.bytearray.base64">
+        <value>[base64 mime encoded string representing a byte array form of the .NET Framework object]</value>
+        <comment>This is a comment</comment>
+    </data>
+                
+    There are any number of "resheader" rows that contain simple 
+    name/value pairs.
+    
+    Each data row contains a name, and value. The row also contains a 
+    type or mimetype. Type corresponds to a .NET class that support 
+    text/value conversion through the TypeConverter architecture. 
+    Classes that don't support this are serialized and stored with the 
+    mimetype set.
+    
+    The mimetype is used for serialized objects, and tells the 
+    ResXResourceReader how to depersist the object. This is currently not 
+    extensible. For a given mimetype the value must be set accordingly:
+    
+    Note - application/x-microsoft.net.object.binary.base64 is the format 
+    that the ResXResourceWriter will generate, however the reader can 
+    read any of the formats listed below.
+    
+    mimetype: application/x-microsoft.net.object.binary.base64
+    value   : The object must be serialized with 
+            : System.Runtime.Serialization.Formatters.Binary.BinaryFormatter
+            : and then encoded with base64 encoding.
+    
+    mimetype: application/x-microsoft.net.object.soap.base64
+    value   : The object must be serialized with 
+            : System.Runtime.Serialization.Formatters.Soap.SoapFormatter
+            : and then encoded with base64 encoding.
+
+    mimetype: application/x-microsoft.net.object.bytearray.base64
+    value   : The object must be serialized into a byte array 
+            : using a System.ComponentModel.TypeConverter
+            : and then encoded with base64 encoding.
+    -->
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="metadata">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" />
+              </xsd:sequence>
+              <xsd:attribute name="name" use="required" type="xsd:string" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="assembly">
+            <xsd:complexType>
+              <xsd:attribute name="alias" type="xsd:string" />
+              <xsd:attribute name="name" type="xsd:string" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1" />
+              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
+              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="AcceptAmex" xml:space="preserve">
+    <value>Amex kabul edildi mi</value>
+  </data>
+  <data name="ActivationDate" xml:space="preserve">
+    <value>Aktivasyon Tarihi</value>
+  </data>
+  <data name="AnnulmentCode" xml:space="preserve">
+    <value>Fesih Kodu</value>
+  </data>
+  <data name="AnnulmentCodeExplanation" xml:space="preserve">
+    <value>Fesih Kodu Açıklaması</value>
+  </data>
+  <data name="AnnulmentDate" xml:space="preserve">
+    <value>Fesih Tarihi</value>
+  </data>
+  <data name="AnnulmentDescription" xml:space="preserve">
+    <value>Fesih Açıklama</value>
+  </data>
+  <data name="BankName" xml:space="preserve">
+    <value>Banka Adı</value>
+  </data>
+  <data name="BIN" xml:space="preserve">
+    <value>Kart Numarası</value>
+  </data>
+  <data name="CardBrand" xml:space="preserve">
+    <value>Kart Markası</value>
+  </data>
+  <data name="CardNetwork" xml:space="preserve">
+    <value>Kart Ağı</value>
+  </data>
+  <data name="CardSubType" xml:space="preserve">
+    <value>Kart Alt Türü</value>
+  </data>
+  <data name="CardType" xml:space="preserve">
+    <value>Kart Tipi</value>
+  </data>
+  <data name="Code" xml:space="preserve">
+    <value>Kod</value>
+  </data>
+  <data name="CommercialTitle" xml:space="preserve">
+    <value>Ticari ünvan</value>
+  </data>
+  <data name="CompanyType" xml:space="preserve">
+    <value>Şirket Tipi</value>
+  </data>
+  <data name="CountryName" xml:space="preserve">
+    <value>Ülke İsmi</value>
+  </data>
+  <data name="CreateDate" xml:space="preserve">
+    <value>Oluşturma Tarihi</value>
+  </data>
+  <data name="CurrencyCode" xml:space="preserve">
+    <value>Para Birimi Kodu</value>
+  </data>
+  <data name="Description" xml:space="preserve">
+    <value>Açıklama</value>
+  </data>
+  <data name="EndOfDay" xml:space="preserve">
+    <value>Gün Bitiş</value>
+  </data>
+  <data name="False" xml:space="preserve">
+    <value>Hayır</value>
+  </data>
+  <data name="HasSubmerchantIntegration" xml:space="preserve">
+    <value>Alt Üye İşyeri Entegrasyonu otomatik olarak yapılsın mı?</value>
+  </data>
+  <data name="IsCancelCode" xml:space="preserve">
+    <value>Fesih İptal İşlemi mi?</value>
+  </data>
+  <data name="IsVirtual" xml:space="preserve">
+    <value>Sanal Kart Mı?</value>
+  </data>
+  <data name="MaxCorporateInstallmentCount" xml:space="preserve">
+    <value>Maksimum Kurumsal Taksit Sayısı</value>
+  </data>
+  <data name="MaxIndividualInstallmentCount" xml:space="preserve">
+    <value>Maksimum Bireysel Taksit Sayısı</value>
+  </data>
+  <data name="MerchantName" xml:space="preserve">
+    <value>Üye İş Yeri İsmi</value>
+  </data>
+  <data name="MerchantPoolStatus" xml:space="preserve">
+    <value>Üye İş Yeri Başvuru Durumu</value>
+  </data>
+  <data name="MerchantStatus" xml:space="preserve">
+    <value>Üye İş Yeri Durumu</value>
+  </data>
+  <data name="MonthlyTurnover" xml:space="preserve">
+    <value>Aylık Ciro</value>
+  </data>
+  <data name="Name" xml:space="preserve">
+    <value>İsim</value>
+  </data>
+  <data name="PerTransactionFee" xml:space="preserve">
+    <value>İşlem Başına Ücret</value>
+  </data>
+  <data name="PricingProfileItems" xml:space="preserve">
+    <value>Fiyatlandırma Profili Öğeleri</value>
+  </data>
+  <data name="ProfileStatus" xml:space="preserve">
+    <value>Profil Durumu</value>
+  </data>
+  <data name="RejectReason" xml:space="preserve">
+    <value>Reddetme Nedeni</value>
+  </data>
+  <data name="SecurityType" xml:space="preserve">
+    <value>Güvenlik Tipi</value>
+  </data>
+  <data name="True" xml:space="preserve">
+    <value>Evet</value>
+  </data>
+  <data name="VposStatus" xml:space="preserve">
+    <value>Sanalpos Durumu</value>
+  </data>
+  <data name="WebSiteUrl" xml:space="preserve">
+    <value>Web Site Linki</value>
+  </data>
+  <data name="ConversationId" xml:space="preserve">
+    <value>Üye İşyeri Sipariş No</value>
+  </data>
+  <data name="MerchantTransactionId" xml:space="preserve">
+    <value>Üye İş Yeri İşlem Id</value>
+  </data>
+  <data name="TransactionDate" xml:space="preserve">
+    <value>İşlem Tarihi</value>
+  </data>
+  <data name="Amount" xml:space="preserve">
+    <value>Tutar</value>
+  </data>
+  <data name="IsHealthCheckAllowed" xml:space="preserve">
+    <value>Sağlık Kontrolü Onaylandı mı?</value>
+  </data>
+  <data name="BankLimitType" xml:space="preserve">
+    <value>Banka Limit Türü</value>
+  </data>
+  <data name="MerchantIban" xml:space="preserve">
+    <value>Üye İş Yeri IBAN</value>
+  </data>
+  <data name="DueProfileTitle" xml:space="preserve">
+    <value>Aidat Başlığı</value>
+  </data>
+  <data name="MerchantNumber" xml:space="preserve">
+    <value>Üye İş Yeri Numarası</value>
+  </data>
+  <data name="MoneyTransferBankCode" xml:space="preserve">
+    <value>Para Transferi Banka Kodu</value>
+  </data>
+  <data name="MoneyTransferBankName" xml:space="preserve">
+    <value>Para Transferi Banka İsmi</value>
+  </data>
+  <data name="BlockageAmount" xml:space="preserve">
+    <value>Blokaj Tutarı</value>
+  </data>
+  <data name="InstallmentCount" xml:space="preserve">
+    <value>Taksit Tutarı</value>
+  </data>
+  <data name="IntegratorCommissionRate" xml:space="preserve">
+    <value>Entegratör Komisyon Oranı</value>
+  </data>
+  <data name="IntegratorName" xml:space="preserve">
+    <value>Entegratör Adı</value>
+  </data>
+  <data name="LastExecDate" xml:space="preserve">
+    <value>Son Çalışma Tarihi</value>
+  </data>
+  <data name="LimitType" xml:space="preserve">
+    <value>Limit Türü</value>
+  </data>
+  <data name="MaxAmount" xml:space="preserve">
+    <value>Maksimum Miktar</value>
+  </data>
+  <data name="MaxPiece" xml:space="preserve">
+    <value>Maksimum Parça</value>
+  </data>
+  <data name="BirthDate" xml:space="preserve">
+    <value>Doğum Tarihi</value>
+  </data>
+  <data name="Email" xml:space="preserve">
+    <value>Email</value>
+  </data>
+  <data name="LastName" xml:space="preserve">
+    <value>Soy Adı</value>
+  </data>
+  <data name="MobilePhoneNumber" xml:space="preserve">
+    <value>Telefon Numarası</value>
+  </data>
+  <data name="RoleName" xml:space="preserve">
+    <value>Rol Adı</value>
+  </data>
+  <data name="PartnerBirthDate" xml:space="preserve">
+    <value>Partner Doğum Tarihi</value>
+  </data>
+  <data name="PartnerEmail" xml:space="preserve">
+    <value>Partner Emaili</value>
+  </data>
+  <data name="PartnerIdentityNumber" xml:space="preserve">
+    <value>Partner Kimlik Numarası</value>
+  </data>
+  <data name="PartnerLastName" xml:space="preserve">
+    <value>Partner Soyadı</value>
+  </data>
+  <data name="PartnerName" xml:space="preserve">
+    <value>Partner Adı</value>
+  </data>
+  <data name="PartnerPhone" xml:space="preserve">
+    <value>Partner Telefon Numarası</value>
+  </data>
+  <data name="PaymentDate" xml:space="preserve">
+    <value>Ödeme Tarihi</value>
+  </data>
+  <data name="PaymentType" xml:space="preserve">
+    <value>Ödeme Türü</value>
+  </data>
+  <data name="PointAmount" xml:space="preserve">
+    <value>Puan Tutarı</value>
+  </data>
+  <data name="RejectDesc" xml:space="preserve">
+    <value>Reddetme Açıklaması</value>
+  </data>
+  <data name="RemainingAmount" xml:space="preserve">
+    <value>Kalan Tutar</value>
+  </data>
+  <data name="TotalAmount" xml:space="preserve">
+    <value>Toplam Tutar</value>
+  </data>
+  <data name="TotalExecCount" xml:space="preserve">
+    <value>Toplam Çalışma Sayısı</value>
+  </data>
+  <data name="TransactionLimitType" xml:space="preserve">
+    <value>İşlem Limit Türü</value>
+  </data>
+  <data name="TransactionPeriod" xml:space="preserve">
+    <value>İşlem Periodu</value>
+  </data>
+  <data name="GlobalMerchantId" xml:space="preserve">
+    <value>Evrensel Üye İş Yeri Numarası</value>
+  </data>
+  <data name="PointCommission" xml:space="preserve">
+    <value>Puan Komisyonu</value>
+  </data>
+  <data name="ServiceCommission" xml:space="preserve">
+    <value>Servis Komisyonu</value>
+  </data>
+  <data name="VposName" xml:space="preserve">
+    <value>Pos Adı</value>
+  </data>
+  <data name="CardTransactionType" xml:space="preserve">
+    <value>Kart İşlem Tipi</value>
+  </data>
+  <data name="RecordStatus" xml:space="preserve">
+    <value>Kayıt Durumu</value>
+  </data>
+  <data name="RestrictOwnCardNotOnUs" xml:space="preserve">
+    <value>Bankanın kartı sadece kendi bankasından geçsin</value>
+  </data>
+  <data name="Active" xml:space="preserve">
+    <value>Aktif</value>
+  </data>
+  <data name="AllTransaction" xml:space="preserve">
+    <value>Tüm İşlemler</value>
+  </data>
+  <data name="Amex" xml:space="preserve">
+    <value>Amex</value>
+  </data>
+  <data name="Annually" xml:space="preserve">
+    <value>Yıllık</value>
+  </data>
+  <data name="Annulment" xml:space="preserve">
+    <value>Fesih</value>
+  </data>
+  <data name="Api" xml:space="preserve">
+    <value>Api</value>
+  </data>
+  <data name="ApplicationChannel" xml:space="preserve">
+    <value>Uygulama Kanalı</value>
+  </data>
+  <data name="Approved" xml:space="preserve">
+    <value>Onaylandı</value>
+  </data>
+  <data name="Auth" xml:space="preserve">
+    <value>Satış</value>
+  </data>
+  <data name="AuthorizedPerson" xml:space="preserve">
+    <value>Yetkili Kişi</value>
+  </data>
+  <data name="Blockage" xml:space="preserve">
+    <value>Bloke</value>
+  </data>
+  <data name="BlockedDayNumber" xml:space="preserve">
+    <value>Bloke Gün Sayısı</value>
+  </data>
+  <data name="Business" xml:space="preserve">
+    <value>İş</value>
+  </data>
+  <data name="Cancelled" xml:space="preserve">
+    <value>İptal Edildi</value>
+  </data>
+  <data name="Classic" xml:space="preserve">
+    <value>Klasik</value>
+  </data>
+  <data name="Closed" xml:space="preserve">
+    <value>Kapatıldı</value>
+  </data>
+  <data name="CommissionRate" xml:space="preserve">
+    <value>Komisyon Oranı</value>
+  </data>
+  <data name="Complete" xml:space="preserve">
+    <value>Tamamlandı</value>
+  </data>
+  <data name="Completed" xml:space="preserve">
+    <value>Tamamlandı</value>
+  </data>
+  <data name="ContactPerson" xml:space="preserve">
+    <value>Yetkili Kişi</value>
+  </data>
+  <data name="ContactPersonType" xml:space="preserve">
+    <value>Yetkili Kişi Türü</value>
+  </data>
+  <data name="Corporate" xml:space="preserve">
+    <value>Tüzel</value>
+  </data>
+  <data name="CostProfile" xml:space="preserve">
+    <value>Maliyet Profili</value>
+  </data>
+  <data name="Count" xml:space="preserve">
+    <value>Miktar</value>
+  </data>
+  <data name="Credit" xml:space="preserve">
+    <value>Kredi Kartı</value>
+  </data>
+  <data name="Customer" xml:space="preserve">
+    <value>Müşteri</value>
+  </data>
+  <data name="CustomerStatus" xml:space="preserve">
+    <value>Müşteri Durumu</value>
+  </data>
+  <data name="Daily" xml:space="preserve">
+    <value>Günlük</value>
+  </data>
+  <data name="Debit" xml:space="preserve">
+    <value>Debit Kart</value>
+  </data>
+  <data name="Deleted" xml:space="preserve">
+    <value>Silindi</value>
+  </data>
+  <data name="Draft" xml:space="preserve">
+    <value>Draft</value>
+  </data>
+  <data name="DueProfileType" xml:space="preserve">
+    <value>Aidat Türü</value>
+  </data>
+  <data name="Fail" xml:space="preserve">
+    <value>Başarısız</value>
+  </data>
+  <data name="FinancialTransactionAllowed" xml:space="preserve">
+    <value>Finansal İşlem Onaylandı Mı?</value>
+  </data>
+  <data name="Finished" xml:space="preserve">
+    <value>Bitti</value>
+  </data>
+  <data name="FullSecure" xml:space="preserve">
+    <value>Tam Güvenli</value>
+  </data>
+  <data name="HalfSecure" xml:space="preserve">
+    <value>Yarı Güvenli</value>
+  </data>
+  <data name="HalfSecureAllowed" xml:space="preserve">
+    <value>Yarı Güvenli Ödeme İzni Verildi Mi?</value>
+  </data>
+  <data name="Hpp" xml:space="preserve">
+    <value>Hpp</value>
+  </data>
+  <data name="Inactive" xml:space="preserve">
+    <value>Aktif Değil</value>
+  </data>
+  <data name="Incomplete" xml:space="preserve">
+    <value>Tamamlanmadı</value>
+  </data>
+  <data name="Individual" xml:space="preserve">
+    <value>Şahıs</value>
+  </data>
+  <data name="Installment" xml:space="preserve">
+    <value>Taksit</value>
+  </data>
+  <data name="InstallmentAllowed" xml:space="preserve">
+    <value>Taksit İzni Verildi Mi?</value>
+  </data>
+  <data name="InstallmentNumber" xml:space="preserve">
+    <value>Taksit Sayısı</value>
+  </data>
+  <data name="InstallmentNumberEnd" xml:space="preserve">
+    <value>Taksit Sayısı Son</value>
+  </data>
+  <data name="IntegrationMode" xml:space="preserve">
+    <value>Entegrasyon Modu</value>
+  </data>
+  <data name="Integrator" xml:space="preserve">
+    <value>Entegratör</value>
+  </data>
+  <data name="International" xml:space="preserve">
+    <value>Yabancı</value>
+  </data>
+  <data name="InternationalCardAllowed" xml:space="preserve">
+    <value>Yabancı Kart İzni Verildi Mi?</value>
+  </data>
+  <data name="InUse" xml:space="preserve">
+    <value>Kullanımda</value>
+  </data>
+  <data name="Is3dRequired" xml:space="preserve">
+    <value>3D Zorunlu Mu?</value>
+  </data>
+  <data name="IsActive" xml:space="preserve">
+    <value>Aktif Mi?</value>
+  </data>
+  <data name="IsApprove" xml:space="preserve">
+    <value>Onaylandı Mı?</value>
+  </data>
+  <data name="IsChargeback" xml:space="preserve">
+    <value>Chargeback Mi?</value>
+  </data>
+  <data name="IsCvvPaymentAllowed" xml:space="preserve">
+    <value>Ödemelerde Cvv'ye İzin Verildi Mi?</value>
+  </data>
+  <data name="IsDocumentRequired" xml:space="preserve">
+    <value>Döküman Zorunlu Mu?</value>
+  </data>
+  <data name="IsHostedPayment3dRequired" xml:space="preserve">
+    <value>Hpp 3D Zorunlu Mu?</value>
+  </data>
+  <data name="IsLinkPayment3dRequired" xml:space="preserve">
+    <value>Linkle Ödemede 3D Zorunlu Mu?</value>
+  </data>
+  <data name="IsManuelPayment3dRequired" xml:space="preserve">
+    <value>Manuel Ödemede 3D Zorunlu Mu?</value>
+  </data>
+  <data name="IsOnUsVpos" xml:space="preserve">
+    <value>Kendi Kartını Kabul Eden Vpos Mu?</value>
+  </data>
+  <data name="IsPostAuthAmountHigherAllowed" xml:space="preserve">
+    <value>Fazla Ön Satış Kapama Miktarı Girilebilir Mi?</value>
+  </data>
+  <data name="IsSuspecious" xml:space="preserve">
+    <value>Şüpheli İşlem Mi?</value>
+  </data>
+  <data name="LastValidDate" xml:space="preserve">
+    <value>Son Doğrulama Tarihi</value>
+  </data>
+  <data name="LinkPaymentPage" xml:space="preserve">
+    <value>Linkle Ödeme Sayfası</value>
+  </data>
+  <data name="ManuelPaymentPage" xml:space="preserve">
+    <value>Manuel Ödeme Sayfası</value>
+  </data>
+  <data name="MarginRatio" xml:space="preserve">
+    <value>Marjin Oranı</value>
+  </data>
+  <data name="MasterCard" xml:space="preserve">
+    <value>MasterCard</value>
+  </data>
+  <data name="MerchantBlockage" xml:space="preserve">
+    <value>Üye İş Yeri Blokaj</value>
+  </data>
+  <data name="MerchantBlockageStatus" xml:space="preserve">
+    <value>Üye İş Yeri Bloke Durumu</value>
+  </data>
+  <data name="MerchantBusinessPartner" xml:space="preserve">
+    <value>Üye İş Yeri İş Ortağı</value>
+  </data>
+  <data name="MerchantIntegrator" xml:space="preserve">
+    <value>Üye İş Yeri Entegratörü</value>
+  </data>
+  <data name="MerchantLimit" xml:space="preserve">
+    <value>Üye İş Yeri Limit</value>
+  </data>
+  <data name="MerchantUserBirthDate" xml:space="preserve">
+    <value>Üye İş Yeri Kullanıcı Doğum Tarihi</value>
+  </data>
+  <data name="MerchantUserEmail" xml:space="preserve">
+    <value>Üye İş Yeri Kullanıcı Email</value>
+  </data>
+  <data name="MerchantUserLast" xml:space="preserve">
+    <value>Üye İş Yeri Kullanıcı Soy Adı</value>
+  </data>
+  <data name="MerchantUserName" xml:space="preserve">
+    <value>Üye İş Yeri Kullanıcı Adı</value>
+  </data>
+  <data name="MerchantUserPhoneNumber" xml:space="preserve">
+    <value>Üye İş Yeri Kullanıcı Telefon Numarası</value>
+  </data>
+  <data name="MerchantUserRoleName" xml:space="preserve">
+    <value>Üye İş Yeri Kullanıcı Rol Adı</value>
+  </data>
+  <data name="MerchantVpos" xml:space="preserve">
+    <value>Üye İş Yeri Vpos</value>
+  </data>
+  <data name="MissingDocument" xml:space="preserve">
+    <value>Kayıp/Eksik Döküman</value>
+  </data>
+  <data name="MobilePhoneNumberSecond" xml:space="preserve">
+    <value>İkinci Telefon Numarası</value>
+  </data>
+  <data name="Monthly" xml:space="preserve">
+    <value>Aylık</value>
+  </data>
+  <data name="MonthlyLimitAmount" xml:space="preserve">
+    <value>Aylık Limit Tutarı</value>
+  </data>
+  <data name="NextDay" xml:space="preserve">
+    <value>Sonraki Gün</value>
+  </data>
+  <data name="NoAction" xml:space="preserve">
+    <value>İşlem Yok</value>
+  </data>
+  <data name="NonSecure" xml:space="preserve">
+    <value>Güvenli Olmayan</value>
+  </data>
+  <data name="PartiallyClosed" xml:space="preserve">
+    <value>Kısmi Kapatıldı</value>
+  </data>
+  <data name="PartiallyReturned" xml:space="preserve">
+    <value>Kısmi İade Edildi</value>
+  </data>
+  <data name="Passive" xml:space="preserve">
+    <value>Pasif</value>
+  </data>
+  <data name="PaymentAllowed" xml:space="preserve">
+    <value>Ödeme İzni Verildi Mi?</value>
+  </data>
+  <data name="PaymentReturnAllowed" xml:space="preserve">
+    <value>Ödeme İadesi İzni Verildi Mi?</value>
+  </data>
+  <data name="PaymentReverseAllowed" xml:space="preserve">
+    <value>Ödeme İptali İzni Verildi Mi?</value>
+  </data>
+  <data name="Pending" xml:space="preserve">
+    <value>Yönlendiriliyor</value>
+  </data>
+  <data name="PendingIK" xml:space="preserve">
+    <value>IK'ya Devredildi</value>
+  </data>
+  <data name="PostAuth" xml:space="preserve">
+    <value>Ön Satış Kapama</value>
+  </data>
+  <data name="PreAuth" xml:space="preserve">
+    <value>Ön Satış</value>
+  </data>
+  <data name="PreAuthorizationAllowed" xml:space="preserve">
+    <value>Ön Satış İzni Verildi Mi?</value>
+  </data>
+  <data name="Priority" xml:space="preserve">
+    <value>Öncelik</value>
+  </data>
+  <data name="ProfileCardType" xml:space="preserve">
+    <value>Profil Kart Türü</value>
+  </data>
+  <data name="Reject" xml:space="preserve">
+    <value>Reddedildi</value>
+  </data>
+  <data name="Rejected" xml:space="preserve">
+    <value>Reddedildi</value>
+  </data>
+  <data name="Return" xml:space="preserve">
+    <value>İade</value>
+  </data>
+  <data name="Returned" xml:space="preserve">
+    <value>İade Edildi</value>
+  </data>
+  <data name="ReturnStatus" xml:space="preserve">
+    <value>Yanıt Durumu</value>
+  </data>
+  <data name="Reverse" xml:space="preserve">
+    <value>İptal</value>
+  </data>
+  <data name="Reversed" xml:space="preserve">
+    <value>İptal Edildi</value>
+  </data>
+  <data name="RiskApproval" xml:space="preserve">
+    <value>Risk Onayında</value>
+  </data>
+  <data name="Sales" xml:space="preserve">
+    <value>Satış</value>
+  </data>
+  <data name="Subscription" xml:space="preserve">
+    <value>Abonelik</value>
+  </data>
+  <data name="Success" xml:space="preserve">
+    <value>Başarılı</value>
+  </data>
+  <data name="Surname" xml:space="preserve">
+    <value>Soy Adı</value>
+  </data>
+  <data name="SuspeciousDesc" xml:space="preserve">
+    <value>Şüpheli İşlem Açıklaması</value>
+  </data>
+  <data name="TechnicalPerson" xml:space="preserve">
+    <value>Teknik Kişi</value>
+  </data>
+  <data name="TransactionStatus" xml:space="preserve">
+    <value>İşlem Durumu</value>
+  </data>
+  <data name="TransactionType" xml:space="preserve">
+    <value>İşlem Türü</value>
+  </data>
+  <data name="Troy" xml:space="preserve">
+    <value>Troy</value>
+  </data>
+  <data name="Undefined" xml:space="preserve">
+    <value>Tanımlanmamış</value>
+  </data>
+  <data name="UnionPay" xml:space="preserve">
+    <value>UnionPay</value>
+  </data>
+  <data name="Unknown" xml:space="preserve">
+    <value>Bilinmeyen</value>
+  </data>
+  <data name="Visa" xml:space="preserve">
+    <value>Visa</value>
+  </data>
+  <data name="VposType" xml:space="preserve">
+    <value>Vpos Türü</value>
+  </data>
+  <data name="Waiting" xml:space="preserve">
+    <value>Beklemede</value>
+  </data>
+  <data name="DueAmount" xml:space="preserve">
+    <value>Aidat Tutarı</value>
+  </data>
+  <data name="IsDefault" xml:space="preserve">
+    <value>Varsayılan Mı?</value>
+  </data>
+  <data name="OccurenceInterval" xml:space="preserve">
+    <value>Oluşum Aralığı</value>
+  </data>
+  <data name="AuthorizedPersonBirthDate" xml:space="preserve">
+    <value>Yetkili Kişi Doğum Tarihi</value>
+  </data>
+  <data name="AuthorizedPersonCompanyPhoneNumber" xml:space="preserve">
+    <value>Yetkili Kişi Şirket Telefonu Numarası</value>
+  </data>
+  <data name="AuthorizedPersonIdentityNumber" xml:space="preserve">
+    <value>Yetkili Kişi Kimlik Numarası</value>
+  </data>
+  <data name="AuthorizedPersonMobilePhoneNumber" xml:space="preserve">
+    <value>Yetkili Kişi Telefon Numarası</value>
+  </data>
+  <data name="AuthorizedPersonMobilePhoneNumberSecond" xml:space="preserve">
+    <value>Yetkili Kişi İkinci Telefon Numarası</value>
+  </data>
+  <data name="AuthorizedPersonName" xml:space="preserve">
+    <value>Yetkili Kişi Adı</value>
+  </data>
+  <data name="AuthorizedPersonSurname" xml:space="preserve">
+    <value>Yetkili Kişi Soy Adı</value>
+  </data>
+  <data name="CityName" xml:space="preserve">
+    <value>Şehir Adı</value>
+  </data>
+  <data name="CompanyEmail" xml:space="preserve">
+    <value>Şirket Emaili</value>
+  </data>
+  <data name="DistrictName" xml:space="preserve">
+    <value>İlçe Adı</value>
+  </data>
+  <data name="PostalCode" xml:space="preserve">
+    <value>Posta Kodu</value>
+  </data>
+  <data name="TaxAdministration" xml:space="preserve">
+    <value>Vergi Dairesi</value>
+  </data>
+  <data name="TaxNumber" xml:space="preserve">
+    <value>Vergi Numarası</value>
+  </data>
+  <data name="TradeRegistrationNumber" xml:space="preserve">
+    <value>Mersis Numarası</value>
+  </data>
+  <data name="Address" xml:space="preserve">
+    <value>Adres</value>
+  </data>
+  <data name="Currency" xml:space="preserve">
+    <value>Para Birimi</value>
+  </data>
+  <data name="PhoneCode" xml:space="preserve">
+    <value>Telefon Kodu</value>
+  </data>
+  <data name="PostingPaymentChannel" xml:space="preserve">
+    <value>Ödeme Kanalı</value>
+  </data>
+  <data name="MerchantWalletNumber" xml:space="preserve">
+    <value>Cüzdan Numarası</value>
+  </data>
+  <data name="CostProfileItems" xml:space="preserve">
+    <value>Maliyet Profili Öğeleri</value>
+  </data>
+  <data name="NotOnUs" xml:space="preserve">
+    <value>Farklı Banka</value>
+  </data>
+  <data name="InstallmentSupport" xml:space="preserve">
+    <value>Taksit Destekleniyor Mu?</value>
+  </data>
+</root>

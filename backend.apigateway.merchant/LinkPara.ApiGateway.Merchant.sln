@@ -1,0 +1,37 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.5.33530.505
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "build", "build", "{3D395936-B076-4ED7-B0BF-24B5005755CB}"
+	ProjectSection(SolutionItems) = preProject
+		deployment.yaml = deployment.yaml
+		Dockerfile = Dockerfile
+		rubik.yaml = rubik.yaml
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{D6318D55-9BDA-41F7-8345-AC18C8B9660F}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "LinkPara.ApiGateway.Merchant", "LinkPara.ApiGateway.Merchant\LinkPara.ApiGateway.Merchant.csproj", "{0CE1D4C9-0A57-43CD-992D-6E47CC7E9873}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{0CE1D4C9-0A57-43CD-992D-6E47CC7E9873}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0CE1D4C9-0A57-43CD-992D-6E47CC7E9873}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0CE1D4C9-0A57-43CD-992D-6E47CC7E9873}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0CE1D4C9-0A57-43CD-992D-6E47CC7E9873}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{0CE1D4C9-0A57-43CD-992D-6E47CC7E9873} = {D6318D55-9BDA-41F7-8345-AC18C8B9660F}
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {347ADD4A-7813-49B6-B541-F05A2095FB07}
+	EndGlobalSection
+EndGlobal

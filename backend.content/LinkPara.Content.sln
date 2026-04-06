@@ -1,0 +1,67 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.2.32408.312
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "LinkPara.Content.API", "LinkPara.Content.API\LinkPara.Content.API.csproj", "{8FBF578F-E1B6-4D68-9D51-B1E0CC1181BF}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "LinkPara.Content.Application", "LinkPara.Content.Application\LinkPara.Content.Application.csproj", "{0266A859-03B7-45F9-866B-CD1FD38E1050}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "LinkPara.Content.Domain", "LinkPara.Content.Domain\LinkPara.Content.Domain.csproj", "{98301008-4806-4FA2-9639-44D22A4691FE}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "LinkPara.Content.Infrastructure", "LinkPara.Content.Infrastructure\LinkPara.Content.Infrastructure.csproj", "{109A7995-CAE3-4FB0-A12E-A0DBFAF1CDD8}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "LinkPara.Content.IntegrationTests", "LinkPara.Content.IntegrationTests\LinkPara.Content.IntegrationTests.csproj", "{459867F9-A095-4B7F-B0F4-1EDFF27FEBF2}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "build", "build", "{2C83362E-D9F9-4EC8-B52E-1DC479DF7651}"
+	ProjectSection(SolutionItems) = preProject
+		deployment.yaml = deployment.yaml
+		Dockerfile = Dockerfile
+		rubik.yaml = rubik.yaml
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{C5044F80-5E09-4B39-A0E4-74F977EF91BD}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "test", "test", "{A2ED2868-25D5-4F1F-B8B9-7817078AD9AF}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{8FBF578F-E1B6-4D68-9D51-B1E0CC1181BF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8FBF578F-E1B6-4D68-9D51-B1E0CC1181BF}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8FBF578F-E1B6-4D68-9D51-B1E0CC1181BF}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8FBF578F-E1B6-4D68-9D51-B1E0CC1181BF}.Release|Any CPU.Build.0 = Release|Any CPU
+		{0266A859-03B7-45F9-866B-CD1FD38E1050}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0266A859-03B7-45F9-866B-CD1FD38E1050}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0266A859-03B7-45F9-866B-CD1FD38E1050}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0266A859-03B7-45F9-866B-CD1FD38E1050}.Release|Any CPU.Build.0 = Release|Any CPU
+		{98301008-4806-4FA2-9639-44D22A4691FE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{98301008-4806-4FA2-9639-44D22A4691FE}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{98301008-4806-4FA2-9639-44D22A4691FE}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{98301008-4806-4FA2-9639-44D22A4691FE}.Release|Any CPU.Build.0 = Release|Any CPU
+		{109A7995-CAE3-4FB0-A12E-A0DBFAF1CDD8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{109A7995-CAE3-4FB0-A12E-A0DBFAF1CDD8}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{109A7995-CAE3-4FB0-A12E-A0DBFAF1CDD8}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{109A7995-CAE3-4FB0-A12E-A0DBFAF1CDD8}.Release|Any CPU.Build.0 = Release|Any CPU
+		{459867F9-A095-4B7F-B0F4-1EDFF27FEBF2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{459867F9-A095-4B7F-B0F4-1EDFF27FEBF2}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{459867F9-A095-4B7F-B0F4-1EDFF27FEBF2}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{459867F9-A095-4B7F-B0F4-1EDFF27FEBF2}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {5055B2DF-E5F7-49CF-A725-8E84AF796159}
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{8FBF578F-E1B6-4D68-9D51-B1E0CC1181BF} = {C5044F80-5E09-4B39-A0E4-74F977EF91BD}
+		{0266A859-03B7-45F9-866B-CD1FD38E1050} = {C5044F80-5E09-4B39-A0E4-74F977EF91BD}
+		{98301008-4806-4FA2-9639-44D22A4691FE} = {C5044F80-5E09-4B39-A0E4-74F977EF91BD}
+		{109A7995-CAE3-4FB0-A12E-A0DBFAF1CDD8} = {C5044F80-5E09-4B39-A0E4-74F977EF91BD}
+		{459867F9-A095-4B7F-B0F4-1EDFF27FEBF2} = {A2ED2868-25D5-4F1F-B8B9-7817078AD9AF}
+	EndGlobalSection
+EndGlobal

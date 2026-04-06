@@ -1,0 +1,35 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.1.32228.430
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{3B6A8B3E-3484-4096-93C8-55331D9C4EA6}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "LinkPara.ApiGateway.Boa", "LinkPara.ApiGateway.Boa\LinkPara.ApiGateway.Boa.csproj", "{C63AA995-2667-4A8D-B33A-CCE5B26FE310}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "build", "build", "{7CE613C5-FC34-4D2A-BD52-BA93085B77A8}"
+	ProjectSection(SolutionItems) = preProject
+		Dockerfile = Dockerfile
+	EndProjectSection
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{C63AA995-2667-4A8D-B33A-CCE5B26FE310}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C63AA995-2667-4A8D-B33A-CCE5B26FE310}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C63AA995-2667-4A8D-B33A-CCE5B26FE310}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C63AA995-2667-4A8D-B33A-CCE5B26FE310}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{C63AA995-2667-4A8D-B33A-CCE5B26FE310} = {3B6A8B3E-3484-4096-93C8-55331D9C4EA6}
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {31CB2303-7083-4BBD-AB48-14FC3DBB0E70}
+	EndGlobalSection
+EndGlobal

@@ -1,0 +1,58 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.1.32228.430
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{66DAFFE4-0E25-4834-8C60-D67C8DA09551}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "test", "test", "{F2D5C24D-C2AA-416D-9690-C675B8F1CF8C}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "LinkPara.SoftOtp.API", "LinkPara.SoftOtp.API\LinkPara.SoftOtp.API.csproj", "{CF0B3D68-0C0A-402D-8C96-148D77462231}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "LinkPara.SoftOtp.Application", "LinkPara.SoftOtp.Application\LinkPara.SoftOtp.Application.csproj", "{960A2E23-9C86-439C-ACF3-39F01126D6FC}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "LinkPara.SoftOtp.Domain", "LinkPara.SoftOtp.Domain\LinkPara.SoftOtp.Domain.csproj", "{DEC46CB2-6F34-4B1D-93E4-163B021567EA}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "LinkPara.SoftOtp.Infrastructure", "LinkPara.SoftOtp.Infrastructure\LinkPara.SoftOtp.Infrastructure.csproj", "{BE60D338-E73B-4B20-A735-0A12F1FE895A}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "build", "build", "{B7D33E4D-744B-43AA-B00D-785FE0E4341C}"
+	ProjectSection(SolutionItems) = preProject
+		Dockerfile = Dockerfile
+	EndProjectSection
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{CF0B3D68-0C0A-402D-8C96-148D77462231}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{CF0B3D68-0C0A-402D-8C96-148D77462231}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{CF0B3D68-0C0A-402D-8C96-148D77462231}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{CF0B3D68-0C0A-402D-8C96-148D77462231}.Release|Any CPU.Build.0 = Release|Any CPU
+		{960A2E23-9C86-439C-ACF3-39F01126D6FC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{960A2E23-9C86-439C-ACF3-39F01126D6FC}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{960A2E23-9C86-439C-ACF3-39F01126D6FC}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{960A2E23-9C86-439C-ACF3-39F01126D6FC}.Release|Any CPU.Build.0 = Release|Any CPU
+		{DEC46CB2-6F34-4B1D-93E4-163B021567EA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{DEC46CB2-6F34-4B1D-93E4-163B021567EA}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{DEC46CB2-6F34-4B1D-93E4-163B021567EA}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{DEC46CB2-6F34-4B1D-93E4-163B021567EA}.Release|Any CPU.Build.0 = Release|Any CPU
+		{BE60D338-E73B-4B20-A735-0A12F1FE895A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{BE60D338-E73B-4B20-A735-0A12F1FE895A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{BE60D338-E73B-4B20-A735-0A12F1FE895A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{BE60D338-E73B-4B20-A735-0A12F1FE895A}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{CF0B3D68-0C0A-402D-8C96-148D77462231} = {66DAFFE4-0E25-4834-8C60-D67C8DA09551}
+		{960A2E23-9C86-439C-ACF3-39F01126D6FC} = {66DAFFE4-0E25-4834-8C60-D67C8DA09551}
+		{DEC46CB2-6F34-4B1D-93E4-163B021567EA} = {66DAFFE4-0E25-4834-8C60-D67C8DA09551}
+		{BE60D338-E73B-4B20-A735-0A12F1FE895A} = {66DAFFE4-0E25-4834-8C60-D67C8DA09551}
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {53AC16DC-907F-4FC0-96FB-EB3FCD46FC71}
+	EndGlobalSection
+EndGlobal

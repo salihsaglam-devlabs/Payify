@@ -1,0 +1,2 @@
+INSERT INTO core."case" (id, base_url, action_name, case_type, resource, action, module_name, display_name, create_date, update_date, created_by, last_modified_by, record_status) 
+VALUES ('e864dfdc-f0ec-4b30-af8c-b16c941e38d4', '/v1/MerchantTransactions/manual-return', null, 'BaseUrl', 'MerchantTransactions', 'Post', 'PF', 'Manual İade', '2024-03-13 15:53:09.697996', null, 'c46da32f-0b9e-43ae-a724-984691d73819', null, 'Active') ON CONFLICT DO NOTHING;

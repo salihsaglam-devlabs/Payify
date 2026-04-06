@@ -1,0 +1,24 @@
+﻿
+IF EXISTS (
+    SELECT 1
+    FROM INFORMATION_SCHEMA.COLUMNS
+    WHERE TABLE_SCHEMA = 'Core'
+      AND TABLE_NAME = 'IksTerminal'
+      AND COLUMN_NAME = 'HostingTradeName'
+)
+BEGIN
+    ALTER TABLE Core.IksTerminal
+    ALTER COLUMN HostingTradeName VARCHAR(150);
+END;
+
+IF EXISTS (
+    SELECT 1
+    FROM INFORMATION_SCHEMA.COLUMNS
+    WHERE TABLE_SCHEMA = 'Core'
+      AND TABLE_NAME = 'IksTerminal'
+      AND COLUMN_NAME = 'PaymentGwTradeName'
+)
+BEGIN
+    ALTER TABLE Core.IksTerminal
+    ALTER COLUMN PaymentGwTradeName VARCHAR(150);
+END;

@@ -1,0 +1,61 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>net8.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>disable</Nullable>
+        <LangVersion>12</LangVersion>
+    </PropertyGroup>
+
+	<ItemGroup>
+		<Content Include="Persistence\SqlMigrations\**\*.sql">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+	</ItemGroup>
+
+
+    <ItemGroup>
+      <PackageReference Include="EFCore.NamingConventions" Version="9.0.0" />
+      <PackageReference Include="LinkPara.Approval" Version="2.0.0" />
+      <PackageReference Include="LinkPara.Audit" Version="2.0.0" />
+      <PackageReference Include="LinkPara.Cache" Version="2.0.0" />
+      <PackageReference Include="LinkPara.ContextProvider" Version="2.0.0" />
+      <PackageReference Include="LinkPara.HttpProviders" Version="2.0.0" />
+      <PackageReference Include="LinkPara.Security" Version="2.0.0" />
+      <PackageReference Include="LinkPara.SharedModels" Version="2.0.0" />
+      <PackageReference Include="LinkPara.SystemUser" Version="2.0.0" />
+      <PackageReference Include="MassTransit.Extensions.DependencyInjection" Version="7.3.1" />
+      <PackageReference Include="MassTransit.RabbitMQ" Version="8.4.1" />
+      <PackageReference Include="Microsoft.Data.SqlClient" Version="6.0.2" />
+      <PackageReference Include="Microsoft.EntityFrameworkCore" Version="9.0.5" />
+      <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" Version="9.0.5" />
+      <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="9.0.5" />
+      <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="9.0.5">
+        <PrivateAssets>all</PrivateAssets>
+        <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      </PackageReference>
+      <PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="9.0.5" />
+      <PackageReference Include="Microsoft.Extensions.Http" Version="9.0.5" />
+      <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="9.0.4" />
+      <PackageReference Include="System.ServiceModel.Duplex" Version="6.0.0" />
+      <PackageReference Include="System.ServiceModel.Http" Version="8.1.2" />
+      <PackageReference Include="System.ServiceModel.NetTcp" Version="8.1.2" />
+      <PackageReference Include="System.ServiceModel.Primitives" Version="8.1.2" />
+      <PackageReference Include="System.ServiceModel.Security" Version="6.0.0" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\LinkPara.Emoney.Application\LinkPara.Emoney.Application.csproj" />
+      <ProjectReference Include="..\LinkPara.Emoney.Domain\LinkPara.Emoney.Domain.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <Compile Remove="Consumers\CronJobs\ConvertCommercialWalletsToIndividualConsumer.cs" />
+      <Compile Remove="Migrations\20250318174843_ManualTransferReferenceTableAdded.cs" />
+      <Compile Remove="Migrations\20250318174843_ManualTransferReferenceTableAdded.Designer.cs" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <Folder Include="Migrations\" />
+    </ItemGroup>
+</Project>

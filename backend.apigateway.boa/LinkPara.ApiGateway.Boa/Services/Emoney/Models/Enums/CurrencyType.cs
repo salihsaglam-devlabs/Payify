@@ -1,0 +1,8 @@
+﻿namespace LinkPara.ApiGateway.Boa.Services.Emoney.Models.Enums;
+
+public enum CurrencyType
+{
+    Undefined = 0,
+    Money,
+    Crypto,
+}

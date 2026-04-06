@@ -1,0 +1,23 @@
+IF NOT EXISTS (
+    SELECT 1 
+    FROM INFORMATION_SCHEMA.COLUMNS
+    WHERE TABLE_SCHEMA = 'Core' 
+      AND TABLE_NAME = 'CardTopupRequest' 
+      AND COLUMN_NAME = 'BankName'
+)
+BEGIN
+    ALTER TABLE Core.CardTopupRequest 
+        ADD BankName NVARCHAR(300) NULL;
+END
+
+IF NOT EXISTS (
+    SELECT 1 
+    FROM INFORMATION_SCHEMA.COLUMNS
+    WHERE TABLE_SCHEMA = 'Core' 
+      AND TABLE_NAME = 'CardTopupRequest' 
+      AND COLUMN_NAME = 'BankCode'
+)
+BEGIN
+    ALTER TABLE Core.CardTopupRequest 
+        ADD BankCode INT NOT NULL DEFAULT 0;
+END

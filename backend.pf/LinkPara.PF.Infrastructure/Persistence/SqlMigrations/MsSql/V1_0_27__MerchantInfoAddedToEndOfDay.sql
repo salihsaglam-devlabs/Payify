@@ -1,0 +1,23 @@
+﻿IF NOT EXISTS (
+    SELECT 1
+    FROM INFORMATION_SCHEMA.COLUMNS
+    WHERE TABLE_SCHEMA = 'Physical'
+      AND TABLE_NAME = 'EndOfDay'
+      AND COLUMN_NAME = 'MerchantName'
+)
+BEGIN
+ALTER TABLE Physical.EndOfDay ADD MerchantName VARCHAR(150);
+END
+GO
+
+IF NOT EXISTS (
+    SELECT 1
+    FROM INFORMATION_SCHEMA.COLUMNS
+    WHERE TABLE_SCHEMA = 'Physical'
+      AND TABLE_NAME = 'EndOfDay'
+      AND COLUMN_NAME = 'MerchantNumber'
+)
+BEGIN
+ALTER TABLE Physical.EndOfDay ADD MerchantNumber VARCHAR(15);
+END
+GO

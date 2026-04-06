@@ -1,0 +1,11 @@
+
+IF EXISTS (
+    SELECT 1
+    FROM INFORMATION_SCHEMA.COLUMNS
+    WHERE TABLE_SCHEMA = 'Core'
+      AND TABLE_NAME = 'ThreeDVerification'
+      AND COLUMN_NAME = 'HashKey'
+)
+BEGIN
+    ALTER TABLE Core.ThreeDVerification ALTER COLUMN HashKey VARCHAR(200)
+END;

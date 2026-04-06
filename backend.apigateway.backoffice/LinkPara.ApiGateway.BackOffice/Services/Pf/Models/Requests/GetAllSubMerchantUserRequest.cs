@@ -1,0 +1,20 @@
+﻿using LinkPara.SharedModels.Pagination;
+using LinkPara.SharedModels.Persistence;
+
+namespace LinkPara.ApiGateway.BackOffice.Services.Pf.Models.Requests;
+
+public class GetAllSubMerchantUserRequest : SearchQueryParams
+{
+    public Guid? UserId { get; set; }
+    public string Fullname { get; set; }
+    public DateTime? BirthDate { get; set; }
+    public Guid? SubMerchantId { get; set; }
+    public Guid? MerchantId { get; set; }
+    public DateTime? CreateDateStart { get; set; }
+    public DateTime? CreateDateEnd { get; set; }
+    public RecordStatus? RecordStatus { get; set; }
+    public string IdentityNumber { get; set; }
+    public string Email { get; set; }
+    public string PhoneNumber { get; set; }
+    public string RoleId { get; set; }
+}

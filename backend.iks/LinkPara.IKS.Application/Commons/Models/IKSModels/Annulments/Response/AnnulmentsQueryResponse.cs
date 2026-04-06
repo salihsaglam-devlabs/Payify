@@ -1,0 +1,25 @@
+﻿using LinkPara.IKS.Application.Commons.Mappings;
+
+namespace LinkPara.IKS.Application.Commons.Models.IKSModels.Annulments.Response
+{
+    public class AnnulmentsQueryResponse : IMapFrom<IKSAnnulmentsQueryResponse>
+    {
+        public List<AnnulmentDto> Annulments { get; set; }  
+    }
+    public class AnnulmentDto : IMapFrom<AnnulmentsResponse>
+    {
+        public string AnnulmentId { get; set; }
+        public string GlobalMerchantId { get; set; }
+        public string Code { get; set; }
+        public string Date { get; set; }
+        public string ActivityType { get; set; }
+        public string InformType { get; set; }
+        public string OwnerIdentityNo { get; set; }
+        public string CreateDate { get; set; }
+        public string UpdateDate { get; set; }
+        public bool OwnAnnulment { get; set; }
+        public string TaxNo { get; set; }
+        public string AnnulmentCodeDescription { get; set; }
+        public string OwnAnnulmentDescription { get; set; }
+    }
+}

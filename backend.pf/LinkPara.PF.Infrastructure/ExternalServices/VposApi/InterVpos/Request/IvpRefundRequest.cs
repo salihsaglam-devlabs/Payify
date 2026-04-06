@@ -1,0 +1,35 @@
+using System.Text;
+
+namespace LinkPara.PF.Infrastructure.ExternalServices.VposApi.InterVpos.Request;
+
+public class IvpRefundRequest : IvpRequestBase
+{
+    public string OrderId { get; set; }
+    public string OrgOrderId { get; set; }
+    public int Currency { get; set; }
+    public string PurcAmount { get; set; }
+    public int Moto { get; set; } = 0;
+    public int CardType { get; set; }
+    public string SubMerchantCode { get; set; }
+
+    public string BuildRequest()
+    {
+        var formBuilder = new StringBuilder();
+
+        formBuilder.AppendFormat("ShopCode={0}&", ShopCode);
+        formBuilder.AppendFormat("Currency={0}&", Currency);
+        formBuilder.AppendFormat("TxnType={0}&", TxnType);
+        formBuilder.AppendFormat("OrderId={0}&", OrderId);
+        formBuilder.AppendFormat("orgOrderId={0}&", OrgOrderId);
+        formBuilder.AppendFormat("UserCode={0}&", UserCode);
+        formBuilder.AppendFormat("UserPass={0}&", UserPass);
+        formBuilder.AppendFormat("SecureType={0}&", SecureType);
+        formBuilder.AppendFormat("MOTO={0}&", Moto);
+        formBuilder.AppendFormat("PurchAmount={0}&", PurcAmount);
+        formBuilder.AppendFormat("CardType={0}&", CardType);
+        formBuilder.AppendFormat("Lang={0}&", Lang.ToUpper());
+        formBuilder.AppendFormat("SubMerchantCode={0}&", SubMerchantCode);
+
+        return formBuilder.ToString();
+    }
+}

@@ -1,0 +1,109 @@
+IF NOT EXISTS (
+    SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS
+    WHERE TABLE_SCHEMA = 'Core'
+      AND TABLE_NAME = 'Payment'
+      AND COLUMN_NAME = 'BankCommissionAmount'
+)
+BEGIN
+ALTER TABLE Core.Payment
+    ADD BankCommissionAmount DECIMAL(18,4) NOT NULL
+    CONSTRAINT DF_Payment_BankCommissionAmount DEFAULT (0.0);
+END;
+GO
+
+
+IF NOT EXISTS (
+    SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS
+    WHERE TABLE_SCHEMA = 'Core'
+      AND TABLE_NAME = 'Payment'
+      AND COLUMN_NAME = 'ChargebackAmount'
+)
+BEGIN
+ALTER TABLE Core.Payment
+    ADD ChargebackAmount DECIMAL(18,4) NOT NULL
+    CONSTRAINT DF_Payment_ChargebackAmount DEFAULT (0.0);
+END;
+GO
+
+
+IF NOT EXISTS (
+    SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS
+    WHERE TABLE_SCHEMA = 'Core'
+      AND TABLE_NAME = 'Payment'
+      AND COLUMN_NAME = 'ChargebackReturnAmount'
+)
+BEGIN
+ALTER TABLE Core.Payment
+    ADD ChargebackReturnAmount DECIMAL(18,4) NOT NULL
+    CONSTRAINT DF_Payment_ChargebackReturnAmount DEFAULT (0.0);
+END;
+GO
+
+
+IF NOT EXISTS (
+    SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS
+    WHERE TABLE_SCHEMA = 'Core'
+      AND TABLE_NAME = 'Payment'
+      AND COLUMN_NAME = 'DueAmount'
+)
+BEGIN
+ALTER TABLE Core.Payment
+    ADD DueAmount DECIMAL(18,4) NOT NULL
+    CONSTRAINT DF_Payment_DueAmount DEFAULT (0.0);
+END;
+GO
+
+
+IF NOT EXISTS (
+    SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS
+    WHERE TABLE_SCHEMA = 'Core'
+      AND TABLE_NAME = 'Payment'
+      AND COLUMN_NAME = 'ReturnAmount'
+)
+BEGIN
+ALTER TABLE Core.Payment
+    ADD ReturnAmount DECIMAL(18,4) NOT NULL
+    CONSTRAINT DF_Payment_ReturnAmount DEFAULT (0.0);
+END;
+GO
+
+
+IF NOT EXISTS (
+    SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS
+    WHERE TABLE_SCHEMA = 'Core'
+      AND TABLE_NAME = 'Payment'
+      AND COLUMN_NAME = 'SuspiciousAmount'
+)
+BEGIN
+ALTER TABLE Core.Payment
+    ADD SuspiciousAmount DECIMAL(18,4) NOT NULL
+    CONSTRAINT DF_Payment_SuspiciousAmount DEFAULT (0.0);
+END;
+GO
+
+
+IF NOT EXISTS (
+    SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS
+    WHERE TABLE_SCHEMA = 'Core'
+      AND TABLE_NAME = 'Payment'
+      AND COLUMN_NAME = 'SuspiciousReturnAmount'
+)
+BEGIN
+ALTER TABLE Core.Payment
+    ADD SuspiciousReturnAmount DECIMAL(18,4) NOT NULL
+    CONSTRAINT DF_Payment_SuspiciousReturnAmount DEFAULT (0.0);
+END;
+GO
+
+IF NOT EXISTS (
+    SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS
+    WHERE TABLE_SCHEMA = 'Core'
+      AND TABLE_NAME = 'BankAccount'
+      AND COLUMN_NAME = 'AccountTag'
+)
+BEGIN
+ALTER TABLE Core.BankAccount
+    ADD AccountTag VARCHAR(350) NOT NULL
+    CONSTRAINT DF_BankAccount_AccountTag DEFAULT ('{{BankAccountNumber}}');
+END;
+GO

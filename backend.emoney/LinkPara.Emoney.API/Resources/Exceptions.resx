@@ -1,0 +1,330 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <!-- 
+    Microsoft ResX Schema 
+    
+    Version 2.0
+    
+    The primary goals of this format is to allow a simple XML format 
+    that is mostly human readable. The generation and parsing of the 
+    various data types are done through the TypeConverter classes 
+    associated with the data types.
+    
+    Example:
+    
+    ... ado.net/XML headers & schema ...
+    <resheader name="resmimetype">text/microsoft-resx</resheader>
+    <resheader name="version">2.0</resheader>
+    <resheader name="reader">System.Resources.ResXResourceReader, System.Windows.Forms, ...</resheader>
+    <resheader name="writer">System.Resources.ResXResourceWriter, System.Windows.Forms, ...</resheader>
+    <data name="Name1"><value>this is my long string</value><comment>this is a comment</comment></data>
+    <data name="Color1" type="System.Drawing.Color, System.Drawing">Blue</data>
+    <data name="Bitmap1" mimetype="application/x-microsoft.net.object.binary.base64">
+        <value>[base64 mime encoded serialized .NET Framework object]</value>
+    </data>
+    <data name="Icon1" type="System.Drawing.Icon, System.Drawing" mimetype="application/x-microsoft.net.object.bytearray.base64">
+        <value>[base64 mime encoded string representing a byte array form of the .NET Framework object]</value>
+        <comment>This is a comment</comment>
+    </data>
+                
+    There are any number of "resheader" rows that contain simple 
+    name/value pairs.
+    
+    Each data row contains a name, and value. The row also contains a 
+    type or mimetype. Type corresponds to a .NET class that support 
+    text/value conversion through the TypeConverter architecture. 
+    Classes that don't support this are serialized and stored with the 
+    mimetype set.
+    
+    The mimetype is used for serialized objects, and tells the 
+    ResXResourceReader how to depersist the object. This is currently not 
+    extensible. For a given mimetype the value must be set accordingly:
+    
+    Note - application/x-microsoft.net.object.binary.base64 is the format 
+    that the ResXResourceWriter will generate, however the reader can 
+    read any of the formats listed below.
+    
+    mimetype: application/x-microsoft.net.object.binary.base64
+    value   : The object must be serialized with 
+            : System.Runtime.Serialization.Formatters.Binary.BinaryFormatter
+            : and then encoded with base64 encoding.
+    
+    mimetype: application/x-microsoft.net.object.soap.base64
+    value   : The object must be serialized with 
+            : System.Runtime.Serialization.Formatters.Soap.SoapFormatter
+            : and then encoded with base64 encoding.
+
+    mimetype: application/x-microsoft.net.object.bytearray.base64
+    value   : The object must be serialized into a byte array 
+            : using a System.ComponentModel.TypeConverter
+            : and then encoded with base64 encoding.
+    -->
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="metadata">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" />
+              </xsd:sequence>
+              <xsd:attribute name="name" use="required" type="xsd:string" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="assembly">
+            <xsd:complexType>
+              <xsd:attribute name="alias" type="xsd:string" />
+              <xsd:attribute name="name" type="xsd:string" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1" />
+              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
+              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="BankApiAlreadyExists" xml:space="preserve">
+    <value>Bank Api already exists !</value>
+  </data>
+  <data name="CurrencyCodeMismatchException" xml:space="preserve">
+    <value>Currency code mismatch !</value>
+  </data>
+  <data name="DateIsNotWorkDayException" xml:space="preserve">
+    <value>Date is not work day !</value>
+  </data>
+  <data name="InsufficientBalanceException" xml:space="preserve">
+    <value>Insufficient balance !</value>
+  </data>
+  <data name="InvalidIbanException" xml:space="preserve">
+    <value>Invalid IBAN number !</value>
+  </data>
+  <data name="InvalidTierLevelException" xml:space="preserve">
+    <value>Invalid tier level!</value>
+  </data>
+  <data name="InvalidTransactionStatusException" xml:space="preserve">
+    <value>Invalid transaction !</value>
+  </data>
+  <data name="InvalidWalletStatusException" xml:space="preserve">
+    <value>Invalid wallet !</value>
+  </data>
+  <data name="LimitExceededException" xml:space="preserve">
+    <value>Limit exceeded !</value>
+  </data>
+  <data name="MainWalletAlreadyExistsException" xml:space="preserve">
+    <value>Main wallet already exists !</value>
+  </data>
+  <data name="MaxWalletLimitExceededException" xml:space="preserve">
+    <value>Max wallet limit exceeded !</value>
+  </data>
+  <data name="MoneyTransferOutsideEftHoursException" xml:space="preserve">
+    <value>Money transfer outside eft hours !</value>
+  </data>
+  <data name="DuplicateRecordException" xml:space="preserve">
+    <value>Record exists !</value>
+  </data>
+  <data name="WalletHasBalanceException" xml:space="preserve">
+    <value>Wallet Has Balance</value>
+  </data>
+  <data name="WalletBlockedException" xml:space="preserve">
+    <value>Wallet blocked !</value>
+  </data>
+  <data name="ProfileIsPassiveException" xml:space="preserve">
+    <value>Profile is passive !</value>
+  </data>
+  <data name="InvalidProfileItemException" xml:space="preserve">
+    <value>Invalid Profile Item !</value>
+  </data>
+  <data name="AmountIntervalIsAlreadyInUseException" xml:space="preserve">
+    <value>Amount Interval Is Already InUse!</value>
+  </data>
+  <data name="DuplicateWalletException" xml:space="preserve">
+    <value>Duplicate Wallet!</value>
+  </data>
+  <data name="PotentialFraudException" xml:space="preserve">
+    <value>We are unable to process your transaction at the moment. For information, please send an e-mail to @@informationMail.</value>
+  </data>
+  <data name="InvalidActivationDateException" xml:space="preserve">
+    <value>Invalid Activation Date !</value>
+  </data>
+  <data name="AmountCanNotBeEmptyException" xml:space="preserve">
+    <value>Amount can not be Empty !</value>
+  </data>
+  <data name="InvalidAmountException" xml:space="preserve">
+    <value>Invalid Amount !</value>
+  </data>
+  <data name="GreaterThanProvisionAmountException" xml:space="preserve">
+    <value>Request amount is not greater than provision amount !</value>
+  </data>
+  <data name="InitiateWithdrawException" xml:space="preserve">
+    <value>Error occurred during withdrawal request !</value>
+  </data>
+  <data name="AlreadyInUseEmailException" xml:space="preserve">
+    <value>Email is already in use !</value>
+  </data>
+  <data name="CommercialPricingStatusInvalid" xml:space="preserve">
+    <value>Commercial pricing record is invalid!</value>
+  </data>
+  <data name="InvalidDateRange" xml:space="preserve">
+    <value>Date range cannot be greater than 3 months!</value>
+  </data>
+  <data name="CommercialPricingStatusInvalidException" xml:space="preserve">
+    <value>Only Active and Waiting records can be operated.</value>
+  </data>
+  <data name="InternalTransferLimitExceededException" xml:space="preserve">
+    <value>Sender Transfer Limit Exceeded !</value>
+  </data>
+  <data name="DepositLimitExceededException" xml:space="preserve">
+    <value>Deposit limit exceeded !</value>
+  </data>
+  <data name="WithdrawalLimitExceededException" xml:space="preserve">
+    <value>Withdraw limit exceeded !</value>
+  </data>
+  <data name="InternationalTransferLimitExceededException" xml:space="preserve">
+    <value>International transfer limit exceeded !</value>
+  </data>
+  <data name="MaxBalanceLimitExceededException" xml:space="preserve">
+    <value>Receiver Max balance limit exceeded !</value>
+  </data>
+  <data name="WithdrawIbanLimitExceededException" xml:space="preserve">
+    <value>Withdraw to IBAN limit exceeded !</value>
+  </data>
+  <data name="InvalidTierPermissionException" xml:space="preserve">
+    <value>Account tier is not permitted for this operation !</value>
+  </data>
+  <data name="BirthdateOutOfRange" xml:space="preserve">
+    <value>Users under @@minAge are not allowed !</value>
+  </data>
+  <data name="UserInBlacklistException" xml:space="preserve">
+    <value>We cannot process your request right now. For information, please send an e-mail to @@informationMail.</value>
+  </data>
+  <data name="InvalidKycLevelException" xml:space="preserve">
+    <value>Invalid Customer Level !</value>
+  </data>
+  <data name="KPSValidationFailedException" xml:space="preserve">
+    <value>Identity validation failed !</value>
+  </data>
+  <data name="KPSInformationsNotMatchException" xml:space="preserve">
+    <value>Identity information not matched !</value>
+  </data>
+  <data name="InvalidTagLengthException" xml:space="preserve">
+    <value>Tag must be between 3 and 20 characters long !</value>
+  </data>
+  <data name="AlreadyInUsePhoneNumberException" xml:space="preserve">
+    <value>Phone Number is already in use !</value>
+  </data>
+  <data name="ParentAccountNotRelativeWithWallet" xml:space="preserve">
+    <value>ParentAccount is not relative with this Wallet !</value>
+  </data>
+  <data name="SameAccountInsufficientBalanceException" xml:space="preserve">
+    <value>Same acccount insufficient balance !</value>
+  </data>
+  <data name="IbanBlacklistedException" xml:space="preserve">
+    <value>Transfer cannot be made to the entered IBAN !</value>
+  </data>
+  <data name="RequiredDocumentTypeException" xml:space="preserve">
+    <value>This document is required ! Document Name : {0}</value>
+  </data>
+  <data name="AlreadyProcessedException" xml:space="preserve">
+    <value>Already Processed !</value>
+  </data>
+  <data name="CreaterAndApproverAreSameException" xml:space="preserve">
+    <value>creater and approver are same !</value>
+  </data>
+  <data name="DuplicateBulkTransferDetailException" xml:space="preserve">
+    <value>Duplicate Bulk Transfer Detail Found !</value>
+  </data>
+  <data name="AccountLimitInsufficientException" xml:space="preserve">
+    <value>Insufficient account limit !</value>
+  </data>
+  <data name="DuplicateDocumentException" xml:space="preserve">
+    <value>Duplicate Document Found !</value>
+  </data>
+  <data name="InvalidReceiverNameException" xml:space="preserve">
+    <value>Invalid Receiver Name !</value>
+  </data>
+  <data name="ForbiddenAccessException" xml:space="preserve">
+    <value>Forbiden Access !</value>
+  </data>
+  <data name="UnknownException" xml:space="preserve">
+    <value>Unknown Error !</value>
+  </data>
+  <data name="MasterpassUnauthorizedAccessException" xml:space="preserve">
+    <value>Unauthorized access to Masterpass. Invalid or missing token !</value>
+  </data>
+  <data name="CustomizedWalletNotFoundException" xml:space="preserve">
+    <value>User not found</value>
+  </data>
+  <data name="AmountDigitException" xml:space="preserve">
+    <value>The amount can be up to 2 digits after the decimal point!</value>
+  </data>
+  <data name="MainWalletHasAsset" xml:space="preserve">
+    <value />
+  </data>
+  <data name="ProfileIsPassive" xml:space="preserve">
+    <value />
+  </data>
+  <data name="WalletHasPendingApprovalRequest" xml:space="preserve">
+    <value>Wallet Has Pending ApprovalRequest</value>
+  </data>
+  <data name="AddBlockage" xml:space="preserve">
+    <value>Add Blockage</value>
+  </data>
+  <data name="RemoveBlockage" xml:space="preserve">
+    <value>Remove Blockage</value>
+  </data>
+  <data name="OperationType" xml:space="preserve">
+    <value>Operation Type</value>
+  </data>
+  <data name="WalletBlockageAmountIsGreaterThanAvailabeBalance" xml:space="preserve">
+    <value>WalletBlockageAmount is greater than availabe balance</value>
+  </data>
+  <data name="DescriptionLengthException" xml:space="preserve">
+    <value>Description Length Is Short</value>
+  </data>
+  <data name="PermissionDeniedExeption" xml:space="preserve">
+    <value>Permission Denied</value>
+  </data>
+  <data name="ReturnAmountExceededException" xml:space="preserve">
+    <value>The return amount cannot exceed the amount of the previous transaction!</value>
+  </data>
+	<data name="MaxDocumentLimitExceededException" xml:space="preserve">
+    <value>Max Document limit exceeded !</value>
+  </data>
+	<data name="MaxDocumentSizeExceededException" xml:space="preserve">
+    <value>Max Document Size limit exceeded !</value>
+  </data>
+</root>

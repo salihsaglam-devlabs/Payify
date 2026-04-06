@@ -1,0 +1,15 @@
+using Microsoft.Extensions.Diagnostics.HealthChecks;
+
+namespace LinkPara.HealthCheck.HttpCheck;
+
+public class PFApiCheck : CheckBase, IHealthCheck
+{
+    public PFApiCheck(string baseUrl) : base(baseUrl)
+    {
+    }
+
+    public async Task<HealthCheckResult> CheckHealthAsync(HealthCheckContext context, CancellationToken cancellationToken = default)
+    {
+        return await SendRequestAsync($"v1/Banks/", cancellationToken);
+    }
+}

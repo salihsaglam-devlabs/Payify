@@ -1,0 +1,35 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>net8.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>disable</Nullable>
+        <LangVersion>12</LangVersion>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <PackageReference Include="FluentValidation.DependencyInjectionExtensions" Version="12.0.0" />
+      <PackageReference Include="LinkPara.Audit" Version="2.0.0" />
+      <PackageReference Include="LinkPara.ContextProvider" Version="2.0.0" />
+      <PackageReference Include="LinkPara.HttpProviders" Version="2.0.0" />
+      <PackageReference Include="LinkPara.MappingExtensions" Version="2.0.0" />
+      <PackageReference Include="LinkPara.SharedModels" Version="2.0.0" />
+      <PackageReference Include="LinkPara.SystemUser" Version="2.0.0" />
+      <PackageReference Include="LinkPara.Security" Version="2.0.0" />
+      <PackageReference Include="MediatR.Extensions.Microsoft.DependencyInjection" Version="11.1.0" />
+      <PackageReference Include="Microsoft.AspNetCore.Diagnostics.EntityFrameworkCore" Version="8.0.16" />
+      <PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="9.0.5" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\LinkPara.Emoney.Domain\LinkPara.Emoney.Domain.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <Folder Include="Features\AccountUsers\Queries\GetAccountUserListQuery\" />
+      <Folder Include="Features\Currencies\Commands\" />
+      <Folder Include="Features\Transactions\Commands" />
+      <Folder Include="Features\Wallets\EventHandlers\" />
+    </ItemGroup>
+
+</Project>

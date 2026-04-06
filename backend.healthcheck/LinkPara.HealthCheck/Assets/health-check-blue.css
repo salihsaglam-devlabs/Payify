@@ -1,0 +1,8 @@
+﻿:root {
+    --primaryColor: #303e49;
+    --secondaryColor: #f4f4f4;
+    --bgMenuActive: #0073bb;
+    --bgButton: #007eb9;
+    --logoImageUrl: url(https://media-exp1.licdn.com/dms/image/C4D0BAQFYewTq6i1X8A/company-logo_200_200/0/1620031837123?e=2159024400&v=beta&t=FtTi1O-Tbl9j4axVTXvsGCRd5PIzhTCejX2kZbdPDk4);
+    --bgAside: var(--primaryColor);
+}

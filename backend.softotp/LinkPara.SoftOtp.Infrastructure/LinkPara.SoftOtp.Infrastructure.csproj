@@ -1,0 +1,81 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<TargetFramework>net8.0</TargetFramework>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Nullable>disable</Nullable>
+		<LangVersion>12</LangVersion>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<Compile Remove="DataSeeder.cs" />
+		<Compile Remove="Persistence\DbMigrationBase.cs" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<None Remove="Persistence\DataBaseResources\City.min.json" />
+		<None Remove="Persistence\DataBaseResources\Country.min.json" />
+		<None Remove="Persistence\DataBaseResources\District.min.json" />
+		<None Remove="Persistence\DataBaseResources\District2.min.json" />
+		<None Remove="Persistence\DataBaseResources\District3.min.json" />
+		<None Remove="Persistence\DataBaseResources\District4.min.json" />
+		<None Remove="Persistence\DataBaseResources\InitilizingBaseData.sql" />
+		<None Remove="Persistence\SqlMigrations\V1_0_1__TestAlterMigration.sql" />
+		<None Remove="Persistence\SqlMigrations\V1_0_2__MultipleFirst.sql" />
+		<None Remove="Persistence\SqlMigrations\V1_0_3__MultipleSecondWithError.sql" />
+		<None Remove="Persistence\SqlMigrations\V1_0_4__AddedPriority.sql" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<PackageReference Include="BouncyCastle.Cryptography" Version="2.6.1" />
+		<PackageReference Include="EFCore.NamingConventions" Version="9.0.0" />
+		<PackageReference Include="Elastic.Apm.NetCoreAll" Version="1.31.0" />
+		<PackageReference Include="Evolve" Version="3.2.0" />
+		<PackageReference Include="LinkPara.ContextProvider" Version="2.0.0" />
+		<PackageReference Include="LinkPara.HttpProviders" Version="2.0.0" />
+		<PackageReference Include="LinkPara.MappingExtensions" Version="2.0.0" />
+		<PackageReference Include="LinkPara.SharedModels" Version="2.0.0" />
+		<PackageReference Include="LinkPara.SystemUser" Version="2.0.0" />
+		<PackageReference Include="MassTransit.Extensions.DependencyInjection" Version="7.3.1" />
+		<PackageReference Include="MassTransit.RabbitMQ" Version="8.4.1" />
+		<PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.16" />
+		<PackageReference Include="Microsoft.AspNetCore.Identity" Version="2.3.1" />
+		<PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="8.0.16" />
+		<PackageReference Include="Microsoft.Data.SqlClient" Version="6.0.2" />
+		<PackageReference Include="Microsoft.EntityFrameworkCore" Version="9.0.5" />
+		<PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="9.0.5">
+		  <PrivateAssets>all</PrivateAssets>
+		  <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+		</PackageReference>
+		<PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" Version="9.0.5" />
+		<PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="9.0.5" />
+		<PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="9.0.5">
+			<PrivateAssets>all</PrivateAssets>
+			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+		</PackageReference>
+		<PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="9.0.5" />
+		<PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="9.0.4" />
+		<PackageReference Include="System.Resources.ResourceManager" Version="4.3.0" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\LinkPara.SoftOtp.Application\LinkPara.SoftOtp.Application.csproj" />
+		<ProjectReference Include="..\LinkPara.SoftOtp.Domain\LinkPara.SoftOtp.Domain.csproj" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<Folder Include="Persistence\Configuration\" />
+		<Folder Include="Persistence\DataBaseResources\" />
+		<Folder Include="Persistence\Migrations\MsSql\" />
+		<Folder Include="Persistence\Migrations\PostgreSql\" />
+		<Folder Include="Persistence\SqlMigrations\MsSql\" />
+		<Folder Include="Persistence\SqlMigrations\PostgreSql\" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<Content Include="Persistence\SqlMigrations\**\*.sql">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+	</ItemGroup>
+
+</Project>

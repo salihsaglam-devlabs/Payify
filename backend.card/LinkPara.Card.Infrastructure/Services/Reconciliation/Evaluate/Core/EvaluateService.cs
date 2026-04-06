@@ -1,0 +1,654 @@
+using System.Text.Json;
+using System.Data;
+using LinkPara.Card.Application.Commons.Helpers.Reconciliation;
+using LinkPara.Card.Application.Commons.Models.Reconciliation;
+using LinkPara.Card.Domain.Entities.FileIngestion;
+using LinkPara.Card.Domain.Entities.Reconciliation;
+using LinkPara.Card.Domain.Enums.FileIngestion;
+using LinkPara.Card.Domain.Enums.Reconciliation;
+using LinkPara.Card.Infrastructure.Persistence;
+using LinkPara.Card.Infrastructure.Services.Audit;
+using LinkPara.SharedModels.Persistence;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
+
+namespace LinkPara.Card.Infrastructure.Services.Reconciliation.Evaluate;
+
+internal sealed class EvaluateService : IEvaluateService
+{
+    private readonly CardDbContext _dbContext;
+    private readonly IContextBuilder _contextBuilder;
+    private readonly EvaluatorResolver _evaluatorResolver;
+    private readonly IAuditStampService _auditStampService;
+    private readonly ReconciliationOptions _options = new();
+
+    public EvaluateService(
+        CardDbContext dbContext,
+        IContextBuilder contextBuilder,
+        EvaluatorResolver evaluatorResolver,
+        IAuditStampService auditStampService,
+        IOptions<ReconciliationOptions> options)
+    {
+        _dbContext = dbContext;
+        _contextBuilder = contextBuilder;
+        _evaluatorResolver = evaluatorResolver;
+        _auditStampService = auditStampService;
+        _options = options.Value;
+    }
+
+    public async Task<EvaluateResponse> EvaluateAsync(
+        EvaluateRequest request,
+        List<ReconciliationErrorDetail>? errors = null,
+        CancellationToken cancellationToken = default)
+    {
+        errors ??= new List<ReconciliationErrorDetail>();
+        var runId = Guid.NewGuid();
+        var groupId = runId;
+        var chunkSize = ResolveChunkSize(request);
+        var createdOperationCount = 0;
+        var skippedCount = 0;
+        var fileIds = await ResolveTargetFileIdsAsync(request, cancellationToken);
+
+        foreach (var fileId in fileIds)
+        {
+            while (true)
+            {
+                var rows = await ClaimReadyChunkAsync(fileId, chunkSize, cancellationToken);
+                if (rows.Count == 0)
+                {
+                    break;
+                }
+
+                IReadOnlyDictionary<Guid, EvaluationContext> contextMap;
+                try
+                {
+                    contextMap = await _contextBuilder.BuildManyAsync(rows, errors, cancellationToken);
+                }
+                catch (Exception ex)
+                {
+                    await MarkChunkFailedAsync(rows, ex, errors, groupId, cancellationToken);
+                    continue;
+                }
+
+                var successfulEvaluations = new List<SuccessfulEvaluationPersistence>();
+
+                foreach (var row in rows)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+
+                    try
+                    {
+                        if (!contextMap.TryGetValue(row.Id, out var context))
+                        {
+                            throw new InvalidOperationException($"Evaluation context could not be built for row '{row.Id}'.");
+                        }
+
+                        var evaluator = _evaluatorResolver.Resolve(context.RootFile.ContentType);
+                        var result = await evaluator.EvaluateAsync(context, cancellationToken);
+
+                        successfulEvaluations.Add(new SuccessfulEvaluationPersistence(row, result));
+                    }
+                    catch (Exception ex)
+                    {
+                        errors.Add(ReconciliationErrorMapper.MapException(
+                            ex,
+                            "EVALUATION_ROW",
+                            fileLineId: row.Id,
+                            message: $"Reconciliation evaluation failed for file line '{row.Id}'."));
+                        await CreateFailedEvaluationAsync(row.Id, ex.Message, groupId, cancellationToken);
+                        await MarkRowAsync(row.Id, ReconciliationStatus.Failed, ex.Message, cancellationToken);
+                        skippedCount++;
+                    }
+                }
+
+                createdOperationCount += await PersistSuccessfulEvaluationsAsync(
+                    successfulEvaluations,
+                    groupId,
+                    errors,
+                    cancellationToken);
+            }
+        }
+
+        return CreateResponse(runId, fileIds.Length, createdOperationCount, skippedCount, errors);
+    }
+
+    private async Task<Guid[]> ResolveTargetFileIdsAsync(EvaluateRequest request, CancellationToken cancellationToken)
+    {
+        var requested = request.IngestionFileIds?.Where(x => x != Guid.Empty).Distinct().ToArray() ?? [];
+        if (requested.Length > 0)
+        {
+            return requested;
+        }
+
+        return await _dbContext.IngestionFileLines
+            .AsNoTracking()
+            .Where(x => x.ReconciliationStatus == ReconciliationStatus.Ready)
+            .Select(x => x.IngestionFileId)
+            .Distinct()
+            .ToArrayAsync(cancellationToken);
+    }
+
+    private async Task<List<IngestionFileLine>> ClaimReadyChunkAsync(
+        Guid transactionFileId,
+        int chunkSize,
+        CancellationToken cancellationToken)
+    {
+        var maxAttempts = Math.Max(1, _options.Evaluate.ClaimRetryCount);
+
+        for (var attempt = 0; attempt < maxAttempts; attempt++)
+        {
+            try
+            {
+                return await ClaimReadyChunkCoreAsync(transactionFileId, chunkSize, cancellationToken);
+            }
+            catch (DbUpdateException) when (attempt < maxAttempts - 1)
+            {
+            }
+            catch (InvalidOperationException) when (attempt < maxAttempts - 1)
+            {
+            }
+        }
+
+        return await ClaimReadyChunkCoreAsync(transactionFileId, chunkSize, cancellationToken);
+    }
+
+    private async Task<List<IngestionFileLine>> ClaimReadyChunkCoreAsync(
+        Guid transactionFileId,
+        int chunkSize,
+        CancellationToken cancellationToken)
+    {
+        var auditStamp = _auditStampService.CreateStamp();
+        var claimMarker = $"EVAL_CLAIM:{Guid.NewGuid():N}";
+        var claimTimeout = TimeSpan.FromSeconds(Math.Max(30, _options.Evaluate.ClaimTimeoutSeconds));
+        var staleCutoff = auditStamp.Timestamp.Add(-claimTimeout);
+
+        var strategy = _dbContext.Database.CreateExecutionStrategy();
+        return await strategy.ExecuteAsync(async () =>
+        {
+            await using var transaction = await _dbContext.Database.BeginTransactionAsync(IsolationLevel.Serializable, cancellationToken);
+
+            var candidateIds = await _dbContext.IngestionFileLines
+                .AsNoTracking()
+                .Where(x => x.IngestionFileId == transactionFileId)
+                .Where(x => x.RecordType == "D")
+                .Where(x =>
+                    x.ReconciliationStatus == ReconciliationStatus.Ready ||
+                    (x.ReconciliationStatus == ReconciliationStatus.Processing &&
+                     x.UpdateDate.HasValue &&
+                     x.UpdateDate.Value <= staleCutoff))
+                .OrderBy(x => x.LineNumber)
+                .ThenBy(x => x.Id)
+                .Select(x => x.Id)
+                .Take(chunkSize)
+                .ToListAsync(cancellationToken);
+
+            if (candidateIds.Count == 0)
+            {
+                await transaction.CommitAsync(cancellationToken);
+                return [];
+            }
+
+            var claimedCount = await _dbContext.IngestionFileLines
+                .Where(x => candidateIds.Contains(x.Id))
+                .Where(x =>
+                    x.ReconciliationStatus == ReconciliationStatus.Ready ||
+                    (x.ReconciliationStatus == ReconciliationStatus.Processing &&
+                     x.UpdateDate.HasValue &&
+                     x.UpdateDate.Value <= staleCutoff))
+                .ExecuteUpdateAsync(update => update
+                    .SetProperty(x => x.ReconciliationStatus, ReconciliationStatus.Processing)
+                    .SetProperty(x => x.Message, claimMarker)
+                    .SetProperty(x => x.UpdateDate, auditStamp.Timestamp)
+                    .SetProperty(x => x.LastModifiedBy, auditStamp.UserId),
+                    cancellationToken);
+
+            if (claimedCount == 0)
+            {
+                await transaction.CommitAsync(cancellationToken);
+                return [];
+            }
+
+            var rows = await _dbContext.IngestionFileLines
+                .AsNoTracking()
+                .Include(x => x.IngestionFile)
+                .Where(x => candidateIds.Contains(x.Id))
+                .Where(x => x.ReconciliationStatus == ReconciliationStatus.Processing && x.Message == claimMarker)
+                .OrderBy(x => x.LineNumber)
+                .ThenBy(x => x.Id)
+                .ToListAsync(cancellationToken);
+
+            await transaction.CommitAsync(cancellationToken);
+            return rows;
+        });
+    }
+
+    private async Task<int> PersistEvaluationAsync(
+        IngestionFileLine row,
+        EvaluationResult result,
+        Guid groupId,
+        CancellationToken cancellationToken)
+    {
+        var orderedOperations = result.Operations.OrderBy(x => x.Order).ToList();
+        var evaluation = new ReconciliationEvaluation
+        {
+            Id = Guid.NewGuid(),
+            FileLineId = row.Id,
+            GroupId = groupId,
+            Status = EvaluationStatus.Completed,
+            Message = result.Note,
+            CreatedOperationCount = orderedOperations.Count
+        };
+        
+        var operations = BuildOperations(row.Id, evaluation.Id, groupId, orderedOperations);
+
+        var reviews = BuildReviews(operations, orderedOperations, row.Id, evaluation.Id, groupId);
+        _auditStampService.StampForCreate(evaluation);
+        _auditStampService.StampForCreate(operations.Cast<AuditEntity>());
+        _auditStampService.StampForCreate(reviews.Cast<AuditEntity>());
+
+        await ExecuteInTransactionAsync(async () =>
+        {
+            await _dbContext.ReconciliationEvaluations.AddAsync(evaluation, cancellationToken);
+            if (operations.Count > 0)
+            {
+                await _dbContext.ReconciliationOperations.AddRangeAsync(operations, cancellationToken);
+            }
+
+            if (reviews.Count > 0)
+            {
+                await _dbContext.ReconciliationReviews.AddRangeAsync(reviews, cancellationToken);
+            }
+
+            await _dbContext.SaveChangesAsync(cancellationToken);
+        }, cancellationToken);
+
+        return operations.Count;
+    }
+
+    private async Task<int> PersistSuccessfulEvaluationsAsync(
+        IReadOnlyList<SuccessfulEvaluationPersistence> items,
+        Guid groupId,
+        List<ReconciliationErrorDetail> errors,
+        CancellationToken cancellationToken)
+    {
+        if (items.Count == 0)
+        {
+            return 0;
+        }
+
+        try
+        {
+            var batch = items.Select(item => CreatePersistedEvaluation(item.Row, item.Result, groupId)).ToList();
+
+            await ExecuteInTransactionAsync(async () =>
+            {
+                await _dbContext.ReconciliationEvaluations.AddRangeAsync(batch.Select(x => x.Evaluation), cancellationToken);
+
+                var operations = batch.SelectMany(x => x.Operations).ToList();
+                if (operations.Count > 0)
+                {
+                    await _dbContext.ReconciliationOperations.AddRangeAsync(operations, cancellationToken);
+                }
+
+                var reviews = batch.SelectMany(x => x.Reviews).ToList();
+                if (reviews.Count > 0)
+                {
+                    await _dbContext.ReconciliationReviews.AddRangeAsync(reviews, cancellationToken);
+                }
+
+                await _dbContext.SaveChangesAsync(cancellationToken);
+            }, cancellationToken);
+
+            foreach (var item in items)
+            {
+                await MarkRowAsync(item.Row.Id, ReconciliationStatus.Success, item.Result.Note, cancellationToken);
+            }
+
+            return batch.Sum(x => x.Operations.Count);
+        }
+        catch
+        {
+            var createdOperationCount = 0;
+            foreach (var item in items)
+            {
+                try
+                {
+                    createdOperationCount += await PersistEvaluationAsync(item.Row, item.Result, groupId, cancellationToken);
+                    await MarkRowAsync(item.Row.Id, ReconciliationStatus.Success, item.Result.Note, cancellationToken);
+                }
+                catch (Exception ex)
+                {
+                    errors.Add(ReconciliationErrorMapper.MapException(
+                        ex,
+                        "EVALUATION_ROW",
+                        fileLineId: item.Row.Id,
+                        message: $"Reconciliation evaluation failed for file line '{item.Row.Id}'."));
+                    await CreateFailedEvaluationAsync(item.Row.Id, ex.Message, groupId, cancellationToken);
+                    await MarkRowAsync(item.Row.Id, ReconciliationStatus.Failed, ex.Message, cancellationToken);
+                }
+            }
+
+            return createdOperationCount;
+        }
+    }
+
+    private PersistedEvaluation CreatePersistedEvaluation(
+        IngestionFileLine row,
+        EvaluationResult result,
+        Guid groupId)
+    {
+        var orderedOperations = result.Operations.OrderBy(x => x.Order).ToList();
+        var evaluation = new ReconciliationEvaluation
+        {
+            Id = Guid.NewGuid(),
+            FileLineId = row.Id,
+            GroupId = groupId,
+            Status = EvaluationStatus.Completed,
+            Message = result.Note,
+            CreatedOperationCount = orderedOperations.Count
+        };
+
+        var operations = BuildOperations(row.Id, evaluation.Id, groupId, orderedOperations);
+        var reviews = BuildReviews(operations, orderedOperations, row.Id, evaluation.Id, groupId);
+
+        _auditStampService.StampForCreate(evaluation);
+        _auditStampService.StampForCreate(operations.Cast<AuditEntity>());
+        _auditStampService.StampForCreate(reviews.Cast<AuditEntity>());
+
+        return new PersistedEvaluation(evaluation, operations, reviews);
+    }
+
+    private static List<ReconciliationReview> BuildReviews(
+        IReadOnlyList<ReconciliationOperation> operations,
+        IReadOnlyList<EvaluationOperation> orderedOperations,
+        Guid fileLineId,
+        Guid evaluationId,
+        Guid groupId)
+    {
+        return operations
+            .Where(x => x.IsManual)
+            .Select(x =>
+            {
+                var definition = orderedOperations[x.SequenceIndex];
+                return new ReconciliationReview
+                {
+                    Id = Guid.NewGuid(),
+                    FileLineId = fileLineId,
+                    GroupId = groupId,
+                    EvaluationId = evaluationId,
+                    OperationId = x.Id,
+                    Decision = ReviewDecision.Pending,
+                    ExpiresAt = ResolveReviewExpirationAt(definition),
+                    ExpirationAction = ResolveExpirationAction(definition),
+                    ExpirationFlowAction = ResolveExpirationFlowAction(definition)
+                };
+            })
+            .ToList();
+    }
+
+    private static List<ReconciliationOperation> BuildOperations(
+        Guid transactionFileDataId,
+        Guid evaluationId,
+        Guid groupId,
+        IReadOnlyList<EvaluationOperation> orderedOperations)
+    {
+        var operations = new List<ReconciliationOperation>();
+        foreach (var operation in orderedOperations)
+        {
+            var sequence = operations.Count;
+            var parentSequenceIndex = ResolveParentSequenceIndex(operation, operations);
+            var status = sequence == 0 ? OperationStatus.Planned : OperationStatus.Blocked;
+
+            operations.Add(new ReconciliationOperation
+            {
+                Id = Guid.NewGuid(),
+                FileLineId = transactionFileDataId,
+                EvaluationId = evaluationId,
+                GroupId = groupId,
+                SequenceIndex = sequence,
+                ParentSequenceIndex = parentSequenceIndex,
+                Code = operation.Code,
+                Note = operation.Note,
+                Payload = JsonSerializer.Serialize(operation.Payload),
+                IsManual = operation.IsManual,
+                Branch = operation.Branch,
+                Status = status,
+                RetryCount = 0,
+                MaxRetries = 5,
+                IdempotencyKey = ResolveIdempotencyKey(transactionFileDataId, sequence, operation)
+            });
+        }
+
+        return operations;
+    }
+    
+    private static List<ReconciliationReview> BuildReviews(
+        IReadOnlyList<ReconciliationOperation> operations,
+        IReadOnlyList<EvaluationOperation> orderedOperations)
+    {
+        return operations
+            .Where(x => x.IsManual)
+            .Select(x =>
+            {
+                var definition = orderedOperations[x.SequenceIndex];
+                return new ReconciliationReview
+                {
+                    Id = Guid.NewGuid(),
+                    OperationId = x.Id,
+                    Decision = ReviewDecision.Pending,
+                    ExpiresAt = ResolveReviewExpirationAt(definition),
+                    ExpirationAction = ResolveExpirationAction(definition),
+                    ExpirationFlowAction = ResolveExpirationFlowAction(definition)
+                };
+            })
+            .ToList();
+    }
+
+    private static string ResolveIdempotencyKey(
+        Guid fileLineId,
+        int sequenceIndex,
+        EvaluationOperation operation)
+    {
+        var prefix = $"{operation.Code}:{fileLineId:N}:{sequenceIndex}";
+        var correlationValue = GetPayloadValue(operation.Payload, operation.Code, "correlationValue");
+        if (!string.IsNullOrWhiteSpace(correlationValue))
+        {
+            var differenceAmount = GetPayloadValue(operation.Payload, operation.Code, "differenceAmount");
+            if (!string.IsNullOrWhiteSpace(differenceAmount))
+            {
+                return $"{prefix}:{correlationValue}:{differenceAmount}";
+            }
+
+            var originalTransactionId = GetPayloadValue(operation.Payload, operation.Code, "originalTransactionId");
+            if (!string.IsNullOrWhiteSpace(originalTransactionId))
+            {
+                return $"{prefix}:{originalTransactionId}";
+            }
+
+            return $"{prefix}:{correlationValue}:{operation.Branch}";
+        }
+
+        return $"{prefix}:{operation.Branch}";
+    }
+
+    private static int? ResolveParentSequenceIndex(
+        EvaluationOperation operation,
+        IReadOnlyList<ReconciliationOperation> operations)
+    {
+        if (operations.Count == 0)
+        {
+            return null;
+        }
+
+        if (operation.Branch is Branches.Approve or Branches.Reject)
+        {
+            return FindRequiredManualGateSequence(operations);
+        }
+
+        return operations[^1].SequenceIndex;
+    }
+
+    private static int FindRequiredManualGateSequence(IReadOnlyList<ReconciliationOperation> operations)
+    {
+        var manualGateSequence = operations.LastOrDefault(x => x.IsManual)?.SequenceIndex;
+        if (manualGateSequence.HasValue)
+        {
+            return manualGateSequence.Value;
+        }
+
+        throw new InvalidOperationException("Branch operations require a preceding manual gate operation.");
+    }
+
+    private static DateTime? ResolveReviewExpirationAt(EvaluationOperation operation)
+    {
+        return operation.ReviewTimeout.HasValue
+            ? DateTime.Now.Add(operation.ReviewTimeout.Value)
+            : null;
+    }
+
+    private static ReviewExpirationAction ResolveExpirationAction(EvaluationOperation operation)
+    {
+        return operation.ExpirationAction ?? ReviewExpirationAction.Cancel;
+    }
+
+    private static ReviewExpirationFlowAction ResolveExpirationFlowAction(EvaluationOperation operation)
+    {
+        return operation.ExpirationFlowAction ?? ReviewExpirationFlowAction.Continue;
+    }
+
+    private static string? GetPayloadValue(
+        Dictionary<string, List<OperationPayloadItem>> payload,
+        string group,
+        string key)
+    {
+        if (!payload.TryGetValue(group, out var items))
+        {
+            return null;
+        }
+
+        return items.FirstOrDefault(x => x.Key == key)?.Value;
+    }
+
+    private async Task CreateFailedEvaluationAsync(Guid rowId, string error, Guid groupId, CancellationToken cancellationToken)
+    {
+        var evaluation = new ReconciliationEvaluation
+        {
+            Id = Guid.NewGuid(),
+            GroupId = groupId,
+            FileLineId = rowId,
+            Status = EvaluationStatus.Failed,
+            Message = error,
+            CreatedOperationCount = 0
+        };
+
+        var alert = new ReconciliationAlert
+        {
+            Id = Guid.NewGuid(),
+            GroupId = groupId,
+            FileLineId = rowId,
+            EvaluationId = evaluation.Id,
+            OperationId = Guid.Empty,
+            Severity = "Error",
+            AlertType = "EvaluationFailed",
+            Message = error
+        };
+        _auditStampService.StampForCreate(new AuditEntity[] { evaluation, alert });
+        
+        await ExecuteInTransactionAsync(async () =>
+        {
+            await _dbContext.ReconciliationEvaluations.AddAsync(evaluation, cancellationToken);
+            await _dbContext.ReconciliationAlerts.AddAsync(alert, cancellationToken);
+            await _dbContext.SaveChangesAsync(cancellationToken);
+        }, cancellationToken);
+    }
+
+    private async Task MarkChunkFailedAsync(
+        IReadOnlyCollection<IngestionFileLine> rows,
+        Exception ex,
+        List<ReconciliationErrorDetail> errors,
+        Guid groupId,
+        CancellationToken cancellationToken)
+    {
+        foreach (var row in rows)
+        {
+            errors.Add(ReconciliationErrorMapper.MapException(
+                ex,
+                "EVALUATION_CHUNK",
+                fileLineId: row.Id,
+                message: $"Evaluation chunk preparation failed for file line '{row.Id}'."));
+
+            await CreateFailedEvaluationAsync(row.Id, ex.Message, groupId, cancellationToken);
+            await MarkRowAsync(row.Id, ReconciliationStatus.Failed, ex.Message, cancellationToken);
+        }
+    }
+
+    private async Task MarkRowAsync(
+        Guid rowId,
+        ReconciliationStatus status,
+        string? message,
+        CancellationToken cancellationToken)
+    {
+        var auditStamp = _auditStampService.CreateStamp();
+        await _dbContext.IngestionFileLines
+            .Where(x => x.Id == rowId)
+            .ExecuteUpdateAsync(update => update
+                .SetProperty(x => x.ReconciliationStatus, status)
+                .SetProperty(x => x.Message, message)
+                .SetProperty(x => x.UpdateDate, auditStamp.Timestamp)
+                .SetProperty(x => x.LastModifiedBy, auditStamp.UserId),
+                cancellationToken);
+    }
+
+    private int ResolveChunkSize(EvaluateRequest request)
+    {
+        return Math.Clamp(request.Options?.ChunkSize ?? _options.Evaluate.ChunkSize, 100, 10_000);
+    }
+
+    private static EvaluateResponse CreateResponse(
+        Guid runId,
+        int fileCount,
+        int createdOperationCount,
+        int skippedCount,
+        List<ReconciliationErrorDetail> errors)
+    {
+        return new EvaluateResponse
+        {
+            EvaluationRunId = runId,
+            CreatedOperationsCount = createdOperationCount,
+            SkippedCount = skippedCount,
+            Message = errors.Count == 0
+                ? $"Reconciliation evaluation completed for {fileCount} file(s)."
+                : $"Reconciliation evaluation completed with {errors.Count} error(s) for {fileCount} file(s).",
+            ErrorCount = errors.Count,
+            Errors = errors
+        };
+    }
+
+    private async Task ExecuteInTransactionAsync(
+        Func<Task> action,
+        CancellationToken cancellationToken)
+    {
+        var strategy = _dbContext.Database.CreateExecutionStrategy();
+        await strategy.ExecuteAsync(async () =>
+        {
+            await using var transaction = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
+            try
+            {
+                await action();
+                await transaction.CommitAsync(cancellationToken);
+            }
+            catch
+            {
+                await transaction.RollbackAsync(cancellationToken);
+                throw;
+            }
+        });
+    }
+
+    private sealed record SuccessfulEvaluationPersistence(IngestionFileLine Row, EvaluationResult Result);
+
+    private sealed record PersistedEvaluation(
+        ReconciliationEvaluation Evaluation,
+        List<ReconciliationOperation> Operations,
+        List<ReconciliationReview> Reviews);
+}
