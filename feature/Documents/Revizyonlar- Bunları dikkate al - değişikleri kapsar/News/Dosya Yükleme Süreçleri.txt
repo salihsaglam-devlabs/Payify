@@ -1,0 +1,72 @@
+DOSYA YÜKLEME YAPISI
+
+1. Card Transaction Dosyası
+
+Card Transaction datası aşağıdaki klasöre bırakılmaktadır:
+
+\turkonay\PROD\PTS2TURKONAY\PAYCORE_REPORTS
+
+Dosya adı formatı:
+CARD_TRANSACTIONS_YYYYMMDD_1.txt
+
+Dosyanın gece 01:00:00 sonrasında oluşması beklenmektedir. Dosya bir önceki güne (dünün tarihi) ait verileri içermektedir.
+
+Örnek dosya adı:
+CARD_TRANSACTIONS_20250723_1.txt
+
+
+2. BKM / TROY Dosyası
+
+BKM’den gelen clearing verilerinin işlenmesi sonrasında aşağıdaki klasöre dosya bırakılmaktadır:
+
+\turkonay\PROD\PTS2TURKONAY\BKM_REPORTS\OUTGOING\YYAAGG
+
+Dosya adı formatı:
+BKMACCYYYYAAGG1.txt
+
+Dosyanın BKM dosya gönderimine bağlı olarak genellikle 13:30:00 – 16:00:00 saatleri arasında oluşması beklenmektedir. Dosya günün tarihini içermektedir.
+
+Örnek dosya adı:
+BKMACC202507101.txt
+
+Tarih formatı:
+YY   : Yıl (25)
+AA   : Ay (07)
+GG   : Gün (10)
+YYYY : Yıl (2025)
+
+
+3. Mastercard Dosyası
+
+Mastercard clearing datası aşağıdaki klasöre bırakılmaktadır:
+
+\turkonay\PROD\PTS2TURKONAY\MASTERCARD_REPORTS\OUTGOING\YYAAGG
+
+Dosya adı formatı:
+MSCACCYYYYAAGG1.txt
+
+Dosyanın 19:30 saatinden sonra gönderilmesi beklenmektedir. Dosya günün tarihini içermektedir.
+
+Örnek dosya adı:
+MSCACC202507101.txt
+
+Tarih formatı:
+YY   : Yıl (25)
+AA   : Ay (07)
+GG   : Gün (10)
+YYYY : Yıl (2025)
+
+
+4. VISA Dosyası
+
+VISA clearing datası aşağıdaki klasöre bırakılmaktadır:
+
+\turkonay\PROD\PTS2TURKONAY\VISA_REPORTS\OUTGOING\YYAAGG
+
+Dosya adı formatı:
+VISAACCYYYYAAGG1.txt
+
+Dosyanın 15:30 saatinden sonra gönderilmesi beklenmektedir. Dosya günün tarihini içermektedir.
+
+Örnek dosya adı:
+VISAACC202507101.txt

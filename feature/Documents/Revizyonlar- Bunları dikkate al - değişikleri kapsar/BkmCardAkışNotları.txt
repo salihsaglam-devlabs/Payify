@@ -1,0 +1,180 @@
+Evaluate süreci içindeki akış, burada tanımlanan iş akışına birebir uymalı. EvaluationResult içindeki Code ve Note alanları dokümandaki jargonlarla uyumlu olmalı. Aynı şekilde operasyonların Code ve Note alanları da dokümandaki terminolojiyle ve aynı mantıkla tanımlanmalı.
+
+Akışta süreç içerisinde yapılacak işlemler net şekilde tanımlı. Özellikle D kararı çıkan noktalarda birden fazla operasyon oluşabilir. C kararlarında ise çoğunlukla tek operasyon çıkar, ancak bazı durumlarda birden fazla aksiyon da üretilebilir. Ayrıca operasyonun manuel mi yoksa otomatik mi olduğu, akış üzerinden açık ve net şekilde belirlenebiliyor.
+
+Buradaki temel amaç, evaluation sürecinde code ve note alanlarını doğru doldurmak; ayrıca otomatik ve manuel süreçleri net biçimde işaretlemek.
+
+Önce eski projeyi (/Users/base/Codes/backend.cardold) ve dokümanları (path: /Users/base/Codes/backend.card/DesignDocuments) detaylı şekilde oku. Ardından aşağıdaki akışı gösteren yapıyı tam olarak anla. Sonrasında üzerinde geliştirme yaptığımız mevcut kodu incele. En son doğru bir EvaluateAsync içeriğini birlikte yazalım.
+
+Akış aşağıdaki şekilde operasyon üretmeli. Bunun için dokümanlar da mutlaka referans alınmalı.
+
+Prepaid Kart - Card Transaction İş Akışı (BKM)
+
+Kart Trans dosyası SFTP’ye bırakılır.
+Kart Trans dosya içeriğindeki veriler Payify ortamına alınır.
+
+C1* Dosya bazlı uzunluk kontrolü başarılı mı?
+- HAYIR -> Alarm oluşturulur.
+- EVET ->
+  C2* Dosya içerisindeki kayıtlar unique mi?
+  - HAYIR -> Alarm oluşturulur.
+  - EVET ->
+    C3* İşlem iptal ya da reversal mı?
+    - EVET ->
+      C4* İşlem iptal edilmiş mi?
+      - EVET -> Aksiyon yok.
+      - HAYIR ->
+        İşlem bakiye düzeltme listesine alınır.
+        D7: İşlem Bakiye Düzeltme
+        - Orijinal işlemin IsCancelled alanı = 1 yapılır.
+        - İşlemin orijinali tersine çevrilir.
+    - HAYIR ->
+      C5* Dosyadaki işlem statüsü nedir?
+
+1) BAŞARISIZ
+Koşul: ResponseCode != 00 && IsSuccessfulTxn = N
+
+C19* Payify’da işlem statüsü?
+- BAŞARISIZ -> Aksiyon yok
+- YOK -> Aksiyon yok
+- BAŞARILI ->
+  C6*
+  İşlem bakiye düzeltme listesine alınır.
+  D1: İşlem Bakiye Düzeltme
+  - CardTransaction dosyasında işlem BAŞARISIZ
+  - Prepaid Kart Kuruluşunda işlem BAŞARILI
+
+2) EXPIRE
+Koşul: TxnStat = E
+
+C19* Payify’da işlem statüsü?
+- BAŞARISIZ ->
+  İşlem statüsü EXPIRE’a çekilir (C7*)
+  Aksiyon yok
+- YOK ->
+  İşlem oluşturulur ve işlem statüsü EXPIRE’a çekilir (C8*)
+  Aksiyon yok
+- BAŞARILI ->
+  C9* ACC ControlStat = P mi?
+  - HAYIR ->
+    İşlem bakiye düzeltme listesine alınır (C11*)
+    D2: İşlem Bakiye Düzeltme
+    - CardTransaction dosyasında işlem EXPIRE
+    - Prepaid Kart Kuruluşunda işlem BAŞARILI
+  - EVET ->
+    İşlem bakiye düzeltme listesine alınır (C10*)
+    Aksiyon yok
+
+3) BAŞARILI
+Koşul: ResponseCode = 00 && IsSuccessfulTxn = Y
+
+C10* TxnSettle = Y mi?
+- HAYIR -> Aksiyon yok / süreç biter
+- EVET ->
+  C19* Payify’da işlem statüsü?
+  - BAŞARISIZ ->
+    C12*
+    İşlem bakiye düzeltme listesine alınır
+    D3: İşlem Bakiye Düzeltme
+    - CardTransaction dosyasında işlem BAŞARILI
+    - Prepaid Kart Kuruluşunda işlem BAŞARISIZ
+  - YOK ->
+    C13* İşlem yaratılır
+    İADE işlemi mi?
+    - HAYIR ->
+      C14*
+      İşlem bakiye düzeltme listesine alınır
+      D4: İşlem Bakiye Düzeltme
+      - CardTransaction dosyasında işlem BAŞARILI
+      - Prepaid Kart Kuruluşunda işlem YOK
+    - EVET ->
+      C15* İADE eşlenikli mi?
+      - EVET -> C17* -> D5 (Eşlenikli iade)
+      - HAYIR -> C16* -> D6 (Eşleniksiz iade)
+  - BAŞARILI ->
+    İADE işlemi mi?
+    - EVET ->
+      C15* İADE eşlenikli mi?
+      - EVET -> C17* -> D5
+      - HAYIR -> C16* -> D6
+    - HAYIR ->
+      Transaction.Amount == CardTxn.BillingAmount mı?
+      - EVET -> Aksiyon yok / süreç biter
+      - HAYIR ->
+        Amount < BillingAmount mı?
+        - EVET -> D8 -> Gölge bakiye süreci işletilir
+        - HAYIR -> Aksiyon yok / süreç biter
+
+Decision Matrisi
+
+Decision | Case | İşlem | Açıklama | İşlem Tipi
+D1 | C1* | Response Code düzelt | BAŞARILI işlemi BAŞARISIZ’a çevir, bakiye efektine göre tersine çevir | RED
+D2 | C2* | İşlem EXPIRE’a çekilir | Bakiye efektine göre tersine çevir | Not: Mevcut durumda Payify’da yok, nasıl konumlanacağı konuşulacak
+D3 | C3* | Response Code düzelt | BAŞARISIZ işlemi BAŞARILI’ya çevir, bakiye efektine göre tersine çevir | RED
+D4 | C4* | İşlem oluşturulur | İşlemin orijinaline göre iade işlemi yapılır | İşlem oluşturma
+D5 | C5* | Eşlenikli iade | İşlemin orijinaline göre iade işlemi yapılır | Eşlenikli iade
+D6 | C6* | Manuel review kaydı oluştur | ManualReviewItems tablosuna kayıt edilir, approve/reject servisleri ile aksiyon alınır | Eşleniksiz iade
+D7 | - | İptal / Reversal | Orijinal işlemin IsCancelled = 1 yapılır, işlemin orijinali tersine çevrilir | İptal
+D8 | - | Fark tutarı kadar kayıt oluştur | Borç/Alacak tablosuna yazılır | Gölge Bakiye
+
+Ek Notlar
+
+Card Transaction dosyası gün sonunda otomatik çalışan job’lar ile oluşturulur. .txt formatında üretilir ve CARD_TRANSACTION_YYYYMMDD adıyla SFTP’ye bırakılır. Dosya hem takaslaşmış başarılı işlemleri hem de başarısız olduğu için takasa girmeyen işlemleri içerir.
+
+Bu dosya finansallaşmış işlemleri gösterir ve muhasebeye konu olan işlemler burada yer alır. Kart bakiyesi, Card Transaction dosyasındaki veriye göre güncellenir. Başarılı işlemler IsSuccessfulTxn = Y, başarısız işlemler IsSuccessfulTxn = N ile ayrıştırılır. TxnStat alanı ise işlemin normal, iptal, reverse veya expired olduğunu belirtir.
+
+TxnStat değerleri:
+- R -> Reversal
+- E -> Reversal of Void
+- V -> Void
+
+İş kuralı notları
+
+1. Dosya içerisindeki her bir OceanTxnGuid unique mi diye kontrol edilir.
+2. Unique olmayan işlemler için CardNo, OTC, OTS, CardHolderBillingAmount alanları ile ek kontrol yapılır.
+   - Hepsi aynıysa tek işlem olarak process edilir ve alarm üretilir.
+   - Alanlar farklıysa iki işlem de process edilmez, alarm üretilir.
+3. TxnStat = R || TxnStat = V ise işlem iptal/reversal kabul edilir.
+4. EXPIRE senaryosunda ACC ControlStat = P kayıtları son 20 gün içinde aranmalıdır.
+5. RRN, CardNo, ProvisionCode, ARN, MCC, SourceAmount, SourceCurrency aynı ise işlemler aynı kabul edilir.
+6. RRN null ise bu tek başına eşitsizlik anlamına gelmez.
+7. EXPIRE gelen ama ACC’de eşleşmeyen kayıtlar expire edilmelidir.
+8. EXPIRE gelen ve ACC’de P kaydıyla eşleşen işlemler için alarm üretilmelidir.
+9. Card Transaction tarafında başarılı gelen iade işlemlerinde:
+   - BankingTxnCode = Refund OR ReferenceRefund
+   - MainTxnGuid != null / 0
+   - ise eşlenikli iade kabul edilir.
+   - MainTxnGuid boşsa eşleniksiz iade kabul edilir.
+
+D kararlarının açıklamaları
+
+D1:
+İşlem Bakiye Düzeltme listesine alınan işlem için önce Response Code Düzelt adımı çalıştırılır ve başarılı işlem başarısıza çevrilir. Ardından bakiye efektine göre tersine çevir adımı uygulanır ve süreç sonlanır.
+CardTransaction dosyasında işlem BAŞARISIZ, Prepaid Kart Kuruluşunda işlem BAŞARILI.
+
+D2:
+İşlem Bakiye Düzeltme listesine alınan işlem için önce işlem EXPIRE’a çekilir. Ardından bakiye efektine göre tersine çevir adımı uygulanır ve süreç sonlanır.
+CardTransaction dosyasında işlem EXPIRE, Prepaid Kart Kuruluşunda işlem BAŞARILI.
+Mevcut durumda Payify’da bu akış yok, nasıl konumlanacağı konuşulacak.
+
+D3:
+İşlem Bakiye Düzeltme listesine alınan işlem için önce Response Code Düzelt adımı çalıştırılır ve başarısız işlem başarılıya çevrilir. Ardından bakiye efektine göre tersine çevir adımı uygulanır ve süreç sonlanır.
+CardTransaction dosyasında işlem BAŞARILI, Prepaid Kart Kuruluşunda işlem BAŞARISIZ.
+
+D4:
+İşlem Bakiye Düzeltme listesine alınan işlem için önce işlem oluşturulur. Ardından işlemin orijinaline göre iade işlemi yapılır ve süreç sonlanır.
+CardTransaction dosyasında işlem BAŞARILI, Prepaid Kart Kuruluşunda işlem YOK.
+
+D5:
+İşlem Bakiye Düzeltme listesine alınan işlem için eşlenikli iade kapsamında işlemin orijinaline göre iade işlemi yapılır ve süreç sonlanır.
+CardTransaction dosyasında işlem BAŞARILI, Prepaid Kart Kuruluşunda işlem BAŞARILI ve iade işlemi EŞLENİKLİ.
+
+D6:
+İşlem Bakiye Düzeltme listesine alınan işlem için eşleniksiz iade kapsamında ManualReviewItems tablosuna kayıt atılır. Sonrasında Approve/Reject servisleri üzerinden aksiyon alınır. Approve ile onaylanırsa effect execution planı çalışır ve süreç sonlanır. Reject ile reddedilirse, reject edilen işlemler için Paycore’a chargeback akışı başlatılır ve süreç sonlanır.
+CardTransaction dosyasında işlem BAŞARILI, Prepaid Kart Kuruluşunda işlem BAŞARILI ve iade işlemi EŞLENİKSİZ.
+
+D7:
+İşlem Bakiye Düzeltme listesine alınan işlem için iptal ya da reversal kapsamında orijinal işlemin IsCancelled alanı = 1 yapılır. Ardından işlemin orijinali tersine çevrilir ve süreç sonlanır.
+
+D8:
+İşlem Bakiye Düzeltme listesine alınan işlem için Gölge Bakiye süreci işletilir. Transaction tablosundaki amount ile CardTransaction dosyasına gelen billingAmount arasındaki fark tutarı kadar Borç/Alacak tablosuna yazılır ve süreç sonlanır.

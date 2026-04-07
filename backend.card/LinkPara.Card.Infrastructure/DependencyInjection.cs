@@ -1,13 +1,25 @@
 using LinkPara.Audit;
 using LinkPara.Cache;
 using LinkPara.Card.Application.Commons.Interfaces;
+using LinkPara.Card.Application.Commons.Interfaces.FileIngestion;
+using LinkPara.Card.Application.Commons.Interfaces.Reconciliation;
 using LinkPara.Card.Application.Commons.Models.EventBusConfiguration;
-using LinkPara.Card.Application.Features.PaycoreServices.CardPinServices.Services;
+using LinkPara.Card.Application.Commons.Models.FileIngestion;
+using LinkPara.Card.Application.Commons.Models.Reconciliation;
 using LinkPara.Card.Infrastructure.Persistence;
 using LinkPara.Card.Infrastructure.Services;
+using LinkPara.Card.Infrastructure.Services.FileIngestion.Orchestration;
+using LinkPara.Card.Infrastructure.Services.FileIngestion.Parsing;
+using LinkPara.Card.Infrastructure.Services.FileIngestion.Transports;
 using LinkPara.Card.Infrastructure.Services.PaycoreServices;
 using LinkPara.Card.Infrastructure.Services.PaycoreServices.Services;
-using LinkPara.Card.Infrastructure.Services.WalletServices.Services;
+using LinkPara.Card.Infrastructure.Services.Reconciliation;
+using LinkPara.Card.Infrastructure.Services.Reconciliation.Evaluate;
+using LinkPara.Card.Infrastructure.Services.Reconciliation.Execute;
+using LinkPara.Card.Infrastructure.Services.Reconciliation.Execute.Flow;
+using LinkPara.Card.Infrastructure.Services.Reconciliation.GetAlerts;
+using LinkPara.Card.Infrastructure.Services.Reconciliation.Integrations.Emoney;
+using LinkPara.Card.Infrastructure.Services.Reconciliation.Reviews;
 using LinkPara.ContextProvider;
 using LinkPara.HttpProviders.DataContainer;
 using LinkPara.HttpProviders.Emoney;
@@ -24,7 +36,14 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using System.Reflection;
+using LinkPara.Card.Application.Features.PaycoreServices.CardPinServices.Services;
+using LinkPara.Card.Infrastructure.Consumers.FileIngestionAndReconciliation;
+using LinkPara.Card.Infrastructure.Services.Audit;
+using LinkPara.Card.Infrastructure.Services.AlertService;
+using LinkPara.Card.Infrastructure.Services.Notifications;
+using LinkPara.Card.Infrastructure.Services.WalletServices.Services;
 
 namespace LinkPara.Card.Infrastructure;
 
@@ -57,8 +76,21 @@ public static class DependencyInjection
         ConfigureDatabase(services, configuration, vaultClient);
         ConfigureHttpClients(services, vaultClient);
         ConfigureMassTransit(services, configuration, vaultClient);
-
+        ConfigureFileIngestionAndReconciliationOptions(services, vaultClient);
         return services;
+    }
+
+    private static void ConfigureFileIngestionAndReconciliationOptions(
+        IServiceCollection services,
+        IVaultClient vaultClient)
+    {
+        var reconciliation = vaultClient.GetSecretValue<ReconciliationOptions>("CardSecrets", ReconciliationOptions.SectionName, null)
+            ?? throw new InvalidOperationException("Vault key missing: CardSecrets/Reconciliation");
+        var fileIngestion = vaultClient.GetSecretValue<FileIngestionOptions>("CardSecrets", FileIngestionOptions.SectionName, null)
+            ?? throw new InvalidOperationException("Vault key missing: CardSecrets/FileIngestion");
+
+        services.AddSingleton<IOptions<ReconciliationOptions>>(Options.Create(reconciliation));
+        services.AddSingleton<IOptions<FileIngestionOptions>>(Options.Create(fileIngestion));
     }
 
     private static void ConfigureServices(IServiceCollection services)
@@ -79,6 +111,27 @@ public static class DependencyInjection
         services.AddScoped<IMigrationConfigurator, MigrationConfigurator>();
         services.AddScoped<IDbCommandInterceptor, LongQueryLogger>();
         services.AddScoped<ISecureRandomGenerator, SecureRandomGenerator>();
+        services.AddScoped<IAuditStampService, AuditStampService>();
+        services.AddSingleton<IAuditUserContextAccessor, AuditUserContextAccessor>();
+        services.AddScoped<IFileIngestionService, FileIngestionOrchestrator>();
+        services.AddScoped<IFileTransferClientResolver, FileTransferClientResolver>();
+        services.AddScoped<IFixedWidthRecordParser, FixedWidthRecordParser>();
+        services.AddScoped<IParsedRecordModelMapper, ParsedRecordModelMapper>();
+        services.AddScoped<IFileTransferClient, LocalFileTransferClient>();
+        services.AddScoped<IFileTransferClient, FtpFileTransferClient>();
+        services.AddScoped<IFileTransferClient, SftpFileTransferClient>();
+        services.AddScoped<IContextBuilder, ContextBuilder>();
+        services.AddScoped<IEvaluator, BkmEvaluator>();
+        services.AddScoped<IEvaluator, VisaEvaluator>();
+        services.AddScoped<IEvaluator, MscEvaluator>();
+        services.AddScoped<EvaluatorResolver>();
+        services.AddScoped<IEvaluateService, EvaluateService>();
+        services.AddScoped<ExecuteService>();
+        services.AddScoped<ReviewService>();
+        services.AddScoped<GetAlertsService>();
+        services.AddScoped<IReconciliationService, ReconciliationService>();
+        services.AddScoped<INotificationEmailService, NotificationEmailService>();
+        services.AddScoped<IAlertService, AlertService>();
     }
 
     private static void ConfigureHttpClients(IServiceCollection services, IVaultClient vaultClient)
@@ -102,7 +155,17 @@ public static class DependencyInjection
         {
             services.ConfigureCustomHttpClient(client, serviceUrls.Emoney, forwardToken);
         });
-
+        
+        services.AddHttpClient<IEmoneyService, EmoneyService>(client =>
+        {
+            services.ConfigureCustomHttpClient(client, serviceUrls.Emoney, forwardToken);
+        });
+        
+        services.AddHttpClient<OperationExecutor, OperationExecutor>(client =>
+        {
+            services.ConfigureCustomHttpClient(client, serviceUrls.Emoney, forwardToken);
+        });
+        
     }
     private static void ConfigureCustomHttpClient(this IServiceCollection services, HttpClient client, string uriString, string forwardToken)
     {
@@ -136,10 +199,10 @@ public static class DependencyInjection
             default:
                 AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
                 services.AddDbContext<CardDbContext>((sp, options) => options
-                        .UseNpgsql(connectionString, b => b.EnableRetryOnFailure())
-                        .UseSnakeCaseNamingConvention()
-                        .UseQueryTrackingBehavior(QueryTrackingBehavior.NoTracking)
-                        .AddInterceptors(sp.GetRequiredService<IDbCommandInterceptor>()));
+                    .UseNpgsql(connectionString, b => b.EnableRetryOnFailure())
+                    .UseSnakeCaseNamingConvention()
+                    .UseQueryTrackingBehavior(QueryTrackingBehavior.NoTracking)
+                    .AddInterceptors(sp.GetRequiredService<IDbCommandInterceptor>()));
                 break;
         }
 
@@ -163,6 +226,7 @@ public static class DependencyInjection
         services.AddMassTransit(x =>
         {
             x.AddConsumers(Assembly.GetExecutingAssembly());
+            x.AddConsumer<FileIngestionAndReconciliationConsumer>();
             x.UsingRabbitMq((context, cfg) =>
             {
                 cfg.Host(new Uri($"rabbitmq://{eventBusSettings.Host}/"),
@@ -171,6 +235,15 @@ public static class DependencyInjection
                         h.Username(eventBusSettings.Username);
                         h.Password(eventBusSettings.Password);
                     });
+                
+                cfg.ReceiveEndpoint("Card.FileIngestionAndReconciliation.SerialQueue", e =>
+                {
+                    e.PrefetchCount = 1;
+                    e.ConcurrentMessageLimit = 1;
+                    e.UseRawJsonDeserializer(isDefault: true);
+                    e.SetQueueArgument("x-single-active-consumer", true);
+                    e.ConfigureConsumer<FileIngestionAndReconciliationConsumer>(context);
+                });
             });
         });
     }
