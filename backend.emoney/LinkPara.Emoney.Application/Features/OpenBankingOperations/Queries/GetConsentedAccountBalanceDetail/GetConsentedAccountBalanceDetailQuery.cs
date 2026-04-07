@@ -6,7 +6,7 @@ namespace LinkPara.Emoney.Application.Features.OpenBankingOperations.Queries.Get
 public class GetConsentedAccountBalanceDetailQuery : IRequest<ConsentedAccountBalanceDetailResultDto>
 {
     public string AccountReference { get; set; }
-    public string AppUserId { get; set; }
+    public int AppUserId { get; set; }
     public string HhsCode { get; set; }
 }
 

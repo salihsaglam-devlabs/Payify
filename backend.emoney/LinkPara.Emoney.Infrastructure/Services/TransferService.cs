@@ -21,7 +21,6 @@ using LinkPara.Emoney.Infrastructure.Persistence;
 using LinkPara.HttpProviders.BusinessParameter;
 using LinkPara.HttpProviders.BusinessParameter.Models;
 using LinkPara.HttpProviders.DbProvider;
-using LinkPara.HttpProviders.Emoney.Enums;
 using LinkPara.HttpProviders.Fraud;
 using LinkPara.HttpProviders.Fraud.Models;
 using LinkPara.HttpProviders.Fraud.Models.Enums;
@@ -143,7 +142,7 @@ public class TransferService : ITransferService
         _saveReceiptService = saveReceiptService;
         _databaseProviderService = databaseProviderService;
         _cashbackService = cashbackService;
-        _transactionRepository = transactionRepository;
+        _transactionRepository = transactionRepository;        
     }
 
     public async Task<MoneyTransferResponse> TransferAsync(TransferCommand request,
@@ -167,7 +166,7 @@ public class TransferService : ITransferService
                 cancellationToken: cancellationToken);
 
         if (receiverWallet is null)
-        {
+        {            
             throw new NotFoundException(nameof(Wallet), request.ReceiverWalletNumber);
         }
 
@@ -196,8 +195,6 @@ public class TransferService : ITransferService
             .SingleOrDefaultAsync(p => p.Id == receiverWallet.AccountId, cancellationToken: cancellationToken);
 
         var currencyCode = await GetCurrencyCodeAsync(senderWallet.CurrencyCode);
-
-        await CheckDuplicateTransactionAsync(request.IdempotentKey);
 
         var IsTransactionCheckEnabled = _vaultClient
             .GetSecretValue<bool>("/SharedSecrets", "ServiceState", "TransactionEnabled");
@@ -284,7 +281,7 @@ public class TransferService : ITransferService
     }
 
     public async Task<TransferPreviewResponse> TransferPreviewAsync(TransferPreviewQuery request)
-    {
+    {        
         request.Amount = request.Amount.ToDecimal2();
 
         var senderWallet = await _walletRepository.GetAll()
@@ -1258,8 +1255,7 @@ public class TransferService : ITransferService
             CounterWalletId = receiverWalletId,
             Channel = _contextProvider.CurrentContext.Channel,
             IpAddress = _contextProvider.CurrentContext?.ClientIpAddress ?? string.Empty,
-            PaymentType = request.PaymentType,
-            IdempotentKey = request.IdempotentKey,
+            PaymentType = request.PaymentType
         };
     }
 
@@ -1353,8 +1349,7 @@ public class TransferService : ITransferService
             ReceiverName = receiverAccount.Name,
             CounterWalletId = senderWalletId,
             Channel = _contextProvider.CurrentContext?.Channel,
-            PaymentType = request.PaymentType,
-            IdempotentKey = request.IdempotentKey,
+            PaymentType = request.PaymentType
         };
     }
 
@@ -1412,8 +1407,7 @@ public class TransferService : ITransferService
             Channel = _contextProvider.CurrentContext?.Channel,
             SenderName = senderAccount.Name,
             IpAddress = _contextProvider.CurrentContext?.ClientIpAddress ?? string.Empty,
-            PaymentType = request.PaymentType,
-            IdempotentKey = request.IdempotentKey,
+            PaymentType = request.PaymentType
         };
     }
 
@@ -1490,7 +1484,6 @@ public class TransferService : ITransferService
     public async Task<MoneyTransferResponse> WithdrawAsync(WithdrawRequestCommand request, CancellationToken cancellationToken)
     {
         await ValidateDescriptionLengthAsync(request.PaymentType, request.Description);
-
         using var scope = _scopeFactory.CreateScope();
 
         var _dbContext = scope.ServiceProvider.GetRequiredService<EmoneyDbContext>();
@@ -1518,8 +1511,6 @@ public class TransferService : ITransferService
         {
             throw new InvalidIbanException();
         }
-
-        await CheckDuplicateTransactionAsync(request.IdempotentKey);
 
         var kkbResult = await _accountIbanService.ValidateIbanAsync(senderAccount.IdentityNumber, request.ReceiverIBAN);
 
@@ -1594,7 +1585,7 @@ public class TransferService : ITransferService
         return await ExecuteWithdrawAsync(wallet, request, transferBank.IbanBankCode, moneyTransferInfo, pricingInfo, senderAccount, kkbResult);
     }
 
-    private async Task ValidateWithdrawLimitAsync(Account senderAccount, Wallet wallet, decimal requestAmount)
+    private async Task ValidateWithdrawLimitAsync(Wallet wallet, decimal requestAmount)
     {
         var limitParameter = new ParameterDto();
 
@@ -1606,10 +1597,7 @@ public class TransferService : ITransferService
         {
             _logger.LogError("Error validating NoneKYC withdrawal limit: {Exception}", ex);
         }
-
-        var isNoneKyc = senderAccount.AccountKycLevel == AccountKycLevel.NoneKyc;
-        
-        if (!string.IsNullOrEmpty(limitParameter.ParameterValue) && isNoneKyc)
+        if (!string.IsNullOrEmpty(limitParameter.ParameterValue))
         {
             var startOfYear = new DateTime(DateTime.Now.Year, 1, 1);
 
@@ -1711,7 +1699,7 @@ public class TransferService : ITransferService
 
                     ValidateBalance(dbWallet, pricing.TotalAmount);
 
-                    await ValidateWithdrawLimitAsync(senderAccount, dbWallet, pricing.Amount);
+                    await ValidateWithdrawLimitAsync(dbWallet, pricing.Amount);
 
                     await ValidateWithdrawIbanLimitAsync(wallet, pricing.Amount, kkbResult, request.ReceiverIBAN);
 
@@ -1865,7 +1853,7 @@ public class TransferService : ITransferService
 
         ValidateBalance(wallet, pricingInfo.TotalAmount);
 
-        await ValidateWithdrawLimitAsync(senderAccount, wallet, pricingInfo.Amount);
+        await ValidateWithdrawLimitAsync(wallet, pricingInfo.Amount);
 
         await ValidateWithdrawIbanLimitAsync(wallet, pricingInfo.Amount, kkbResult, request.ReceiverIBAN);
 
@@ -2054,7 +2042,7 @@ public class TransferService : ITransferService
         }
         var templateValues = await _parameterService.GetAllParameterTemplateValuesAsync(MoneyTransferParameterGroup, parameter.ParameterCode);
         var templateDictionary = templateValues.ToDictionary(t => t.TemplateCode, t => t.TemplateValue);
-
+        
         if (templateDictionary.TryGetValue("Permission", out var permissionValue) &&
             bool.TryParse(permissionValue, out var hasPermission) && hasPermission == false)
         {
@@ -2074,21 +2062,6 @@ public class TransferService : ITransferService
         if (description.Length < minLength)
         {
             throw new DescriptionLengthException(minLength);
-        }
-    }
-
-    public async Task CheckDuplicateTransactionAsync(string idempotentKey)
-    {
-        if (!string.IsNullOrWhiteSpace(idempotentKey))
-        {
-            var transactionExists = await _transactionRepository
-                .GetAll()
-                .AnyAsync(s => s.IdempotentKey == idempotentKey);
-
-            if (transactionExists)
-            {
-                throw new DuplicateRecordException();
-            }
         }
     }
 }

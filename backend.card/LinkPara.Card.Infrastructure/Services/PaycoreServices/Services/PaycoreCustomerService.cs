@@ -9,6 +9,7 @@ using LinkPara.Card.Application.Features.PaycoreServices.CustomerServices.Comman
 using LinkPara.Card.Application.Features.PaycoreServices.CustomerServices.Queries.GetCustomerCards;
 using LinkPara.Card.Application.Features.PaycoreServices.CustomerServices.Queries.GetCustomerInformation;
 using LinkPara.Card.Application.Features.PaycoreServices.CustomerServices.Queries.GetCustomerLimitInfo;
+using LinkPara.Card.Domain.Constants;
 using LinkPara.Card.Domain.Entities;
 using LinkPara.Card.Infrastructure.Services.PaycoreServices.Models;
 using LinkPara.Card.Infrastructure.Services.PaycoreServices.Models.CustomerModels.Requests;
@@ -182,7 +183,7 @@ public class PaycoreCustomerService : IPaycoreCustomerService
             return new PaycoreResponse
             {
                 IsSuccess = updateCustomer.IsSuccess,
-                Description = "Failed"//todo const
+                Description = ResponseDescription.ERROR
             };
         }
 

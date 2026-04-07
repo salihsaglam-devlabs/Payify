@@ -12,7 +12,6 @@ public class TransferCommand : IRequest<MoneyTransferResponse>
     public decimal Amount { get; set; }
     public string UserId { get; set; }
     public string PaymentType { get; set; }
-    public string IdempotentKey { get; set; }
 }
 public class TransferCommandHandler : IRequestHandler<TransferCommand, MoneyTransferResponse>
 {

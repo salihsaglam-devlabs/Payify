@@ -321,10 +321,4 @@
   <data name="ReturnAmountExceededException" xml:space="preserve">
     <value>İade tutarı, önceki işlemin tutarını aşamaz!</value>
   </data>
-  <data name="MaxDocumentLimitExceededException" xml:space="preserve">
-    <value>Doküman ekleme limiti dolmuştur </value>
-  </data>
-  <data name="MaxDocumentSizeExceededException" xml:space="preserve">
-    <value>Maximum doysa boyutundan büyük bir dosya girildi</value>
-  </data>
 </root>

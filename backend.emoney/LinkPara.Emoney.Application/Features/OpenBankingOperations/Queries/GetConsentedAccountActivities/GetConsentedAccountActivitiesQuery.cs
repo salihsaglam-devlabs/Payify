@@ -5,8 +5,6 @@ using MediatR;
 namespace LinkPara.Emoney.Application.Features.OpenBankingOperations.Queries.GetConsentedAccountActivities;
 public class GetConsentedAccountActivitiesQuery : IRequest<ConsentedAccountActivitiesResultDto>
 {
-    public string AppUserId { get; set; }
-    public string HhsCode { get; set; }
     public string AccountReference { get; set; }
     public DateTime HesapIslemBslTrh { get; set; }
     public DateTime HesapIslemBtsTrh { get; set; }

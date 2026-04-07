@@ -5,5 +5,4 @@ public class UpdateBalanceResponse
     public string ResponseReasonCode { get; set; }
     public string Utid { get; set; }
     public string TransactionId { get; set; }
-    public decimal CurrentBalance { get; set; }
 }

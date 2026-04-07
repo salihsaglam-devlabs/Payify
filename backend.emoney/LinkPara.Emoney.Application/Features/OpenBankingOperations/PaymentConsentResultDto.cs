@@ -22,8 +22,6 @@ public class StartPaymentConsentDto
 public class PaymentConsentResultDetailOb : PaymentConsentDetailOb
 {
     public string OdmStm { get; set; }
-    public string OhkMsj { get; set; }    
-    public string odmStmNo { get; set; }
-    public string odmDrm { get; set; }
+    public string OhkMsj { get; set; }
     public DateTime BekOdmZmn { get; set; }
 }

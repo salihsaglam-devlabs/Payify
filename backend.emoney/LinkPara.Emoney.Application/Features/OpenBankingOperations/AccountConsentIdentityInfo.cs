@@ -7,5 +7,4 @@ public class AccountConsentIdentityInfo
     public string KmlkVrs { get; set; }
     public string KrmKmlkTur { get; set; }
     public string KrmKmlkVrs { get; set; }
-    public string Unv { get; set; }
 }

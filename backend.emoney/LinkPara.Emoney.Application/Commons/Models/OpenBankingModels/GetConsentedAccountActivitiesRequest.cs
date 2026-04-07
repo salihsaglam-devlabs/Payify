@@ -5,9 +5,9 @@ using LinkPara.Emoney.Application.Features.OpenBankingOperations.Commands.Create
 namespace LinkPara.ApiGateway.Services.Emoney.Models.Requests;
 
 public class GetConsentedAccountActivitiesRequest : IMapFrom<CreateAccountConsentCommand>
-{    
-    public string HesapIslemBslTrh { get; set; }
-    public string HesapIslemBtsTrh { get; set; }
+{
+    public DateTime HesapIslemBslTrh { get; set; }
+    public DateTime HesapIslemBtsTrh { get; set; }
     public string MinIslTtr { get; set; }
     public string MksIslTtr { get; set; }
     public string BrcAlc { get; set; }

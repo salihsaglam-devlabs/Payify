@@ -1,6 +1,4 @@
 using LinkPara.Card.Domain.Entities;
-using LinkPara.Card.Domain.Entities.FileIngestion;
-using LinkPara.Card.Domain.Entities.Reconciliation;
 using LinkPara.ContextProvider;
 using LinkPara.HttpProviders.Vault;
 using LinkPara.SharedModels.DomainEvents.Interfaces;
@@ -16,17 +14,10 @@ public class CardDbContext : BaseDbContext
 {
     private readonly IConfiguration _configuration;
     private readonly IVaultClient _vaultClient;
-    private IContextProvider ContextProvider { get; }
 
     public DbSet<CustomerWalletCard> CustomerWalletCard { get; set; }
     public DbSet<DebitAuthorization> DebitAuthorization { get; set; } 
-    public DbSet<IngestionFile> IngestionFiles { get; set; }
-    public DbSet<IngestionFileLine> IngestionFileLines { get; set; }
-    public DbSet<ReconciliationEvaluation> ReconciliationEvaluations { get; set; }
-    public DbSet<ReconciliationOperation> ReconciliationOperations { get; set; }
-    public DbSet<ReconciliationReview> ReconciliationReviews { get; set; }
-    public DbSet<ReconciliationOperationExecution> ReconciliationOperationExecutions { get; set; }
-    public DbSet<ReconciliationAlert> ReconciliationAlerts { get; set; }
+    public DbSet<DebitAuthorizationFee> DebitAuthorizationFee { get; set; } 
 
 
     public CardDbContext(DbContextOptions options,
@@ -35,7 +26,6 @@ public class CardDbContext : BaseDbContext
         IBus bus, IConfiguration configuration, IVaultClient vaultClient)
         : base(options, contextProvider, domainEventService, bus)
     {
-        ContextProvider = contextProvider;
         _configuration = configuration;
         _vaultClient = vaultClient;
     }
@@ -55,38 +45,22 @@ public class CardDbContext : BaseDbContext
         }
         base.OnModelCreating(modelBuilder);
     }
-
+ 
 
     private static void CreateDefaultMappings(ModelBuilder builder)
     {
         const string coreSchema = "core";
-        const string ingestionSchema = "ingestion";
-        const string reconSchema = "reconciliation";
         builder.Entity<DebitAuthorization>().ToTable("debit_authorization", coreSchema);
+        builder.Entity<DebitAuthorizationFee>().ToTable("debit_authorization_fee", coreSchema);
         builder.Entity<CustomerWalletCard>().ToTable("customer_wallet_card", coreSchema);
-        builder.Entity<IngestionFile>().ToTable("file", ingestionSchema);
-        builder.Entity<IngestionFileLine>().ToTable("file_line", ingestionSchema);
-        builder.Entity<ReconciliationEvaluation>().ToTable("evaluation", reconSchema);
-        builder.Entity<ReconciliationOperation>().ToTable("operation", reconSchema);
-        builder.Entity<ReconciliationReview>().ToTable("review", reconSchema);
-        builder.Entity<ReconciliationOperationExecution>().ToTable("operation_execution", reconSchema);
-        builder.Entity<ReconciliationAlert>().ToTable("alert", reconSchema);
     }
 
     private static void CreateMsSqlMappings(ModelBuilder builder)
     {
         const string coreSchema = "Core";
-        const string ingestionSchema = "Ingestion";
-        const string reconSchema = "Reconciliation";
         builder.Entity<DebitAuthorization>().ToTable("DebitAuthorization", coreSchema);
+        builder.Entity<DebitAuthorizationFee>().ToTable("DebitAuthorizationFee", coreSchema);
         builder.Entity<CustomerWalletCard>().ToTable("CustomerWalletCard", coreSchema);
-        builder.Entity<IngestionFile>().ToTable("File", ingestionSchema);
-        builder.Entity<IngestionFileLine>().ToTable("FileLine", ingestionSchema);
-        builder.Entity<ReconciliationEvaluation>().ToTable("Evaluation", reconSchema);
-        builder.Entity<ReconciliationOperation>().ToTable("Operation", reconSchema);
-        builder.Entity<ReconciliationReview>().ToTable("Review", reconSchema);
-        builder.Entity<ReconciliationOperationExecution>().ToTable("OperationExecution", reconSchema);
-        builder.Entity<ReconciliationAlert>().ToTable("Alert", reconSchema);
     }
 
 }

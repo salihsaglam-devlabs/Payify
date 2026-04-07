@@ -16,13 +16,6 @@ using LinkPara.Emoney.Application.Features.OpenBankingOperations.Queries.Payment
 using LinkPara.Emoney.Application.Features.OpenBankingOperations.Commands.CreatePaymentOrder;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
-using LinkPara.Emoney.Application.Features.OpenBankingOperations.Queries.GetCards;
-using LinkPara.Emoney.Application.Features.OpenBankingOperations.Queries.GetCardDetail;
-using LinkPara.Emoney.Application.Features.OpenBankingOperations.Commands.CreateFuturePaymentOrderConsent;
-using LinkPara.Emoney.Application.Features.OpenBankingOperations.Commands.TriggerFuturePaymentOrder;
-using LinkPara.Emoney.Application.Features.OpenBankingOperations.Commands.CancelFuturePaymentOrder;
-using LinkPara.Emoney.Application.Features.OpenBankingOperations.Commands.CreateStandingPaymentOrderConsent;
-using LinkPara.Emoney.Application.Features.OpenBankingOperations.Queries.GetCardTransactions;
 
 namespace LinkPara.Emoney.API.Controllers
 {
@@ -203,106 +196,12 @@ namespace LinkPara.Emoney.API.Controllers
         /// <returns>it returns payment order detail information.</returns>
         [Authorize(Policy = "OpenBankingOperation:Read")]
         [HttpGet("payment-order-detail")]
-        public async Task<ActionResult<PaymentOrderDetailResultDto>> PaymentOrderDetailAsync([FromQuery] PaymentOrderDetailQuery query)
+        public async Task<ActionResult<PaymentOrderDetailResultDto>> PaymentOrderDetailQueryAsync([FromQuery] PaymentOrderDetailQuery query)
         {
             return await Mediator.Send(query);
         }
 
-        /// <summary>
-        /// This method is used to get card list
-        /// </summary>
-        /// <param name="query"></param>
-        /// <returns>it returns consented card list .</returns>
-        [Authorize(Policy = "OpenBankingOperation:Read")]
-        [HttpGet("cards")]
-        public async Task<ActionResult<CardsResultDto>> GetCardsAsync([FromQuery] GetCardsQuery query)
-        {
-            return await Mediator.Send(query);
-        }
 
-        /// <summary>
-        /// This method is used to get card detalis 
-        /// </summary>
-        /// <param name="query"></param>
-        /// <returns>it returns consented card detail list .</returns>
-        [Authorize(Policy = "OpenBankingOperation:Read")]
-        [HttpGet("card-detail")]
-        public async Task<ActionResult<CardDetailResultDto>> GetCardDetailAsync([FromQuery] GetCardDetailQuery query)
-        {
-            return await Mediator.Send(query);
-        }
-
-        /// <summary>
-        /// This method is used to get card transactions 
-        /// </summary>
-        /// <param name="query"></param>
-        /// <returns>it returns card transactions.</returns>
-        [Authorize(Policy = "OpenBankingOperation:Read")]
-        [HttpGet("card-transactions")]
-        public async Task<ActionResult<CardTransactionsResultDto>> GetCardTransactionAsync([FromQuery] GetCardTransactionsQuery query)
-        {
-            return await Mediator.Send(query);
-        }
-
-        /// <summary>
-        /// This method is used to create future payment order consent
-        /// </summary>
-        /// <param name="command"></param>
-        /// <returns>it returns FuturePaymentOrderConsentResultDto .</returns>
-        [Authorize(Policy = "OpenBankingOperation:Create")]
-        [HttpPost("create-future-payment-order-consent")]
-        public async Task<ActionResult<FuturePaymentOrderConsentResultDto>> CreateFuturePaymentOrderConsentAsync([FromBody] CreateFuturePaymentOrderConsentCommand command)
-        {
-            return await Mediator.Send(command);
-        }
-
-        /// <summary>
-        /// This method is used to list future payment orders
-        /// </summary>
-        /// <param name="command"></param>
-        /// <returns>it returns GetFuturePaymentOrderListResultDto.</returns>
-        [Authorize(Policy = "OpenBankingOperation:Read")]
-        [HttpPost("list-future-payment-order")]
-        public async Task<ActionResult<GetFuturePaymentOrderListResultDto>> GetFuturePaymentOrderListAsync([FromBody] GetFuturePaymentOrderListQuery query)
-        {
-            return await Mediator.Send(query);
-        }
-
-        /// <summary>
-        /// This method is used to trigger future payment order
-        /// </summary>
-        /// <param name="command"></param>
-        /// <returns>it returns TriggerFuturePaymentOrderResultDto.</returns>
-        [Authorize(Policy = "OpenBankingOperation:Read")]
-        [HttpPost("trigger-future-payment-order")]
-        public async Task<ActionResult<TriggerFuturePaymentOrderResultDto>> TriggerFuturePaymentOrderAsync([FromBody] TriggerFuturePaymentOrderCommand command)
-        {
-            return await Mediator.Send(command);
-        }
-
-        /// <summary>
-        /// This method is used to trigger future payment order
-        /// </summary>
-        /// <param name="command"></param>
-        /// <returns>it returns CancelFuturePaymentOrderAsync .</returns>
-        [Authorize(Policy = "OpenBankingOperation:Create")]
-        [HttpPost("cancel-future-payment-order")]
-        public async Task<ActionResult<CancelFuturePaymentOrderResultDto>> CancelFuturePaymentOrderAsync([FromBody] CancelFuturePaymentOrderCommand command)
-        {
-            return await Mediator.Send(command);
-        }
-
-        /// <summary>
-        /// This method is used to create recurring payment order consent
-        /// </summary>
-        /// <param name="command"></param>
-        /// <returns>it returns StandingPaymentOrderConsentResultDto.</returns>
-        [Authorize(Policy = "OpenBankingOperation:Create")]
-        [HttpPost("create-standing-payment-order-consent")]
-        public async Task<ActionResult<StandingPaymentOrderConsentResultDto>> CreateStandingPaymentOrderConsentAsync([FromBody] CreateStandingPaymentOrderConsentCommand command)
-        {
-            return await Mediator.Send(command);
-        }
 
 
     }

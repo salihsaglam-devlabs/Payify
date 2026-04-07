@@ -7,10 +7,13 @@ namespace LinkPara.Emoney.Application.Features.OpenBankingOperations.Commands.Cr
 public class CreateAccountConsentCommand : IRequest<AccountConsentDetailResultDto>
 {
     public string HhsCode { get; set; }
-    public string AppUserId { get; set; }
+    public int AppUserId { get; set; }
     public YosForwardType ForwardType { get; set; }
     public DateTime AccessExpireDate { get; set; }
     public List<string> PermissionTypes { get; set; }
+    public string StatusCode { get; set; }
+    public AccountConsentIdentityInfo Identity { get; set; }
+
 }
 
 public class CreateAccountConsentCommandHandler : IRequestHandler<CreateAccountConsentCommand, AccountConsentDetailResultDto>

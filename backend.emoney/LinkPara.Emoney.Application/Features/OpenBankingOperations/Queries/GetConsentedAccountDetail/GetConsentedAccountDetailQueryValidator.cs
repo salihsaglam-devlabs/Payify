@@ -6,8 +6,8 @@ public class GetConsentedAccountDetailQueryValidator : AbstractValidator<GetCons
 {
     public GetConsentedAccountDetailQueryValidator()
     {
-    //    RuleFor(x => x.AccountReference).NotEmpty().NotNull();
-    //    RuleFor(x => x.HhsCode).NotEmpty().NotNull();
-    //    RuleFor(x => x.AppUserId).NotEmpty().NotNull();
+        RuleFor(x => x.AccountReference).NotEmpty().NotNull();
+        RuleFor(x => x.HhsCode).NotEmpty().NotNull();
+        RuleFor(x => x.AppUserId).NotEmpty().NotNull();
     }
 }

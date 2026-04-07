@@ -12,7 +12,6 @@ using LinkPara.Emoney.Application.Features.Wallets.Commands.SaveWallet;
 using LinkPara.Emoney.Application.Features.Wallets.Commands.Transfer;
 using LinkPara.Emoney.Application.Features.Wallets.Commands.UpdateUserWallets;
 using LinkPara.Emoney.Application.Features.Wallets.Commands.UpdateWallet;
-using LinkPara.Emoney.Application.Features.Wallets.Commands.ValidateWallet;
 using LinkPara.Emoney.Application.Features.Wallets.Queries.GetAccountWallets;
 using LinkPara.Emoney.Application.Features.Wallets.Queries.GetUserWallets;
 using LinkPara.Emoney.Application.Features.Wallets.Queries.GetWalletBalanceDaily;
@@ -64,8 +63,7 @@ public class WalletService : IWalletService
     private readonly IGenericRepository<Transaction> _transactionRepository;
     private readonly IApplicationUserService _applicationUserService;
     private readonly ICalendarService _calendarService;
-    public const string SuccessCode = ExceptionPrefix.Emoney + "000";
-    public const string SuccessReasonCode = "Successful";
+
     public WalletService(
         IGenericRepository<Wallet> repository,
         IMapper mapper,
@@ -129,6 +127,7 @@ public class WalletService : IWalletService
 
         return await query.AnyAsync();
     }
+
     public async Task<List<WalletDto>> GetUserWalletsAsync(GetUserWalletsFilterQuery query)
     {
         var accountUser = await _accountUserRepository.GetAll()
@@ -156,6 +155,7 @@ public class WalletService : IWalletService
 
         return new List<WalletDto>();
     }
+
     public async Task<List<WalletDto>> GetAccountWalletsAsync(AccountWalletsQuery query)
     {
         var wallets = await _repository.GetAll(s => s.Currency)
@@ -167,6 +167,7 @@ public class WalletService : IWalletService
 
         return _mapper.Map<List<WalletDto>>(wallets);
     }
+
     public async Task<WalletBalanceResponse> GetWalletBalancesAsync(GetWalletBalancesQuery query)
     {
         var response = new WalletBalanceResponse();
@@ -260,6 +261,7 @@ public class WalletService : IWalletService
 
         return response;
     }
+
     public async Task<WalletDto> GetWalletDetailsAsync(GetWalletDetailsQuery query)
     {
         var accountUser = await _accountUserRepository.GetAll()
@@ -281,6 +283,7 @@ public class WalletService : IWalletService
 
         return _mapper.Map<WalletDto>(wallet);
     }
+
     public async Task<WalletSummaryDto> GetWalletSummaryAsync(GetWalletSummaryQuery query)
     {
         Wallet wallet = null;
@@ -322,6 +325,7 @@ public class WalletService : IWalletService
             CurrencySymbol = wallet.Currency.Symbol
         };
     }
+
     public async Task ConvertUserWalletsToIndividualAsync(ConvertUserWalletsToIndividualCommand command)
     {
         var accountUser = await _accountUserRepository.GetAll()
@@ -349,6 +353,7 @@ public class WalletService : IWalletService
             ToEmail = user.Email
         });
     }
+
     public async Task SaveWalletAsync(SaveWalletCommand command)
     {
         var currency = await _currencyRepository.GetAll()
@@ -443,6 +448,7 @@ public class WalletService : IWalletService
             {"FriendlyName", command.FriendlyName}
         });
     }
+
     public async Task UpdateUserWalletsAsync(Guid userId, UpdateUserWalletsCommand request)
     {
         var accountUser = await _accountUserRepository.GetAll()
@@ -469,6 +475,7 @@ public class WalletService : IWalletService
 
         await ActiveRecordStatus(request, userWallets, dbContext);
     }
+
     public async Task UpdateWalletAsync(UpdateWalletCommand command, CancellationToken cancellationToken)
     {
         var accountUser = await _accountUserRepository.GetAll()
@@ -526,9 +533,10 @@ public class WalletService : IWalletService
             await UpdateWalletStatusAsync(command, cancellationToken, wallet, userWallets, accountUser, dbContext);
         }
     }
+
     public async Task<WalletPartnerDto> GetWalletDetailsPartnerAsync(GetWalletDetailsPartnerQuery query)
     {
-        if (!string.IsNullOrEmpty(query.Msisdn))
+        if (!query.Msisdn.IsNullOrEmpty())
         {
             var accountMain = await _accountRepository.GetAll()
             .FirstOrDefaultAsync(c => c.PhoneNumber == query.Msisdn);
@@ -592,6 +600,7 @@ public class WalletService : IWalletService
         }
         return walletPartner;
     }
+
     private async Task SaveAccountingCustomerAsync(Account account, Guid customerId, Wallet wallet)
     {
         var customer = await _customerService.GetCustomerAsync(customerId);
@@ -604,6 +613,7 @@ public class WalletService : IWalletService
 
         await _accountingService.CreateCustomerAsync(account, wallet, customer);
     }
+
     private static async Task CurrencyTypeControlAsync(Currency currency, IQueryable<Wallet> walletQuery, int userSubWalletCount)
     {
         if (currency.CurrencyType == CurrencyType.Crypto && userSubWalletCount > 0)
@@ -620,6 +630,7 @@ public class WalletService : IWalletService
             }
         }
     }
+
     private static void CheckMainWallet(SaveWalletCommand request, IQueryable<Wallet> walletQuery, int userSubWalletCount)
     {
         if (userSubWalletCount > 0 && request.IsMainWallet)
@@ -635,6 +646,7 @@ public class WalletService : IWalletService
             }
         }
     }
+
     private async Task SaveWalletAuditLogAsync(bool isSuccess, Guid userId, Dictionary<string, string> deatils)
     {
         await _auditLogService.AuditLogAsync(
@@ -650,6 +662,7 @@ public class WalletService : IWalletService
             }
         );
     }
+
     private async Task<int> GetUserWalletLimit()
     {
         var parameter = await _parameterService
@@ -664,6 +677,7 @@ public class WalletService : IWalletService
             ? Convert.ToInt32(parameter.ParameterValue)
             : 0;
     }
+
     private async Task UpdateFriendlyNameAsync(UpdateWalletCommand request, Wallet wallet, EmoneyDbContext dbContext)
     {
         dbContext.Wallet.Attach(wallet);
@@ -679,6 +693,7 @@ public class WalletService : IWalletService
             { "FriendlyName", request.FriendlyName }
         });
     }
+
     private async Task UpdateWalletStatusAsync(UpdateWalletCommand request, CancellationToken cancellationToken, Wallet wallet,
        List<Wallet> userWallets, AccountUser user, EmoneyDbContext dbContext)
     {
@@ -702,6 +717,7 @@ public class WalletService : IWalletService
         }
         await UpdateWalletStatus(request, wallet, userWallets, user, cancellationToken, dbContext);
     }
+
     private async Task UpdateWalletAuditLogAsync(bool isSuccess, Guid userId, Dictionary<string, string> details)
     {
         await _auditLogService.AuditLogAsync(
@@ -717,6 +733,7 @@ public class WalletService : IWalletService
             }
         );
     }
+
     private async Task UpdateWalletStatus(UpdateWalletCommand request, Wallet wallet, List<Wallet> userWallets, AccountUser user,
         CancellationToken cancellationToken, EmoneyDbContext dbContext)
     {
@@ -793,6 +810,7 @@ public class WalletService : IWalletService
             { "wallet.IsBlocked.", request.IsBlocked.ToString() }
         });
     }
+
     private async Task SendPushNotificationAsync(AccountUser user, Wallet subWallet, Wallet mainWallet)
     {
         var receiverUserIdList = new List<NotificationUserInfo>()
@@ -824,6 +842,7 @@ public class WalletService : IWalletService
 
         await _notificationSender.SendPushNotificationAsync(receiverNotificationRequest);
     }
+
     private async Task PassiveRecordStatus(UpdateUserWalletsCommand request, List<Wallet> userWallets, EmoneyDbContext dbContext)
     {
         if (request.RecordStatus == RecordStatus.Passive)
@@ -847,6 +866,7 @@ public class WalletService : IWalletService
             }
         }
     }
+
     private async Task ActiveRecordStatus(UpdateUserWalletsCommand request, List<Wallet> userWallets, EmoneyDbContext dbContext)
     {
         if (request.RecordStatus == RecordStatus.Active)
@@ -880,6 +900,7 @@ public class WalletService : IWalletService
             }
         }
     }
+
     private async Task SaveUpdateUserWalletsAuditLogAsync(string walletNumber, string status)
     {
         await _auditLogService.AuditLogAsync(
@@ -897,6 +918,7 @@ public class WalletService : IWalletService
                 }
             });
     }
+
     private async Task<bool> GetP2PCreditBalanceUsableAsync()
     {
         bool p2PCreditBalanceUsable = true;
@@ -913,6 +935,7 @@ public class WalletService : IWalletService
 
         return p2PCreditBalanceUsable;
     }
+
     public async Task SyncWalletBalanceDailyAsync()
     {
         var jobTime = DateTime.Now;
@@ -932,6 +955,7 @@ public class WalletService : IWalletService
         }
         return;
     }
+
     private async Task<WalletBalanceDaily> GetWalletBalanceDaily(DateTime jobDate)
     {
         var response = new WalletBalanceDaily();
@@ -975,6 +999,7 @@ public class WalletService : IWalletService
         }
         return response;
     }
+
     public async Task<WalletBalanceDailyResponse> GetWalletBalanceDailyAsync(GetWalletBalancesDailyQuery query)
     {
         using var scope = _scopeFactory.CreateScope();
@@ -1003,6 +1028,7 @@ public class WalletService : IWalletService
             return response;
         }
     }
+
     public async Task<List<MoneyTransferPaymentType>> GetMoneyTransferPaymentTypeAsync()
     {
         var parameterList = await _parameterService.GetParametersAsync("MoneyTransferPaymentType");
@@ -1038,64 +1064,5 @@ public class WalletService : IWalletService
         }
         return moneyTransferPaymentTypeList.OrderBy(x => x.Code).ToList();
     }
-    public async Task<ValidateWalletResponse> ValidateWalletAsync(ValidateWalletCommand command)
-    {
-        Wallet wallet;
-        try
-        {
-            wallet = await GetWalletAsync(command.WalletNumber);
 
-            var currencyCodeNumber = await GetCurrencyCodeAsync(wallet.CurrencyCode);
-            ValidateStatus(wallet, command.CurrencyCode, currencyCodeNumber);
-            return new ValidateWalletResponse
-            {
-                ResponseCode = SuccessCode,
-                ResponseReasonCode = SuccessReasonCode
-            };
-        }
-        catch (Exception exception)
-        {
-            if (exception is ApiException apiException)
-            {
-                return new ValidateWalletResponse
-                {
-                    ResponseCode = apiException.Code,
-                    ResponseReasonCode = apiException.Message
-                };
-            }
-            throw;
-        }
-    }
-    private async Task<Wallet> GetWalletAsync(string walletNumber)
-    {
-        var wallet = await _repository
-            .GetAll()
-            .SingleOrDefaultAsync(x => x.WalletNumber == walletNumber);
-        if (wallet is null)
-        {
-            throw new CustomizedWalletNotFoundException();
-        }
-        return wallet;
-    }
-    private async Task<string> GetCurrencyCodeAsync(string currencyCode)
-    {
-        var parameterTemplateValue = await _parameterService
-            .GetAllParameterTemplateValuesAsync("Currencies", currencyCode);
-        return parameterTemplateValue?.FirstOrDefault(b => b.TemplateCode == "Number")?.TemplateValue;
-    }
-    private static void ValidateStatus(Wallet wallet, string requestCurrencyCode, string walletCurrencyCode)
-    {
-        if (requestCurrencyCode != walletCurrencyCode)
-        {
-            throw new CurrencyCodeMismatchException();
-        }
-        if (wallet.RecordStatus == RecordStatus.Passive)
-        {
-            throw new InvalidWalletStatusException();
-        }
-        if (wallet.IsBlocked)
-        {
-            throw new WalletBlockedException();
-        }
-    }
 }

@@ -178,7 +178,6 @@ public class UpdateBalanceService : IUpdateBalanceService
         try
         {
             var transactionId = Guid.Empty;
-            var currentBalance = 0m;
             using var scope = _scopeFactory.CreateScope();
             var _dbContext = scope.ServiceProvider.GetRequiredService<EmoneyDbContext>();
             var strategy = new NoRetryExecutionStrategy(_dbContext);
@@ -220,7 +219,6 @@ public class UpdateBalanceService : IUpdateBalanceService
 
                     await _dbContext.SaveChangesAsync();
                     transactionId = transaction.Id;
-                    currentBalance = dbWallet.AvailableBalance;
                     await transactionScope.CommitAsync();
                 }
                 catch
@@ -250,8 +248,7 @@ public class UpdateBalanceService : IUpdateBalanceService
                 ResponseCode = SuccessCode,
                 ResponseReasonCode = SuccessReasonCode,
                 Utid = command.Utid,
-                TransactionId = transactionId.ToString(),
-                CurrentBalance = currentBalance
+                TransactionId = transactionId.ToString()
             };
         }
         catch (Exception exception)
@@ -292,7 +289,6 @@ public class UpdateBalanceService : IUpdateBalanceService
         try
         {
             var transactionId = Guid.Empty;
-            var currentBalance = 0m;
             using var scope = _scopeFactory.CreateScope();
             var _dbContext = scope.ServiceProvider.GetRequiredService<EmoneyDbContext>();
             var strategy = new NoRetryExecutionStrategy(_dbContext);
@@ -331,7 +327,6 @@ public class UpdateBalanceService : IUpdateBalanceService
 
                     await _dbContext.SaveChangesAsync();
                     transactionId = transaction.Id;
-                    currentBalance = dbWallet.AvailableBalance;
                     await transactionScope.CommitAsync();
                 }
                 catch
@@ -361,8 +356,7 @@ public class UpdateBalanceService : IUpdateBalanceService
                 ResponseCode = SuccessCode,
                 ResponseReasonCode = SuccessReasonCode,
                 Utid = command.Utid,
-                TransactionId = transactionId.ToString(),
-                CurrentBalance = currentBalance
+                TransactionId = transactionId.ToString()
             };
         }
         catch (Exception exception)
@@ -403,7 +397,6 @@ public class UpdateBalanceService : IUpdateBalanceService
         try
         {
             var transactionId = Guid.Empty;
-            var currentBalance = 0m;
             using var scope = _scopeFactory.CreateScope();
             var _dbContext = scope.ServiceProvider.GetRequiredService<EmoneyDbContext>();
             var strategy = new NoRetryExecutionStrategy(_dbContext);
@@ -433,7 +426,6 @@ public class UpdateBalanceService : IUpdateBalanceService
 
                     await _dbContext.SaveChangesAsync();
                     transactionId = transaction.Id;
-                    currentBalance = dbWallet.AvailableBalance;
                     await transactionScope.CommitAsync();
                 }
                 catch
@@ -463,8 +455,7 @@ public class UpdateBalanceService : IUpdateBalanceService
                 ResponseCode = SuccessCode,
                 ResponseReasonCode = SuccessReasonCode,
                 Utid = command.Utid,
-                TransactionId = transactionId.ToString(),
-                CurrentBalance = currentBalance
+                TransactionId = transactionId.ToString()
             };
         }
         catch (Exception exception)
@@ -505,7 +496,6 @@ public class UpdateBalanceService : IUpdateBalanceService
         try
         {
             var transactionId = Guid.Empty;
-            var currentBalance = 0m;
             using var scope = _scopeFactory.CreateScope();
             var _dbContext = scope.ServiceProvider.GetRequiredService<EmoneyDbContext>();
             var strategy = new NoRetryExecutionStrategy(_dbContext);
@@ -543,7 +533,6 @@ public class UpdateBalanceService : IUpdateBalanceService
 
                     await _dbContext.SaveChangesAsync();
                     transactionId = transaction.Id;
-                    currentBalance = dbWallet.AvailableBalance;
                     await transactionScope.CommitAsync();
                 }
                 catch
@@ -573,8 +562,7 @@ public class UpdateBalanceService : IUpdateBalanceService
                 ResponseCode = SuccessCode,
                 ResponseReasonCode = SuccessReasonCode,
                 Utid = command.Utid,
-                TransactionId = transactionId.ToString(),
-                CurrentBalance = currentBalance
+                TransactionId = transactionId.ToString()
             };
         }
         catch (Exception exception)

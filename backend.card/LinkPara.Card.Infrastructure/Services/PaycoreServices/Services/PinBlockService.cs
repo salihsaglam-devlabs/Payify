@@ -1,6 +1,7 @@
 ﻿using LinkPara.Card.Application.Commons.Helpers;
 using LinkPara.Card.Application.Commons.Interfaces;
 using LinkPara.Card.Application.Commons.Models.PaycoreModels;
+using LinkPara.Card.Application.Commons.Models.PaycoreModels.SecurityModels;
 using LinkPara.Card.Infrastructure.Services.PaycoreServices.Models;
 using LinkPara.HttpProviders.Vault;
 using Microsoft.Extensions.Configuration;
@@ -23,8 +24,7 @@ public class PinBlockService : IPinBlockService
         _paycoreSettings.VaultSettings =
             _vaultClient.GetSecretValue<PaycoreVaultSettings>("CardSecrets", "PaycoreSettings");
     }
-
-    public async Task<PaycoreResponse> GenerateEncryptedPinBlock(string clearPin, string clearCardNumber)
+    public async Task<SetCardBinResponse> GenerateEncryptedPinBlock(string clearPin, string clearCardNumber)
     {
         Validate(clearPin, clearCardNumber);
 
@@ -52,14 +52,13 @@ public class PinBlockService : IPinBlockService
         using ICryptoTransform encryptor = tripleDes.CreateEncryptor();
         byte[] encryptedPinBlock = encryptor.TransformFinalBlock(clearPinBlock, 0, clearPinBlock.Length);
 
-        return new PaycoreResponse
+        return new SetCardBinResponse
         {
             IsSuccess = true,
             Data = HexHelper.BytesToHex(encryptedPinBlock)
         };
     }
-
-    public async Task<PaycoreResponse> DecryptEncryptedPinBlock(string encryptedBlock, string clearCardNumber)
+    public async Task<SetCardBinResponse> DecryptEncryptedPinBlock(string encryptedBlock, string clearCardNumber)
     {
         ValidateEncryptedBlock(encryptedBlock, clearCardNumber);
 
@@ -88,13 +87,12 @@ public class PinBlockService : IPinBlockService
 
         string clearDataHex = HexHelper.BytesToHex(clearDataBlock);
 
-        return new PaycoreResponse
+        return new SetCardBinResponse
         {
             IsSuccess = true,
             Data = ParseClearBlock(clearDataHex)
         };
     }
-
     private static string ParseClearBlock(string clearDataHex)
     {
         if (string.IsNullOrWhiteSpace(clearDataHex) || clearDataHex.Length != 16)
@@ -108,7 +106,6 @@ public class PinBlockService : IPinBlockService
         return clearDataHex.Substring(2, dataLength);
 
     }
-
     private static void Validate(string clearPin, string clearCardNumber)
     {
         if (string.IsNullOrWhiteSpace(clearPin))
@@ -129,7 +126,6 @@ public class PinBlockService : IPinBlockService
         if (clearCardNumber.Length < 13)
             throw new ArgumentException("Clear kart numarası geçersiz.");
     }
-
     private static void ValidateEncryptedBlock(string encryptedBlock, string clearCardNumber)
     {
         if (string.IsNullOrWhiteSpace(encryptedBlock))
@@ -150,7 +146,6 @@ public class PinBlockService : IPinBlockService
         if (clearCardNumber.Length < 13)
             throw new ArgumentException("Clear kart numarası geçersiz.");
     }
-
     private static byte[] NormalizeKey(byte[] key)
     {
         if (key.Length == 16)

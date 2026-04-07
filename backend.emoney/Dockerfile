@@ -33,19 +33,10 @@ RUN dotnet build "LinkPara.Emoney.API.csproj" -c Release -o /app/build
 FROM build AS publish
 RUN dotnet publish "LinkPara.Emoney.API.csproj" -c Release -o /app/publish
 
-FROM mcr.microsoft.com/dotnet/aspnet:8.0-alpine
+FROM mcr.microsoft.com/dotnet/aspnet:8.0
 WORKDIR /app
-
-RUN apk --no-cache upgrade \
- && apk add --no-cache ca-certificates tzdata icu-libs curl iputils bind-tools netcat-openbsd busybox-extras tcpdump procps coreutils openssl
-
-RUN ln -snf /usr/share/zoneinfo/Europe/Istanbul /etc/localtime \
- && echo "Europe/Istanbul" > /etc/timezone
-
 COPY --from=publish /app/publish .
 
-ENV DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=0
 ENV ASPNETCORE_ENVIRONMENT=Development
-
 EXPOSE 5010
 ENTRYPOINT ["dotnet", "LinkPara.Emoney.API.dll"]

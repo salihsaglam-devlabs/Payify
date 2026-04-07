@@ -8,7 +8,6 @@ public class TransactionConfiguration : IEntityTypeConfiguration<Transaction>
 {
     public void Configure(EntityTypeBuilder<Transaction> builder)
     {
-        builder.Property(t => t.IdempotentKey).HasMaxLength(100);
         builder.Property(t => t.Amount).HasPrecision(18, 2);
         builder.Property(t => t.CurrentBalance).HasPrecision(18, 2);
         builder.Property(t => t.PreBalance).HasPrecision(18, 2);

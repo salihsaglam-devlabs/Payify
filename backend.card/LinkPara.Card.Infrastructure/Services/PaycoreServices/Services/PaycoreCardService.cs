@@ -19,7 +19,6 @@ using LinkPara.HttpProviders.Vault;
 using LinkPara.SharedModels.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
-using Microsoft.IdentityModel.Tokens;
 
 namespace LinkPara.Card.Infrastructure.Services.PaycoreServices.Services;
 
@@ -152,27 +151,26 @@ public class PaycoreCardService : IPaycoreCardService
             PersoCenterCode = PersoCenters.PLASTCARD,
             CrdCardAuth = new CrdCardAuth
             {
-                authDomEcom = true,
-                authDomMoto = true,
-                authDomNoCVV2 = true,
-                authDomCash = true,
-                authDomContactless = true,
-                authIntEcom = true,
-                authIntMoto = true,
-                authIntNoCVV2 = true,
-                authIntContactless = true,
-                authIntCash = true,
-                authIntPosSale = true,
-                auth3dSecure = true,
-                auth3dSecureType = ThreeDSecureTypes.SMS,
-                authCloseInstallment = false,
-                authDomCasino = false,
-                authIntCasino = false,
-                visaAccountUpdaterOpt = false
+                AuthDomEcom = true,
+                AuthDomMoto = true,
+                AuthDomNoCVV2 = true,
+                AuthDomCash = true,
+                AuthDomContactless = true,
+                AuthIntEcom = true,
+                AuthIntMoto = true,
+                AuthIntNoCVV2 = true,
+                AuthIntContactless = true,
+                AuthIntCash = true,
+                AuthIntPosSale = true,
+                Auth3dSecure = true,
+                Auth3dSecureType = ThreeDSecureTypes.SMS,
+                AuthCloseInstallment = false,
+                AuthDomCasino = false,
+                AuthIntCasino = false,
+                VisaAccountUpdaterOpt = false
             }
         };
     }
-
     public async Task<GetCardAuthorizationsResponse> GetCardAuthorizationsAsync(GetCardAuthorizationsQuery request)
     {
         try
@@ -228,7 +226,6 @@ public class PaycoreCardService : IPaycoreCardService
 
         return result;
     }
-
     public async Task<GetCardSensitiveDataResponse> GetCardSensitiveDataAsync(GetCardSensitiveDataQuery request)
     {
         try
@@ -296,35 +293,32 @@ public class PaycoreCardService : IPaycoreCardService
             };
         }
     }
-
     public Task<GetCardTransactionsResponse> GetCardTransactionsAsync(GetCardTransactionsQuery request)
     {
         throw new NotImplementedException();
     }
-
     public async Task<PaycoreResponse> UpdateCardAuthorizationsAsync(UpdateCardAuthorizationCommand request)
     {
-
         PaycoreUpdateCardAuthorizationsRequest updateCardAuthorizationRequest = new PaycoreUpdateCardAuthorizationsRequest
         {
             CardNo = request.CardNumber,
-            authDomEcom = request.CrdCardAuth.authDomEcom,
-            authDomMoto = request.CrdCardAuth.authDomMoto,
-            authDomNoCVV2 = request.CrdCardAuth.authDomNoCVV2,
-            authDomCash = request.CrdCardAuth.authDomCash,
-            authDomContactless = request.CrdCardAuth.authDomContactless,
-            authIntEcom = request.CrdCardAuth.authIntEcom,
-            authIntMoto = request.CrdCardAuth.authIntMoto,
-            authIntNoCVV2 = request.CrdCardAuth.authIntNoCVV2,
-            authIntContactless = request.CrdCardAuth.authIntContactless,
-            authIntCash = request.CrdCardAuth.authIntCash,
-            authIntPosSale = request.CrdCardAuth.authIntPosSale,
-            auth3dSecure = request.CrdCardAuth.auth3dSecure,
-            auth3dSecureType = request.CrdCardAuth.auth3dSecureType,
-            authCloseInstallment = request.CrdCardAuth.authCloseInstallment,
-            authDomCasino = request.CrdCardAuth.authDomCasino,
-            authIntCasino = request.CrdCardAuth.authIntCasino,
-            visaAccountUpdaterOpt = request.CrdCardAuth.visaAccountUpdaterOpt
+            AuthDomEcom = request.CrdCardAuth.AuthDomEcom,
+            AuthDomMoto = request.CrdCardAuth.AuthDomMoto,
+            AuthDomNoCVV2 = request.CrdCardAuth.AuthDomNoCVV2,
+            AuthDomCash = request.CrdCardAuth.AuthDomCash,
+            AuthDomContactless = request.CrdCardAuth.AuthDomContactless,
+            AuthIntEcom = request.CrdCardAuth.AuthIntEcom,
+            AuthIntMoto = request.CrdCardAuth.AuthIntMoto,
+            AuthIntNoCVV2 = request.CrdCardAuth.AuthIntNoCVV2,
+            AuthIntContactless = request.CrdCardAuth.AuthIntContactless,
+            AuthIntCash = request.CrdCardAuth.AuthIntCash,
+            AuthIntPosSale = request.CrdCardAuth.AuthIntPosSale,
+            Auth3dSecure = request.CrdCardAuth.Auth3dSecure,
+            Auth3dSecureType = request.CrdCardAuth.Auth3dSecureType,
+            AuthCloseInstallment = request.CrdCardAuth.AuthCloseInstallment,
+            AuthDomCasino = request.CrdCardAuth.AuthDomCasino,
+            AuthIntCasino = request.CrdCardAuth.AuthIntCasino,
+            VisaAccountUpdaterOpt = request.CrdCardAuth.VisaAccountUpdaterOpt
         };
 
         var updateCardAuthorizationsResponse = await _clientService.ExecuteAsync<PaycoreBaseResponse>(
@@ -347,15 +341,14 @@ public class PaycoreCardService : IPaycoreCardService
             Description = updateCardAuthorizationsResponse.message
         };
     }
-
-    public async Task<UpdateCardStatusResponse> UpdateCardStatusAsync(UpdateCardStatusCommand request)
+    public async Task<PaycoreResponse> UpdateCardStatusAsync(UpdateCardStatusCommand request)
     {
         var updateCardRequest = new UpdateCardStatusRequest
         {
             CardNo = request.CardNumber,
             FreeText = request.Description,
             StatCode = request.StatusCode,
-            StatusReasonCode = ""
+            StatusReasonCode = request.StatusReasonCode
         };
 
         var updateCard = await _clientService.ExecuteAsync<PaycoreUpdateCardStatusResponse>(
@@ -365,14 +358,14 @@ public class PaycoreCardService : IPaycoreCardService
 
         if (!updateCard.IsSuccess)
         {
-            return new UpdateCardStatusResponse
+            return new PaycoreResponse
             {
                 IsSuccess = updateCard.IsSuccess,
-                ErrorMessage = updateCard.exception.message
+                Description = updateCard.exception.message
             };
         }
 
-        return new UpdateCardStatusResponse
+        return new PaycoreResponse
         {
             IsSuccess = updateCard.IsSuccess
         };
@@ -425,7 +418,6 @@ public class PaycoreCardService : IPaycoreCardService
            Description = ResponseDescription.SUCCESS
         };
     }
-
     public async Task<AddAdditionalLimitRestrictionResponse> AddAdditionalLimitRestrictionAsync(AddAdditionalLimitRestrictionCommand command)
     {
         var addAdditionalLimitRestrictionRequest = new PaycoreAddAdditionalLimitRestrictionRequest

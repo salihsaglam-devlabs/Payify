@@ -1,25 +1,46 @@
-﻿namespace LinkPara.Card.Application.Commons.Models.PaycoreModels.ParameterModels
+﻿using System.Text.Json.Serialization;
+
+namespace LinkPara.Card.Application.Commons.Models.PaycoreModels.ParameterModels
 {
     public class PaycoreProduct
     {
-        public long guid { get; set; }
-        public string dci { get; set; }
-        public string code { get; set; }
-        public string description { get; set; }
-        public int expiryPeriodMonths { get; set; }
-        public string segment { get; set; }
-        public string physicalType { get; set; }
-        public string plasticType { get; set; }
-        public object virtualCardProductCode { get; set; }
-        public object hceCardProductCode { get; set; }
-        public object[] customerGroups { get; set; }
-        public bool isBusiness { get; set; }
-        public bool isEmv { get; set; }
-        public bool isContactless { get; set; }
-        public bool isOpen { get; set; }
-        public string expiryDateType { get; set; }
-        public bool? hasPhoto { get; set; }
-        public object bin { get; set; }
-        public object isBrandShared { get; set; }
+        [JsonPropertyName("guid")]
+        public long Guid { get; set; }
+        [JsonPropertyName("dci")]
+        public string Dci { get; set; }
+        [JsonPropertyName("code")]
+        public string Code { get; set; }
+        [JsonPropertyName("description")]
+        public string Description { get; set; }
+        [JsonPropertyName("expiryPeriodMonths")]
+        public int ExpiryPeriodMonths { get; set; }
+        [JsonPropertyName("segment")]
+        public string Segment { get; set; }
+        [JsonPropertyName("physicalType")]
+        public string PhysicalType { get; set; }
+        [JsonPropertyName("plasticType")]
+        public string PlasticType { get; set; }
+        [JsonPropertyName("virtualCardProductCode")]
+        public object VirtualCardProductCode { get; set; }
+        [JsonPropertyName("hceCardProductCode")]
+        public object HceCardProductCode { get; set; }
+        [JsonPropertyName("customerGroups")]
+        public object[] CustomerGroups { get; set; }
+        [JsonPropertyName("isBusiness")]
+        public bool IsBusiness { get; set; }
+        [JsonPropertyName("isEmv")]
+        public bool IsEmv { get; set; }
+        [JsonPropertyName("isContactless")]
+        public bool IsContactless { get; set; }
+        [JsonPropertyName("isOpen")]
+        public bool IsOpen { get; set; }
+        [JsonPropertyName("expiryDateType")]
+        public string ExpiryDateType { get; set; }
+        [JsonPropertyName("hasPhoto")]
+        public bool? HasPhoto { get; set; }
+        [JsonPropertyName("bin")]
+        public object Bin { get; set; }
+        [JsonPropertyName("isBrandShared")]
+        public object IsBrandShared { get; set; }
     }
 }

@@ -13,7 +13,6 @@ public class CreateCustomerCommand : IRequest<PaycoreResponse>
     public string Surname { get; set; }
     public CustomerAddress[] CustomerAddresses { get; set; }
     public CustomerCommunication[] CustomerCommunications { get; set; }
-    public CustomerLimit[] CustomerLimits { get; set; }
 }
 public class CreateCustomerCommandHandler : IRequestHandler<CreateCustomerCommand, PaycoreResponse>
 {

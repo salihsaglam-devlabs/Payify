@@ -72,7 +72,6 @@ public class TopupService : ITopupService
     private readonly IMoneyTransferService _moneyTransferService;
     private readonly ISaveReceiptService _saveReceiptService;
     private readonly IDatabaseProviderService _databaseProviderService;
-    private readonly IGenericRepository<Transaction> _transactionRepository;
 
     public TopupService(
         IServiceScopeFactory scopeFactory,
@@ -94,8 +93,7 @@ public class TopupService : ITopupService
         IBankAccountService bankAccountService,
         IMoneyTransferService moneyTransferService,
         ISaveReceiptService saveReceiptService,
-        IDatabaseProviderService databaseProviderService,
-        IGenericRepository<Transaction> transactionRepository)
+        IDatabaseProviderService databaseProviderService)
     {
         _scopeFactory = scopeFactory;
         _logger = logger;
@@ -120,7 +118,6 @@ public class TopupService : ITopupService
         _moneyTransferService = moneyTransferService;
         _saveReceiptService = saveReceiptService;
         _databaseProviderService = databaseProviderService;
-        _transactionRepository = transactionRepository;
     }
 
     public async Task<TopupProcessResponse> TopupProcessAsync(TopupProcessCommand topupProcess, Wallet wallet, CardTopupRequest cardTopupRequest, string cardHolderName, decimal amount)
@@ -129,8 +126,6 @@ public class TopupService : ITopupService
         {
             throw new WalletBlockedException();
         }
-
-        await CheckDuplicateTransactionAsync(topupProcess.BaseRequest.CardTopupRequestId);
 
         using var scope = _scopeFactory.CreateScope();
 
@@ -822,17 +817,5 @@ public class TopupService : ITopupService
             Channel = BatchChannel
         };
         return transaction;
-    }
-
-    public async Task CheckDuplicateTransactionAsync(Guid cardTopupRequestId)
-    {
-        var transactionExists = await _transactionRepository
-            .GetAll()
-            .AnyAsync(s => s.CardTopupRequestId == cardTopupRequestId && s.TransactionType == TransactionType.Deposit);
-
-        if (transactionExists)
-        {
-            throw new DuplicateRecordException();
-        }
     }
 }

@@ -12,7 +12,6 @@ using LinkPara.Emoney.Domain.Enums;
 using LinkPara.Emoney.Infrastructure.Persistence;
 using LinkPara.HttpProviders.Approval;
 using LinkPara.HttpProviders.Approval.Models;
-using LinkPara.HttpProviders.BusinessParameter;
 using LinkPara.HttpProviders.Documents;
 using LinkPara.HttpProviders.Documents.Models;
 using LinkPara.MappingExtensions.Mapping;
@@ -41,7 +40,6 @@ public class WalletBlockageService : IWalletBlockageService
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly ILogger<WalletBlockageService> _logger;
     private readonly IEmailSender _emailSender;
-    private readonly IParameterService _parameterService;
 
     public const string ApprovalRequestDisplayName = "Cüzdan Bloke İşlemi";
 
@@ -55,8 +53,7 @@ public class WalletBlockageService : IWalletBlockageService
         IServiceScopeFactory scopeFactory,
         ILogger<WalletBlockageService> logger,
         IRequestsService requestsService,
-        IEmailSender emailSender,
-        IParameterService parameterService)
+        IEmailSender emailSender)
 
     {
         _walletBlockageRepository = walletBlockageRepository;
@@ -70,7 +67,6 @@ public class WalletBlockageService : IWalletBlockageService
         _logger = logger;
         _requestsService = requestsService;
         _emailSender = emailSender;
-        _parameterService = parameterService;
     }
 
     public async Task<PaginatedList<WalletBlockageDto>> GetWalletBlockageAsync(GetWalletBlockageQuery request)
@@ -233,25 +229,6 @@ public class WalletBlockageService : IWalletBlockageService
     {
         try
         {
-            var walletBlockageDocumentParameters = await _parameterService.GetParametersAsync("WalletBlockageDocument");
-            var maxDocumentSize = walletBlockageDocumentParameters.FirstOrDefault(p => p.ParameterCode == "MaxDocumentSize")?.ParameterValue;
-            var maxDocumentCount = walletBlockageDocumentParameters.FirstOrDefault(p => p.ParameterCode == "MaxDocumentCount")?.ParameterValue;
-
-            var maxFileSize = Convert.ToInt32(maxDocumentSize) * 1024 * 1024;
-            if (request.Bytes == null || request.Bytes.Length > maxFileSize)
-            {                
-                throw new MaxDocumentSizeExceededException(maxDocumentSize);
-            }
-
-            var existingDocuments = await _walletBlockageDocumentRepository.GetAll()
-                                .Where(s => s.WalletId == request.WalletId)
-                                .ToListAsync();
-
-            if (existingDocuments is not null && existingDocuments.Count >= Convert.ToInt32(maxDocumentCount)) 
-            {
-                throw new MaxDocumentLimitExceededException();
-            }
-
             var wallet = await _walletRepository.GetByIdAsync(request.WalletId);
 
             if (wallet == null)

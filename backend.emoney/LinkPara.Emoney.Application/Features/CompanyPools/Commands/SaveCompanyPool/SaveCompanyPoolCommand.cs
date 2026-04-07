@@ -189,7 +189,7 @@ public class SaveCompanyPoolCommandHandler : IRequestHandler<SaveCompanyPoolComm
 
     private Task AddDocumentsAsync(Guid id, List<CompanyPoolDocument> documents)
     {
-        if (documents == null || documents.Count == 0)
+        if (documents.IsNullOrEmpty())
         {
             return Task.CompletedTask;
         }

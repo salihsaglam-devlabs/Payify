@@ -5,7 +5,6 @@ using LinkPara.Emoney.Application.Features.Wallets.Commands.ConvertUserWalletsTo
 using LinkPara.Emoney.Application.Features.Wallets.Commands.SaveWallet;
 using LinkPara.Emoney.Application.Features.Wallets.Commands.UpdateUserWallets;
 using LinkPara.Emoney.Application.Features.Wallets.Commands.UpdateWallet;
-using LinkPara.Emoney.Application.Features.Wallets.Commands.ValidateWallet;
 using LinkPara.Emoney.Application.Features.Wallets.Queries.GetAccountWallets;
 using LinkPara.Emoney.Application.Features.Wallets.Queries.GetUserWallets;
 using LinkPara.Emoney.Application.Features.Wallets.Queries.GetWalletBalanceDaily;
@@ -31,5 +30,4 @@ public interface IWalletService
     Task SyncWalletBalanceDailyAsync();
     Task<WalletBalanceDailyResponse> GetWalletBalanceDailyAsync(GetWalletBalancesDailyQuery query);
     Task<List<MoneyTransferPaymentType>> GetMoneyTransferPaymentTypeAsync();
-    Task<ValidateWalletResponse> ValidateWalletAsync(ValidateWalletCommand command);
 }

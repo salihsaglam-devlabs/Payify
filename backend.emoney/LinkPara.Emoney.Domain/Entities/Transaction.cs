@@ -44,5 +44,4 @@ public class Transaction : AuditEntity
     public string PaymentChannel { get; set; }
     public bool IsSettlementReceived { get; set; }
     public decimal UsedCreditAmount { get; set; }
-    public string IdempotentKey { get; set; }
 }

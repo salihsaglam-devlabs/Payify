@@ -321,10 +321,4 @@
   <data name="ReturnAmountExceededException" xml:space="preserve">
     <value>The return amount cannot exceed the amount of the previous transaction!</value>
   </data>
-	<data name="MaxDocumentLimitExceededException" xml:space="preserve">
-    <value>Max Document limit exceeded !</value>
-  </data>
-	<data name="MaxDocumentSizeExceededException" xml:space="preserve">
-    <value>Max Document Size limit exceeded !</value>
-  </data>
 </root>

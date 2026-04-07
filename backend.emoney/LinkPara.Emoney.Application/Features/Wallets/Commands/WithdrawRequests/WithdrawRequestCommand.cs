@@ -19,7 +19,6 @@ public class WithdrawRequestCommand : IRequest<MoneyTransferResponse>
     public string WalletNumber { get; set; }
     public Guid UserId { get; set; }
     public string TransactionToken { get; set; }
-    public string IdempotentKey { get; set; }
 }
 
 public class WithdrawRequestCommandHandler : IRequestHandler<WithdrawRequestCommand, MoneyTransferResponse>

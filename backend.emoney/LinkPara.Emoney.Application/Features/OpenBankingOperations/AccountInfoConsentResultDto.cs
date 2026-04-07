@@ -1,5 +1,3 @@
-using LinkPara.Emoney.Application.Features.AccountServiceProviders;
-
 namespace LinkPara.Emoney.Application.Features.OpenBankingOperations;
 
 public class AccountInfoConsentResultDto
@@ -7,7 +5,7 @@ public class AccountInfoConsentResultDto
     public ConsentInformation RzBlg { get; set; }
     public AccountGkdInformation Gkd { get; set; }
     public ParticipantInformation KatilimciBlg { get; set; }
-    public PaymentInformationDto OdmBsltm { get; set; }
+    public ConsentAccountInformation HspBlg { get; set; }
 }
 
 public class ConsentInformation
@@ -25,18 +23,21 @@ public class AccountGkdInformation
     public DateTime YetTmmZmn { get; set; }
     public string HhsYonAdr { get; set; }
     public AyrikGkdType AyrikGkd { get; set; }
+
 }
 
 public class AyrikGkdType
 {
     public string OhkTanimTip { get; set; }
     public string OhkTanimDeger { get; set; }
+
 }
 
 public class ParticipantInformation
 {
     public string HhsKod { get; set; }
     public string YosKod { get; set; }
+
 }
 
 public class ConsentAccountInformation
@@ -44,6 +45,7 @@ public class ConsentAccountInformation
     public PermissionInformation IznBlg { get; set; }
     public ConsentDetailInformation AyrBlg { get; set; }
     public AccountConsentIdentityInfo Kmlk { get; set; }
+
 }
 
 public class PermissionInformation
@@ -52,10 +54,12 @@ public class PermissionInformation
     public DateTime ErisimIzniSonTrh { get; set; }
     public DateTime HesapIslemBslZmn { get; set; }
     public DateTime HesapIslemBtsZmn { get; set; }
-}
+    
 
+}
 public class ConsentDetailInformation
 {
     public string OhkMsj { get; set; }
+
 }
 

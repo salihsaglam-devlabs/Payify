@@ -1,3 +1,4 @@
+using LinkPara.Emoney.Application.Commons.Interfaces;
 using LinkPara.Emoney.Application.Commons.Models;
 using LinkPara.Emoney.Application.Commons.Models.WalletModels;
 using LinkPara.Emoney.Application.Features.Transactions;
@@ -9,7 +10,6 @@ using LinkPara.Emoney.Application.Features.Wallets.Commands.Transfer;
 using LinkPara.Emoney.Application.Features.Wallets.Commands.UpdateBalance;
 using LinkPara.Emoney.Application.Features.Wallets.Commands.UpdateUserWallets;
 using LinkPara.Emoney.Application.Features.Wallets.Commands.UpdateWallet;
-using LinkPara.Emoney.Application.Features.Wallets.Commands.ValidateWallet;
 using LinkPara.Emoney.Application.Features.Wallets.Commands.WithdrawRequests;
 using LinkPara.Emoney.Application.Features.Wallets.Queries;
 using LinkPara.Emoney.Application.Features.Wallets.Queries.GetAccountWallets;
@@ -233,17 +233,5 @@ public class WalletsController : ApiControllerBase
     public async Task<List<MoneyTransferPaymentType>> GetMoneyTransferPaymentTypeAsync()
     {
         return await Mediator.Send(new GetMoneyTransferPaymentTypeQuery { });
-    }
-
-    /// <summary>
-    /// Validates and authorizes wallet.
-    /// </summary>
-    /// <param name="command"></param>
-    /// <returns></returns>
-    [Authorize(Policy = "EmoneyWallet:Create")]
-    [HttpPost("validate-wallet")]
-    public async Task<ValidateWalletResponse> ValidateWalletAsync(ValidateWalletCommand command)
-    {
-        return await Mediator.Send(command);
     }
 }

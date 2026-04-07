@@ -2,6 +2,7 @@ using LinkPara.ApiGateway.Commons.EventBusConfiguration;
 using LinkPara.ApiGateway.Services.Billing.HttpClients;
 using LinkPara.ApiGateway.Services.BusinessParameter.HttpClients;
 using LinkPara.ApiGateway.Services.CampaignManagement.HttpClients;
+using LinkPara.ApiGateway.Services.Card.HttpClients;
 using LinkPara.ApiGateway.Services.Cashback.HttpClients;
 using LinkPara.ApiGateway.Services.CustomerManagement.HttpClients;
 using LinkPara.ApiGateway.Services.DigitalKyc.HttpClients;
@@ -59,6 +60,7 @@ public static class DependencyInjection
         {
             client.BaseAddress = new Uri(serviceUrls.Identity);
         });
+
         services.AddHttpClient<IKPSHttpClient, KPSHttpClient>(client =>
         {
             client.BaseAddress = new Uri(serviceUrls.KPS);
@@ -81,10 +83,12 @@ public static class DependencyInjection
         {
             client.BaseAddress = new Uri(serviceUrls.Identity);
         });
+
         services.AddHttpClient<IAuthHttpClient, AuthHttpClient>(client =>
         {
             client.BaseAddress = new Uri(serviceUrls.Identity);
         });
+
         services.AddHttpClient<IOtpHttpClient, OtpHttpClient>(client =>
         {
             client.BaseAddress = new Uri(serviceUrls.Notification);
@@ -244,6 +248,7 @@ public static class DependencyInjection
         {
             client.BaseAddress = new Uri(serviceUrls.Notification);
         });
+
         services.AddHttpClient<ICustomerHttpClient, CustomerHttpClient>(client =>
         {
             client.BaseAddress = new Uri(serviceUrls.CustomerManagement);
@@ -325,10 +330,30 @@ public static class DependencyInjection
         });
 
         services.AddHttpClient<ICashbackHttpClient, CashbackHttpClient>(client =>
-       {
-           client.BaseAddress = new Uri(serviceUrls.Cashback);
-       });
+        {
+            client.BaseAddress = new Uri(serviceUrls.Cashback);
+        });
 
+        services.AddHttpClient<IPaycoreCardHttpClient, PaycoreCardHttpClient>(client =>
+        {
+            client.BaseAddress = new Uri(serviceUrls.Card);
+        });
+
+        services.AddHttpClient<IPaycoreCustomerHttpClient, PaycoreCustomerHttpClient>(client =>
+        {
+            client.BaseAddress = new Uri(serviceUrls.Card);
+        });
+
+        services.AddHttpClient<IPaycoreParametersHttpClient, PaycoreParametersHttpClient>(client =>
+        {
+            client.BaseAddress = new Uri(serviceUrls.Card);
+        });
+
+        services.AddHttpClient<ICustomerWalletCardHttpClient, CustomerWalletCardHttpClient>(client =>
+        {
+            client.BaseAddress = new Uri(serviceUrls.Card);
+        });
+        
         return services;
     }
 
@@ -339,19 +364,21 @@ public static class DependencyInjection
         var isLocalConfigurationEnabled = configuration.GetValue<bool>("LocalConfiguration:IsEnabled");
 
         var eventBusSettings = new EventBusSettings();
-        if (isLocalConfigurationEnabled) configuration.GetSection("LocalConfiguration:EventBusSettings").Bind(eventBusSettings);
-        else eventBusSettings = vaultClient.GetSecretValue<EventBusSettings>("SharedSecrets", "EventBusSettings", null);
+        if (isLocalConfigurationEnabled)
+            configuration.GetSection("LocalConfiguration:EventBusSettings").Bind(eventBusSettings);
+        else
+            eventBusSettings = vaultClient.GetSecretValue<EventBusSettings>("SharedSecrets", "EventBusSettings", null);
 
         services.AddMassTransit(x =>
         {
             x.UsingRabbitMq((context, cfg) =>
             {
                 cfg.Host(new Uri($"rabbitmq://{eventBusSettings.Host}/"),
-                     h =>
-                     {
-                         h.Username(eventBusSettings.Username);
-                         h.Password(eventBusSettings.Password);
-                     });
+                    h =>
+                    {
+                        h.Username(eventBusSettings.Username);
+                        h.Password(eventBusSettings.Password);
+                    });
             });
         });
 

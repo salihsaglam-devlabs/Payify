@@ -18,11 +18,6 @@ public class AccDetail
     public string HspDrm { get; set; }
     public string HspShb { get; set; }
     public string SubeAdi { get; set; }
-    public AccountDetail HspDty { get; set; }
-    
-}
-
-public class AccountDetail
-{
+    public string HspDty { get; set; }
     public DateTime HspAclsTrh { get; set; }
 }

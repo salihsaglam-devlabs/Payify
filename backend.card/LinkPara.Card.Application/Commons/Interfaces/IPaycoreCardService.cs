@@ -14,7 +14,7 @@ namespace LinkPara.Card.Application.Commons.Interfaces;
 public interface IPaycoreCardService
 {
     Task<PaycoreResponse> CreateCardAsync(CreateCardCommand command);
-    Task<UpdateCardStatusResponse> UpdateCardStatusAsync(UpdateCardStatusCommand command);
+    Task<PaycoreResponse> UpdateCardStatusAsync(UpdateCardStatusCommand command);
     Task<GetCardAuthorizationsResponse> GetCardAuthorizationsAsync(GetCardAuthorizationsQuery command);
     Task<List<GetCardInformationsResponse>> GetCardInformationsAsync(GetCardInformationsQuery command);
     Task<PaycoreResponse> UpdateCardAuthorizationsAsync(UpdateCardAuthorizationCommand command);

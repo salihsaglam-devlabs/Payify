@@ -1,5 +1,4 @@
 ﻿using System.Globalization;
-using System.Numerics;
 using AutoMapper;
 using LinkPara.Card.Application.Commons.Interfaces;
 using LinkPara.Card.Application.Commons.Models.PaycoreModels.DebitAuthorizationModels;
@@ -8,7 +7,6 @@ using LinkPara.Card.Domain.Constants;
 using LinkPara.Card.Domain.Entities;
 using LinkPara.Card.Infrastructure.Persistence;
 using LinkPara.Card.Infrastructure.Services.PaycoreServices.Models;
-using LinkPara.Card.Infrastructure.Services.PaycoreServices.Models.Response;
 using LinkPara.ContextProvider;
 using LinkPara.HttpProviders.Emoney;
 using LinkPara.HttpProviders.Emoney.Enums;
@@ -20,7 +18,6 @@ using MassTransit.Initializers;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
-using Microsoft.IdentityModel.Tokens;
 
 namespace LinkPara.Card.Infrastructure.Services.PaycoreServices.Services
 {
@@ -32,7 +29,8 @@ namespace LinkPara.Card.Infrastructure.Services.PaycoreServices.Services
         private readonly CardDbContext _dbContext;
         private readonly IMapper _mapper;
         private readonly ILogger<DebitAuthorizationService> _logger;
-        private readonly IGenericRepository<DebitAuthorization> _repository;
+        private readonly IGenericRepository<DebitAuthorization> _debitAuthRepository;
+        private readonly IGenericRepository<DebitAuthorizationFee> _debitAuthFeeRepository;
         private readonly IGenericRepository<CustomerWalletCard> _walletCardRepository;
         private readonly IWalletService _walletService;
         private readonly ICustomerTransactionService _transactionService;
@@ -49,7 +47,8 @@ namespace LinkPara.Card.Infrastructure.Services.PaycoreServices.Services
           IContextProvider contextProvider,
           IMapper mapper,
           ILogger<DebitAuthorizationService> logger,
-          IGenericRepository<DebitAuthorization> repository,
+          IGenericRepository<DebitAuthorization> debitAuthorizationRepository,
+          IGenericRepository<DebitAuthorizationFee> debitAuthorizationFeeRepository,
           IGenericRepository<CustomerWalletCard> walletCardRepository,
           IWalletService walletService,
           ICustomerTransactionService transactionService)
@@ -62,7 +61,8 @@ namespace LinkPara.Card.Infrastructure.Services.PaycoreServices.Services
             _dbContext = dbContext;
             _mapper = mapper;
             _logger = logger;
-            _repository = repository;
+            _debitAuthRepository = debitAuthorizationRepository;
+            _debitAuthFeeRepository = debitAuthorizationFeeRepository;
             _walletService = walletService;
             _contextProvider = contextProvider;
             _walletCardRepository = walletCardRepository;
@@ -160,6 +160,24 @@ namespace LinkPara.Card.Infrastructure.Services.PaycoreServices.Services
                 response.ResponseMessage = debitAuthorizationTxnResponse.ResponseMessage;
                 response.ResponseDescription = debitAuthorizationTxnResponse.ResponseDescription;
                 response.IsApproved = (response.ResponseCode == TransactionResponseCodes.Approved);
+            }
+            else if (command.TransactionType == TxnTypes.REFERENCEDREFUND || command.TransactionType == TxnTypes.REFUND) {
+                response.BillingAmount = new PaycoreAmount();
+                response.BillingAmount.Amount = command.BillingAmount.Amount;
+                response.BillingAmount.CurrencyCode = command.BillingAmount.CurrencyCode;
+                response.TransactionAmount = new PaycoreAmount();
+                response.TransactionAmount.Amount = command.TransactionAmount.Amount;
+                response.TransactionAmount.CurrencyCode = command.TransactionAmount.CurrencyCode;
+                BalanceInfo balanceInfo = new BalanceInfo();
+                balanceInfo.Type = BalanceInfoType;
+                balanceInfo.CurrencyCode = command.BillingAmount.CurrencyCode;
+                balanceInfo.CurrentAmount = 0;
+                balanceInfo.PreviousAmount = 0;
+                balanceInfo.TransactionAmount = (long)command.BillingAmount.Amount;
+                response.ResponseCode = TransactionResponseCodes.Approved;
+                response.ResponseMessage = EmoneyResponseCodes.Approved;
+                response.ResponseDescription = EmoneyResponseCodes.Approved;
+                response.IsApproved = true;
             }
             else
             {
@@ -508,7 +526,23 @@ namespace LinkPara.Card.Infrastructure.Services.PaycoreServices.Services
                     debitAuthorization.IsReturn = false;
                 }
 
-                await _repository.AddAsync(debitAuthorization);
+                await _debitAuthRepository.AddAsync(debitAuthorization);
+
+                foreach(var fee in command.FeeList)
+                {
+
+                    await _debitAuthFeeRepository.AddAsync(new DebitAuthorizationFee
+                    {
+                        Type = fee.Type,
+                        Amount = fee.Amount,
+                        CreatedBy = _contextProvider.CurrentContext.UserId ?? PaycoreUser,
+                        CreateDate = DateTime.UtcNow,
+                        CurrencyCode = fee.CurrencyCode,
+                        OceanTxnGUID = command.OceanTxnGUID,
+                        Tax1Amount = fee.Tax1Amount,
+                        Tax2Amount = fee.Tax2Amount
+                    });
+                }
                 return debitAuthorization;
             }
             catch (Exception ex)

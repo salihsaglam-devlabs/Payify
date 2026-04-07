@@ -6,7 +6,7 @@ namespace LinkPara.Emoney.Application.Features.OpenBankingOperations.Commands.Cr
 public class CreatePaymentConsentCommand : IRequest<PaymentOrderConsentDetailDto>
 {
     public string HhsCode { get; set; }
-    public string AppUserId { get; set; }
+    public int AppUserId { get; set; }
     public YosForwardType YonTipi { get; set; }
     public string OhkTur { get; set; }
     public string DrmKod { get; set; }

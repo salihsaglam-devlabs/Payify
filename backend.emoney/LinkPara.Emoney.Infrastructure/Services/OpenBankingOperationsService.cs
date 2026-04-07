@@ -1,5 +1,7 @@
 ﻿using AutoMapper;
+using LinkPara.Audit;
 using LinkPara.Emoney.Application.Commons.Interfaces;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using System.Text.Json;
 using LinkPara.HttpProviders;
@@ -19,28 +21,18 @@ using LinkPara.Emoney.Application.Features.OpenBankingOperations.Queries.GetActi
 using LinkPara.Emoney.Application.Features.OpenBankingOperations.Queries.GetConsentedAccountList;
 using LinkPara.Emoney.Application.Features.OpenBankingOperations.Queries.GetConsentedAccountDetail;
 using LinkPara.Emoney.Application.Commons.Models.OpenBankingModels;
+using LinkPara.HttpProviders.Utility;
 using LinkPara.Emoney.Application.Features.OpenBankingOperations.Queries.GetConsentedAccountBalanceList;
 using LinkPara.Emoney.Application.Features.OpenBankingOperations.Queries.GetConsentedAccountBalanceDetail;
 using LinkPara.Emoney.Application.Features.OpenBankingOperations.Queries.GetConsentedAccountActivities;
+using LinkPara.ApiGateway.Services.Emoney.Models.Requests;
 using LinkPara.Emoney.Application.Features.OpenBankingOperations.Commands.CreatePaymentConsent;
 using LinkPara.Emoney.Application.Features.OpenBankingOperations.Queries.GetPaymentOrderConsentDetail;
 using LinkPara.Emoney.Application.Features.OpenBankingOperations.Commands.CreatePaymentOrder;
 using LinkPara.Emoney.Application.Features.OpenBankingOperations.Queries.PaymentOrderDetail;
 using LinkPara.Emoney.Application.Commons.Models.ConsentModels.Responses;
 using LinkPara.Cache;
-using LinkPara.Emoney.Application.Features.OpenBankingOperations.Queries.GetCards;
-using LinkPara.Emoney.Application.Features.OpenBankingOperations.Queries.GetCardDetail;
-using LinkPara.Emoney.Application.Features.OpenBankingOperations.Queries.GetCardTransactions;
-using LinkPara.Emoney.Application.Features.OpenBankingOperations.Commands.CreateFuturePaymentOrderConsent;
-using LinkPara.Emoney.Domain.Entities;
-using LinkPara.HttpProviders.Emoney.Enums;
-using LinkPara.SharedModels.Exceptions;
-using LinkPara.SharedModels.Persistence;
-using Microsoft.EntityFrameworkCore;
-using LinkPara.Emoney.Application.Features.OpenBankingOperations.Commands.TriggerFuturePaymentOrder;
-using Microsoft.AspNetCore.Mvc;
-using LinkPara.Emoney.Application.Features.OpenBankingOperations.Commands.CancelFuturePaymentOrder;
-using LinkPara.Emoney.Application.Features.OpenBankingOperations.Commands.CreateStandingPaymentOrderConsent;
+using Newtonsoft.Json.Linq;
 
 namespace LinkPara.Emoney.Infrastructure.Services;
 
@@ -54,8 +46,6 @@ public class OpenBankingOperationsService : HttpClientBase, IOpenBankingOperatio
     private readonly IBus _bus;
     private readonly ISecretService _secretService;
     private readonly ICacheService _cacheService;
-    private readonly IGenericRepository<Account> _accountRepository;
-    private readonly IServiceProvider _serviceProvider;
 
     public OpenBankingOperationsService(
         HttpClient client,
@@ -64,9 +54,7 @@ public class OpenBankingOperationsService : HttpClientBase, IOpenBankingOperatio
         IMapper mapper,
         IBus bus,
         ISecretService secretService,
-        ICacheService cacheService,
-        IGenericRepository<Account> accountRepository,
-        IServiceProvider serviceProvider)
+        ICacheService cacheService)
         : base(client, httpContextAccessor)
     {
         _client = client;
@@ -77,8 +65,6 @@ public class OpenBankingOperationsService : HttpClientBase, IOpenBankingOperatio
         _bus = bus;
         _secretService = secretService;
         _cacheService = cacheService;
-        _accountRepository = accountRepository;
-        _serviceProvider = serviceProvider;
     }
 
     private async Task<string> GetAirapiAccessTokenAsync()
@@ -102,7 +88,7 @@ public class OpenBankingOperationsService : HttpClientBase, IOpenBankingOperatio
         var content = new FormUrlEncodedContent(collection);
 
         var response = await client.PostAsync("connect/token", content);
-        
+
         var accessTokenResponse = await response.Content.ReadFromJsonAsync<TokenResponse>();
 
         var tokenStr = accessTokenResponse != null ? $"{accessTokenResponse.Token_Type} {accessTokenResponse.Access_Token}" : string.Empty;
@@ -132,38 +118,19 @@ public class OpenBankingOperationsService : HttpClientBase, IOpenBankingOperatio
         _client.DefaultRequestHeaders.Add("Authorization", token);
         _client.DefaultRequestHeaders.Add("PSU-Initiated", "E");
         _client.DefaultRequestHeaders.Add("x-aspsp-code", command.HhsCode);
-        _client.DefaultRequestHeaders.Add("x-app-user-id", command.AppUserId);
+        _client.DefaultRequestHeaders.Add("x-app-user-id", command.AppUserId.ToString());
         _client.DefaultRequestHeaders.Add("x-request-id", Guid.NewGuid().ToString());
-
-        var Identity = await _accountRepository
-            .GetAll()
-            .Where(x => x.IdentityNumber == command.AppUserId
-                     && x.RecordStatus == RecordStatus.Active
-                     && x.AccountType == AccountType.Individual)
-            .Select(x => new AccountConsentIdentityInfo
-            {
-                OhkTur = "B",
-                KmlkTur = "K",
-                KmlkVrs = x.IdentityNumber,
-                Unv = x.Name
-            })
-            .FirstOrDefaultAsync();
-
-        if (Identity is null)
-        {
-            throw new NotFoundException(nameof(Account.IdentityNumber), command.AppUserId);
-        }
 
         var request = new CreateAccountConsentRequest()
         {
             YonTipi = command.ForwardType == YosForwardType.Mobil ? "M" : "W",
-            ErisimIzniSonTrh = command.AccessExpireDate.ToString("yyyy-MM-ddTHH:mm:ss"),
+            ErisimIzniSonTrh = command.AccessExpireDate.ToLongDateString(),
             IznTur = command.PermissionTypes,
-            DrmKod = Guid.NewGuid().ToString(),
-            Kmlk = Identity
+            DrmKod = command.StatusCode,
+            Kmlk = command.Identity
         };
 
-        string logReq = Newtonsoft.Json.JsonConvert.SerializeObject(request);
+        string logReq = Newtonsoft.Json.JsonConvert.SerializeObject(command);
         var createAccountConsentResult = await YosServicePostAsync<AccountConsentDetailResultDto>("ohvps/hbh/s1.0/hesap-bilgisi-rizasi", request, logReq, "CreateAccountConsent");
 
         return createAccountConsentResult;
@@ -180,12 +147,12 @@ public class OpenBankingOperationsService : HttpClientBase, IOpenBankingOperatio
         {
             RizaNo = query.ConsentId,
             RizaTip = query.ConsentType == ConsentType.PaymentOrder ? "O" : "H",
-            YetTip = "yet_kod",
+            YetTip = "yetkod",
             YetKod = query.AccessCode,
         };
 
-        string logReq = Newtonsoft.Json.JsonConvert.SerializeObject(request);
-        var accessTokenResponse = await YosServicePostAsync<YosServiceResultDto>("ohvps/gkd/s1.0/erisim-belirteci", request, logReq, "GetHhsAccessToken");
+        string logReq = Newtonsoft.Json.JsonConvert.SerializeObject(query);
+        var accessTokenResponse = await YosServicePostAsync<YosServiceResultDto>("gkd/s1.0/erisim-belirteci", request, logReq, "GetHhsAccessToken");
 
         return accessTokenResponse;
 
@@ -242,7 +209,7 @@ public class OpenBankingOperationsService : HttpClientBase, IOpenBankingOperatio
         _client.DefaultRequestHeaders.Add("PSU-Initiated", "E");
         _client.DefaultRequestHeaders.Add("x-request-id", Guid.NewGuid().ToString());
         _client.DefaultRequestHeaders.Add("x-cache-update", Boolean.FalseString);
-        _client.DefaultRequestHeaders.Add("x-app-user-id", query.AppUserId);
+        _client.DefaultRequestHeaders.Add("x-app-user-id", query.AppUserId.ToString());
 
         string logReq = Newtonsoft.Json.JsonConvert.SerializeObject(query);
         var activeAccountConsentListResult = await YosServiceGetAsync<ActiveAccountConsentResultDto>($"ohvps/hbh/s1.0/myaccountconsentlist", logReq, "GetActiveAccountConsentList");
@@ -258,7 +225,7 @@ public class OpenBankingOperationsService : HttpClientBase, IOpenBankingOperatio
         _client.DefaultRequestHeaders.Add("PSU-Initiated", "E");
         _client.DefaultRequestHeaders.Add("x-request-id", Guid.NewGuid().ToString());
         _client.DefaultRequestHeaders.Add("x-cache-update", Boolean.FalseString);
-        _client.DefaultRequestHeaders.Add("x-app-user-id", query.AppUserId);
+        _client.DefaultRequestHeaders.Add("x-app-user-id", query.AppUserId.ToString());
         _client.DefaultRequestHeaders.Add("x-aspsp-code", query.HhsCode);
 
         string logReq = Newtonsoft.Json.JsonConvert.SerializeObject(query);
@@ -275,7 +242,7 @@ public class OpenBankingOperationsService : HttpClientBase, IOpenBankingOperatio
         _client.DefaultRequestHeaders.Add("PSU-Initiated", "E");
         _client.DefaultRequestHeaders.Add("x-request-id", Guid.NewGuid().ToString());
         _client.DefaultRequestHeaders.Add("x-cache-update", Boolean.FalseString);
-        _client.DefaultRequestHeaders.Add("x-app-user-id", query.AppUserId);
+        _client.DefaultRequestHeaders.Add("x-app-user-id", query.AppUserId.ToString());
         _client.DefaultRequestHeaders.Add("x-aspsp-code", query.HhsCode);
 
         string logReq = Newtonsoft.Json.JsonConvert.SerializeObject(query);
@@ -292,11 +259,16 @@ public class OpenBankingOperationsService : HttpClientBase, IOpenBankingOperatio
         _client.DefaultRequestHeaders.Add("PSU-Initiated", "E");
         _client.DefaultRequestHeaders.Add("x-request-id", Guid.NewGuid().ToString());
         _client.DefaultRequestHeaders.Add("x-cache-update", Boolean.FalseString);
-        _client.DefaultRequestHeaders.Add("x-app-user-id", query.AppUserId);
+        _client.DefaultRequestHeaders.Add("x-app-user-id", query.AppUserId.ToString());
         _client.DefaultRequestHeaders.Add("x-aspsp-code", query.HhsCode);
 
         string logReq = Newtonsoft.Json.JsonConvert.SerializeObject(query);
         var consentedAccountBalancesResult = await YosServiceGetAsync<ConsentedAccountBalancesResultDto>($"ohvps/hbh/s1.0/bakiye", logReq, "GetConsentedAccountBalanceList");
+
+        foreach (var result in consentedAccountBalancesResult.Result)
+        {
+            result.Bky.BkyZmnDeger = DateTime.Parse(result.Bky.BkyZmn);
+        }
 
         return consentedAccountBalancesResult;
     }
@@ -309,7 +281,7 @@ public class OpenBankingOperationsService : HttpClientBase, IOpenBankingOperatio
         _client.DefaultRequestHeaders.Add("PSU-Initiated", "E");
         _client.DefaultRequestHeaders.Add("x-request-id", Guid.NewGuid().ToString());
         _client.DefaultRequestHeaders.Add("x-cache-update", Boolean.FalseString);
-        _client.DefaultRequestHeaders.Add("x-app-user-id", query.AppUserId);
+        _client.DefaultRequestHeaders.Add("x-app-user-id", query.AppUserId.ToString());
         _client.DefaultRequestHeaders.Add("x-aspsp-code", query.HhsCode);
 
         string logReq = Newtonsoft.Json.JsonConvert.SerializeObject(query);
@@ -325,53 +297,13 @@ public class OpenBankingOperationsService : HttpClientBase, IOpenBankingOperatio
         _client.DefaultRequestHeaders.Add("Authorization", token);
         _client.DefaultRequestHeaders.Add("PSU-Initiated", "E");
         _client.DefaultRequestHeaders.Add("x-request-id", Guid.NewGuid().ToString());
-        _client.DefaultRequestHeaders.Add("x-app-user-id", query.AppUserId);
-        _client.DefaultRequestHeaders.Add("x-aspsp-code", query.HhsCode);
-        
         string logReq = Newtonsoft.Json.JsonConvert.SerializeObject(query);
 
-
-        var tz = TimeZoneInfo.FindSystemTimeZoneById("Turkey Standard Time");
-        var parameters = new Dictionary<string, object>
-        {
-            ["hesapIslemBslTrh"] = TimeZoneInfo.ConvertTime(query.HesapIslemBslTrh, tz),
-            ["hesapIslemBtsTrh"] = TimeZoneInfo.ConvertTime(query.HesapIslemBtsTrh, tz),
-            ["minIslTtr"] = query.MinIslTtr,
-            ["mksIslTtr"] = query.MksIslTtr,
-            ["brcAlc"] = query.BrcAlc,
-            ["syfNo"] = query.SyfNo,
-            ["srlmKrtr"] = query.SrlmKrtr,
-            ["srlmYon"] = query.SrlmYon,
-            ["syfKytSayi"] = query.SyfKytSayi
-        };
-
-        var queryString = ToQueryString(parameters);
-
-        queryString = $"ohvps/hbh/s1.0/hesaplar/{query.AccountReference}/islemler?{queryString}";        
+        var request = _mapper.Map<GetConsentedAccountActivitiesRequest>(query);
+        var queryString = GetQueryString.CreateUrlWithParams($"ohvps/hbh/s1.0/hesaplar/{query.AccountReference}/islemler", request);
         var consentedAccountActivitiesResult = await YosServiceGetAsync<ConsentedAccountActivitiesResultDto>(queryString, logReq, "GetConsentedAccountActivities");
 
         return consentedAccountActivitiesResult;
-    }
-
-    public static string ToQueryString(Dictionary<string, object> parameters)
-    {
-        var queryParts = new List<string>();
-
-        foreach (var param in parameters)
-        {
-            if (param.Value == null)
-                continue;
-
-            var value = param.Value switch
-            {
-                DateTime dt => dt.ToString("yyyy-MM-ddTHH:mm:sszzz"),
-                _ => param.Value.ToString()
-            };
-
-            queryParts.Add($"{param.Key}={value}");
-        }
-
-        return string.Join("&", queryParts);
     }
 
     public async Task<PaymentOrderConsentDetailDto> CreatePaymentConsentAsync(CreatePaymentConsentCommand command)
@@ -381,14 +313,13 @@ public class OpenBankingOperationsService : HttpClientBase, IOpenBankingOperatio
         _client.DefaultRequestHeaders.Add("Authorization", token);
         _client.DefaultRequestHeaders.Add("PSU-Initiated", "E");
         _client.DefaultRequestHeaders.Add("x-request-id", Guid.NewGuid().ToString());
-        _client.DefaultRequestHeaders.Add("x-app-user-id", command.AppUserId);
+        _client.DefaultRequestHeaders.Add("x-app-user-id", command.AppUserId.ToString());
         _client.DefaultRequestHeaders.Add("x-aspsp-code", command.HhsCode);
 
         var request = _mapper.Map<CreatePaymentConsentRequest>(command);
         request.YonTipi = command.YonTipi == YosForwardType.Mobil ? "M" : "W";
-        request.OdmAyr.RefBlg = Guid.NewGuid().ToString();
 
-        string logReq = Newtonsoft.Json.JsonConvert.SerializeObject(request);
+        string logReq = Newtonsoft.Json.JsonConvert.SerializeObject(command);
         var paymentOrderConsentDetailResult = await YosServicePostAsync<PaymentOrderConsentDetailDto>("ohvps/obh/s1.0/odeme-emri-rizasi", request, logReq, "CreatePaymentConsent");
 
         return paymentOrderConsentDetailResult;
@@ -401,7 +332,7 @@ public class OpenBankingOperationsService : HttpClientBase, IOpenBankingOperatio
         _client.DefaultRequestHeaders.Add("Authorization", token);
         _client.DefaultRequestHeaders.Add("PSU-Initiated", "E");
         _client.DefaultRequestHeaders.Add("x-request-id", Guid.NewGuid().ToString());
-        _client.DefaultRequestHeaders.Add("x-app-user-id", query.AppUserId);
+        _client.DefaultRequestHeaders.Add("x-app-user-id", query.AppUserId.ToString());
         _client.DefaultRequestHeaders.Add("x-aspsp-code", query.HhsCode);
 
         string logReq = Newtonsoft.Json.JsonConvert.SerializeObject(query);
@@ -417,7 +348,7 @@ public class OpenBankingOperationsService : HttpClientBase, IOpenBankingOperatio
         _client.DefaultRequestHeaders.Add("Authorization", token);
         _client.DefaultRequestHeaders.Add("PSU-Initiated", "E");
         _client.DefaultRequestHeaders.Add("x-request-id", Guid.NewGuid().ToString());
-        _client.DefaultRequestHeaders.Add("x-app-user-id", command.AppUserId);
+        _client.DefaultRequestHeaders.Add("x-app-user-id", command.AppUserId.ToString());
         _client.DefaultRequestHeaders.Add("x-aspsp-code", command.HhsCode);
         _client.DefaultRequestHeaders.Add("x-riza-no", command.ConsentId);
 
@@ -435,166 +366,16 @@ public class OpenBankingOperationsService : HttpClientBase, IOpenBankingOperatio
         _client.DefaultRequestHeaders.Add("Authorization", token);
         _client.DefaultRequestHeaders.Add("PSU-Initiated", "E");
         _client.DefaultRequestHeaders.Add("x-request-id", Guid.NewGuid().ToString());
-        _client.DefaultRequestHeaders.Add("x-app-user-id", query.AppUserId);
+        _client.DefaultRequestHeaders.Add("x-app-user-id", query.AppUserId.ToString());
         _client.DefaultRequestHeaders.Add("x-aspsp-code", query.HhsCode);
         _client.DefaultRequestHeaders.Add("x-riza-no", query.ConsentId);
         _client.DefaultRequestHeaders.Add("isPaymentOrConsentId", "1");
 
         string logReq = Newtonsoft.Json.JsonConvert.SerializeObject(query);
 
-        var paymentOrderResult = await YosServiceGetAsync<PaymentOrderDetailResultDto>($"ohvps/obh/s1.0/odeme-emri/{query.ConsentId}", logReq, "PaymentOrderDetailQuery");
+        var paymentOrderResult = await YosServicePostAsync<PaymentOrderDetailResultDto>($"ohvps/obh/s1.0/odeme-emri/{query.ConsentId}", new { }, logReq, "PaymentOrderDetailQuery");
+
         return paymentOrderResult;
-    }
-
-    public async Task<CardsResultDto> GetCardsAsync(GetCardsQuery command)
-    {
-        var token = await GetAirapiAccessTokenAsync();
-        _client.DefaultRequestHeaders.Clear();
-        _client.DefaultRequestHeaders.Add("Authorization", token);
-        _client.DefaultRequestHeaders.Add("PSU-Initiated", "E");
-        _client.DefaultRequestHeaders.Add("x-request-id", Guid.NewGuid().ToString());
-        _client.DefaultRequestHeaders.Add("x-app-user-id", command.ApplicationUser);
-        _client.DefaultRequestHeaders.Add("x-aspsp-code", command.HhsCode);;
-        _client.DefaultRequestHeaders.Add("applicationUser", command.ApplicationUser);
-
-        string logReq = Newtonsoft.Json.JsonConvert.SerializeObject(command);
-
-        var cardsResult = await YosServicePostAsync<CardsResultDto>("ohvps/hbh/s1.0/kartlar", new { }, logReq, "GetCards");
-
-        return cardsResult;
-    }
-
-    public async Task<CardDetailResultDto> GetCardDetailAsync(GetCardDetailQuery command)
-    {
-        var token = await GetAirapiAccessTokenAsync();
-        _client.DefaultRequestHeaders.Clear();
-        _client.DefaultRequestHeaders.Add("Authorization", token);
-        _client.DefaultRequestHeaders.Add("PSU-Initiated", "E");
-        _client.DefaultRequestHeaders.Add("x-request-id", Guid.NewGuid().ToString());
-        _client.DefaultRequestHeaders.Add("x-app-user-id", command.AppUserId);
-        _client.DefaultRequestHeaders.Add("x-aspsp-code", command.HhsCode);
-        _client.DefaultRequestHeaders.Add("x-riza-no", command.ConsentId);
-
-        string logReq = Newtonsoft.Json.JsonConvert.SerializeObject(command);
-
-        var cardDetailsResult = await YosServicePostAsync<CardDetailResultDto>("ohvps/obh/s1.0/kart-detay", new { }, logReq, "GetCardDetail");
-
-        return cardDetailsResult;
-    }
-
-
-    public async Task<CardTransactionsResultDto> GetCardTransactionsAsync(GetCardTransactionsQuery command)
-    {
-        var token = await GetAirapiAccessTokenAsync();
-        _client.DefaultRequestHeaders.Clear();
-        _client.DefaultRequestHeaders.Add("Authorization", token);
-        _client.DefaultRequestHeaders.Add("PSU-Initiated", "E");
-        _client.DefaultRequestHeaders.Add("x-request-id", Guid.NewGuid().ToString());
-        _client.DefaultRequestHeaders.Add("x-app-user-id", command.AppUserId);
-        _client.DefaultRequestHeaders.Add("x-aspsp-code", command.HhsCode);
-
-        string logReq = Newtonsoft.Json.JsonConvert.SerializeObject(command);
-
-        var parameters = new Dictionary<string, object>
-        {
-            ["consentId"] = command.ConsentId,
-            ["cardRefNo"] = command.CardRefNo,
-            ["periodValue"] = command.PeriodValue,
-            ["statementType"] = command.StatementType,
-            ["pageRecordCount"] = command.PageRecordCount,
-            ["pageNo"] = command.PageNo,
-            ["debtOrCredit"] = command.DebtOrCredit,
-            ["orderType"] = command.OrderType
-        };
-
-        var cardTransactionsResult = await YosServicePostAsync<CardTransactionsResultDto>("ohvps/hbh/s1.0/kartlar/kart-hareketleri", parameters, logReq, "GetCardTransactions");
-
-        return cardTransactionsResult;
-    }
-
-    public async Task<FuturePaymentOrderConsentResultDto> CreateFuturePaymentOrderConsentAsync(CreateFuturePaymentOrderConsentCommand command)
-    {
-        var token = await GetAirapiAccessTokenAsync();
-        _client.DefaultRequestHeaders.Clear();
-        _client.DefaultRequestHeaders.Add("Authorization", token);
-        _client.DefaultRequestHeaders.Add("PSU-Initiated", "E");
-        _client.DefaultRequestHeaders.Add("x-request-id", Guid.NewGuid().ToString());
-        _client.DefaultRequestHeaders.Add("x-app-user-id", command.AppUserId);
-        _client.DefaultRequestHeaders.Add("x-aspsp-code", command.HhsCode);
-        _client.DefaultRequestHeaders.Add("x-riza-no", command.ConsentId);
-
-        string logReq = Newtonsoft.Json.JsonConvert.SerializeObject(command);
-
-        var futurePaymentOrderConsentResult = await YosServicePostAsync<FuturePaymentOrderConsentResultDto>("ohvps/obh/s1.0/ileri-tarihli-odeme-emri-rizasi", new { }, logReq, "CreateFuturePaymentOrderConsent");
-
-        return futurePaymentOrderConsentResult;
-    }
-
-    public async Task<TriggerFuturePaymentOrderResultDto> TriggerFuturePaymentOrderAsync(TriggerFuturePaymentOrderCommand command)
-    {
-        var token = await GetAirapiAccessTokenAsync();
-        _client.DefaultRequestHeaders.Clear();
-        _client.DefaultRequestHeaders.Add("Authorization", token);
-        _client.DefaultRequestHeaders.Add("PSU-Initiated", "E");
-        _client.DefaultRequestHeaders.Add("x-request-id", Guid.NewGuid().ToString());
-        _client.DefaultRequestHeaders.Add("x-app-user-id", command.AppUserId);
-        _client.DefaultRequestHeaders.Add("x-aspsp-code", command.HhsCode);
-        _client.DefaultRequestHeaders.Add("x-riza-no", command.ConsentId);
-
-        string logReq = Newtonsoft.Json.JsonConvert.SerializeObject(command);
-
-        var triggerPaymentOrderResult = await YosServicePostAsync<TriggerFuturePaymentOrderResultDto>("ohvps/obh/s1.0/ileri-tarihli-odeme-emri", new { }, logReq, "CreateFuturePaymentOrderConsent");
-
-        return triggerPaymentOrderResult;
-    }
-
-    public async Task<GetFuturePaymentOrderListResultDto> GetFuturePaymentOrderListAsync([FromBody] GetFuturePaymentOrderListQuery query)
-    {
-        var token = await GetAirapiAccessTokenAsync();
-        _client.DefaultRequestHeaders.Clear();
-        _client.DefaultRequestHeaders.Add("Authorization", token);
-        _client.DefaultRequestHeaders.Add("PSU-Initiated", "E");
-        _client.DefaultRequestHeaders.Add("x-request-id", Guid.NewGuid().ToString());
-
-        string logReq = Newtonsoft.Json.JsonConvert.SerializeObject(query);
-
-        var futurePaymentOrderList = await YosServicePostAsync<GetFuturePaymentOrderListResultDto>("ohvps/obh/s1.0/ileri-tarihli-odeme-emri-listesi", new { }, logReq, "CreateFuturePaymentOrderConsent");
-
-        return futurePaymentOrderList;
-    }
-
-    public async Task<CancelFuturePaymentOrderResultDto> CancelFuturePaymentOrderAsync([FromBody] CancelFuturePaymentOrderCommand command)
-    {
-        var token = await GetAirapiAccessTokenAsync();
-        _client.DefaultRequestHeaders.Clear();
-        _client.DefaultRequestHeaders.Add("Authorization", token);
-        _client.DefaultRequestHeaders.Add("PSU-Initiated", "E");
-        _client.DefaultRequestHeaders.Add("x-request-id", Guid.NewGuid().ToString());
-        _client.DefaultRequestHeaders.Add("x-aspsp-code", command.HhsCode);
-
-        string logReq = Newtonsoft.Json.JsonConvert.SerializeObject(command);
-
-        var cancelPaymentOrderResult = await YosServicePostAsync<CancelFuturePaymentOrderResultDto>("ohvps/obh/s1.0/ileri-tarihli-odeme-emri-iptal", new { }, logReq, "CreateFuturePaymentOrderConsent");
-
-        return cancelPaymentOrderResult;
-    }
-
-    public async Task<StandingPaymentOrderConsentResultDto> CreateStandingPaymentOrderConsentAsync(CreateStandingPaymentOrderConsentCommand command)
-    {
-        var token = await GetAirapiAccessTokenAsync();
-        _client.DefaultRequestHeaders.Clear();
-        _client.DefaultRequestHeaders.Add("Authorization", token);
-        _client.DefaultRequestHeaders.Add("PSU-Initiated", "E");
-        _client.DefaultRequestHeaders.Add("x-request-id", Guid.NewGuid().ToString());
-        _client.DefaultRequestHeaders.Add("x-app-user-id", command.AppUserId);
-        _client.DefaultRequestHeaders.Add("x-aspsp-code", command.HhsCode);
-        _client.DefaultRequestHeaders.Add("x-riza-no", command.ConsentId);
-
-        string logReq = Newtonsoft.Json.JsonConvert.SerializeObject(command);
-
-        var recurringPaymentOrderConsentResult = await YosServicePostAsync<StandingPaymentOrderConsentResultDto>("ohvps/obh/s1.0/duzenli-odeme-emri-rizasi", new { }, logReq, "CreateFuturePaymentOrderConsent");
-
-        return recurringPaymentOrderConsentResult;
     }
 
     private async Task<T> YosServiceGetAsync<T>(string queryString, string jsonData, string processName)
@@ -606,7 +387,7 @@ public class OpenBankingOperationsService : HttpClientBase, IOpenBankingOperatio
             await SendIntegrationRequest(jsonData, processName, correlationId, IntegrationLogDataType.Json);
 
             var response = await _client.GetAsync(queryString);
-            
+
             await SendIntegrationResponse(processName, response, correlationId);
 
             var deserializedResponse = await response.Content.ReadFromJsonAsync<T>();

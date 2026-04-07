@@ -1,12 +1,22 @@
-﻿namespace LinkPara.Card.Application.Commons.Models.PaycoreModels.CustomerModels;
+﻿using System.Text.Json.Serialization;
+
+namespace LinkPara.Card.Application.Commons.Models.PaycoreModels.CustomerModels;
 public class GetCustomerInformationResponse
 {
-    public CustomerAddress[] cstCustomerAddresses { get; set; }
-    public CustomerCommunication[] cstCustomerCommunications { get; set; }
-    public CustomerLimit[] customerLimits { get; set; }
-    public string primaryCardNo { get; set; }
-    public string bankingCustomerNo { get; set; }
-    public string name { get; set; }
-    public string surname { get; set; }
-    public int branchCode { get; set; }
+    [JsonPropertyName("cstCustomerAddresses")]
+    public CustomerAddress[] CstCustomerAddresses { get; set; }
+    [JsonPropertyName("cstCustomerCommunications")]
+    public CustomerCommunication[] CstCustomerCommunications { get; set; }
+    [JsonPropertyName("customerLimits")]
+    public CustomerLimit[] CustomerLimits { get; set; }
+    [JsonPropertyName("primaryCardNo")]
+    public string PrimaryCardNo { get; set; }
+    [JsonPropertyName("bankingCustomerNo")]
+    public string BankingCustomerNo { get; set; }
+    [JsonPropertyName("name")]
+    public string Name { get; set; }
+    [JsonPropertyName("surname")]
+    public string Surname { get; set; }
+    [JsonPropertyName("branchCode")]
+    public int BranchCode { get; set; }
 }

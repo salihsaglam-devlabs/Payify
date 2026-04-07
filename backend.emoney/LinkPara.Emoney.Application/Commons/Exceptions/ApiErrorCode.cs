@@ -57,7 +57,5 @@ public static class ApiErrorCode
     public const string WalletBlockageAmountIsGreaterThanAvailabeBalance = _prefix + "046";
     public const string DescriptionLengthIsShort = _prefix + "047";
     public const string PermissionDenied = _prefix + "048";
-    public const string ReturnAmountExceeded = _prefix + "049";
-    public const string MaxDocumentLimitExceeded = _prefix + "050";
-    public const string MaxDocumentSizeExceeded = _prefix + "051";
+    public const string ReturnAmountExceeded = _prefix + "045";
 }

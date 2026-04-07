@@ -44,7 +44,6 @@
 	  <PackageReference Include="System.ServiceModel.NetTcp" Version="8.1.2" />
 	  <PackageReference Include="System.ServiceModel.Primitives" Version="8.1.2" />
 	  <PackageReference Include="System.ServiceModel.Security" Version="6.0.0" />
-      <PackageReference Include="SSH.NET" Version="2024.2.0" />
     </ItemGroup>
 
     <ItemGroup>
@@ -56,6 +55,14 @@
     </ItemGroup>
 
     <ItemGroup>
+		
+		
+		
+		
+		
+		
+		
+      <Folder Include="Consumers\CronJobs\" />
       <Folder Include="Persistence\Migrations\PostgreSql\" />
       <Folder Include="Persistence\SqlMigrations\PostgreSql\" />
     </ItemGroup>

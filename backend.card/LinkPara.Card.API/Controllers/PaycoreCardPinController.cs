@@ -1,7 +1,5 @@
-﻿using LinkPara.Card.Application.Commons.Models.PaycoreModels;
-using LinkPara.Card.Application.Commons.Models.PaycoreModels.CardModels;
+﻿using LinkPara.Card.Application.Commons.Models.PaycoreModels.SecurityModels;
 using LinkPara.Card.Application.Features.PaycoreServices.CardPinServices.Commands.SetCardPin;
-using LinkPara.Card.Application.Features.PaycoreServices.CardServices.Commands.UpdateCardStatus;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -16,7 +14,7 @@ namespace LinkPara.Card.API.Controllers
         /// <returns></returns>
         [AllowAnonymous]
         [HttpPut("set-card-pin")]
-        public async Task<PaycoreResponse> SetCardPinAsync(SetCardPinCommand command)
+        public async Task<SetCardBinResponse> SetCardPinAsync(SetCardPinCommand command)
         {
             return await Mediator.Send(command);
         }

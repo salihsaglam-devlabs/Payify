@@ -1,21 +1,39 @@
-﻿namespace LinkPara.Card.Application.Commons.Models.PaycoreModels.CustomerModels;
+﻿using System.Text.Json.Serialization;
+
+namespace LinkPara.Card.Application.Commons.Models.PaycoreModels.CustomerModels;
 
 public class GetCustomerCardsResponse
 {
-    public string bankingCustomerNo { get; set; }
-    public string cardNo { get; set; }
-    public string mainCardNo { get; set; }
-    public string physicalType { get; set; }
-    public string cardLevel { get; set; }
-    public int branchCode { get; set; }
-    public string productName { get; set; }
-    public string productCode { get; set; }
-    public string statCode { get; set; }
-    public string statDescription { get; set; }
-    public string statusReason { get; set; }
-    public string embossName1 { get; set; }
-    public string embossName2 { get; set; }
-    public bool isNonameCard { get; set; }
-    public string customerGroupType { get; set; }
-    public string cardBrand { get; set; }
+    [JsonPropertyName("bankingCustomerNo")]
+    public string BankingCustomerNo { get; set; }
+    [JsonPropertyName("cardNo")]
+    public string CardNo { get; set; }
+    [JsonPropertyName("mainCardNo")]
+    public string MainCardNo { get; set; }
+    [JsonPropertyName("physicalType")]
+    public string PhysicalType { get; set; }
+    [JsonPropertyName("cardLevel")]
+    public string CardLevel { get; set; }
+    [JsonPropertyName("branchCode")]
+    public int BranchCode { get; set; }
+    [JsonPropertyName("productName")]
+    public string ProductName { get; set; }
+    [JsonPropertyName("productCode")]
+    public string ProductCode { get; set; }
+    [JsonPropertyName("statCode")]
+    public string StatCode { get; set; }
+    [JsonPropertyName("statDescription")]
+    public string StatDescription { get; set; }
+    [JsonPropertyName("statusReason")]
+    public string StatusReason { get; set; }
+    [JsonPropertyName("embossName1")]
+    public string EmbossName1 { get; set; }
+    [JsonPropertyName("embossName2")]
+    public string EmbossName2 { get; set; }
+    [JsonPropertyName("isNonameCard")]
+    public bool IsNonameCard { get; set; }
+    [JsonPropertyName("customerGroupType")]
+    public string CustomerGroupType { get; set; }
+    [JsonPropertyName("cardBrand")]
+    public string CardBrand { get; set; }
 }

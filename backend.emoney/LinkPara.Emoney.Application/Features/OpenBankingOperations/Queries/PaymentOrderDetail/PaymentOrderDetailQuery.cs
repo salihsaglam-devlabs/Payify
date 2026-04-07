@@ -6,7 +6,7 @@ namespace LinkPara.Emoney.Application.Features.OpenBankingOperations.Queries.Pay
 public class PaymentOrderDetailQuery : IRequest<PaymentOrderDetailResultDto>
 {
     public string HhsCode { get; set; }
-    public string AppUserId { get; set; }
+    public int AppUserId { get; set; }
     public string ConsentId { get; set; }
 }
 

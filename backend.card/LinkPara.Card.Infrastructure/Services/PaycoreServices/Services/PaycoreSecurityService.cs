@@ -1,5 +1,6 @@
 ﻿using LinkPara.Card.Application.Commons.Interfaces;
 using LinkPara.Card.Application.Commons.Models.PaycoreModels;
+using LinkPara.Card.Application.Commons.Models.PaycoreModels.SecurityModels;
 using LinkPara.Card.Application.Features.PaycoreServices.CardPinServices.Commands.SetCardPin;
 using LinkPara.Card.Application.Features.PaycoreServices.CardServices.Queries.GetClearCardNo;
 using LinkPara.Card.Domain.Constants;
@@ -39,20 +40,18 @@ public class PaycoreSecurityService : IPaycoreSecurityService
         _paycoreCardService = paycoreCardService;
     }
 
-    public async Task<PaycoreResponse> SetCardPinAsync(SetCardPinCommand command)
+    public async Task<SetCardBinResponse> SetCardPinAsync(SetCardPinCommand command)
     {
         var clearCardResponse = await _paycoreCardService.GetClearCardNoAsync(
                    new GetClearCardNoQuery()
                    {
                        Cards = new string[] { command.TokenPan }
-                   }
-
-                  );
+                   });
         
         var clearCardNo = clearCardResponse.First().CardNo;
         if (string.IsNullOrWhiteSpace(clearCardNo))
         {
-            return new PaycoreResponse
+            return new SetCardBinResponse
             {
                 IsSuccess = false,
                 Description = ResponseDescription.CLEAR_CARD_NO_EMPTY,
@@ -78,7 +77,7 @@ public class PaycoreSecurityService : IPaycoreSecurityService
 
         if (!response.IsSuccess)
         {
-            return new PaycoreResponse
+            return new SetCardBinResponse
             {
                 IsSuccess = false,
                 Description = response.exception.message,
@@ -87,13 +86,12 @@ public class PaycoreSecurityService : IPaycoreSecurityService
 };
         }
 
-        return new PaycoreResponse
+        return new SetCardBinResponse
         {
             IsSuccess = true,
             Description = "Success",
             Code = "00",
             Data = "SUCCESS"
-        };
-            
+        };   
     }
 }

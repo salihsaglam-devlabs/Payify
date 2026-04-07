@@ -4,7 +4,7 @@ using MediatR;
 namespace LinkPara.Emoney.Application.Features.OpenBankingOperations.Queries.GetConsentedAccountBalanceList;
 public class GetConsentedAccountBalanceListQuery : IRequest<ConsentedAccountBalancesResultDto>
 {
-    public string AppUserId { get; set; }
+    public int AppUserId { get; set; }
     public string HhsCode { get; set; }
 }
 

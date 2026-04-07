@@ -3,7 +3,7 @@ namespace LinkPara.Emoney.Application.Features.OpenBankingOperations;
 public class ConsentedAccountActivityDto
 {
     public string HspRef { get; set; }
-    public List<ActivitiesDto> Isller { get; set; }
+    public ActivitiesDto Isller { get; set; }
 }
 
 public class ActivitiesDto

@@ -20,7 +20,7 @@ namespace LinkPara.Card.API.Controllers
         /// </summary>
         /// <param name="command"></param>
         /// <returns></returns>
-        [AllowAnonymous]
+        [Authorize(Policy = "PaycoreCustomer:Create")]
         [HttpPost("")]
         public async Task<PaycoreResponse> CreateCustomerAsync(CreateCustomerCommand command)
         {
@@ -32,7 +32,7 @@ namespace LinkPara.Card.API.Controllers
         /// </summary>
         /// <param name="query"></param>
         /// <returns></returns>
-        [AllowAnonymous]
+        [Authorize(Policy = "PaycoreCustomer:Read")]
         [HttpGet("")]
         public async Task<GetCustomerInformationResponse> GetCustomerInformationAsync(GetCustomerInformationQuery query)
         {
@@ -44,7 +44,7 @@ namespace LinkPara.Card.API.Controllers
         /// </summary>
         /// <param name="query"></param>
         /// <returns></returns>
-        [AllowAnonymous]
+        [Authorize(Policy = "PaycoreCustomer:Read")]
         [HttpGet("cards")]
         public async Task<List<GetCustomerCardsResponse>> GetCustomerCardsAsync(GetCustomerCardsQuery query)
         {
@@ -56,7 +56,7 @@ namespace LinkPara.Card.API.Controllers
         /// </summary>
         /// <param name="query"></param>
         /// <returns></returns>
-        [AllowAnonymous]
+        [Authorize(Policy = "PaycoreCustomer:Read")]
         [HttpGet("limit-info")]
         public async Task<List<GetCustomerLimitInfoResponse>> GetCustomerLimitInfoAsync(GetCustomerLimitInfoQuery query)
         {
@@ -68,7 +68,7 @@ namespace LinkPara.Card.API.Controllers
         /// </summary>
         /// <param name="command"></param>
         /// <returns></returns>
-        [AllowAnonymous]
+        [Authorize(Policy = "PaycoreCustomer:Update")]
         [HttpPut("customer")]
         public async Task<PaycoreResponse> UpdateCustomerAsync(UpdateCustomerCommand command)
         {
@@ -80,7 +80,7 @@ namespace LinkPara.Card.API.Controllers
         /// </summary>
         /// <param name="command"></param>
         /// <returns></returns>
-        [AllowAnonymous]
+        [Authorize(Policy = "PaycoreCustomer:Update")]
         [HttpPut("communication")]
         public async Task<PaycoreResponse> UpdateCustomerCommunicationAsync(UpdateCustomerCommunicationCommand command)
         {
@@ -92,7 +92,7 @@ namespace LinkPara.Card.API.Controllers
         /// </summary>
         /// <param name="command"></param>
         /// <returns></returns>
-        [AllowAnonymous]
+        [Authorize(Policy = "PaycoreCustomer:Update")]
         [HttpPut("address")]
         public async Task<PaycoreResponse> UpdateCustomerAddressAsync(UpdateCustomerAddressCommand command)
         {
@@ -104,7 +104,7 @@ namespace LinkPara.Card.API.Controllers
         /// </summary>
         /// <param name="command"></param>
         /// <returns></returns>
-        [AllowAnonymous]
+        [Authorize(Policy = "PaycoreCustomer:Update")]
         [HttpPut("limit")]
         public async Task<PaycoreResponse> UpdateCustomerLimitAsync(UpdateCustomerLimitCommand command)
         {

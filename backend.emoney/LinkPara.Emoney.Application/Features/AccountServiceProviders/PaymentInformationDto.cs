@@ -13,11 +13,6 @@ public class PaymentInformationDto
     public PriceInfo IslTtr { get; set; }
 
     /// <summary>
-    /// Gets or sets the price information
-    /// </summary>
-    public PriceInfo GrckIslTtr { get; set; }
-
-    /// <summary>
     /// Gets or sets the person information for "Gon".
     /// </summary>
     public PersonInfo Gon { get; set; }
@@ -159,20 +154,5 @@ public class PaymentDetail
     /// <summary>
     /// Gets or sets the expected payment time for PÖS payment system outside of PÖS transaction hours.
     /// </summary>
-    public string BekOdmZmn { get; set; }    
-
-    /// <summary>
-    /// Gets or sets the expected payment Date .
-    /// </summary>
-    public DateTime TlmtTrh { get; set; }
-
-    /// <summary>
-    /// Gets or sets the payment Date .
-    /// </summary>
-    public string GrckOdmZmn { get; set; }
-    
-    /// <summary>
-    /// Gets or sets the status of the Payment.
-    /// </summary>
-    public string OdmDrm { get; set; }
+    public string BekOdmZmn { get; set; }
 }

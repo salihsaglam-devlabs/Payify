@@ -11,7 +11,7 @@ namespace LinkPara.Card.API.Controllers
         /// Return Paycore Product List
         /// </summary>
         /// <returns></returns>
-        [AllowAnonymous]
+        [Authorize(Policy = "PaycoreParameters:ReadAll")]
         [HttpGet()]
         public async Task<GetProductsResponse> GetProductsAsync()
         {

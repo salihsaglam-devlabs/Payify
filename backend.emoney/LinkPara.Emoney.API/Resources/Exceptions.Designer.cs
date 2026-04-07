@@ -493,24 +493,6 @@ namespace LinkPara.Emoney.API.Resources {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Max Document limit exceeded !.
-        /// </summary>
-        public static string MaxDocumentLimitExceededException {
-            get {
-                return ResourceManager.GetString("MaxDocumentLimitExceededException", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Max Document Size limit exceeded !.
-        /// </summary>
-        public static string MaxDocumentSizeExceededException {
-            get {
-                return ResourceManager.GetString("MaxDocumentSizeExceededException", resourceCulture);
-            }
-        }
-        
-        /// <summary>
         ///   Looks up a localized string similar to Max wallet limit exceeded !.
         /// </summary>
         public static string MaxWalletLimitExceededException {

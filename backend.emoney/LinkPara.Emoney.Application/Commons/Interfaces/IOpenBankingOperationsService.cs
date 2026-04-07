@@ -14,14 +14,6 @@ using LinkPara.Emoney.Application.Features.OpenBankingOperations.Commands.Create
 using LinkPara.Emoney.Application.Features.OpenBankingOperations.Queries.GetPaymentOrderConsentDetail;
 using LinkPara.Emoney.Application.Features.OpenBankingOperations.Queries.PaymentOrderDetail;
 using LinkPara.Emoney.Application.Features.OpenBankingOperations.Commands.CreatePaymentOrder;
-using LinkPara.Emoney.Application.Features.OpenBankingOperations.Queries.GetCards;
-using LinkPara.Emoney.Application.Features.OpenBankingOperations.Queries.GetCardDetail;
-using LinkPara.Emoney.Application.Features.OpenBankingOperations.Queries.GetCardTransactions;
-using LinkPara.Emoney.Application.Features.OpenBankingOperations.Commands.CreateFuturePaymentOrderConsent;
-using LinkPara.Emoney.Application.Features.OpenBankingOperations.Commands.TriggerFuturePaymentOrder;
-using Microsoft.AspNetCore.Mvc;
-using LinkPara.Emoney.Application.Features.OpenBankingOperations.Commands.CancelFuturePaymentOrder;
-using LinkPara.Emoney.Application.Features.OpenBankingOperations.Commands.CreateStandingPaymentOrderConsent;
 
 namespace LinkPara.Emoney.Application.Commons.Interfaces;
 
@@ -42,13 +34,5 @@ public interface IOpenBankingOperationsService
     Task<PaymentOrderConsentDetailDto> GetPaymentOrderConsentDetailAsync(GetPaymentOrderConsentDetailQuery query);
     Task<PaymentOrderDetailResultDto> CreatePaymentOrderAsync(CreatePaymentOrderYosCommand command);
     Task<PaymentOrderDetailResultDto> PaymentOrderDetailQueryAsync(PaymentOrderDetailQuery query);
-    Task<CardsResultDto> GetCardsAsync(GetCardsQuery query);
-    Task<CardDetailResultDto> GetCardDetailAsync(GetCardDetailQuery query);
-    Task<CardTransactionsResultDto> GetCardTransactionsAsync(GetCardTransactionsQuery query);
-    Task<FuturePaymentOrderConsentResultDto> CreateFuturePaymentOrderConsentAsync(CreateFuturePaymentOrderConsentCommand command);
-    Task<StandingPaymentOrderConsentResultDto> CreateStandingPaymentOrderConsentAsync(CreateStandingPaymentOrderConsentCommand command);
-    Task<TriggerFuturePaymentOrderResultDto> TriggerFuturePaymentOrderAsync(TriggerFuturePaymentOrderCommand command);
-    Task<GetFuturePaymentOrderListResultDto> GetFuturePaymentOrderListAsync([FromBody] GetFuturePaymentOrderListQuery query);
-    Task<CancelFuturePaymentOrderResultDto> CancelFuturePaymentOrderAsync([FromBody] CancelFuturePaymentOrderCommand command);
 
 }

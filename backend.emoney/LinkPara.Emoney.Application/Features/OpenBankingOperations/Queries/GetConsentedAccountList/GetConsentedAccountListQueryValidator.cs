@@ -7,5 +7,6 @@ public class GetConsentedAccountListQueryValidator : AbstractValidator<GetConsen
     public GetConsentedAccountListQueryValidator()
     {
         RuleFor(x => x.AppUserId).NotEmpty().NotNull();
+        RuleFor(x => x.HhsCode).NotEmpty().NotNull();
     }
 }

@@ -19,7 +19,7 @@ namespace LinkPara.Card.API.Controllers
         /// </summary>
         /// <param name="command"></param>
         /// <returns></returns>
-        [AllowAnonymous]
+        [Authorize(Policy = "PaycoreCard:Create")]
         [HttpPost("")]
         public async Task<PaycoreResponse> CreateCardAsync(CreateCardCommand command)
         {
@@ -31,9 +31,9 @@ namespace LinkPara.Card.API.Controllers
         /// </summary>
         /// <param name="command"></param>
         /// <returns></returns>
-        [AllowAnonymous]
+        [Authorize(Policy = "PaycoreCard:Update")]
         [HttpPut("status")]
-        public async Task<UpdateCardStatusResponse> UpdateCardStatusAsync(UpdateCardStatusCommand command)
+        public async Task<PaycoreResponse> UpdateCardStatusAsync(UpdateCardStatusCommand command)
         {
             return await Mediator.Send(command);
         }
@@ -43,7 +43,7 @@ namespace LinkPara.Card.API.Controllers
         /// </summary>
         /// <param name="query"></param>
         /// <returns></returns>
-        [AllowAnonymous]
+        [Authorize(Policy = "PaycoreCard:Read")]
         [HttpGet("card-authorizations")]
         public async Task<GetCardAuthorizationsResponse> GetCardAuthorizationsAsync([FromQuery] GetCardAuthorizationsQuery query)
         {
@@ -55,7 +55,7 @@ namespace LinkPara.Card.API.Controllers
         /// </summary>
         /// <param name="query"></param>
         /// <returns></returns>
-        [AllowAnonymous]
+        [Authorize(Policy = "PaycoreCard:Read")]
         [HttpGet("card-info")]
         public async Task<List<GetCardInformationsResponse>> GetCardInformationsAsync([FromQuery]GetCardInformationsQuery query)
         {
@@ -67,7 +67,7 @@ namespace LinkPara.Card.API.Controllers
         /// </summary>
         /// <param name="command"></param>
         /// <returns></returns>
-        [AllowAnonymous]
+        [Authorize(Policy = "PaycoreCard:Update")]
         [HttpPut("card-authorization")]
         public async Task<PaycoreResponse> UpdateCardAuthorizationsAsync(UpdateCardAuthorizationCommand command)
         {
@@ -79,7 +79,7 @@ namespace LinkPara.Card.API.Controllers
         /// </summary>
         /// <param name="query"></param>
         /// <returns></returns>
-        [AllowAnonymous]
+        [Authorize(Policy = "PaycoreCard:ReadAll")]
         [HttpGet("transactions")]
         public async Task<GetCardTransactionsResponse> GetCardTransactionsAsync(GetCardTransactionsQuery query)
         {
@@ -91,7 +91,7 @@ namespace LinkPara.Card.API.Controllers
         /// </summary>
         /// <param name="query"></param>
         /// <returns></returns>
-        [AllowAnonymous]
+        [Authorize(Policy = "PaycoreCard:Read")]
         [HttpGet("card-last-courier-activity")]
         public async Task<GetCardLastCourierActivityResponse> GetCardLastCourierActivityAsync([FromQuery] GetCardLastCourierActivityQuery query)
         {
@@ -103,19 +103,19 @@ namespace LinkPara.Card.API.Controllers
         /// </summary>
         /// <param name="command"></param>
         /// <returns></returns>
-        [AllowAnonymous]
+        [Authorize(Policy = "PaycoreCard:Create")]
         [HttpPut("additional-limit-restriction")]
         public async Task<AddAdditionalLimitRestrictionResponse> AddAdditionalLimitRestriction(AddAdditionalLimitRestrictionCommand command)
         {
             return await Mediator.Send(command);
         }
-    
+
         /// <summary>
         /// Gets Card Sensitive Data
         /// </summary>
         /// <param name="query"></param>
         /// <returns></returns>
-        [AllowAnonymous]
+        [Authorize(Policy = "PaycoreCard:Read")]
         [HttpGet("card-sensitive-data")]
         public async Task<GetCardSensitiveDataResponse> GetCardSensitiveDataAsync([FromQuery] GetCardSensitiveDataQuery query)
         {

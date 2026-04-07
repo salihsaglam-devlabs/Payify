@@ -3401,11 +3401,6 @@ namespace LinkPara.Emoney.Infrastructure.Persistence.Migrations.PostgreSql
                         .HasColumnType("timestamp without time zone")
                         .HasColumnName("external_transaction_date");
 
-                    b.Property<string>("IdempotentKey")
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)")
-                        .HasColumnName("idempotent_key");
-
                     b.Property<Guid?>("IncomingTransactionId")
                         .HasColumnType("uuid")
                         .HasColumnName("incoming_transaction_id");
