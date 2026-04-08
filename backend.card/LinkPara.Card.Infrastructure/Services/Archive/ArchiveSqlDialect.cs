@@ -25,15 +25,14 @@ internal interface IArchiveSqlDialect
     string BuildDeleteIngestionFileSql();
 }
 
-/// <summary>
-/// Generates archive copy/delete SQL using EF metadata for both live and archive entity types.
-/// Archive entities inherit from live entities and are mapped to the archive schema.
-/// No hardcoded table names; all resolved from EF model metadata.
-/// </summary>
 internal sealed class ArchiveSqlDialect : IArchiveSqlDialect
 {
     private readonly CardDbContext _dbContext;
     private readonly bool _isSqlServer;
+    
+    private const string FileLineIdProperty = nameof(ReconciliationEvaluation.FileLineId);
+    private const string IngestionFileIdProperty = nameof(IngestionFileLine.IngestionFileId);
+    private const string ArchivedAtProperty = nameof(ArchiveIngestionFile.ArchivedAt);
 
     public ArchiveSqlDialect(CardDbContext dbContext)
     {
@@ -41,79 +40,92 @@ internal sealed class ArchiveSqlDialect : IArchiveSqlDialect
         _isSqlServer = (_dbContext.Database.ProviderName ?? string.Empty)
             .Contains("SqlServer", StringComparison.OrdinalIgnoreCase);
     }
-
-    // Copy SQL: parameters are {0}=archivedAt, {1}=ingestionFileId
-
+    
     public string BuildCopyIngestionFileSql()
-        => BuildCopySql<IngestionFile, ArchiveIngestionFile>(
+    {
+        var pk = Pk<IngestionFile>();
+        return BuildCopySql<IngestionFile, ArchiveIngestionFile>(
             "s",
-            $"FROM {GetTableName<IngestionFile>()} s",
-            "WHERE s.id = {1}");
+            $"FROM {Tbl<IngestionFile>()} s",
+            $"WHERE s.{pk} = {{1}}");
+    }
 
     public string BuildCopyIngestionFileLineSql()
-        => BuildCopySql<IngestionFileLine, ArchiveIngestionFileLine>(
+    {
+        var fk = Col<IngestionFileLine>(IngestionFileIdProperty);
+        return BuildCopySql<IngestionFileLine, ArchiveIngestionFileLine>(
             "s",
-            $"FROM {GetTableName<IngestionFileLine>()} s",
-            "WHERE s.file_id = {1}");
+            $"FROM {Tbl<IngestionFileLine>()} s",
+            $"WHERE s.{fk} = {{1}}");
+    }
 
     public string BuildCopyReconciliationEvaluationSql()
-        => BuildCopySql<ReconciliationEvaluation, ArchiveReconciliationEvaluation>(
-            "s",
-            $"FROM {GetTableName<ReconciliationEvaluation>()} s JOIN {GetTableName<IngestionFileLine>()} l ON l.id = s.file_line_id",
-            "WHERE l.file_id = {1}");
+        => BuildReconCopySql<ReconciliationEvaluation, ArchiveReconciliationEvaluation>();
 
     public string BuildCopyReconciliationOperationSql()
-        => BuildCopySql<ReconciliationOperation, ArchiveReconciliationOperation>(
-            "s",
-            $"FROM {GetTableName<ReconciliationOperation>()} s JOIN {GetTableName<IngestionFileLine>()} l ON l.id = s.file_line_id",
-            "WHERE l.file_id = {1}");
+        => BuildReconCopySql<ReconciliationOperation, ArchiveReconciliationOperation>();
 
     public string BuildCopyReconciliationReviewSql()
-        => BuildCopySql<ReconciliationReview, ArchiveReconciliationReview>(
-            "s",
-            $"FROM {GetTableName<ReconciliationReview>()} s JOIN {GetTableName<IngestionFileLine>()} l ON l.id = s.file_line_id",
-            "WHERE l.file_id = {1}");
+        => BuildReconCopySql<ReconciliationReview, ArchiveReconciliationReview>();
 
     public string BuildCopyReconciliationOperationExecutionSql()
-        => BuildCopySql<ReconciliationOperationExecution, ArchiveReconciliationOperationExecution>(
-            "s",
-            $"FROM {GetTableName<ReconciliationOperationExecution>()} s JOIN {GetTableName<IngestionFileLine>()} l ON l.id = s.file_line_id",
-            "WHERE l.file_id = {1}");
+        => BuildReconCopySql<ReconciliationOperationExecution, ArchiveReconciliationOperationExecution>();
 
     public string BuildCopyReconciliationAlertSql()
-        => BuildCopySql<ReconciliationAlert, ArchiveReconciliationAlert>(
-            "s",
-            $"FROM {GetTableName<ReconciliationAlert>()} s JOIN {GetTableName<IngestionFileLine>()} l ON l.id = s.file_line_id",
-            "WHERE l.file_id = {1}");
-
-    // Delete SQL: parameter is {0}=ingestionFileId (unchanged)
-
+        => BuildReconCopySql<ReconciliationAlert, ArchiveReconciliationAlert>();
+    
     public string BuildDeleteReconciliationAlertSql()
-        => $"DELETE FROM {GetTableName<ReconciliationAlert>()} WHERE file_line_id IN (SELECT id FROM {GetTableName<IngestionFileLine>()} WHERE file_id = {{0}});";
+        => BuildReconDeleteSql<ReconciliationAlert>();
 
     public string BuildDeleteReconciliationOperationExecutionSql()
-        => $"DELETE FROM {GetTableName<ReconciliationOperationExecution>()} WHERE file_line_id IN (SELECT id FROM {GetTableName<IngestionFileLine>()} WHERE file_id = {{0}});";
+        => BuildReconDeleteSql<ReconciliationOperationExecution>();
 
     public string BuildDeleteReconciliationReviewSql()
-        => $"DELETE FROM {GetTableName<ReconciliationReview>()} WHERE file_line_id IN (SELECT id FROM {GetTableName<IngestionFileLine>()} WHERE file_id = {{0}});";
+        => BuildReconDeleteSql<ReconciliationReview>();
 
     public string BuildDeleteReconciliationOperationSql()
-        => $"DELETE FROM {GetTableName<ReconciliationOperation>()} WHERE file_line_id IN (SELECT id FROM {GetTableName<IngestionFileLine>()} WHERE file_id = {{0}});";
+        => BuildReconDeleteSql<ReconciliationOperation>();
 
     public string BuildDeleteReconciliationEvaluationSql()
-        => $"DELETE FROM {GetTableName<ReconciliationEvaluation>()} WHERE file_line_id IN (SELECT id FROM {GetTableName<IngestionFileLine>()} WHERE file_id = {{0}});";
+        => BuildReconDeleteSql<ReconciliationEvaluation>();
 
     public string BuildDeleteIngestionFileLineSql()
-        => $"DELETE FROM {GetTableName<IngestionFileLine>()} WHERE file_id = {{0}};";
+    {
+        var fk = Col<IngestionFileLine>(IngestionFileIdProperty);
+        return $"DELETE FROM {Tbl<IngestionFileLine>()} WHERE {fk} = {{0}};";
+    }
 
     public string BuildDeleteIngestionFileSql()
-        => $"DELETE FROM {GetTableName<IngestionFile>()} WHERE id = {{0}};";
+    {
+        var pk = Pk<IngestionFile>();
+        return $"DELETE FROM {Tbl<IngestionFile>()} WHERE {pk} = {{0}};";
+    }
+    
+    private string BuildReconCopySql<TSource, TArchive>()
+        where TSource : class
+        where TArchive : class
+    {
+        var sourceFileLineId = Col<TSource>(FileLineIdProperty);
+        var fileLinePk = Pk<IngestionFileLine>();
+        var fileLineFileId = Col<IngestionFileLine>(IngestionFileIdProperty);
+        var fileLineTable = Tbl<IngestionFileLine>();
 
-    /// <summary>
-    /// Builds INSERT INTO archive_table ({live_columns}, archived_at)
-    /// SELECT {live_columns}, {0} FROM {live_table} ...
-    /// Parameters: {0}=archivedAt, {1}=ingestionFileId
-    /// </summary>
+        return BuildCopySql<TSource, TArchive>(
+            "s",
+            $"FROM {Tbl<TSource>()} s JOIN {fileLineTable} l ON l.{fileLinePk} = s.{sourceFileLineId}",
+            $"WHERE l.{fileLineFileId} = {{1}}");
+    }
+    
+    private string BuildReconDeleteSql<TEntity>() where TEntity : class
+    {
+        var fileLineIdCol = Col<TEntity>(FileLineIdProperty);
+        var fileLinePk = Pk<IngestionFileLine>();
+        var fileLineTable = Tbl<IngestionFileLine>();
+        var fileLineFileId = Col<IngestionFileLine>(IngestionFileIdProperty);
+
+        return $"DELETE FROM {Tbl<TEntity>()} WHERE {fileLineIdCol} IN (SELECT {fileLinePk} FROM {fileLineTable} WHERE {fileLineFileId} = {{0}});";
+    }
+    
     private string BuildCopySql<TSource, TArchive>(string sourceAlias, string fromClause, string whereClause)
         where TSource : class
         where TArchive : class
@@ -122,14 +134,11 @@ internal sealed class ArchiveSqlDialect : IArchiveSqlDialect
             ?? throw new InvalidOperationException($"Entity type not found for {typeof(TSource).Name}.");
 
         var storeColumns = GetStoreColumnNames(sourceEntity);
-        var archiveTable = GetTableName<TArchive>();
+        var archiveTable = Tbl<TArchive>();
+        var archivedAtCol = Col<TArchive>(ArchivedAtProperty);
 
-        var insertColumns = storeColumns
-            .Concat(new[] { QuoteIdentifier("archived_at") });
-
-        var selectColumns = storeColumns
-            .Select(col => $"{sourceAlias}.{col}")
-            .Concat(new[] { "{0}" });
+        var insertColumns = storeColumns.Concat(new[] { archivedAtCol });
+        var selectColumns = storeColumns.Select(col => $"{sourceAlias}.{col}").Concat(new[] { "{0}" });
 
         return $"""
             INSERT INTO {archiveTable}
@@ -145,22 +154,49 @@ internal sealed class ArchiveSqlDialect : IArchiveSqlDialect
 
     private List<string> GetStoreColumnNames(IEntityType entityType)
     {
-        var storeObject = StoreObjectIdentifier.Table(entityType.GetTableName()!, entityType.GetSchema());
+        var storeObject = GetStoreObject(entityType);
         return entityType.GetProperties()
             .Select(p => QuoteIdentifier(p.GetColumnName(storeObject)!))
             .ToList();
     }
 
-    private string GetTableName<TEntity>() where TEntity : class
+    private string Tbl<TEntity>() where TEntity : class
     {
-        var entityType = _dbContext.Model.FindEntityType(typeof(TEntity))
-            ?? throw new InvalidOperationException($"Entity type not found for {typeof(TEntity).Name}.");
-
+        var entityType = FindEntityType<TEntity>();
         var schema = entityType.GetSchema();
         var table = entityType.GetTableName()!;
         return string.IsNullOrWhiteSpace(schema)
             ? QuoteIdentifier(table)
             : $"{QuoteIdentifier(schema)}.{QuoteIdentifier(table)}";
+    }
+
+    private string Col<TEntity>(string propertyName) where TEntity : class
+    {
+        var entityType = FindEntityType<TEntity>();
+        var property = entityType.FindProperty(propertyName)
+            ?? throw new InvalidOperationException(
+                $"Property '{propertyName}' not found on entity type {typeof(TEntity).Name}.");
+        return QuoteIdentifier(property.GetColumnName(GetStoreObject(entityType))!);
+    }
+
+    private string Pk<TEntity>() where TEntity : class
+    {
+        var entityType = FindEntityType<TEntity>();
+        var pk = entityType.FindPrimaryKey()
+            ?? throw new InvalidOperationException(
+                $"No primary key defined on entity type {typeof(TEntity).Name}.");
+        return QuoteIdentifier(pk.Properties[0].GetColumnName(GetStoreObject(entityType))!);
+    }
+
+    private IEntityType FindEntityType<TEntity>() where TEntity : class
+    {
+        return _dbContext.Model.FindEntityType(typeof(TEntity))
+            ?? throw new InvalidOperationException($"Entity type not found in EF model: {typeof(TEntity).Name}.");
+    }
+
+    private static StoreObjectIdentifier GetStoreObject(IEntityType entityType)
+    {
+        return StoreObjectIdentifier.Table(entityType.GetTableName()!, entityType.GetSchema());
     }
 
     private string QuoteIdentifier(string name)

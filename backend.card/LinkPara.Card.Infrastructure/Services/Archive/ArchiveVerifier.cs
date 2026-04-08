@@ -39,11 +39,7 @@ internal sealed class ArchiveVerifier
         counts.ReconciliationAlertCount = await _dbContext.ReconciliationAlerts.CountAsync(x => fileLineIds.Contains(x.FileLineId), cancellationToken);
         return counts;
     }
-
-    /// <summary>
-    /// Counts archive rows using the archive entity DbSets.
-    /// Archive entities are mapped to archive schema tables via EF configuration.
-    /// </summary>
+    
     public async Task<ArchiveAggregateCounts> GetArchiveCountsAsync(Guid ingestionFileId, CancellationToken cancellationToken)
     {
         var counts = new ArchiveAggregateCounts

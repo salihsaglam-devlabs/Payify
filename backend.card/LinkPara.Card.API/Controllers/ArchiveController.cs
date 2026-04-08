@@ -8,13 +8,8 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace LinkPara.Card.API.Controllers;
 
-[ApiController]
-[Route("archive")]
-public class ArchiveController : ControllerBase
+public class ArchiveController : ApiControllerBase
 {
-    private ISender Mediator =>
-        HttpContext.RequestServices.GetRequiredService<ISender>();
-
     [Authorize(Policy = ReconciliationPolicies.ReadAll)]
     [HttpPost("Preview")]
     public Task<ArchivePreviewResponse> PreviewAsync([FromBody] ArchivePreviewRequest? request, CancellationToken cancellationToken = default)
