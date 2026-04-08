@@ -1,12 +1,14 @@
 using LinkPara.Audit;
 using LinkPara.Cache;
 using LinkPara.Card.Application.Commons.Interfaces;
+using LinkPara.Card.Application.Commons.Interfaces.Archive;
 using LinkPara.Card.Application.Commons.Interfaces.FileIngestion;
 using LinkPara.Card.Application.Commons.Interfaces.Reconciliation;
 using LinkPara.Card.Application.Commons.Helpers.FileIngestion;
 using LinkPara.Card.Application.Commons.Helpers.Reconciliation;
 using LinkPara.Card.Application.Commons.Localization;
 using LinkPara.Card.Application.Commons.Models.EventBusConfiguration;
+using LinkPara.Card.Application.Commons.Models.Archive;
 using LinkPara.Card.Application.Commons.Models.FileIngestion;
 using LinkPara.Card.Application.Commons.Models.Reconciliation;
 using LinkPara.Card.Infrastructure.Persistence;
@@ -46,6 +48,7 @@ using LinkPara.Card.Application.Features.PaycoreServices.CardPinServices.Service
 using LinkPara.Card.Infrastructure.Consumers.FileIngestionAndReconciliation;
 using LinkPara.Card.Infrastructure.Services.Audit;
 using LinkPara.Card.Infrastructure.Services.AlertService;
+using LinkPara.Card.Infrastructure.Services.Archive;
 using LinkPara.Card.Infrastructure.Services.Notifications;
 using LinkPara.Card.Infrastructure.Services.WalletServices.Services;
 
@@ -80,21 +83,37 @@ public static class DependencyInjection
         ConfigureDatabase(services, configuration, vaultClient);
         ConfigureHttpClients(services, vaultClient);
         ConfigureMassTransit(services, configuration, vaultClient);
-        ConfigureFileIngestionAndReconciliationOptions(services, vaultClient);
+        ConfigureFileIngestionAndReconciliationOptions(services, configuration, vaultClient);
         return services;
     }
 
     private static void ConfigureFileIngestionAndReconciliationOptions(
         IServiceCollection services,
+        IConfiguration configuration,
         IVaultClient vaultClient)
     {
         var reconciliation = vaultClient.GetSecretValue<ReconciliationOptions>("CardSecrets", ReconciliationOptions.SectionName, null)
             ?? throw new InvalidOperationException("Vault key missing: CardSecrets/Reconciliation");
         var fileIngestion = vaultClient.GetSecretValue<FileIngestionOptions>("CardSecrets", FileIngestionOptions.SectionName, null)
             ?? throw new InvalidOperationException("Vault key missing: CardSecrets/FileIngestion");
+        var archive = ResolveArchiveOptions(configuration, vaultClient);
 
         services.AddSingleton<IOptions<ReconciliationOptions>>(Options.Create(reconciliation));
         services.AddSingleton<IOptions<FileIngestionOptions>>(Options.Create(fileIngestion));
+        services.AddSingleton<IOptions<ArchiveOptions>>(Options.Create(archive));
+    }
+
+    private static ArchiveOptions ResolveArchiveOptions(IConfiguration configuration, IVaultClient vaultClient)
+    {
+        var localArchive = configuration.GetSection($"LocalConfiguration:{ArchiveOptions.SectionName}").Get<ArchiveOptions>();
+        if (localArchive is not null)
+        {
+            return localArchive;
+        }
+
+        return vaultClient.GetSecretValue<ArchiveOptions>("CardSecrets", ArchiveOptions.SectionName, null)
+               ?? configuration.GetSection(ArchiveOptions.SectionName).Get<ArchiveOptions>()
+               ?? new ArchiveOptions();
     }
 
     private static void ConfigureServices(IServiceCollection services)
@@ -144,6 +163,12 @@ public static class DependencyInjection
         services.AddScoped<IReconciliationService, ReconciliationService>();
         services.AddScoped<INotificationEmailService, NotificationEmailService>();
         services.AddScoped<IAlertService, AlertService>();
+        services.AddScoped<IArchiveService, ArchiveService>();
+        services.AddScoped<ArchiveAggregateReader>();
+        services.AddScoped<ArchiveEligibilityEvaluator>();
+        services.AddScoped<ArchiveVerifier>();
+        services.AddScoped<ArchiveExecutor>();
+        services.AddScoped<IArchiveSqlDialect, ArchiveSqlDialect>();
     }
 
     private static void ConfigureHttpClients(IServiceCollection services, IVaultClient vaultClient)

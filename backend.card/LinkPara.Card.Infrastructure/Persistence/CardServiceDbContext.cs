@@ -1,6 +1,7 @@
 using LinkPara.Card.Domain.Entities;
 using LinkPara.Card.Domain.Entities.FileIngestion;
 using LinkPara.Card.Domain.Entities.Reconciliation;
+using LinkPara.Card.Infrastructure.Persistence.ArchiveEntities;
 using LinkPara.ContextProvider;
 using LinkPara.HttpProviders.Vault;
 using LinkPara.SharedModels.DomainEvents.Interfaces;
@@ -29,6 +30,16 @@ public class CardDbContext : BaseDbContext
     public DbSet<ReconciliationReview> ReconciliationReviews { get; set; }
     public DbSet<ReconciliationOperationExecution> ReconciliationOperationExecutions { get; set; }
     public DbSet<ReconciliationAlert> ReconciliationAlerts { get; set; }
+
+    public DbSet<ArchiveIngestionFile> ArchiveIngestionFiles { get; set; }
+    public DbSet<ArchiveIngestionFileLine> ArchiveIngestionFileLines { get; set; }
+    public DbSet<ArchiveReconciliationEvaluation> ArchiveReconciliationEvaluations { get; set; }
+    public DbSet<ArchiveReconciliationOperation> ArchiveReconciliationOperations { get; set; }
+    public DbSet<ArchiveReconciliationReview> ArchiveReconciliationReviews { get; set; }
+    public DbSet<ArchiveReconciliationOperationExecution> ArchiveReconciliationOperationExecutions { get; set; }
+    public DbSet<ArchiveReconciliationAlert> ArchiveReconciliationAlerts { get; set; }
+    public DbSet<ArchiveBatch> ArchiveBatches { get; set; }
+    public DbSet<ArchiveBatchItem> ArchiveBatchItems { get; set; }
 
     public CardDbContext(DbContextOptions options,
         IContextProvider contextProvider,
@@ -75,6 +86,16 @@ public class CardDbContext : BaseDbContext
         builder.Entity<ReconciliationReview>().ToTable("review", reconSchema);
         builder.Entity<ReconciliationOperationExecution>().ToTable("operation_execution", reconSchema);
         builder.Entity<ReconciliationAlert>().ToTable("alert", reconSchema);
+
+        builder.Entity<ArchiveIngestionFile>().ToTable("ingestion_file", "archive");
+        builder.Entity<ArchiveIngestionFileLine>().ToTable("ingestion_file_line", "archive");
+        builder.Entity<ArchiveReconciliationEvaluation>().ToTable("reconciliation_evaluation", "archive");
+        builder.Entity<ArchiveReconciliationOperation>().ToTable("reconciliation_operation", "archive");
+        builder.Entity<ArchiveReconciliationReview>().ToTable("reconciliation_review", "archive");
+        builder.Entity<ArchiveReconciliationOperationExecution>().ToTable("reconciliation_operation_execution", "archive");
+        builder.Entity<ArchiveReconciliationAlert>().ToTable("reconciliation_alert", "archive");
+        builder.Entity<ArchiveBatch>().ToTable("archive_batch", "archive");
+        builder.Entity<ArchiveBatchItem>().ToTable("archive_batch_item", "archive");
     }
 
     private static void CreateMsSqlMappings(ModelBuilder builder)
@@ -95,5 +116,15 @@ public class CardDbContext : BaseDbContext
         builder.Entity<ReconciliationReview>().ToTable("Review", reconSchema);
         builder.Entity<ReconciliationOperationExecution>().ToTable("OperationExecution", reconSchema);
         builder.Entity<ReconciliationAlert>().ToTable("Alert", reconSchema);
+
+        builder.Entity<ArchiveIngestionFile>().ToTable("ingestion_file", "archive");
+        builder.Entity<ArchiveIngestionFileLine>().ToTable("ingestion_file_line", "archive");
+        builder.Entity<ArchiveReconciliationEvaluation>().ToTable("reconciliation_evaluation", "archive");
+        builder.Entity<ArchiveReconciliationOperation>().ToTable("reconciliation_operation", "archive");
+        builder.Entity<ArchiveReconciliationReview>().ToTable("reconciliation_review", "archive");
+        builder.Entity<ArchiveReconciliationOperationExecution>().ToTable("reconciliation_operation_execution", "archive");
+        builder.Entity<ArchiveReconciliationAlert>().ToTable("reconciliation_alert", "archive");
+        builder.Entity<ArchiveBatch>().ToTable("archive_batch", "archive");
+        builder.Entity<ArchiveBatchItem>().ToTable("archive_batch_item", "archive");
     }
 }
