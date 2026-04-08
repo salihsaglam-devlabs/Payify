@@ -7,13 +7,10 @@ namespace LinkPara.Card.Infrastructure.Services.Archive;
 internal sealed class ArchiveVerifier
 {
     private readonly CardDbContext _dbContext;
-    private readonly bool _isSqlServer;
 
     public ArchiveVerifier(CardDbContext dbContext)
     {
         _dbContext = dbContext;
-        _isSqlServer = (_dbContext.Database.ProviderName ?? string.Empty)
-            .Contains("SqlServer", StringComparison.OrdinalIgnoreCase);
     }
 
     public async Task<ArchiveAggregateCounts> GetLiveCountsAsync(Guid ingestionFileId, CancellationToken cancellationToken)
@@ -44,38 +41,42 @@ internal sealed class ArchiveVerifier
     }
 
     /// <summary>
-    /// Counts archive rows by ingestionFileId using raw SQL.
-    /// Archive business tables mirror live tables and have no duplicate EF entity types.
+    /// Counts archive rows using the archive entity DbSets.
+    /// Archive entities are mapped to archive schema tables via EF configuration.
     /// </summary>
     public async Task<ArchiveAggregateCounts> GetArchiveCountsAsync(Guid ingestionFileId, CancellationToken cancellationToken)
     {
-        var a = ArchiveSchema;
-        var fileLineSub = $"SELECT id FROM {a}.{Q("ingestion_file_line")} WHERE file_id = {{0}}";
-
-        return new ArchiveAggregateCounts
+        var counts = new ArchiveAggregateCounts
         {
-            IngestionFileCount = await CountAsync(
-                $"SELECT CAST(COUNT(*) AS INTEGER) FROM {a}.{Q("ingestion_file")} WHERE id = {{0}}",
-                ingestionFileId, cancellationToken),
-            IngestionFileLineCount = await CountAsync(
-                $"SELECT CAST(COUNT(*) AS INTEGER) FROM {a}.{Q("ingestion_file_line")} WHERE file_id = {{0}}",
-                ingestionFileId, cancellationToken),
-            ReconciliationEvaluationCount = await CountAsync(
-                $"SELECT CAST(COUNT(*) AS INTEGER) FROM {a}.{Q("reconciliation_evaluation")} WHERE file_line_id IN ({fileLineSub})",
-                ingestionFileId, cancellationToken),
-            ReconciliationOperationCount = await CountAsync(
-                $"SELECT CAST(COUNT(*) AS INTEGER) FROM {a}.{Q("reconciliation_operation")} WHERE file_line_id IN ({fileLineSub})",
-                ingestionFileId, cancellationToken),
-            ReconciliationReviewCount = await CountAsync(
-                $"SELECT CAST(COUNT(*) AS INTEGER) FROM {a}.{Q("reconciliation_review")} WHERE file_line_id IN ({fileLineSub})",
-                ingestionFileId, cancellationToken),
-            ReconciliationOperationExecutionCount = await CountAsync(
-                $"SELECT CAST(COUNT(*) AS INTEGER) FROM {a}.{Q("reconciliation_operation_execution")} WHERE file_line_id IN ({fileLineSub})",
-                ingestionFileId, cancellationToken),
-            ReconciliationAlertCount = await CountAsync(
-                $"SELECT CAST(COUNT(*) AS INTEGER) FROM {a}.{Q("reconciliation_alert")} WHERE file_line_id IN ({fileLineSub})",
-                ingestionFileId, cancellationToken)
+            IngestionFileCount = await _dbContext.ArchiveIngestionFiles
+                .CountAsync(x => x.Id == ingestionFileId, cancellationToken),
+            IngestionFileLineCount = await _dbContext.ArchiveIngestionFileLines
+                .CountAsync(x => x.IngestionFileId == ingestionFileId, cancellationToken)
         };
+
+        var archiveFileLineIds = await _dbContext.ArchiveIngestionFileLines
+            .AsNoTracking()
+            .Where(x => x.IngestionFileId == ingestionFileId)
+            .Select(x => x.Id)
+            .ToListAsync(cancellationToken);
+
+        if (archiveFileLineIds.Count == 0)
+        {
+            return counts;
+        }
+
+        counts.ReconciliationEvaluationCount = await _dbContext.ArchiveReconciliationEvaluations
+            .CountAsync(x => archiveFileLineIds.Contains(x.FileLineId), cancellationToken);
+        counts.ReconciliationOperationCount = await _dbContext.ArchiveReconciliationOperations
+            .CountAsync(x => archiveFileLineIds.Contains(x.FileLineId), cancellationToken);
+        counts.ReconciliationReviewCount = await _dbContext.ArchiveReconciliationReviews
+            .CountAsync(x => archiveFileLineIds.Contains(x.FileLineId), cancellationToken);
+        counts.ReconciliationOperationExecutionCount = await _dbContext.ArchiveReconciliationOperationExecutions
+            .CountAsync(x => archiveFileLineIds.Contains(x.FileLineId), cancellationToken);
+        counts.ReconciliationAlertCount = await _dbContext.ArchiveReconciliationAlerts
+            .CountAsync(x => archiveFileLineIds.Contains(x.FileLineId), cancellationToken);
+
+        return counts;
     }
 
     public void EnsureArchiveCountsMatch(ArchiveAggregateCounts liveCounts, ArchiveAggregateCounts archiveCounts)
@@ -103,15 +104,6 @@ internal sealed class ArchiveVerifier
         }
     }
 
-    private string ArchiveSchema => Q("archive");
-
-    private async Task<int> CountAsync(string sql, Guid param, CancellationToken cancellationToken)
-    {
-        return await _dbContext.Database
-            .SqlQueryRaw<int>(sql, param)
-            .SingleAsync(cancellationToken);
-    }
-
     private static void EnsureEqual(int expected, int actual, string table)
     {
         if (expected != actual)
@@ -119,6 +111,4 @@ internal sealed class ArchiveVerifier
             throw new InvalidOperationException($"Archive verification failed for {table}. Expected={expected}, Actual={actual}.");
         }
     }
-
-    private string Q(string name) => _isSqlServer ? $"[{name}]" : $"\"{name}\"";
 }

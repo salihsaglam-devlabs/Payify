@@ -7,13 +7,10 @@ namespace LinkPara.Card.Infrastructure.Services.Archive;
 internal sealed class ArchiveAggregateReader
 {
     private readonly CardDbContext _dbContext;
-    private readonly bool _isSqlServer;
 
     public ArchiveAggregateReader(CardDbContext dbContext)
     {
         _dbContext = dbContext;
-        _isSqlServer = (_dbContext.Database.ProviderName ?? string.Empty)
-            .Contains("SqlServer", StringComparison.OrdinalIgnoreCase);
     }
 
     public async Task<List<Guid>> ResolveCandidateFileIdsAsync(
@@ -197,11 +194,8 @@ internal sealed class ArchiveAggregateReader
 
     private async Task<bool> ExistsInArchiveAsync(Guid ingestionFileId, CancellationToken cancellationToken)
     {
-        var q = _isSqlServer ? (Func<string, string>)(n => $"[{n}]") : n => $"\"{n}\"";
-        var sql = $"SELECT CAST(COUNT(*) AS INTEGER) FROM {q("archive")}.{q("ingestion_file")} WHERE id = {{0}}";
-        var count = await _dbContext.Database
-            .SqlQueryRaw<int>(sql, ingestionFileId)
-            .SingleAsync(cancellationToken);
-        return count > 0;
+        return await _dbContext.ArchiveIngestionFiles
+            .AsNoTracking()
+            .AnyAsync(x => x.Id == ingestionFileId, cancellationToken);
     }
 }
