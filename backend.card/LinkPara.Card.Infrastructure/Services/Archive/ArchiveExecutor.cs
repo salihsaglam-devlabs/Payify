@@ -55,9 +55,9 @@ internal sealed class ArchiveExecutor
 
             var liveCounts = await _verifier.GetLiveCountsAsync(ingestionFileId, cancellationToken);
 
-            await CopyAggregateAsync(ingestionFileId, archiveRunId, auditStamp.Timestamp, auditStamp.UserId, cancellationToken);
+            await CopyAggregateAsync(ingestionFileId, auditStamp.Timestamp, cancellationToken);
 
-            var archiveCounts = await _verifier.GetArchiveCountsAsync(archiveRunId, cancellationToken);
+            var archiveCounts = await _verifier.GetArchiveCountsAsync(ingestionFileId, cancellationToken);
             _verifier.EnsureArchiveCountsMatch(liveCounts, archiveCounts);
 
             await DeleteAggregateAsync(ingestionFileId, cancellationToken);
@@ -142,7 +142,11 @@ internal sealed class ArchiveExecutor
         await _dbContext.SaveChangesAsync(cancellationToken);
     }
 
-    private async Task CopyAggregateAsync(Guid ingestionFileId, Guid archiveRunId, DateTime archivedAt, string archivedBy, CancellationToken cancellationToken)
+    /// <summary>
+    /// Copies the aggregate to archive tables using raw SQL.
+    /// Parameters: {0}=archivedAt, {1}=ingestionFileId
+    /// </summary>
+    private async Task CopyAggregateAsync(Guid ingestionFileId, DateTime archivedAt, CancellationToken cancellationToken)
     {
         var copySqls = new[]
         {
@@ -157,7 +161,7 @@ internal sealed class ArchiveExecutor
 
         foreach (var sql in copySqls)
         {
-            await _dbContext.Database.ExecuteSqlRawAsync(sql, new object[] { archiveRunId, archivedAt, archivedBy, ingestionFileId }, cancellationToken);
+            await _dbContext.Database.ExecuteSqlRawAsync(sql, new object[] { archivedAt, ingestionFileId }, cancellationToken);
         }
     }
 

@@ -36,11 +36,8 @@ namespace LinkPara.Card.Infrastructure.Persistence.Migrations.PostgreSql
                     created_by character varying(50) NOT NULL,
                     last_modified_by character varying(50) NULL,
                     record_status character varying(50) NOT NULL,
-                    archive_run_id uuid NOT NULL,
-                    archived_at timestamp without time zone NOT NULL,
-                    archived_by character varying(100) NOT NULL
+                    archived_at timestamp without time zone NOT NULL
                 );
-                CREATE INDEX IF NOT EXISTS ix_archive_ingestion_file_archive_run_id ON archive.ingestion_file (archive_run_id);
                 """);
 
             migrationBuilder.Sql(
@@ -69,14 +66,11 @@ namespace LinkPara.Card.Infrastructure.Persistence.Migrations.PostgreSql
                     created_by character varying(50) NOT NULL,
                     last_modified_by character varying(50) NULL,
                     record_status character varying(50) NOT NULL,
-                    archive_run_id uuid NOT NULL,
                     archived_at timestamp without time zone NOT NULL,
-                    archived_by character varying(100) NOT NULL,
                     CONSTRAINT fk_archive_ingestion_file_line_file
                         FOREIGN KEY (file_id) REFERENCES archive.ingestion_file (id)
                 );
                 CREATE INDEX IF NOT EXISTS ix_archive_ingestion_file_line_file_id ON archive.ingestion_file_line (file_id);
-                CREATE INDEX IF NOT EXISTS ix_archive_ingestion_file_line_archive_run_id ON archive.ingestion_file_line (archive_run_id);
                 """);
 
             migrationBuilder.Sql(
@@ -94,14 +88,11 @@ namespace LinkPara.Card.Infrastructure.Persistence.Migrations.PostgreSql
                     created_by character varying(50) NOT NULL,
                     last_modified_by character varying(50) NULL,
                     record_status character varying(50) NOT NULL,
-                    archive_run_id uuid NOT NULL,
                     archived_at timestamp without time zone NOT NULL,
-                    archived_by character varying(100) NOT NULL,
                     CONSTRAINT fk_archive_reconciliation_evaluation_file_line
                         FOREIGN KEY (file_line_id) REFERENCES archive.ingestion_file_line (id)
                 );
                 CREATE INDEX IF NOT EXISTS ix_archive_reconciliation_evaluation_file_line_id ON archive.reconciliation_evaluation (file_line_id);
-                CREATE INDEX IF NOT EXISTS ix_archive_reconciliation_evaluation_archive_run_id ON archive.reconciliation_evaluation (archive_run_id);
                 """);
 
             migrationBuilder.Sql(
@@ -132,9 +123,7 @@ namespace LinkPara.Card.Infrastructure.Persistence.Migrations.PostgreSql
                     created_by character varying(50) NOT NULL,
                     last_modified_by character varying(50) NULL,
                     record_status character varying(50) NOT NULL,
-                    archive_run_id uuid NOT NULL,
                     archived_at timestamp without time zone NOT NULL,
-                    archived_by character varying(100) NOT NULL,
                     CONSTRAINT fk_archive_reconciliation_operation_file_line
                         FOREIGN KEY (file_line_id) REFERENCES archive.ingestion_file_line (id),
                     CONSTRAINT fk_archive_reconciliation_operation_evaluation
@@ -142,7 +131,6 @@ namespace LinkPara.Card.Infrastructure.Persistence.Migrations.PostgreSql
                 );
                 CREATE INDEX IF NOT EXISTS ix_archive_reconciliation_operation_file_line_id ON archive.reconciliation_operation (file_line_id);
                 CREATE INDEX IF NOT EXISTS ix_archive_reconciliation_operation_evaluation_id ON archive.reconciliation_operation (evaluation_id);
-                CREATE INDEX IF NOT EXISTS ix_archive_reconciliation_operation_archive_run_id ON archive.reconciliation_operation (archive_run_id);
                 """);
 
             migrationBuilder.Sql(
@@ -166,9 +154,7 @@ namespace LinkPara.Card.Infrastructure.Persistence.Migrations.PostgreSql
                     created_by character varying(50) NOT NULL,
                     last_modified_by character varying(50) NULL,
                     record_status character varying(50) NOT NULL,
-                    archive_run_id uuid NOT NULL,
                     archived_at timestamp without time zone NOT NULL,
-                    archived_by character varying(100) NOT NULL,
                     CONSTRAINT fk_archive_reconciliation_review_file_line
                         FOREIGN KEY (file_line_id) REFERENCES archive.ingestion_file_line (id),
                     CONSTRAINT fk_archive_reconciliation_review_evaluation
@@ -179,7 +165,6 @@ namespace LinkPara.Card.Infrastructure.Persistence.Migrations.PostgreSql
                 CREATE INDEX IF NOT EXISTS ix_archive_reconciliation_review_file_line_id ON archive.reconciliation_review (file_line_id);
                 CREATE INDEX IF NOT EXISTS ix_archive_reconciliation_review_evaluation_id ON archive.reconciliation_review (evaluation_id);
                 CREATE INDEX IF NOT EXISTS ix_archive_reconciliation_review_operation_id ON archive.reconciliation_review (operation_id);
-                CREATE INDEX IF NOT EXISTS ix_archive_reconciliation_review_archive_run_id ON archive.reconciliation_review (archive_run_id);
                 """);
 
             migrationBuilder.Sql(
@@ -206,9 +191,7 @@ namespace LinkPara.Card.Infrastructure.Persistence.Migrations.PostgreSql
                     created_by character varying(50) NOT NULL,
                     last_modified_by character varying(50) NULL,
                     record_status character varying(50) NOT NULL,
-                    archive_run_id uuid NOT NULL,
                     archived_at timestamp without time zone NOT NULL,
-                    archived_by character varying(100) NOT NULL,
                     CONSTRAINT fk_archive_reconciliation_operation_execution_file_line
                         FOREIGN KEY (file_line_id) REFERENCES archive.ingestion_file_line (id),
                     CONSTRAINT fk_archive_reconciliation_operation_execution_evaluation
@@ -219,7 +202,6 @@ namespace LinkPara.Card.Infrastructure.Persistence.Migrations.PostgreSql
                 CREATE INDEX IF NOT EXISTS ix_archive_reconciliation_operation_execution_file_line_id ON archive.reconciliation_operation_execution (file_line_id);
                 CREATE INDEX IF NOT EXISTS ix_archive_reconciliation_operation_execution_evaluation_id ON archive.reconciliation_operation_execution (evaluation_id);
                 CREATE INDEX IF NOT EXISTS ix_archive_reconciliation_operation_execution_operation_id ON archive.reconciliation_operation_execution (operation_id);
-                CREATE INDEX IF NOT EXISTS ix_archive_reconciliation_operation_execution_archive_run_id ON archive.reconciliation_operation_execution (archive_run_id);
                 """);
 
             migrationBuilder.Sql(
@@ -240,9 +222,7 @@ namespace LinkPara.Card.Infrastructure.Persistence.Migrations.PostgreSql
                     created_by character varying(50) NOT NULL,
                     last_modified_by character varying(50) NULL,
                     record_status character varying(50) NOT NULL,
-                    archive_run_id uuid NOT NULL,
                     archived_at timestamp without time zone NOT NULL,
-                    archived_by character varying(100) NOT NULL,
                     CONSTRAINT fk_archive_reconciliation_alert_file_line
                         FOREIGN KEY (file_line_id) REFERENCES archive.ingestion_file_line (id),
                     CONSTRAINT fk_archive_reconciliation_alert_evaluation
@@ -253,7 +233,6 @@ namespace LinkPara.Card.Infrastructure.Persistence.Migrations.PostgreSql
                 CREATE INDEX IF NOT EXISTS ix_archive_reconciliation_alert_file_line_id ON archive.reconciliation_alert (file_line_id);
                 CREATE INDEX IF NOT EXISTS ix_archive_reconciliation_alert_evaluation_id ON archive.reconciliation_alert (evaluation_id);
                 CREATE INDEX IF NOT EXISTS ix_archive_reconciliation_alert_operation_id ON archive.reconciliation_alert (operation_id);
-                CREATE INDEX IF NOT EXISTS ix_archive_reconciliation_alert_archive_run_id ON archive.reconciliation_alert (archive_run_id);
                 """);
 
             migrationBuilder.Sql(
