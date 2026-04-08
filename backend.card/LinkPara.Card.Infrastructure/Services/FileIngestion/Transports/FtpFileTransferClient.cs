@@ -1,4 +1,5 @@
 using LinkPara.Card.Application.Commons.Models.FileIngestion;
+using LinkPara.Card.Application.Commons.Interfaces.Localization;
 using LinkPara.Card.Domain.Enums.FileIngestion;
 using Microsoft.Extensions.Options;
 using System.Net;
@@ -10,10 +11,12 @@ namespace LinkPara.Card.Infrastructure.Services.FileIngestion.Transports;
 public class FtpFileTransferClient : IFileTransferClient
 {
     private readonly FileIngestionOptions _options = new();
+    private readonly ICardResourceLocalizer _localizer;
 
-    public FtpFileTransferClient(IOptions<FileIngestionOptions> options)
+    public FtpFileTransferClient(IOptions<FileIngestionOptions> options, ICardResourceLocalizer localizer)
     {
         _options = options.Value;
+        _localizer = localizer;
     }
 
     public FileSourceType SourceType => FileSourceType.Remote;
@@ -160,7 +163,7 @@ public class FtpFileTransferClient : IFileTransferClient
     {
         var ftpOptions = GetFtpOptions(endpointType);
         if (!ftpOptions.Paths.TryGetValue(profileKey, out var remotePath))
-            throw new InvalidOperationException($"FTP path is not configured for profile '{profileKey}'.");
+            throw new InvalidOperationException(_localizer.Get("FileIngestion.FtpPathNotConfigured", profileKey));
 
         return $"{remotePath.TrimEnd('/')}/{fileName}";
     }

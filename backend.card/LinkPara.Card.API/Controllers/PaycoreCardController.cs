@@ -21,7 +21,7 @@ namespace LinkPara.Card.API.Controllers
         /// <returns></returns>
         [Authorize(Policy = "PaycoreCard:Create")]
         [HttpPost("")]
-        public async Task<PaycoreResponse> CreateCardAsync(CreateCardCommand command)
+        public async Task<CreateCardResponse> CreateCardAsync(CreateCardCommand command)
         {
             return await Mediator.Send(command);
         }

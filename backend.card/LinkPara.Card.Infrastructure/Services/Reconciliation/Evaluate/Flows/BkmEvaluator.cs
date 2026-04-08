@@ -33,6 +33,7 @@ internal sealed class BkmEvaluator : IEvaluator
         var bkmContext = (BkmEvaluationContext)context;
         var result = new EvaluationResult();
         var currentCard = GetRootCardDetail(bkmContext);
+        bkmContext.CachedRootDetail = currentCard;
 
         if (TryHandleMissingCardRow(result, bkmContext, currentCard))
         {
@@ -496,37 +497,42 @@ internal sealed class BkmEvaluator : IEvaluator
     {
         var windowStart = ParseTransactionDate(detail.TransactionDate)?.AddDays(-20);
 
-        var query = _dbContext.IngestionFileLines
+        var parsedDataQuery = _dbContext.IngestionFileLines
             .AsNoTracking()
-            .Include(x => x.IngestionFile)
             .Where(x => x.IngestionFile.FileType == FileType.Clearing)
             .Where(x => x.IngestionFile.ContentType == FileContentType.Bkm)
             .Where(x => x.RecordType == "D")
             .Where(x => x.Status == FileRowStatus.Success)
-            .Where(x => x.ParsedData != null);
+            .Where(x => x.DuplicateDetectionKey != null && x.DuplicateDetectionKey.EndsWith(":Problem"))
+            .Select(x => x.ParsedData!);
 
-        var rows = await query.ToListAsync(cancellationToken);
-        foreach (var row in rows)
+        await foreach (var parsedData in parsedDataQuery.AsAsyncEnumerable().WithCancellation(cancellationToken))
         {
-            var clearing = DeserializeClearingDetail(row);
-            if (clearing is null || clearing.ControlStat != ClearingBkmControlStat.Problem)
+            if (string.IsNullOrWhiteSpace(parsedData))
+                continue;
+
+            ClearingBkmDetail? clearing;
+            try
+            {
+                clearing = JsonSerializer.Deserialize<ClearingBkmDetail>(parsedData, JsonOptions);
+            }
+            catch
             {
                 continue;
             }
+
+            if (clearing is null)
+                continue;
 
             if (windowStart.HasValue)
             {
                 var ioDate = ParseDate(clearing.IoDate);
                 if (ioDate.HasValue && ioDate.Value < windowStart.Value)
-                {
                     continue;
-                }
             }
 
             if (HasSameAccSignature(detail, clearing))
-            {
                 return true;
-            }
         }
 
         return false;
@@ -645,24 +651,6 @@ internal sealed class BkmEvaluator : IEvaluator
         try
         {
             return JsonSerializer.Deserialize<CardBkmDetail>(row.ParsedData, JsonOptions);
-        }
-        catch
-        {
-            return null;
-        }
-    }
-
-    private static ClearingBkmDetail? DeserializeClearingDetail(IngestionFileLine row)
-    {
-        if (!string.Equals(row.RecordType, "D", StringComparison.OrdinalIgnoreCase) ||
-            string.IsNullOrWhiteSpace(row.ParsedData))
-        {
-            return null;
-        }
-
-        try
-        {
-            return JsonSerializer.Deserialize<ClearingBkmDetail>(row.ParsedData, JsonOptions);
         }
         catch
         {

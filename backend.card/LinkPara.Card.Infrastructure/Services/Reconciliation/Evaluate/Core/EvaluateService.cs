@@ -299,9 +299,10 @@ internal sealed class EvaluateService : IEvaluateService
                 await _dbContext.SaveChangesAsync(cancellationToken);
             }, cancellationToken);
 
-            foreach (var item in items)
+            foreach (var noteGroup in items.GroupBy(x => x.Result.Note))
             {
-                await MarkRowAsync(item.Row.Id, ReconciliationStatus.Success, item.Result.Note, cancellationToken);
+                var ids = noteGroup.Select(x => x.Row.Id).ToList();
+                await MarkRowsBatchAsync(ids, ReconciliationStatus.Success, noteGroup.Key, cancellationToken);
             }
 
             return batch.Sum(x => x.Operations.Count);
@@ -422,27 +423,6 @@ internal sealed class EvaluateService : IEvaluateService
         return operations;
     }
     
-    private static List<ReconciliationReview> BuildReviews(
-        IReadOnlyList<ReconciliationOperation> operations,
-        IReadOnlyList<EvaluationOperation> orderedOperations)
-    {
-        return operations
-            .Where(x => x.IsManual)
-            .Select(x =>
-            {
-                var definition = orderedOperations[x.SequenceIndex];
-                return new ReconciliationReview
-                {
-                    Id = Guid.NewGuid(),
-                    OperationId = x.Id,
-                    Decision = ReviewDecision.Pending,
-                    ExpiresAt = ResolveReviewExpirationAt(definition),
-                    ExpirationAction = ResolveExpirationAction(definition),
-                    ExpirationFlowAction = ResolveExpirationFlowAction(definition)
-                };
-            })
-            .ToList();
-    }
 
     private static string ResolveIdempotencyKey(
         Guid fileLineId,
@@ -569,6 +549,9 @@ internal sealed class EvaluateService : IEvaluateService
         Guid groupId,
         CancellationToken cancellationToken)
     {
+        var evaluations = new List<ReconciliationEvaluation>();
+        var alerts = new List<ReconciliationAlert>();
+
         foreach (var row in rows)
         {
             errors.Add(ReconciliationErrorMapper.MapException(
@@ -577,9 +560,42 @@ internal sealed class EvaluateService : IEvaluateService
                 fileLineId: row.Id,
                 message: $"Evaluation chunk preparation failed for file line '{row.Id}'."));
 
-            await CreateFailedEvaluationAsync(row.Id, ex.Message, groupId, cancellationToken);
-            await MarkRowAsync(row.Id, ReconciliationStatus.Failed, ex.Message, cancellationToken);
+            var evaluation = new ReconciliationEvaluation
+            {
+                Id = Guid.NewGuid(),
+                GroupId = groupId,
+                FileLineId = row.Id,
+                Status = EvaluationStatus.Failed,
+                Message = ex.Message,
+                CreatedOperationCount = 0
+            };
+
+            alerts.Add(new ReconciliationAlert
+            {
+                Id = Guid.NewGuid(),
+                GroupId = groupId,
+                FileLineId = row.Id,
+                EvaluationId = evaluation.Id,
+                OperationId = Guid.Empty,
+                Severity = "Error",
+                AlertType = "EvaluationFailed",
+                Message = ex.Message
+            });
+
+            evaluations.Add(evaluation);
         }
+
+        _auditStampService.StampForCreate(evaluations.Cast<AuditEntity>().Concat(alerts.Cast<AuditEntity>()));
+
+        await ExecuteInTransactionAsync(async () =>
+        {
+            await _dbContext.ReconciliationEvaluations.AddRangeAsync(evaluations, cancellationToken);
+            await _dbContext.ReconciliationAlerts.AddRangeAsync(alerts, cancellationToken);
+            await _dbContext.SaveChangesAsync(cancellationToken);
+        }, cancellationToken);
+
+        var rowIds = rows.Select(x => x.Id).ToList();
+        await MarkRowsBatchAsync(rowIds, ReconciliationStatus.Failed, ex.Message, cancellationToken);
     }
 
     private async Task MarkRowAsync(
@@ -591,6 +607,26 @@ internal sealed class EvaluateService : IEvaluateService
         var auditStamp = _auditStampService.CreateStamp();
         await _dbContext.IngestionFileLines
             .Where(x => x.Id == rowId)
+            .ExecuteUpdateAsync(update => update
+                .SetProperty(x => x.ReconciliationStatus, status)
+                .SetProperty(x => x.Message, message)
+                .SetProperty(x => x.UpdateDate, auditStamp.Timestamp)
+                .SetProperty(x => x.LastModifiedBy, auditStamp.UserId),
+                cancellationToken);
+    }
+
+    private async Task MarkRowsBatchAsync(
+        List<Guid> rowIds,
+        ReconciliationStatus status,
+        string? message,
+        CancellationToken cancellationToken)
+    {
+        if (rowIds.Count == 0)
+            return;
+
+        var auditStamp = _auditStampService.CreateStamp();
+        await _dbContext.IngestionFileLines
+            .Where(x => rowIds.Contains(x.Id))
             .ExecuteUpdateAsync(update => update
                 .SetProperty(x => x.ReconciliationStatus, status)
                 .SetProperty(x => x.Message, message)

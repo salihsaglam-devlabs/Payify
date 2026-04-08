@@ -49,7 +49,7 @@ public class PaycoreCardService : IPaycoreCardService
         _customerWalletCard = customerWalletCard;
     }
 
-    public async Task<PaycoreResponse> CreateCardAsync(CreateCardCommand request)
+    public async Task<CreateCardResponse> CreateCardAsync(CreateCardCommand request)
     {
         var customerWalletCard = await _customerWalletCard
             .GetAll()
@@ -59,7 +59,7 @@ public class PaycoreCardService : IPaycoreCardService
 
         if (customerWalletCard is null)
         {
-            return new PaycoreResponse()
+            return new CreateCardResponse()
             {
                 IsSuccess = false,
                 Description = "CustomerNotFound"
@@ -68,7 +68,7 @@ public class PaycoreCardService : IPaycoreCardService
 
         if (!string.IsNullOrEmpty(customerWalletCard.CardNumber))
         {
-            return new PaycoreResponse()
+            return new CreateCardResponse()
             {
                 IsSuccess = false,
                 Description = "CardExist"

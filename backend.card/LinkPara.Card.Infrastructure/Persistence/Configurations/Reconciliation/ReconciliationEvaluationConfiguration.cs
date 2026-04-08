@@ -15,11 +15,10 @@ public class ReconciliationEvaluationConfiguration : IEntityTypeConfiguration<Re
 
         builder.Property(x => x.Status).HasConversion<string>().HasMaxLength(32).IsRequired();
         builder.Property(x => x.Message).HasMaxLength(1000);
-        builder.HasIndex(x => x.FileLineId);
         builder.Property(x => x.GroupId).HasColumnName("group_id");
 
-        builder.HasIndex(x => x.GroupId);
         builder.HasIndex(x => x.FileLineId);
+        builder.HasIndex(x => x.GroupId);
         builder.HasOne(x => x.IngestionFileLine)
             .WithMany()
             .HasForeignKey(x => x.FileLineId);

@@ -1,14 +1,22 @@
 using LinkPara.Card.Application.Commons.Models.FileIngestion;
 using LinkPara.Card.Application.Commons.Helpers;
+using LinkPara.Card.Application.Commons.Interfaces.Localization;
 
 namespace LinkPara.Card.Infrastructure.Services.FileIngestion.Parsing;
 
 public class FixedWidthRecordParser : IFixedWidthRecordParser
 {
+    private readonly ICardResourceLocalizer _localizer;
+
+    public FixedWidthRecordParser(ICardResourceLocalizer localizer)
+    {
+        _localizer = localizer;
+    }
+
     public ParsedFileLine Parse(string line, ParsingOptions parsingRule)
     {
         if (string.IsNullOrWhiteSpace(line))
-            throw new InvalidOperationException("Line cannot be empty or whitespace.");
+            throw new InvalidOperationException(_localizer.Get("FileIngestion.ParserLineEmpty"));
         
         var recordType = string.IsNullOrWhiteSpace(line)
             ? string.Empty
@@ -20,7 +28,7 @@ public class FixedWidthRecordParser : IFixedWidthRecordParser
             };
         
         if (!parsingRule.Records.TryGetValue(recordType, out var recordRule))
-            throw new InvalidOperationException($"Unsupported record type '{recordType}'. Must be H (Header), D (Detail), or F (Footer).");
+            throw new InvalidOperationException(_localizer.Get("FileIngestion.ParserUnsupportedRecordType", recordType));
 
         var parsed = new ParsedFileLine
         {
@@ -46,7 +54,7 @@ public class FixedWidthRecordParser : IFixedWidthRecordParser
         catch (Exception ex)
         {
             throw new InvalidOperationException(
-                $"Error parsing record type '{recordType}': {ex.Message}",
+                _localizer.Get("FileIngestion.ParserRecordTypeError", recordType, ex.Message),
                 ex);
         }
 

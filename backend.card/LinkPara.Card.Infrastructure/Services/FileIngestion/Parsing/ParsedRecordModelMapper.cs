@@ -1,4 +1,5 @@
 using LinkPara.Card.Domain.Entities.FileIngestion;
+using LinkPara.Card.Application.Commons.Interfaces.Localization;
 using System.Globalization;
 using System.Reflection;
 using System.Runtime.Serialization;
@@ -7,6 +8,13 @@ namespace LinkPara.Card.Infrastructure.Services.FileIngestion.Parsing;
 
 public class ParsedRecordModelMapper : IParsedRecordModelMapper
 {
+    private readonly ICardResourceLocalizer _localizer;
+
+    public ParsedRecordModelMapper(ICardResourceLocalizer localizer)
+    {
+        _localizer = localizer;
+    }
+
     public object Create(string profileKey, ParsedFileLine parsedLine)
     {
         return (profileKey, parsedLine.RecordType) switch
@@ -29,7 +37,7 @@ public class ParsedRecordModelMapper : IParsedRecordModelMapper
             ("CardBkm", "H") => MapCardBkmHeader(parsedLine),
             ("CardBkm", "D") => MapCardBkmDetail(parsedLine),
             ("CardBkm", "F") => MapCardBkmFooter(parsedLine),
-            _ => throw new InvalidOperationException($"Typed schema mapper is not defined for profile '{profileKey}' and record type '{parsedLine.RecordType}'.")
+            _ => throw new InvalidOperationException(_localizer.Get("FileIngestion.TypedSchemaMapperMissing", profileKey, parsedLine.RecordType))
         };
     }
 
@@ -454,7 +462,7 @@ public class ParsedRecordModelMapper : IParsedRecordModelMapper
         if (decimal.TryParse(rawValue, NumberStyles.Any, CultureInfo.GetCultureInfo("tr-TR"), out var trValue))
             return trValue;
 
-        throw new InvalidOperationException($"Decimal value '{rawValue}' is not valid for '{key}'.");
+        throw new InvalidOperationException(_localizer.Get("FileIngestion.DecimalValueInvalid", rawValue, key));
     }
 
     private static int IntValue(ParsedFileLine line, string key, params string[] aliases)
@@ -469,7 +477,7 @@ public class ParsedRecordModelMapper : IParsedRecordModelMapper
         if (int.TryParse(rawValue, NumberStyles.Integer, CultureInfo.GetCultureInfo("tr-TR"), out var trValue))
             return trValue;
 
-        throw new InvalidOperationException($"Int value '{rawValue}' is not valid for '{key}'.");
+        throw new InvalidOperationException(_localizer.Get("FileIngestion.IntValueInvalid", rawValue, key));
     }
 
     private static long LongValue(ParsedFileLine line, string key, params string[] aliases)
@@ -484,7 +492,7 @@ public class ParsedRecordModelMapper : IParsedRecordModelMapper
         if (long.TryParse(rawValue, NumberStyles.Integer, CultureInfo.GetCultureInfo("tr-TR"), out var trValue))
             return trValue;
 
-        throw new InvalidOperationException($"Long value '{rawValue}' is not valid for '{key}'.");
+        throw new InvalidOperationException(_localizer.Get("FileIngestion.LongValueInvalid", rawValue, key));
     }
 
     private static TEnum EnumValue<TEnum>(ParsedFileLine line, string key, params string[] aliases)
@@ -520,6 +528,6 @@ public class ParsedRecordModelMapper : IParsedRecordModelMapper
                 return (TEnum)field.GetValue(null)!;
         }
 
-        throw new InvalidOperationException($"Enum value '{rawValue}' is not valid for '{typeof(TEnum).Name}'.");
+        throw new InvalidOperationException(_localizer.Get("FileIngestion.EnumValueInvalid", rawValue, typeof(TEnum).Name));
     }
 }

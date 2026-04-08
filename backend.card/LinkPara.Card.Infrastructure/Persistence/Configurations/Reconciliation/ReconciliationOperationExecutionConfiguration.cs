@@ -35,11 +35,10 @@ public class ReconciliationOperationExecutionConfiguration : IEntityTypeConfigur
         builder.Property(x => x.GroupId).HasColumnName("group_id");
         builder.Property(x => x.EvaluationId).HasColumnName("evaluation_id");
 
-        builder.HasIndex(x => new { x.OperationId, x.AttemptNumber }).IsUnique(false);
         builder.HasIndex(x => x.FileLineId);
         builder.HasIndex(x => x.GroupId);
         builder.HasIndex(x => x.EvaluationId);
-        builder.HasIndex(x => x.OperationId);
+        builder.HasIndex(x => new { x.EvaluationId, x.OperationId });
 
         builder.HasOne(x => x.IngestionFileLine)
             .WithMany()

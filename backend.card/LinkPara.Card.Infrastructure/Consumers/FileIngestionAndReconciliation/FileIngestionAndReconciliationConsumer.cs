@@ -4,6 +4,7 @@ using LinkPara.Card.Application.Features.FileIngestion.Commands.IngestFile;
 using LinkPara.Card.Application.Features.Reconciliation.Commands.Evaluate;
 using LinkPara.Card.Application.Features.Reconciliation.Commands.Execute;
 using LinkPara.Card.Application.Commons.Models.FileIngestion;
+using LinkPara.Card.Application.Commons.Interfaces.Localization;
 using LinkPara.Card.Infrastructure.Services.Audit;
 using LinkPara.Card.Domain.Enums.FileIngestion;
 using MassTransit;
@@ -15,13 +16,16 @@ public class FileIngestionAndReconciliationConsumer : IConsumer<FileIngestionAnd
 {
     private readonly ISender _mediator;
     private readonly IAuditUserContextAccessor _auditUserContextAccessor;
+    private readonly ICardResourceLocalizer _localizer;
 
     public FileIngestionAndReconciliationConsumer(
         ISender mediator,
-        IAuditUserContextAccessor auditUserContextAccessor)
+        IAuditUserContextAccessor auditUserContextAccessor,
+        ICardResourceLocalizer localizer)
     {
         _mediator = mediator;
         _auditUserContextAccessor = auditUserContextAccessor;
+        _localizer = localizer;
     }
 
     public async Task Consume(ConsumeContext<FileIngestionAndReconciliationJobRequest> context)
@@ -37,7 +41,7 @@ public class FileIngestionAndReconciliationConsumer : IConsumer<FileIngestionAnd
                 case FileIngestionAndReconciliationJobType.IngestFile:
                 {
                     if (message.IngestionRequest is null)
-                        throw new InvalidOperationException("IngestFile request missing.");
+                        throw new InvalidOperationException(_localizer.Get("FileIngestion.ConsumerRequestMissing"));
 
                     var ingestCmd = new FileIngestionCommand
                     {
@@ -96,7 +100,7 @@ public class FileIngestionAndReconciliationConsumer : IConsumer<FileIngestionAnd
                 }
 
                 default:
-                    throw new NotSupportedException($"Unsupported job type: {message.Type}");
+                    throw new NotSupportedException(_localizer.Get("Reconciliation.ConsumerUnsupportedJobType", message.Type));
             }
         }
         catch (Exception ex)

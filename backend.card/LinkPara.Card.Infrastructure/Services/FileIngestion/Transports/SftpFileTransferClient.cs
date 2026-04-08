@@ -1,4 +1,5 @@
 using LinkPara.Card.Application.Commons.Models.FileIngestion;
+using LinkPara.Card.Application.Commons.Interfaces.Localization;
 using LinkPara.Card.Domain.Enums.FileIngestion;
 using Microsoft.Extensions.Options;
 using Renci.SshNet;
@@ -11,10 +12,12 @@ namespace LinkPara.Card.Infrastructure.Services.FileIngestion.Transports;
 public class SftpFileTransferClient : IFileTransferClient
 {
     private readonly FileIngestionOptions _options = new();
+    private readonly ICardResourceLocalizer _localizer;
 
-    public SftpFileTransferClient(IOptions<FileIngestionOptions> options)
+    public SftpFileTransferClient(IOptions<FileIngestionOptions> options, ICardResourceLocalizer localizer)
     {
         _options = options.Value;
+        _localizer = localizer;
     }
 
     public FileSourceType SourceType => FileSourceType.Remote;
@@ -144,7 +147,7 @@ public class SftpFileTransferClient : IFileTransferClient
     {
         var sftpOptions = GetSftpOptions(endpointType);
         if (!sftpOptions.Paths.TryGetValue(profileKey, out var remotePath))
-            throw new InvalidOperationException($"SFTP path is not configured for profile '{profileKey}'.");
+            throw new InvalidOperationException(_localizer.Get("FileIngestion.SftpPathNotConfigured", profileKey));
 
         return $"{remotePath.TrimEnd('/')}/{fileName}";
     }

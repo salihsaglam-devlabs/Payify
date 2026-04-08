@@ -1,4 +1,5 @@
 using LinkPara.Card.Application.Commons.Models.FileIngestion;
+using LinkPara.Card.Application.Commons.Interfaces.Localization;
 using LinkPara.Card.Domain.Enums.FileIngestion;
 using Microsoft.Extensions.Options;
 
@@ -8,11 +9,16 @@ public class FileTransferClientResolver : IFileTransferClientResolver
 {
     private readonly IEnumerable<IFileTransferClient> _clients;
     private readonly FileIngestionOptions _options = new();
+    private readonly ICardResourceLocalizer _localizer;
 
-    public FileTransferClientResolver(IEnumerable<IFileTransferClient> clients, IOptions<FileIngestionOptions> options)
+    public FileTransferClientResolver(
+        IEnumerable<IFileTransferClient> clients,
+        IOptions<FileIngestionOptions> options,
+        ICardResourceLocalizer localizer)
     {
         _clients = clients;
         _options = options.Value;
+        _localizer = localizer;
     }
 
     public IFileTransferClient Create(
@@ -35,6 +41,6 @@ public class FileTransferClientResolver : IFileTransferClientResolver
         if (string.Equals(endpoint.Protocol, "Local", StringComparison.OrdinalIgnoreCase))
             return _clients.Single(x => x.SourceType == FileSourceType.Local);
 
-        throw new InvalidOperationException($"Unsupported file transfer protocol '{endpoint.Protocol}'.");
+        throw new InvalidOperationException(_localizer.Get("FileIngestion.UnsupportedProtocol", endpoint.Protocol));
     }
 }

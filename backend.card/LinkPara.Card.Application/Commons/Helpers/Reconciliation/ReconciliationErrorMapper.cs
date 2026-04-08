@@ -1,11 +1,21 @@
+#nullable enable
 using System.Text;
+using LinkPara.Card.Application.Commons.Interfaces.Localization;
+using LinkPara.Card.Application.Commons.Interfaces.Reconciliation;
 using LinkPara.Card.Application.Commons.Models.Reconciliation;
 
 namespace LinkPara.Card.Application.Commons.Helpers.Reconciliation;
 
-public static class ReconciliationErrorMapper
+public sealed class ReconciliationErrorMapper : IReconciliationErrorMapper
 {
-    public static ReconciliationErrorDetail MapException(
+    private readonly ICardResourceLocalizer _localizer;
+
+    public ReconciliationErrorMapper(ICardResourceLocalizer localizer)
+    {
+        _localizer = localizer;
+    }
+
+    public ReconciliationErrorDetail MapException(
         Exception ex,
         string step,
         Guid? fileLineId = null,
@@ -17,17 +27,13 @@ public static class ReconciliationErrorMapper
         ArgumentNullException.ThrowIfNull(ex);
 
         var (code, defaultMessage, defaultDetail) = ClassifyException(ex);
-
-        var finalMessage = BuildUserFacingMessage(message ?? defaultMessage, ex);
         var finalDetail = detail ?? BuildDetailMessage(ex);
 
         return new ReconciliationErrorDetail
         {
             Code = code,
-            Message = finalMessage,
-            Detail = string.IsNullOrWhiteSpace(defaultDetail)
-                ? finalDetail
-                : $"{defaultDetail} | {finalDetail}",
+            Message = Trim(message ?? defaultMessage, 2000),
+            Detail = string.IsNullOrWhiteSpace(defaultDetail) ? finalDetail : $"{defaultDetail} | {finalDetail}",
             Step = step,
             FileLineId = fileLineId,
             OperationId = operationId,
@@ -36,7 +42,7 @@ public static class ReconciliationErrorMapper
         };
     }
 
-    public static ReconciliationErrorDetail Create(
+    public ReconciliationErrorDetail Create(
         string code,
         string message,
         string step,
@@ -59,27 +65,16 @@ public static class ReconciliationErrorMapper
         };
     }
 
-    private static (string Code, string Message, string? Detail) ClassifyException(Exception ex)
+    private (string code, string message, string? detail) ClassifyException(Exception ex)
     {
         return ex switch
         {
-            OperationCanceledException oce =>
-                ("OPERATION_CANCELLED", "Reconciliation operation was cancelled.", oce.Message),
-
-            InvalidOperationException ioe =>
-                ("INVALID_OPERATION", $"Invalid operation: {ioe.Message}", ioe.InnerException?.Message),
-
-            ArgumentException ae =>
-                ("INVALID_ARGUMENT", $"Invalid argument: {ae.Message}", ae.InnerException?.Message),
-
-            FormatException fe =>
-                ("FORMAT_ERROR", $"Format error: {fe.Message}", fe.InnerException?.Message),
-
-            TimeoutException te =>
-                ("TIMEOUT_ERROR", "Reconciliation operation timed out.", te.Message),
-
-            _ =>
-                ("INTERNAL_ERROR", "Unexpected reconciliation error occurred.", ex.Message)
+            OperationCanceledException oce => ("OPERATION_CANCELLED", _localizer.Get("Reconciliation.OperationCancelled"), oce.Message),
+            InvalidOperationException ioe => ("INVALID_OPERATION", _localizer.Get("Reconciliation.InvalidOperation"), ioe.InnerException?.Message),
+            ArgumentException ae => ("INVALID_ARGUMENT", _localizer.Get("Reconciliation.InvalidArgument"), ae.InnerException?.Message),
+            FormatException fe => ("FORMAT_ERROR", _localizer.Get("Reconciliation.FormatError"), fe.InnerException?.Message),
+            TimeoutException te => ("TIMEOUT_ERROR", _localizer.Get("Reconciliation.Timeout"), te.Message),
+            _ => ("INTERNAL_ERROR", _localizer.Get("Reconciliation.InternalError"), ex.Message)
         };
     }
 
@@ -96,53 +91,24 @@ public static class ReconciliationErrorMapper
     {
         var sb = new StringBuilder();
         var current = ex;
-
         while (current != null)
         {
             if (sb.Length > 0)
+            {
                 sb.Append(" => ");
+            }
 
             sb.Append(current.GetType().Name);
             sb.Append(": ");
             sb.Append(current.Message);
-
             current = current.InnerException;
         }
 
         return sb.ToString();
     }
 
-    private static string BuildUserFacingMessage(string baseMessage, Exception ex)
-    {
-        var rootCause = GetRootCauseMessage(ex);
-        if (string.IsNullOrWhiteSpace(rootCause))
-        {
-            return Trim(baseMessage, 2000);
-        }
-
-        if (baseMessage.Contains(rootCause, StringComparison.OrdinalIgnoreCase))
-        {
-            return Trim(baseMessage, 2000);
-        }
-
-        return Trim($"{baseMessage} Root cause: {rootCause}", 2000);
-    }
-
-    private static string GetRootCauseMessage(Exception ex)
-    {
-        var current = ex;
-        while (current.InnerException is not null)
-        {
-            current = current.InnerException;
-        }
-
-        return current.Message;
-    }
-
     private static string Trim(string value, int maxLength)
     {
-        return value.Length <= maxLength
-            ? value
-            : value[..maxLength];
+        return value.Length <= maxLength ? value : value[..maxLength];
     }
 }

@@ -2,7 +2,10 @@ using LinkPara.Audit;
 using LinkPara.Cache;
 using LinkPara.Card.Application.Commons.Interfaces;
 using LinkPara.Card.Application.Commons.Interfaces.FileIngestion;
+using LinkPara.Card.Application.Commons.Interfaces.Localization;
 using LinkPara.Card.Application.Commons.Interfaces.Reconciliation;
+using LinkPara.Card.Application.Commons.Helpers.FileIngestion;
+using LinkPara.Card.Application.Commons.Helpers.Reconciliation;
 using LinkPara.Card.Application.Commons.Models.EventBusConfiguration;
 using LinkPara.Card.Application.Commons.Models.FileIngestion;
 using LinkPara.Card.Application.Commons.Models.Reconciliation;
@@ -44,6 +47,7 @@ using LinkPara.Card.Infrastructure.Services.Audit;
 using LinkPara.Card.Infrastructure.Services.AlertService;
 using LinkPara.Card.Infrastructure.Services.Notifications;
 using LinkPara.Card.Infrastructure.Services.WalletServices.Services;
+using LinkPara.Card.Infrastructure.Services.Localization;
 
 namespace LinkPara.Card.Infrastructure;
 
@@ -96,6 +100,9 @@ public static class DependencyInjection
     private static void ConfigureServices(IServiceCollection services)
     {
         services.AddScoped(typeof(IGenericRepository<>), typeof(Repository<>));
+        services.AddScoped<ICardResourceLocalizer, CardResourceLocalizer>();
+        services.AddScoped<IIngestionErrorMapper, IngestionErrorMapper>();
+        services.AddScoped<IReconciliationErrorMapper, ReconciliationErrorMapper>();
         services.AddScoped<DbContext, CardDbContext>();
         services.AddScoped<IContextProvider, CurrentContextProvider>();
         services.AddScoped<IDomainEventService, DomainEventService>();
@@ -126,6 +133,7 @@ public static class DependencyInjection
         services.AddScoped<IEvaluator, MscEvaluator>();
         services.AddScoped<EvaluatorResolver>();
         services.AddScoped<IEvaluateService, EvaluateService>();
+        services.AddScoped<OperationExecutor>();
         services.AddScoped<ExecuteService>();
         services.AddScoped<ReviewService>();
         services.AddScoped<GetAlertsService>();
@@ -160,12 +168,6 @@ public static class DependencyInjection
         {
             services.ConfigureCustomHttpClient(client, serviceUrls.Emoney, forwardToken);
         });
-        
-        services.AddHttpClient<OperationExecutor, OperationExecutor>(client =>
-        {
-            services.ConfigureCustomHttpClient(client, serviceUrls.Emoney, forwardToken);
-        });
-        
     }
     private static void ConfigureCustomHttpClient(this IServiceCollection services, HttpClient client, string uriString, string forwardToken)
     {

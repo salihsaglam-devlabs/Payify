@@ -6,6 +6,7 @@ using LinkPara.Card.Domain.Enums.FileIngestion;
 using LinkPara.Card.Infrastructure.Persistence;
 using LinkPara.Card.Infrastructure.Services.Reconciliation;
 using LinkPara.Card.Infrastructure.Services.Audit;
+using LinkPara.Card.Infrastructure.Services.Reconciliation.Integrations.Emoney;
 using Microsoft.EntityFrameworkCore;
 
 namespace LinkPara.Card.Infrastructure.Services.Reconciliation.Execute;
@@ -13,13 +14,13 @@ namespace LinkPara.Card.Infrastructure.Services.Reconciliation.Execute;
 internal sealed class OperationExecutor
 {
     private readonly CardDbContext _dbContext;
-    private readonly HttpClient _httpClient;
+    private readonly IEmoneyService _emoneyService;
     private readonly IAuditStampService _auditStampService;
 
-    public OperationExecutor(CardDbContext dbContext, HttpClient httpClient, IAuditStampService auditStampService)
+    public OperationExecutor(CardDbContext dbContext, IEmoneyService emoneyService, IAuditStampService auditStampService)
     {
         _dbContext = dbContext;
-        _httpClient = httpClient;
+        _emoneyService = emoneyService;
         _auditStampService = auditStampService;
     }
 
@@ -183,7 +184,7 @@ internal sealed class OperationExecutor
             note = operation.Note
         };
 
-        var response = await PostAsync("v1/Reconciliation/transactions/status", request, cancellationToken);
+        var response = await _emoneyService.UpdateTransactionStatusAsync(request, cancellationToken);
         return FromExternalResult("SUCCESS_MARK_ORIGINAL_TRANSACTION_CANCELLED", "MARK_ORIGINAL_TRANSACTION_CANCELLED_FAILED", request, response);
     }
 
@@ -201,7 +202,7 @@ internal sealed class OperationExecutor
             note = operation.Note
         };
 
-        var response = await PostAsync("v1/Reconciliation/transactions/reverse-balance-effect", request, cancellationToken);
+        var response = await _emoneyService.ReverseBalanceEffectAsync(request, cancellationToken);
         return FromExternalResult("SUCCESS_REVERSE_ORIGINAL_TRANSACTION", "REVERSE_ORIGINAL_TRANSACTION_FAILED", request, response);
     }
 
@@ -218,7 +219,7 @@ internal sealed class OperationExecutor
             note = operation.Note
         };
 
-        var response = await PostAsync("v1/Reconciliation/transactions/correct-response-code", request, cancellationToken);
+        var response = await _emoneyService.CorrectResponseCodeAsync(request, cancellationToken);
         return FromExternalResult("SUCCESS_CORRECT_RESPONSE_CODE", "CORRECT_RESPONSE_CODE_FAILED", request, response);
     }
 
@@ -249,7 +250,7 @@ internal sealed class OperationExecutor
             note = operation.Note
         };
 
-        var response = await PostAsync("v1/Reconciliation/transactions/status", request, cancellationToken);
+        var response = await _emoneyService.UpdateTransactionStatusAsync(request, cancellationToken);
         return FromExternalResult(successCode, failureCode, request, response);
     }
 
@@ -268,7 +269,7 @@ internal sealed class OperationExecutor
             note = operation.Note
         };
 
-        var response = await PostAsync("v1/Reconciliation/transactions/reverse-balance-effect", request, cancellationToken);
+        var response = await _emoneyService.ReverseBalanceEffectAsync(request, cancellationToken);
         return FromExternalResult("SUCCESS_REVERSE_BY_BALANCE_EFFECT", "REVERSE_BY_BALANCE_EFFECT_FAILED", request, response);
     }
 
@@ -282,7 +283,7 @@ internal sealed class OperationExecutor
             note = operation.Note
         };
 
-        var response = await PostAsync("v1/Reconciliation/transactions/expire", request, cancellationToken);
+        var response = await _emoneyService.ExpireTransactionAsync(request, cancellationToken);
         return FromExternalResult("SUCCESS_MOVE_TRANSACTION_TO_EXPIRED", "MOVE_TRANSACTION_TO_EXPIRED_FAILED", request, response);
     }
 
@@ -311,7 +312,7 @@ internal sealed class OperationExecutor
             idempotencyKey = operation.IdempotencyKey
         };
 
-        var response = await PostAsync("v1/Reconciliation/transactions/create", request, cancellationToken);
+        var response = await _emoneyService.CreateTransactionAsync(request, cancellationToken);
         return FromExternalResult("SUCCESS_CREATE_TRANSACTION", "CREATE_TRANSACTION_FAILED", request, response);
     }
 
@@ -365,7 +366,7 @@ internal sealed class OperationExecutor
             note = operation.Note
         };
 
-        var response = await PostAsync("v1/Reconciliation/transactions/refund", request, cancellationToken);
+        var response = await _emoneyService.RefundTransactionAsync(request, cancellationToken);
         return FromExternalResult(successCode, failureCode, request, response);
     }
 
@@ -396,7 +397,7 @@ internal sealed class OperationExecutor
             merchantId = GetOptional<string>(payload, operation, "merchantId") ?? string.Empty
         };
 
-        var initResponse = await PostAsync("v1/Chargeback/init", initRequest, cancellationToken);
+        var initResponse = await _emoneyService.InitChargebackAsync(initRequest, cancellationToken);
         if (!initResponse.IsSuccessful)
         {
             return FromExternalResult("SUCCESS_START_CHARGEBACK", "START_CHARGEBACK_FAILED", initRequest, initResponse);
@@ -409,7 +410,7 @@ internal sealed class OperationExecutor
             description = $"Reconciliation chargeback: {GetRequired<long>(payload, operation, "currentTransactionId")}"
         };
 
-        var approveResponse = await PutAsync("v1/Chargeback/approve", approveRequest, cancellationToken);
+        var approveResponse = await _emoneyService.ApproveChargebackAsync(approveRequest, cancellationToken);
         return FromExternalResult("SUCCESS_START_CHARGEBACK", "START_CHARGEBACK_FAILED", approveRequest, approveResponse);
     }
 
@@ -427,7 +428,7 @@ internal sealed class OperationExecutor
             idempotencyKey = operation.IdempotencyKey
         };
 
-        var response = await PostAsync("v1/Reconciliation/shadow-balance/debt-credit", request, cancellationToken);
+        var response = await _emoneyService.CreateShadowBalanceDebtCreditAsync(request, cancellationToken);
         return FromExternalResult("SUCCESS_INSERT_SHADOW_BALANCE_ENTRY", "INSERT_SHADOW_BALANCE_ENTRY_FAILED", request, response);
     }
 
@@ -443,7 +444,7 @@ internal sealed class OperationExecutor
             idempotencyKey = operation.IdempotencyKey
         };
 
-        var response = await PostAsync("v1/Reconciliation/shadow-balance/run", request, cancellationToken);
+        var response = await _emoneyService.RunShadowBalanceProcessAsync(request, cancellationToken);
         return FromExternalResult("SUCCESS_RUN_SHADOW_BALANCE_PROCESS", "RUN_SHADOW_BALANCE_PROCESS_FAILED", request, response);
     }
 
@@ -473,32 +474,6 @@ internal sealed class OperationExecutor
         return _dbContext.ReconciliationAlerts.AddAsync(alert, cancellationToken).AsTask();
     }
 
-
-    private async Task<ExternalCommandResult> PostAsync(string relativeUrl, object request, CancellationToken cancellationToken)
-    {
-        _ = cancellationToken;
-        return await Task.FromResult(CreateStubExternalCommandResult("POST", relativeUrl, request));
-    }
-
-    private async Task<ExternalCommandResult> PutAsync(string relativeUrl, object request, CancellationToken cancellationToken)
-    {
-        _ = cancellationToken;
-        return await Task.FromResult(CreateStubExternalCommandResult("PUT", relativeUrl, request));
-    }
-
-    private static ExternalCommandResult CreateStubExternalCommandResult(string method, string relativeUrl, object request)
-    {
-        var responseBody = JsonSerializer.Serialize(new
-        {
-            isStub = true,
-            method,
-            relativeUrl,
-            request,
-            message = "External command was stubbed and accepted."
-        });
-
-        return ExternalCommandResult.Success(responseBody);
-    }
 
     private static string ResolveDirection(string txnEffect)
     {
@@ -551,25 +526,11 @@ internal sealed class OperationExecutor
         };
     }
 
-    private static OperationHandlerResult FromExternalResult(string successCode, string failureCode, object request, ExternalCommandResult response)
+    private static OperationHandlerResult FromExternalResult(string successCode, string failureCode, object request, EmoneyCommandResult response)
     {
         return response.IsSuccessful
             ? Success(successCode, "Operation completed successfully.", request, response.ResponseBody)
             : Failed(failureCode, response.ErrorMessage ?? "Request failed.", request, response.ResponseBody, response.ErrorCode, response.ErrorMessage);
-    }
-
-    private sealed class ExternalCommandResult
-    {
-        public bool IsSuccessful { get; private init; }
-        public string? ResponseBody { get; private init; }
-        public string? ErrorCode { get; private init; }
-        public string? ErrorMessage { get; private init; }
-
-        public static ExternalCommandResult Success(string? responseBody)
-            => new() { IsSuccessful = true, ResponseBody = responseBody };
-
-        public static ExternalCommandResult Failed(string errorCode, string errorMessage)
-            => new() { IsSuccessful = false, ErrorCode = errorCode, ErrorMessage = errorMessage, ResponseBody = errorMessage };
     }
 
     private static T GetRequired<T>(OperationPayloadAccessor payload, ReconciliationOperation operation, string key)

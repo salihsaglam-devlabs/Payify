@@ -22,16 +22,14 @@ public class ReconciliationReviewConfiguration : IEntityTypeConfiguration<Reconc
         builder.Property(x => x.ExpirationAction).HasConversion<string>().HasMaxLength(32).IsRequired();
         builder.Property(x => x.ExpirationFlowAction).HasConversion<string>().HasMaxLength(32).IsRequired();
 
-        builder.HasIndex(x => x.OperationId);
-
         builder.Property(x => x.FileLineId).HasColumnName("file_line_id");
         builder.Property(x => x.GroupId).HasColumnName("group_id");
         builder.Property(x => x.EvaluationId).HasColumnName("evaluation_id");
 
+        builder.HasIndex(x => x.OperationId);
         builder.HasIndex(x => x.FileLineId);
         builder.HasIndex(x => x.GroupId);
         builder.HasIndex(x => x.EvaluationId);
-        builder.HasIndex(x => x.OperationId);
         builder.HasIndex(x => new { x.Decision, x.CreateDate });
 
         builder.HasOne(x => x.IngestionFileLine)

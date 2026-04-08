@@ -47,6 +47,7 @@ internal sealed class ExecuteService
         errors ??= new List<ReconciliationErrorDetail>();
         var now = DateTime.Now;
         var executeOptions = ResolveExecuteOptions(request);
+        var selection = ExecutionSelection.Create(request);
 
         var response = new ExecuteResponse
         {
@@ -73,13 +74,18 @@ internal sealed class ExecuteService
                 now,
                 remaining,
                 executeOptions.LeaseSeconds,
+                selection,
                 errors,
                 cancellationToken);
 
             foreach (var result in results)
             {
-                response.Results.Add(result);
                 UpdateExecutionTotals(response, result);
+
+                if (IsFailedResult(result))
+                {
+                    response.Results.Add(result);
+                }
             }
 
             remaining = executeOptions.MaxEvaluations - response.TotalAttempted;
@@ -103,15 +109,7 @@ internal sealed class ExecuteService
         int maxEvaluations,
         CancellationToken cancellationToken)
     {
-        var explicitOperationIds = request.OperationIds?
-            .Where(x => x != Guid.Empty)
-            .Distinct()
-            .ToArray() ?? [];
-
-        var explicitGroupIds = request.GroupIds?
-            .Where(x => x != Guid.Empty)
-            .Distinct()
-            .ToArray() ?? [];
+        var selection = ExecutionSelection.Create(request);
 
         var query = _dbContext.ReconciliationOperations
             .AsNoTracking()
@@ -122,14 +120,17 @@ internal sealed class ExecuteService
             .Where(x => !x.NextAttemptAt.HasValue || x.NextAttemptAt.Value <= now)
             .Where(x => !x.LeaseExpiresAt.HasValue || x.LeaseExpiresAt.Value <= now);
 
-        if (explicitOperationIds.Length > 0)
+        if (selection.Mode == ExecutionSelectionMode.OperationIds)
         {
-            query = query.Where(x => explicitOperationIds.Contains(x.Id));
+            query = query.Where(x => selection.OperationIds.Contains(x.Id));
         }
-
-        if (explicitGroupIds.Length > 0)
+        else if (selection.Mode == ExecutionSelectionMode.EvaluationIds)
         {
-            query = query.Where(x => explicitGroupIds.Contains(x.GroupId));
+            query = query.Where(x => selection.EvaluationIds.Contains(x.EvaluationId));
+        }
+        else if (selection.Mode == ExecutionSelectionMode.GroupIds)
+        {
+            query = query.Where(x => selection.GroupIds.Contains(x.GroupId));
         }
 
         return await query
@@ -146,6 +147,7 @@ internal sealed class ExecuteService
         DateTime now,
         int remainingLimit,
         int leaseSeconds,
+        ExecutionSelection selection,
         List<ReconciliationErrorDetail> errors,
         CancellationToken cancellationToken)
     {
@@ -155,8 +157,16 @@ internal sealed class ExecuteService
         {
             _dbContext.ChangeTracker.Clear();
 
-            var operations = await LoadEvaluationOperationsAsync(evaluationId, cancellationToken);
-            var nextOperation = GetNextOperation(operations, now);
+            var operations = await LoadEvaluationOperationWindowAsync(
+                evaluationId,
+                cancellationToken);
+
+            if (operations.Count == 0)
+            {
+                break;
+            }
+
+            var nextOperation = GetNextOperation(operations, now, selection);
 
             if (nextOperation is null)
             {
@@ -185,8 +195,8 @@ internal sealed class ExecuteService
 
         return results;
     }
-
-    private async Task<List<ReconciliationOperation>> LoadEvaluationOperationsAsync(
+    
+    private async Task<List<ReconciliationOperation>> LoadEvaluationOperationWindowAsync(
         Guid evaluationId,
         CancellationToken cancellationToken)
     {
@@ -199,11 +209,17 @@ internal sealed class ExecuteService
 
     private static ReconciliationOperation? GetNextOperation(
         IReadOnlyList<ReconciliationOperation> operations,
-        DateTime now)
+        DateTime now,
+        ExecutionSelection selection)
     {
         foreach (var operation in operations.OrderBy(x => x.SequenceIndex))
         {
             if (operation.Status is OperationStatus.Completed or OperationStatus.Cancelled or OperationStatus.Failed)
+            {
+                continue;
+            }
+
+            if (!selection.Matches(operation))
             {
                 continue;
             }
@@ -370,8 +386,7 @@ internal sealed class ExecuteService
         };
 
         _auditStampService.StampForCreate(execution);
-        await _dbContext.ReconciliationOperationExecutions.AddAsync(execution, cancellationToken);
-        await _dbContext.SaveChangesAsync(cancellationToken);
+        _dbContext.ReconciliationOperationExecutions.Add(execution);
 
         try
         {
@@ -786,4 +801,75 @@ internal sealed class ExecuteService
             Message = message
         };
     }
+
+    private sealed class ExecutionSelection
+    {
+        public static readonly ExecutionSelection All = new([], [], [], ExecutionSelectionMode.All);
+
+        public HashSet<Guid> GroupIds { get; }
+        public HashSet<Guid> EvaluationIds { get; }
+        public HashSet<Guid> OperationIds { get; }
+        public ExecutionSelectionMode Mode { get; }
+
+        private ExecutionSelection(
+            HashSet<Guid> groupIds,
+            HashSet<Guid> evaluationIds,
+            HashSet<Guid> operationIds,
+            ExecutionSelectionMode mode)
+        {
+            GroupIds = groupIds;
+            EvaluationIds = evaluationIds;
+            OperationIds = operationIds;
+            Mode = mode;
+        }
+
+        public static ExecutionSelection Create(ExecuteRequest request)
+        {
+            var operationIds = request.OperationIds
+                .Where(x => x != Guid.Empty)
+                .ToHashSet();
+            if (operationIds.Count > 0)
+            {
+                return new ExecutionSelection([], [], operationIds, ExecutionSelectionMode.OperationIds);
+            }
+
+            var evaluationIds = request.EvaluationIds
+                .Where(x => x != Guid.Empty)
+                .ToHashSet();
+            if (evaluationIds.Count > 0)
+            {
+                return new ExecutionSelection([], evaluationIds, [], ExecutionSelectionMode.EvaluationIds);
+            }
+
+            var groupIds = request.GroupIds
+                .Where(x => x != Guid.Empty)
+                .ToHashSet();
+            if (groupIds.Count > 0)
+            {
+                return new ExecutionSelection(groupIds, [], [], ExecutionSelectionMode.GroupIds);
+            }
+
+            return All;
+        }
+
+        public bool Matches(ReconciliationOperation operation)
+        {
+            return Mode switch
+            {
+                ExecutionSelectionMode.OperationIds => OperationIds.Contains(operation.Id),
+                ExecutionSelectionMode.EvaluationIds => EvaluationIds.Contains(operation.EvaluationId),
+                ExecutionSelectionMode.GroupIds => GroupIds.Contains(operation.GroupId),
+                _ => true
+            };
+        }
+    }
+
+    private enum ExecutionSelectionMode
+    {
+        All = 0,
+        GroupIds = 1,
+        EvaluationIds = 2,
+        OperationIds = 3
+    }
+
 }

@@ -36,14 +36,9 @@ RUN dotnet publish "LinkPara.Card.API.csproj" -c Release -o /app/publish
 FROM mcr.microsoft.com/dotnet/aspnet:8.0-alpine
 WORKDIR /app
 
-# Alpine g�venlik yamalar� (OpenSSL/expat vs. fix'ler)
-RUN apk --no-cache upgrade
-
-# �htiya� paketleri (sen zaten bunlar� istiyordun)
 RUN apk --no-cache upgrade \
  && apk add --no-cache ca-certificates tzdata icu-libs curl
 
-# Zaman dilimi istersen (opsiyonel, apt'li sat�rlar�n Alpine kar��l���)
 RUN ln -snf /usr/share/zoneinfo/Europe/Istanbul /etc/localtime \
  && echo "Europe/Istanbul" > /etc/timezone
 

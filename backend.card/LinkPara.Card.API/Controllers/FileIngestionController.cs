@@ -13,7 +13,7 @@ public class FileIngestionController : ApiControllerBase
     [HttpPost("")]
     public Task<List<FileIngestionResponse>> IngestAsync([FromBody] FileIngestionRequest request)
     {
-        return Mediator.Send(MapToCommand(request));
+        return Mediator.Send(MapToCommand(request ?? new FileIngestionRequest()));
     }
 
     [Authorize(Policy = FileIngestionPolicies.Create)]

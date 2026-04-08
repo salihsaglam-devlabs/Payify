@@ -92,6 +92,32 @@ internal sealed class AlertService : IAlertService
             return;
         }
 
+        // Batch-preload related data to eliminate N+1 queries
+        var evaluationIds = alerts.Select(a => a.EvaluationId).Distinct().ToArray();
+        var operationIds = alerts.Where(a => a.OperationId != Guid.Empty).Select(a => a.OperationId).Distinct().ToArray();
+
+        var evaluationsById = await _dbContext.ReconciliationEvaluations
+            .AsNoTracking()
+            .Where(e => evaluationIds.Contains(e.Id))
+            .ToDictionaryAsync(e => e.Id, cancellationToken);
+
+        var operationsById = operationIds.Length > 0
+            ? await _dbContext.ReconciliationOperations
+                .AsNoTracking()
+                .Where(o => operationIds.Contains(o.Id))
+                .ToDictionaryAsync(o => o.Id, cancellationToken)
+            : new Dictionary<Guid, ReconciliationOperation>();
+
+        var executionsByOpId = operationIds.Length > 0
+            ? (await _dbContext.ReconciliationOperationExecutions
+                .AsNoTracking()
+                .Where(x => evaluationIds.Contains(x.EvaluationId) && operationIds.Contains(x.OperationId))
+                .OrderBy(x => x.AttemptNumber)
+                .ToListAsync(cancellationToken))
+                .GroupBy(x => x.OperationId)
+                .ToDictionary(g => g.Key, g => g.ToList())
+            : new Dictionary<Guid, List<ReconciliationOperationExecution>>();
+
         foreach (var alert in alerts)
         {
             var processingUpdated = await TryMarkAsProcessingAsync(alert.Id, validStatuses, cancellationToken);
@@ -103,26 +129,18 @@ internal sealed class AlertService : IAlertService
 
             try
             {
-                var evaluation = await _dbContext.ReconciliationEvaluations
-                    .AsNoTracking()
-                    .FirstOrDefaultAsync(x => x.Id == alert.EvaluationId, cancellationToken);
-
+                evaluationsById.TryGetValue(alert.EvaluationId, out var evaluation);
                 ReconciliationOperation? operation = null;
                 if (alert.OperationId != Guid.Empty)
                 {
-                    operation = await _dbContext.ReconciliationOperations
-                        .AsNoTracking()
-                        .FirstOrDefaultAsync(x => x.Id == alert.OperationId, cancellationToken);
+                    operationsById.TryGetValue(alert.OperationId, out operation);
                 }
 
-                var executions = new List<ReconciliationOperationExecution>();
+                List<ReconciliationOperationExecution> executions = [];
                 if (alert.OperationId != Guid.Empty)
                 {
-                    executions = await _dbContext.ReconciliationOperationExecutions
-                        .AsNoTracking()
-                        .Where(x => x.EvaluationId == alert.EvaluationId && x.OperationId == alert.OperationId)
-                        .OrderBy(x => x.AttemptNumber)
-                        .ToListAsync(cancellationToken);
+                    executionsByOpId.TryGetValue(alert.OperationId, out executions);
+                    executions ??= [];
                 }
 
                 var templateData = BuildTemplateData(alert, evaluation, operation, executions, alertOptions);

@@ -18,6 +18,7 @@ public class IngestionFileLine : AuditEntity
     public int RetryCount { get; set; }
     public string CorrelationKey { get; set; }
     public string CorrelationValue { get; set; }
+    public string DuplicateDetectionKey { get; set; }
     public string DuplicateStatus { get; set; }
     public Guid? DuplicateGroupId { get; set; }
     public ReconciliationStatus? ReconciliationStatus { get; set; }

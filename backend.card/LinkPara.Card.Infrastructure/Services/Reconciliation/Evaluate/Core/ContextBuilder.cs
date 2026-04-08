@@ -53,7 +53,7 @@ internal sealed class ContextBuilder : IContextBuilder
             .Distinct()
             .ToList();
 
-        var correlatedRows = new List<IngestionFileLine>();
+        var correlatedGroups = new Dictionary<string, IReadOnlyList<IngestionFileLine>>();
         foreach (var group in correlationPairs.GroupBy(x => x.Key, x => x.Value, StringComparer.Ordinal))
         {
             var values = group
@@ -71,13 +71,12 @@ internal sealed class ContextBuilder : IContextBuilder
                     .ThenBy(x => x.Id)
                     .ToListAsync(cancellationToken);
 
-                correlatedRows.AddRange(rowsByKey);
+                foreach (var rowGroup in rowsByKey.GroupBy(x => $"{x.CorrelationKey}::{x.CorrelationValue}"))
+                {
+                    correlatedGroups[rowGroup.Key] = rowGroup.ToList();
+                }
             }
         }
-
-        var correlatedGroups = correlatedRows
-            .GroupBy(x => $"{x.CorrelationKey}::{x.CorrelationValue}")
-            .ToDictionary(x => x.Key, x => (IReadOnlyList<IngestionFileLine>)x.ToList());
 
         var distinctValues = correlationPairs
             .Where(x => string.Equals(x.Key, OceanTxnGuidCorrelationKey, StringComparison.Ordinal))
@@ -138,6 +137,7 @@ internal sealed class ContextBuilder : IContextBuilder
 
         return contexts;
     }
+
 
     private async Task<EmoneyFetchResult> FetchEmoneyTransactionsAsync(
         string customerTransactionId,

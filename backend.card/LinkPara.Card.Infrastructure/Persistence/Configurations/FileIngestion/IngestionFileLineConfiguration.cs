@@ -20,6 +20,7 @@ public class IngestionFileLineConfiguration : IEntityTypeConfiguration<Ingestion
         builder.Property(x => x.RetryCount).HasColumnName("retry_count");
         builder.Property(x => x.CorrelationKey).HasColumnName("correlation_key");
         builder.Property(x => x.CorrelationValue).HasColumnName("correlation_value");
+        builder.Property(x => x.DuplicateDetectionKey).HasColumnName("duplicate_detection_key");
         builder.Property(x => x.DuplicateStatus).HasColumnName("duplicate_status");
         builder.Property(x => x.DuplicateGroupId).HasColumnName("duplicate_group_id");
         builder.Property(x => x.ReconciliationStatus).HasColumnName("reconciliation_status");
@@ -29,12 +30,14 @@ public class IngestionFileLineConfiguration : IEntityTypeConfiguration<Ingestion
         builder.Property(x => x.Message).HasMaxLength(4000);
         builder.Property(x => x.CorrelationKey).HasMaxLength(256);
         builder.Property(x => x.CorrelationValue).HasMaxLength(1024);
+        builder.Property(x => x.DuplicateDetectionKey).HasMaxLength(256);
         builder.Property(x => x.DuplicateStatus).HasMaxLength(64);
         builder.Property(x => x.ReconciliationStatus).HasConversion<string>().HasMaxLength(32);
         builder.HasIndex(x => new { x.IngestionFileId, x.LineNumber }).IsUnique();
         builder.HasIndex(x => new { x.IngestionFileId, x.Status });
         builder.HasIndex(x => new { x.IngestionFileId, x.RecordType, x.Status });
         builder.HasIndex(x => new { x.IngestionFileId, x.ByteOffset });
+        builder.HasIndex(x => new { x.IngestionFileId, x.DuplicateDetectionKey });
         builder.HasIndex(x => new { x.IngestionFileId, x.DuplicateStatus });
         builder.HasIndex(x => x.DuplicateGroupId);
         builder.HasIndex(x => x.CorrelationKey);

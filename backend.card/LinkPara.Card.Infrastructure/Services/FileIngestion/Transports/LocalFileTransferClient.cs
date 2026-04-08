@@ -1,4 +1,5 @@
 using LinkPara.Card.Application.Commons.Models.FileIngestion;
+using LinkPara.Card.Application.Commons.Interfaces.Localization;
 using LinkPara.Card.Domain.Enums.FileIngestion;
 using Microsoft.Extensions.Options;
 using System.Runtime.InteropServices;
@@ -10,10 +11,12 @@ namespace LinkPara.Card.Infrastructure.Services.FileIngestion.Transports;
 public class LocalFileTransferClient : IFileTransferClient
 {
     private readonly FileIngestionOptions _options = new();
+    private readonly ICardResourceLocalizer _localizer;
 
-    public LocalFileTransferClient(IOptions<FileIngestionOptions> options)
+    public LocalFileTransferClient(IOptions<FileIngestionOptions> options, ICardResourceLocalizer localizer)
     {
         _options = options.Value;
+        _localizer = localizer;
     }
 
     public FileSourceType SourceType => FileSourceType.Local;
@@ -132,11 +135,11 @@ public class LocalFileTransferClient : IFileTransferClient
             : _options.Connections.Source.Local;
 
         if (!localOptions.Paths.TryGetValue(profileKey, out var location))
-            throw new InvalidOperationException($"Local path is not configured for profile '{profileKey}'.");
+            throw new InvalidOperationException(_localizer.Get("FileIngestion.LocalPathNotConfigured", profileKey));
 
         var rootPath = ResolveRootPath(location);
         if (string.IsNullOrWhiteSpace(rootPath))
-            throw new InvalidOperationException($"Local root path is empty for profile '{profileKey}'.");
+            throw new InvalidOperationException(_localizer.Get("FileIngestion.LocalRootPathEmpty", profileKey));
 
         var now = DateTime.Now;
         var dateFolder = now.ToString("yyyy-MM-dd");

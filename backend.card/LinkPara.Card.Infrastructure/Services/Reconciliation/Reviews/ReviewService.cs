@@ -1,12 +1,10 @@
 using System.Text.Json;
 using LinkPara.Card.Application.Commons.Helpers.Reconciliation;
 using LinkPara.Card.Application.Commons.Models.Reconciliation;
-using LinkPara.Card.Domain.Entities.Reconciliation;
 using LinkPara.Card.Domain.Enums.Reconciliation;
 using LinkPara.Card.Infrastructure.Persistence;
 using LinkPara.Card.Infrastructure.Services.Audit;
 using LinkPara.Card.Infrastructure.Services.Reconciliation.Execute;
-using LinkPara.SharedModels.Persistence;
 using LinkPara.Card.Infrastructure.Services.Reconciliation.Evaluate;
 using Microsoft.EntityFrameworkCore;
 
@@ -161,10 +159,15 @@ internal sealed class ReviewService
                 .Distinct()
                 .ToArray();
 
-            var branchOpsByEvaluation = await _dbContext.ReconciliationOperations
+            var branchOpsRaw = await _dbContext.ReconciliationOperations
                 .AsNoTracking()
-                .Where(o => evaluationIds.Contains(o.EvaluationId))
+                .Where(o => evaluationIds.Contains(o.EvaluationId) && o.ParentSequenceIndex != null)
+                .Select(o => new { o.EvaluationId, o.ParentSequenceIndex, o.Code, o.Payload, o.Branch })
                 .ToListAsync(cancellationToken);
+
+            var branchOpsLookup = branchOpsRaw
+                .GroupBy(o => (o.EvaluationId, o.ParentSequenceIndex))
+                .ToDictionary(g => g.Key, g => g.ToList());
 
             var items = new List<ManualReview>();
 
@@ -186,10 +189,9 @@ internal sealed class ReviewService
                     ApprovalMessage = "If approved, the transaction will follow the 'Approve' flow.",
                     RejectionMessage = "If rejected, the transaction will follow the 'Reject' flow."
                 };
-                
-                var branchOps = branchOpsByEvaluation
-                    .Where(o => o.EvaluationId == op.EvaluationId && o.ParentSequenceIndex == op.SequenceIndex)
-                    .ToList();
+
+                var key = (op.EvaluationId, ParentSequenceIndex: (int?)op.SequenceIndex);
+                var branchOps = branchOpsLookup.TryGetValue(key, out var matched) ? matched : [];
 
                 foreach (var b in branchOps)
                 {
@@ -208,6 +210,7 @@ internal sealed class ReviewService
                         manualReview.RejectBranchOperations.Add(branchOperation);
                     }
                 }
+
 
                 if (string.Equals(op.Code, OperationCodes.CreateManualReview, StringComparison.Ordinal))
                 {
@@ -255,25 +258,38 @@ internal sealed class ReviewService
     {
         try
         {
-            var review = await _dbContext.ReconciliationReviews
-                .AsTracking()
-                .SingleOrDefaultAsync(x => x.OperationId == operationId, cancellationToken);
-            var operation = await _dbContext.ReconciliationOperations
-                .AsTracking()
-                .SingleOrDefaultAsync(x => x.Id == operationId, cancellationToken);
+            var currentReviewerId = ResolveReviewerId(reviewerId);
+            var auditStamp = _auditStampService.CreateStamp();
+            var now = DateTime.Now;
 
-            if (review is null)
-            {
-                errors?.Add(ReconciliationErrorMapper.Create(
-                    "REVIEW_NOT_FOUND",
-                    "Review record was not found for the manual operation.",
-                    "REVIEW_DECISION",
-                    operationId: operationId));
-                return ("NotFound", "Review record was not found for the manual operation.");
-            }
+            // Atomic update with Pending guard — eliminates race between concurrent approve/reject calls
+            var updatedReviewRows = await _dbContext.ReconciliationReviews
+                .Where(x => x.OperationId == operationId && x.Decision == ReviewDecision.Pending)
+                .ExecuteUpdateAsync(update => update
+                    .SetProperty(x => x.ReviewerId, currentReviewerId)
+                    .SetProperty(x => x.Decision, decision)
+                    .SetProperty(x => x.Comment, comment)
+                    .SetProperty(x => x.DecisionAt, now)
+                    .SetProperty(x => x.UpdateDate, auditStamp.Timestamp)
+                    .SetProperty(x => x.LastModifiedBy, auditStamp.UserId),
+                    cancellationToken);
 
-            if (review.Decision != ReviewDecision.Pending)
+            if (updatedReviewRows == 0)
             {
+                var exists = await _dbContext.ReconciliationReviews
+                    .AsNoTracking()
+                    .AnyAsync(x => x.OperationId == operationId, cancellationToken);
+
+                if (!exists)
+                {
+                    errors?.Add(ReconciliationErrorMapper.Create(
+                        "REVIEW_NOT_FOUND",
+                        "Review record was not found for the manual operation.",
+                        "REVIEW_DECISION",
+                        operationId: operationId));
+                    return ("NotFound", "Review record was not found for the manual operation.");
+                }
+
                 errors?.Add(ReconciliationErrorMapper.Create(
                     "REVIEW_ALREADY_FINALIZED",
                     "Review decision is already finalized.",
@@ -282,26 +298,20 @@ internal sealed class ReviewService
                 return ("Invalid", "Review decision is already finalized.");
             }
 
-            var currentReviewerId = ResolveReviewerId(reviewerId);
-            review.ReviewerId = currentReviewerId;
-            review.Decision = decision;
-            review.Comment = comment;
-            review.DecisionAt = DateTime.Now;
-            if (operation is not null &&
-                operation.Status != OperationStatus.Completed &&
-                operation.Status != OperationStatus.Cancelled &&
-                operation.Status != OperationStatus.Failed)
-            {
-                operation.NextAttemptAt = DateTime.Now;
-                operation.LeaseExpiresAt = null;
-                operation.LeaseOwner = null;
-            }
-
-            var entitiesToUpdate = operation is null
-                ? new AuditEntity[] { review }
-                : new AuditEntity[] { review, operation };
-            _auditStampService.StampForUpdate(entitiesToUpdate);
-            await _dbContext.SaveChangesAsync(cancellationToken);
+            // Unblock the operation so execution can pick it up
+            await _dbContext.ReconciliationOperations
+                .Where(x => x.Id == operationId)
+                .Where(x =>
+                    x.Status != OperationStatus.Completed &&
+                    x.Status != OperationStatus.Cancelled &&
+                    x.Status != OperationStatus.Failed)
+                .ExecuteUpdateAsync(update => update
+                    .SetProperty(x => x.NextAttemptAt, now)
+                    .SetProperty(x => x.LeaseExpiresAt, (DateTime?)null)
+                    .SetProperty(x => x.LeaseOwner, (string?)null)
+                    .SetProperty(x => x.UpdateDate, auditStamp.Timestamp)
+                    .SetProperty(x => x.LastModifiedBy, auditStamp.UserId),
+                    cancellationToken);
 
             var result = decision == ReviewDecision.Approved ? "Approved" : "Rejected";
             return (result, $"Manual review {result.ToLowerInvariant()}.");

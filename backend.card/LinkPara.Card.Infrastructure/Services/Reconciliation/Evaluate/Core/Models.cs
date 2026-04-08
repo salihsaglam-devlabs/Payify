@@ -17,6 +17,7 @@ internal sealed class BkmEvaluationContext : EvaluationContext
     public required IReadOnlyList<CardBkmDetail> CardDetails { get; init; }
     public required IReadOnlyList<ClearingBkmDetail> ClearingDetails { get; init; }
     public required IReadOnlyList<EmoneyCustomerTransactionDto> EmoneyTransactions { get; init; }
+    public CardBkmDetail? CachedRootDetail { get; set; }
 }
 
 internal sealed class VisaEvaluationContext : EvaluationContext

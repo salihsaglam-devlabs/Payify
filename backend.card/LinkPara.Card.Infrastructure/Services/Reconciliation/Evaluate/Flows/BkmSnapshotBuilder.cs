@@ -15,7 +15,7 @@ internal static class BkmSnapshotBuilder
         string reason,
         params (string Key, object? Value)[] extra)
     {
-        var detail = DeserializeRootCardDetail(context.RootRow)
+        var detail = context.CachedRootDetail ?? DeserializeRootCardDetail(context.RootRow)
             ?? throw new InvalidOperationException("Current card row is missing.");
         var latestEmoney = context.EmoneyTransactions
             .OrderByDescending(x => x.TransactionDate)

@@ -1,4 +1,4 @@
-﻿using LinkPara.Card.Application.Commons.Models.WalletMoodels.CardModels;
+﻿using LinkPara.Card.Application.Commons.Models.WalletModels.CardModels;
 using LinkPara.Card.Application.Features.WalletServices.CardServices.Queries.GetCustomerWalletCardsQuery;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -12,9 +12,9 @@ namespace LinkPara.Card.API.Controllers
         /// </summary>
         /// <param name="query"></param>
         /// <returns></returns>
-        [AllowAnonymous]
+        [Authorize(Policy = "CustomerWalletCard:ReadAll")]
         [HttpGet("customer-cards")]
-        public async Task<GetCustomerWalletCardsResponse> GetCustomerWalletCardsAsync([FromQuery] GetCustomerWalletCardsQuery query)
+        public async Task<List<CustomerWalletCardDto>> GetCustomerWalletCardsAsync([FromQuery] GetCustomerWalletCardsQuery query)
         {
             return await Mediator.Send(query);
         }

@@ -1,6 +1,5 @@
-using LinkPara.Card.Application.Commons.Interfaces.FileIngestion;
+#nullable enable
 using LinkPara.Card.Application.Commons.Models.FileIngestion;
-using LinkPara.Card.Domain.Entities.FileIngestion;
 using LinkPara.Card.Domain.Enums.FileIngestion;
 using LinkPara.Card.Infrastructure.Persistence;
 using LinkPara.Card.Infrastructure.Services.Audit;
@@ -23,6 +22,8 @@ using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using LinkPara.Card.Application.Commons.Helpers.FileIngestion;
+using LinkPara.Card.Application.Commons.Interfaces.FileIngestion;
+using LinkPara.Card.Application.Commons.Interfaces.Localization;
 using LinkPara.Card.Application.Commons.Models.FileIngestion.Contracts.Responses;
 using IngestionFileLineEntity = LinkPara.Card.Domain.Entities.FileIngestion.IngestionFileLine;
 using IngestionFileEntity = LinkPara.Card.Domain.Entities.FileIngestion.IngestionFile;
@@ -37,6 +38,8 @@ public class FileIngestionOrchestrator : IFileIngestionService
     private readonly IFileTransferClientResolver _fileTransferClientResolver;
     private readonly IFixedWidthRecordParser _fixedWidthRecordParser;
     private readonly IParsedRecordModelMapper _parsedRecordModelMapper;
+    private readonly IIngestionErrorMapper _ingestionErrorMapper;
+    private readonly ICardResourceLocalizer _localizer;
     private readonly FileIngestionOptions _options = new();
     private readonly IServiceScopeFactory _serviceScopeFactory;
 
@@ -46,6 +49,8 @@ public class FileIngestionOrchestrator : IFileIngestionService
         IFileTransferClientResolver fileTransferClientResolver,
         IFixedWidthRecordParser fixedWidthRecordParser,
         IParsedRecordModelMapper parsedRecordModelMapper,
+        IIngestionErrorMapper ingestionErrorMapper,
+        ICardResourceLocalizer localizer,
         IOptions<FileIngestionOptions> options,
         IServiceScopeFactory serviceScopeFactory)
     {
@@ -54,6 +59,8 @@ public class FileIngestionOrchestrator : IFileIngestionService
         _fileTransferClientResolver = fileTransferClientResolver;
         _fixedWidthRecordParser = fixedWidthRecordParser;
         _parsedRecordModelMapper = parsedRecordModelMapper;
+        _ingestionErrorMapper = ingestionErrorMapper;
+        _localizer = localizer;
         _options = options.Value;
         _serviceScopeFactory = serviceScopeFactory;
     }
@@ -71,7 +78,7 @@ public class FileIngestionOrchestrator : IFileIngestionService
                 var error = new IngestionErrorDetail
                 {
                     Code = "INVALID_REQUEST",
-                    Message = "File ingestion request is null.",
+                    Message = _localizer.Get("FileIngestion.InvalidRequest"),
                     Step = "VALIDATION",
                     Severity = "Error"
                 };
@@ -93,7 +100,7 @@ public class FileIngestionOrchestrator : IFileIngestionService
             }
             catch (Exception ex)
             {
-                var error = IngestionErrorMapper.MapException(ex, "CONFIGURATION", fileName: request.FilePath);
+                var error = _ingestionErrorMapper.MapException(ex, "CONFIGURATION", fileName: request.FilePath);
                 error.Step = "CONFIGURATION";
                 globalErrors.Add(error);
                 return new List<FileIngestionResponse> { CreateErrorResponse(request.FilePath ?? "unknown", globalErrors) };
@@ -106,7 +113,7 @@ public class FileIngestionOrchestrator : IFileIngestionService
             }
             catch (Exception ex)
             {
-                var error = IngestionErrorMapper.MapIOError(ex, request.FilePath ?? "unknown");
+                var error = _ingestionErrorMapper.MapIOError(ex, request.FilePath ?? "unknown");
                 error.Step = "FILE_RESOLUTION";
                 globalErrors.Add(error);
                 return new List<FileIngestionResponse> { CreateErrorResponse(error.FileName ?? request.FilePath ?? "unknown", globalErrors) };
@@ -117,7 +124,7 @@ public class FileIngestionOrchestrator : IFileIngestionService
                 var error = new IngestionErrorDetail
                 {
                     Code = "FILE_NOT_FOUND",
-                    Message = $"No file matched profile '{profileKey}'. Please verify the file path and profile configuration.",
+                    Message = _localizer.Get("FileIngestion.NoMatchingFile", profileKey),
                     Detail = $"Profile: {profileKey}, FileSourceType: {request.FileSourceType}, FilePath: {request.FilePath}",
                     Step = "FILE_RESOLUTION",
                     FileName = request.FilePath ?? "unknown",
@@ -173,7 +180,7 @@ public class FileIngestionOrchestrator : IFileIngestionService
                                 fileErrors.Add(new IngestionErrorDetail
                                 {
                                     Code = "OPERATION_CANCELLED",
-                                    Message = "File ingestion was cancelled.",
+                                    Message = _localizer.Get("FileIngestion.Cancelled"),
                                     Detail = ex.Message,
                                     Step = "IMPORT",
                                     FileName = file.Name,
@@ -182,7 +189,7 @@ public class FileIngestionOrchestrator : IFileIngestionService
                             }
                             catch (Exception ex)
                             {
-                                fileErrors.Add(IngestionErrorMapper.MapException(ex, "IMPORT", fileName: file.Name));
+                                fileErrors.Add(_ingestionErrorMapper.MapException(ex, "IMPORT", fileName: file.Name));
                             }
 
                             FileIngestionResponse resp;
@@ -192,7 +199,7 @@ public class FileIngestionOrchestrator : IFileIngestionService
                                 var e = new IngestionErrorDetail
                                 {
                                     Code = "IMPORT_FAILED",
-                                    Message = "File import failed without specific error details.",
+                                    Message = _localizer.Get("FileIngestion.ImportFailed"),
                                     Step = "IMPORT",
                                     Severity = "Error",
                                     FileName = file.Name
@@ -251,7 +258,7 @@ public class FileIngestionOrchestrator : IFileIngestionService
                         fileErrors.Add(new IngestionErrorDetail
                         {
                             Code = "OPERATION_CANCELLED",
-                            Message = "File ingestion was cancelled.",
+                            Message = _localizer.Get("FileIngestion.Cancelled"),
                             Detail = ex.Message,
                             Step = "IMPORT",
                             FileName = file.Name,
@@ -260,7 +267,7 @@ public class FileIngestionOrchestrator : IFileIngestionService
                     }
                     catch (Exception ex)
                     {
-                        fileErrors.Add(IngestionErrorMapper.MapException(ex, "IMPORT", fileName: file.Name));
+                        fileErrors.Add(_ingestionErrorMapper.MapException(ex, "IMPORT", fileName: file.Name));
                     }
 
                     FileIngestionResponse resp;
@@ -270,7 +277,7 @@ public class FileIngestionOrchestrator : IFileIngestionService
                         var e = new IngestionErrorDetail
                         {
                             Code = "IMPORT_FAILED",
-                            Message = "File import failed without specific error details.",
+                            Message = _localizer.Get("FileIngestion.ImportFailed"),
                             Step = "IMPORT",
                             Severity = "Error",
                             FileName = file.Name
@@ -300,7 +307,7 @@ public class FileIngestionOrchestrator : IFileIngestionService
             var error = new IngestionErrorDetail
             {
                 Code = "OPERATION_CANCELLED",
-                Message = "File ingestion operation was cancelled.",
+                Message = _localizer.Get("FileIngestion.OperationCancelled"),
                 Detail = ex.Message,
                 Step = "INGESTION",
                 Severity = "Warning"
@@ -1218,14 +1225,17 @@ public class FileIngestionOrchestrator : IFileIngestionService
 
             await PersistIngestionFileLineBatchAsync(batch, cancellationToken);
 
-            var transactionFile = await _dbContext.IngestionFiles
-                .FirstAsync(x => x.Id == transactionFileId, cancellationToken);
+            var auditStamp = _auditStampService.CreateStamp();
+            await _dbContext.IngestionFiles
+                .Where(x => x.Id == transactionFileId)
+                .ExecuteUpdateAsync(
+                    setters => setters
+                        .SetProperty(x => x.LastProcessedLineNumber, progress.LastProcessedLineNumber)
+                        .SetProperty(x => x.LastProcessedByteOffset, progress.LastProcessedByteOffset)
+                        .SetProperty(x => x.UpdateDate, auditStamp.Timestamp)
+                        .SetProperty(x => x.LastModifiedBy, auditStamp.UserId),
+                    cancellationToken);
 
-            transactionFile.LastProcessedLineNumber = progress.LastProcessedLineNumber;
-            transactionFile.LastProcessedByteOffset = progress.LastProcessedByteOffset;
-            _auditStampService.StampForUpdate(transactionFile);
-
-            await _dbContext.SaveChangesAsync(cancellationToken);
             await transaction.CommitAsync(cancellationToken);
         });
 
@@ -1413,6 +1423,7 @@ public class FileIngestionOrchestrator : IFileIngestionService
                 nameof(IngestionFileLineEntity.RetryCount),
                 nameof(IngestionFileLineEntity.CorrelationKey),
                 nameof(IngestionFileLineEntity.CorrelationValue),
+                nameof(IngestionFileLineEntity.DuplicateDetectionKey),
                 nameof(IngestionFileLineEntity.DuplicateStatus),
                 nameof(IngestionFileLineEntity.DuplicateGroupId),
                 nameof(IngestionFileLineEntity.ReconciliationStatus),
@@ -1573,6 +1584,16 @@ public class FileIngestionOrchestrator : IFileIngestionService
             row.CorrelationKey = "OceanTxnGuid";
             row.CorrelationValue = oceanTxnGuid.ToString(CultureInfo.InvariantCulture);
             row.ReconciliationStatus = ReconciliationStatus.Ready;
+
+            if (fileType == FileType.Card)
+            {
+                row.DuplicateDetectionKey = row.CorrelationValue;
+            }
+            else if (fileType == FileType.Clearing)
+            {
+                row.DuplicateDetectionKey = BuildClearingDuplicateDetectionKey(parsedDataModel);
+            }
+
             return;
         }
 
@@ -1610,6 +1631,23 @@ public class FileIngestionOrchestrator : IFileIngestionService
 
         if (row.ReconciliationStatus == ReconciliationStatus.Failed)
             row.Message = $"{row.Message} Reconciliation key could not be generated.".Trim();
+
+        if (fileType == FileType.Clearing)
+        {
+            row.DuplicateDetectionKey = BuildClearingDuplicateDetectionKey(parsedDataModel);
+        }
+    }
+
+    private static string? BuildClearingDuplicateDetectionKey(object parsedDataModel)
+    {
+        if (!TryGetLongValue(parsedDataModel, "ClrNo", out var clrNo) || clrNo <= 0)
+            return null;
+
+        var controlStat = GetStringValue(parsedDataModel, "ControlStat");
+        if (string.IsNullOrWhiteSpace(controlStat))
+            return null;
+
+        return $"{clrNo.ToString(CultureInfo.InvariantCulture)}:{controlStat}";
     }
 
     private async Task FinalizeFileStateAsync(
@@ -1707,14 +1745,14 @@ public class FileIngestionOrchestrator : IFileIngestionService
                 cancellationToken);
 
         List<IngestionFileLineEntity> rowsToUpdate;
+        rowsToUpdate = await LoadDuplicateRowsAsync(transactionFileId, cancellationToken);
+
         if (file.FileType == FileType.Card)
         {
-            rowsToUpdate = await LoadCardDuplicateRowsAsync(transactionFileId, cancellationToken);
             ApplyCardDuplicateOutcomes(rowsToUpdate);
         }
         else
         {
-            rowsToUpdate = await LoadClearingDuplicateRowsAsync(transactionFileId, cancellationToken);
             ApplyClearingDuplicateOutcomes(rowsToUpdate);
         }
 
@@ -1738,80 +1776,34 @@ public class FileIngestionOrchestrator : IFileIngestionService
                 cancellationToken);
     }
 
-    private async Task<List<IngestionFileLineEntity>> LoadCardDuplicateRowsAsync(
+    private async Task<List<IngestionFileLineEntity>> LoadDuplicateRowsAsync(
         Guid transactionFileId,
         CancellationToken cancellationToken)
     {
-        var duplicateCorrelationValues = await _dbContext.IngestionFileLines
+        var duplicateKeys = await _dbContext.IngestionFileLines
             .AsNoTracking()
             .Where(x => x.IngestionFileId == transactionFileId &&
                         x.RecordType == "D" &&
                         x.Status == FileRowStatus.Success &&
-                        x.CorrelationKey == "OceanTxnGuid" &&
-                        x.CorrelationValue != null)
-            .GroupBy(x => x.CorrelationValue!)
+                        x.DuplicateDetectionKey != null)
+            .GroupBy(x => x.DuplicateDetectionKey!)
             .Where(x => x.Count() > 1)
             .Select(x => x.Key)
             .ToListAsync(cancellationToken);
 
-        if (duplicateCorrelationValues.Count == 0)
+        if (duplicateKeys.Count == 0)
         {
             return new List<IngestionFileLineEntity>();
         }
 
         var rows = new List<IngestionFileLineEntity>();
-        foreach (var batch in Batch(duplicateCorrelationValues.ToArray(), QueryBatchSize))
+        foreach (var batch in Batch(duplicateKeys.ToArray(), QueryBatchSize))
         {
             var batchRows = await _dbContext.IngestionFileLines
                 .Where(x => x.IngestionFileId == transactionFileId &&
                             x.RecordType == "D" &&
                             x.Status == FileRowStatus.Success &&
-                            x.CorrelationKey == "OceanTxnGuid" &&
-                            batch.Contains(x.CorrelationValue!))
-                .OrderBy(x => x.LineNumber)
-                .ThenBy(x => x.Id)
-                .ToListAsync(cancellationToken);
-
-            rows.AddRange(batchRows);
-        }
-
-        return rows;
-    }
-
-    private async Task<List<IngestionFileLineEntity>> LoadClearingDuplicateRowsAsync(
-        Guid transactionFileId,
-        CancellationToken cancellationToken)
-    {
-        var candidateRows = await _dbContext.IngestionFileLines
-            .AsNoTracking()
-            .Where(x => x.IngestionFileId == transactionFileId &&
-                        x.RecordType == "D" &&
-                        x.Status == FileRowStatus.Success)
-            .Select(x => new
-            {
-                x.Id,
-                x.ParsedData
-            })
-            .ToListAsync(cancellationToken);
-
-        var duplicateRowIds = candidateRows
-            .Select(x => new { x.Id, Key = BuildClearingDuplicateKey(x.ParsedData) })
-            .Where(x => x.Key.HasValue)
-            .GroupBy(x => x.Key!.Value)
-            .Where(x => x.Count() > 1)
-            .SelectMany(x => x.Select(y => y.Id))
-            .ToArray();
-
-        if (duplicateRowIds.Length == 0)
-        {
-            return new List<IngestionFileLineEntity>();
-        }
-
-        var rows = new List<IngestionFileLineEntity>(duplicateRowIds.Length);
-        foreach (var batch in Batch(duplicateRowIds, QueryBatchSize))
-        {
-            var batchRows = await _dbContext.IngestionFileLines
-                .Where(x => batch.Contains(x.Id))
+                            batch.Contains(x.DuplicateDetectionKey!))
                 .OrderBy(x => x.LineNumber)
                 .ThenBy(x => x.Id)
                 .ToListAsync(cancellationToken);
@@ -1825,9 +1817,8 @@ public class FileIngestionOrchestrator : IFileIngestionService
     private static void ApplyCardDuplicateOutcomes(List<IngestionFileLineEntity> detailRows)
     {
         var duplicateGroups = detailRows
-            .Where(x => string.Equals(x.CorrelationKey, "OceanTxnGuid", StringComparison.Ordinal) &&
-                        !string.IsNullOrWhiteSpace(x.CorrelationValue))
-            .GroupBy(x => x.CorrelationValue, StringComparer.Ordinal)
+            .Where(x => !string.IsNullOrWhiteSpace(x.DuplicateDetectionKey))
+            .GroupBy(x => x.DuplicateDetectionKey, StringComparer.Ordinal)
             .Where(x => x.Count() > 1);
 
         foreach (var group in duplicateGroups)
@@ -1853,14 +1844,13 @@ public class FileIngestionOrchestrator : IFileIngestionService
     private static void ApplyClearingDuplicateOutcomes(List<IngestionFileLineEntity> detailRows)
     {
         var duplicateGroups = detailRows
-            .Select(x => new { Row = x, Key = BuildClearingDuplicateKey(x.ParsedData) })
-            .Where(x => x.Key.HasValue)
-            .GroupBy(x => x.Key!.Value)
+            .Where(x => !string.IsNullOrWhiteSpace(x.DuplicateDetectionKey))
+            .GroupBy(x => x.DuplicateDetectionKey, StringComparer.Ordinal)
             .Where(x => x.Count() > 1);
 
         foreach (var group in duplicateGroups)
         {
-            var rows = group.Select(x => x.Row).ToList();
+            var rows = group.ToList();
             var primary = rows[0];
             var primaryPayload = primary.ParsedData;
             var allEquivalent = rows.All(x => string.Equals(x.ParsedData, primaryPayload, StringComparison.Ordinal));
@@ -1927,18 +1917,6 @@ public class FileIngestionOrchestrator : IFileIngestionService
                left.CardHolderBillingAmount == right.CardHolderBillingAmount;
     }
 
-    private static ClearingDuplicateKey? BuildClearingDuplicateKey(string parsedData)
-    {
-        using var document = JsonDocument.Parse(parsedData);
-        var root = document.RootElement;
-        var clrNo = GetLong(root, "ClrNo");
-        var controlStat = GetString(root, "ControlStat");
-
-        return clrNo > 0 && !string.IsNullOrWhiteSpace(controlStat)
-            ? new ClearingDuplicateKey(clrNo, controlStat)
-            : null;
-    }
-
     private static string GetString(JsonElement element, string propertyName)
     {
         return element.TryGetProperty(propertyName, out var value) && value.ValueKind != JsonValueKind.Null
@@ -1955,19 +1933,6 @@ public class FileIngestionOrchestrator : IFileIngestionService
         {
             JsonValueKind.Number when value.TryGetInt32(out var parsed) => parsed,
             JsonValueKind.String when int.TryParse(value.GetString(), out var parsed) => parsed,
-            _ => 0
-        };
-    }
-
-    private static long GetLong(JsonElement element, string propertyName)
-    {
-        if (!element.TryGetProperty(propertyName, out var value) || value.ValueKind is JsonValueKind.Null or JsonValueKind.Undefined)
-            return 0;
-
-        return value.ValueKind switch
-        {
-            JsonValueKind.Number when value.TryGetInt64(out var parsed) => parsed,
-            JsonValueKind.String when long.TryParse(value.GetString(), out var parsed) => parsed,
             _ => 0
         };
     }
@@ -1991,9 +1956,6 @@ public class FileIngestionOrchestrator : IFileIngestionService
         int Ots,
         decimal CardHolderBillingAmount);
 
-    private readonly record struct ClearingDuplicateKey(
-        long ClrNo,
-        string ControlStat);
 
     private async Task UpdateFileMessageAsync(
         Guid transactionFileId,

@@ -135,3 +135,23 @@ public sealed class EmoneyWalletDto
     public decimal AvailableBalanceCash { get; set; }
     public decimal AvailableBalance { get; set; }
 }
+
+public sealed class EmoneyCommandResult
+{
+    public bool IsSuccessful { get; init; }
+    public string? ResponseBody { get; init; }
+    public string? ErrorCode { get; init; }
+    public string? ErrorMessage { get; init; }
+
+    public static EmoneyCommandResult Success(string? responseBody)
+        => new() { IsSuccessful = true, ResponseBody = responseBody };
+
+    public static EmoneyCommandResult Failed(string errorCode, string errorMessage, string? responseBody = null)
+        => new()
+        {
+            IsSuccessful = false,
+            ErrorCode = errorCode,
+            ErrorMessage = errorMessage,
+            ResponseBody = responseBody ?? errorMessage
+        };
+}
