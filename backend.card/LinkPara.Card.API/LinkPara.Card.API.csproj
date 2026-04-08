@@ -70,6 +70,8 @@
 	  <EmbeddedResource Update="Resources\Exceptions.tr.resx">
 	    <Generator>PublicResXFileCodeGenerator</Generator>
 	  </EmbeddedResource>
+	  <EmbeddedResource Update="Resources\Messages.resx" />
+	  <EmbeddedResource Update="Resources\Messages.tr.resx" />
 	</ItemGroup>
 
 </Project>

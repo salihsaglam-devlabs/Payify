@@ -1,15 +1,18 @@
 using System.Net.Http.Json;
 using System.Text.Json;
+using Microsoft.Extensions.Localization;
 
 namespace LinkPara.Card.Infrastructure.Services.Reconciliation.Integrations.Emoney;
 
 internal sealed class EmoneyService : IEmoneyService
 {
     private readonly HttpClient _httpClient;
+    private readonly IStringLocalizer _localizer;
 
-    public EmoneyService(HttpClient httpClient)
+    public EmoneyService(HttpClient httpClient, Func<LinkPara.Card.Application.Commons.Localization.LocalizerResource, IStringLocalizer> localizerFactory)
     {
         _httpClient = httpClient;
+        _localizer = localizerFactory(LinkPara.Card.Application.Commons.Localization.LocalizerResource.Messages);
     }
 
     public async Task<IReadOnlyCollection<EmoneyCustomerTransactionDto>> GetByCustomerTransactionIdAsync(
@@ -30,7 +33,7 @@ internal sealed class EmoneyService : IEmoneyService
             if (!httpResponse.IsSuccessStatusCode)
             {
                 throw new EmoneyIntegrationException(
-                    $"Emoney transaction lookup failed with status code {(int)httpResponse.StatusCode} for customerTransactionId '{customerTransactionId}'.");
+                    _localizer.Get("Reconciliation.EmoneyLookupStatusFailed", (int)httpResponse.StatusCode, customerTransactionId));
             }
 
             var customerTransactions = await httpResponse.Content.ReadFromJsonAsync<List<EmoneyCustomerTransactionDto>>(cancellationToken: cancellationToken);
@@ -43,7 +46,7 @@ internal sealed class EmoneyService : IEmoneyService
         catch (Exception ex)
         {
             throw new EmoneyIntegrationException(
-                $"Emoney transaction lookup failed for customerTransactionId '{customerTransactionId}'.",
+                _localizer.Get("Reconciliation.EmoneyLookupForCustomerFailed", customerTransactionId),
                 ex);
         }
     }
@@ -63,7 +66,7 @@ internal sealed class EmoneyService : IEmoneyService
             if (!httpResponse.IsSuccessStatusCode)
             {
                 throw new EmoneyIntegrationException(
-                    $"Emoney transaction lookup failed with status code {(int)httpResponse.StatusCode} for transactionId '{transactionId}'.");
+                    _localizer.Get("Reconciliation.EmoneyLookupStatusFailedForTransaction", (int)httpResponse.StatusCode, transactionId));
             }
 
             return await httpResponse.Content.ReadFromJsonAsync<EmoneyTransactionDto>(cancellationToken: cancellationToken);
@@ -75,7 +78,7 @@ internal sealed class EmoneyService : IEmoneyService
         catch (Exception ex)
         {
             throw new EmoneyIntegrationException(
-                $"Emoney transaction lookup failed for transactionId '{transactionId}'.",
+                _localizer.Get("Reconciliation.EmoneyLookupForTransactionFailed", transactionId),
                 ex);
         }
     }
@@ -150,7 +153,7 @@ internal sealed class EmoneyService : IEmoneyService
         return CreateStubPostResultAsync("v1/Reconciliation/shadow-balance/run", request, cancellationToken);
     }
 
-    private static Task<EmoneyCommandResult> CreateStubPostResultAsync(
+    private Task<EmoneyCommandResult> CreateStubPostResultAsync(
         string relativeUrl,
         object request,
         CancellationToken cancellationToken)
@@ -159,7 +162,7 @@ internal sealed class EmoneyService : IEmoneyService
         return Task.FromResult(CreateStubCommandResult("POST", relativeUrl, request));
     }
 
-    private static Task<EmoneyCommandResult> CreateStubPutResultAsync(
+    private Task<EmoneyCommandResult> CreateStubPutResultAsync(
         string relativeUrl,
         object request,
         CancellationToken cancellationToken)
@@ -168,7 +171,7 @@ internal sealed class EmoneyService : IEmoneyService
         return Task.FromResult(CreateStubCommandResult("PUT", relativeUrl, request));
     }
 
-    private static EmoneyCommandResult CreateStubCommandResult(string method, string relativeUrl, object request)
+    private EmoneyCommandResult CreateStubCommandResult(string method, string relativeUrl, object request)
     {
         var responseBody = JsonSerializer.Serialize(new
         {
@@ -176,7 +179,7 @@ internal sealed class EmoneyService : IEmoneyService
             method,
             relativeUrl,
             request,
-            message = "External command was stubbed and accepted."
+            message = _localizer.Get("Reconciliation.ExternalCommandStubbed")
         });
 
         return EmoneyCommandResult.Success(responseBody);

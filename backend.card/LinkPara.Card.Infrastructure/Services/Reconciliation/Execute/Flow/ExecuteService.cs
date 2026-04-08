@@ -1,5 +1,7 @@
 using System.Text.Json;
 using LinkPara.Card.Application.Commons.Helpers.Reconciliation;
+using Microsoft.Extensions.Localization;
+using LinkPara.Card.Application.Commons.Interfaces.Reconciliation;
 using LinkPara.Card.Application.Commons.Models.Reconciliation;
 using LinkPara.Card.Domain.Entities.Reconciliation;
 using LinkPara.Card.Domain.Enums.Reconciliation;
@@ -23,6 +25,8 @@ internal sealed class ExecuteService
     private readonly OperationExecutor _operationExecutor;
     private readonly IAlertService _alertService;
     private readonly IAuditStampService _auditStampService;
+    private readonly IReconciliationErrorMapper _errorMapper;
+    private readonly IStringLocalizer _localizer;
     private readonly ReconciliationOptions _options = new();
 
     public ExecuteService(
@@ -30,13 +34,17 @@ internal sealed class ExecuteService
         OperationExecutor operationExecutor,
         IAlertService alertService,
         IAuditStampService auditStampService,
-        IOptions<ReconciliationOptions> options)
+        IOptions<ReconciliationOptions> options,
+        IReconciliationErrorMapper errorMapper,
+        Func<LinkPara.Card.Application.Commons.Localization.LocalizerResource, IStringLocalizer> localizerFactory)
     {
         _dbContext = dbContext;
         _operationExecutor = operationExecutor;
         _alertService = alertService;
         _auditStampService = auditStampService;
         _options = options.Value;
+        _errorMapper = errorMapper;
+        _localizer = localizerFactory(LinkPara.Card.Application.Commons.Localization.LocalizerResource.Messages);
     }
 
     public async Task<ExecuteResponse> ExecuteAsync(
@@ -97,7 +105,7 @@ internal sealed class ExecuteService
         }
         catch (Exception ex)
         {
-            errors.Add(ReconciliationErrorMapper.MapException(ex, "RECONCILIATION_ALERT_SERVICE_EXECUTE"));
+            errors.Add(_errorMapper.MapException(ex, "RECONCILIATION_ALERT_SERVICE_EXECUTE"));
         }
         response.ErrorCount = errors.Count;
         return response;
@@ -417,7 +425,7 @@ internal sealed class ExecuteService
                     execution,
                     ExecutionStatus.Skipped,
                     "SKIPPED_ALREADY_APPLIED",
-                    "Operation was already applied for this transaction.",
+                    _localizer.Get("Reconciliation.OperationAlreadyApplied"),
                     "Skipped",
                     cancellationToken);
             }
@@ -435,11 +443,11 @@ internal sealed class ExecuteService
             {
                 ScheduleRetry(operation, now, handlerResult.ErrorMessage);
 
-                errors.Add(ReconciliationErrorMapper.Create(
+                errors.Add(_errorMapper.Create(
                     "OPERATION_EXECUTION_FAILED",
                     handlerResult.ErrorMessage ??
                     handlerResult.ResultMessage ??
-                    $"Operation '{operation.Code}' failed.",
+                    _localizer.Get("Reconciliation.OperationFailed", operation.Code),
                     "EXECUTION_OPERATION",
                     fileLineId: operation.FileLineId,
                     operationId: operation.Id,
@@ -479,20 +487,20 @@ internal sealed class ExecuteService
         }
         catch (Exception ex)
         {
-            errors.Add(ReconciliationErrorMapper.MapException(
+            errors.Add(_errorMapper.MapException(
                 ex,
                 "EXECUTION_OPERATION",
                 fileLineId: operation.FileLineId,
                 operationId: operation.Id,
                 evaluationId: operation.EvaluationId,
-                message: $"Unexpected error occurred while executing operation '{operation.Code}'."));
+                message: _localizer.Get("Reconciliation.UnexpectedOperationError", operation.Code)));
 
             ScheduleRetry(operation, now, ex.Message);
 
             execution.Status = ExecutionStatus.Failed;
             execution.FinishedAt = DateTime.Now;
             execution.ResultCode = "FAILED";
-            execution.ResultMessage = "Operation execution failed.";
+            execution.ResultMessage = _localizer.Get("Reconciliation.OperationExecutionFailed");
             execution.ErrorCode = "OPERATION_EXECUTION_FAILED";
             execution.ErrorMessage = ex.Message;
 
@@ -521,9 +529,9 @@ internal sealed class ExecuteService
 
         if (review is null)
         {
-            errors.Add(ReconciliationErrorMapper.Create(
+            errors.Add(_errorMapper.Create(
                 "MANUAL_REVIEW_NOT_FOUND",
-                "Manual review record could not be resolved.",
+                _localizer.Get("Reconciliation.ManualReviewNotResolved"),
                 "EXECUTION_MANUAL_GATE",
                 fileLineId: operation.FileLineId,
                 operationId: operation.Id,
@@ -531,14 +539,14 @@ internal sealed class ExecuteService
 
             operation.Status = OperationStatus.Failed;
             ReleaseLease(operation);
-            operation.LastError = "Manual review record could not be resolved.";
+            operation.LastError = _localizer.Get("Reconciliation.ManualReviewNotResolved");
 
             execution.Status = ExecutionStatus.Failed;
             execution.FinishedAt = DateTime.Now;
             execution.ResultCode = "MANUAL_REVIEW_NOT_FOUND";
-            execution.ResultMessage = "Manual review record could not be resolved.";
+            execution.ResultMessage = _localizer.Get("Reconciliation.ManualReviewNotResolved");
             execution.ErrorCode = "MANUAL_REVIEW_NOT_FOUND";
-            execution.ErrorMessage = "Manual review record could not be resolved.";
+            execution.ErrorMessage = _localizer.Get("Reconciliation.ManualReviewNotResolved");
 
             _auditStampService.StampForUpdate(new AuditEntity[] { operation, execution });
             await _dbContext.SaveChangesAsync(cancellationToken);
@@ -547,7 +555,7 @@ internal sealed class ExecuteService
             {
                 OperationId = operation.Id,
                 Status = "Failed",
-                Message = "Manual review record could not be resolved."
+                Message = _localizer.Get("Reconciliation.ManualReviewNotResolved")
             };
         }
 
@@ -567,7 +575,7 @@ internal sealed class ExecuteService
             execution.Status = ExecutionStatus.Skipped;
             execution.FinishedAt = DateTime.Now;
             execution.ResultCode = "WAITING_MANUAL_DECISION";
-            execution.ResultMessage = "Manual review decision is pending.";
+            execution.ResultMessage = _localizer.Get("Reconciliation.ManualReviewDecisionPending");
             execution.ResponsePayload = JsonSerializer.Serialize(new { review.Decision, review.ExpiresAt });
 
             _auditStampService.StampForUpdate(new AuditEntity[] { operation, execution });
@@ -577,7 +585,7 @@ internal sealed class ExecuteService
             {
                 OperationId = operation.Id,
                 Status = "Blocked",
-                Message = "Manual review decision is pending."
+                Message = _localizer.Get("Reconciliation.ManualReviewDecisionPending")
             };
         }
 
@@ -588,7 +596,7 @@ internal sealed class ExecuteService
         execution.Status = ExecutionStatus.Completed;
         execution.FinishedAt = DateTime.Now;
         execution.ResultCode = $"MANUAL_GATE_{review.Decision.ToString().ToUpperInvariant()}";
-        execution.ResultMessage = $"Manual gate resolved with decision '{review.Decision}'.";
+        execution.ResultMessage = _localizer.Get("Reconciliation.ManualGateResolved", review.Decision);
         execution.ResponsePayload = JsonSerializer.Serialize(new { review.Decision });
 
         var manualGateEntities = evaluationOperations

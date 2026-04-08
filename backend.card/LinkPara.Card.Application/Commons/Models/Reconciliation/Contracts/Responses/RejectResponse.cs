@@ -9,7 +9,4 @@ public class RejectResponse : ReconciliationResponseBase
 
     [MaxLength(100)]
     public string Result { get; set; }
-
-    [MaxLength(2000)]
-    public string Message { get; set; }
 }

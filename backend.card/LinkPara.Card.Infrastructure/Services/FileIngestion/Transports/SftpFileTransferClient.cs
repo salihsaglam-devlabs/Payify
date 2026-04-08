@@ -1,5 +1,5 @@
 using LinkPara.Card.Application.Commons.Models.FileIngestion;
-using LinkPara.Card.Application.Commons.Interfaces.Localization;
+using Microsoft.Extensions.Localization;
 using LinkPara.Card.Domain.Enums.FileIngestion;
 using Microsoft.Extensions.Options;
 using Renci.SshNet;
@@ -12,12 +12,12 @@ namespace LinkPara.Card.Infrastructure.Services.FileIngestion.Transports;
 public class SftpFileTransferClient : IFileTransferClient
 {
     private readonly FileIngestionOptions _options = new();
-    private readonly ICardResourceLocalizer _localizer;
+    private readonly IStringLocalizer _localizer;
 
-    public SftpFileTransferClient(IOptions<FileIngestionOptions> options, ICardResourceLocalizer localizer)
+    public SftpFileTransferClient(IOptions<FileIngestionOptions> options, Func<LinkPara.Card.Application.Commons.Localization.LocalizerResource, IStringLocalizer> localizerFactory)
     {
         _options = options.Value;
-        _localizer = localizer;
+        _localizer = localizerFactory(LinkPara.Card.Application.Commons.Localization.LocalizerResource.Messages);
     }
 
     public FileSourceType SourceType => FileSourceType.Remote;

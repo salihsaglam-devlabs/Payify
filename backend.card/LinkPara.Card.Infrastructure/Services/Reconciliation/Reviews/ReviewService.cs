@@ -1,6 +1,8 @@
 using System.Text.Json;
-using LinkPara.Card.Application.Commons.Helpers.Reconciliation;
+using Microsoft.Extensions.Localization;
+using LinkPara.Card.Application.Commons.Interfaces.Reconciliation;
 using LinkPara.Card.Application.Commons.Models.Reconciliation;
+using LinkPara.Card.Application.Commons.Exceptions;
 using LinkPara.Card.Domain.Enums.Reconciliation;
 using LinkPara.Card.Infrastructure.Persistence;
 using LinkPara.Card.Infrastructure.Services.Audit;
@@ -14,11 +16,19 @@ internal sealed class ReviewService
 {
     private readonly CardDbContext _dbContext;
     private readonly IAuditStampService _auditStampService;
+    private readonly IReconciliationErrorMapper _errorMapper;
+    private readonly IStringLocalizer _localizer;
 
-    public ReviewService(CardDbContext dbContext, IAuditStampService auditStampService)
+    public ReviewService(
+        CardDbContext dbContext,
+        IAuditStampService auditStampService,
+        IReconciliationErrorMapper errorMapper,
+        Func<LinkPara.Card.Application.Commons.Localization.LocalizerResource, IStringLocalizer> localizerFactory)
     {
         _dbContext = dbContext;
         _auditStampService = auditStampService;
+        _errorMapper = errorMapper;
+        _localizer = localizerFactory(LinkPara.Card.Application.Commons.Localization.LocalizerResource.Messages);
     }
 
     public async Task<ApproveResponse> ApproveAsync(
@@ -48,17 +58,17 @@ internal sealed class ReviewService
         }
         catch (Exception ex)
         {
-            errors.Add(ReconciliationErrorMapper.MapException(
+            errors.Add(_errorMapper.MapException(
                 ex,
                 "REVIEW_APPROVE",
                 operationId: request.OperationId,
-                message: "Manual review approval could not be completed."));
+                message: _localizer.Get("Reconciliation.ManualReviewApprovalCouldNotComplete")));
 
             return new ApproveResponse
             {
                 OperationId = request.OperationId,
                 Result = "Failed",
-                Message = "Manual review approval failed. See errors for details.",
+                Message = _localizer.Get("Reconciliation.ManualReviewApprovalFailedSeeErrors"),
                 Errors = errors,
                 ErrorCount = errors.Count
             };
@@ -92,17 +102,17 @@ internal sealed class ReviewService
         }
         catch (Exception ex)
         {
-            errors.Add(ReconciliationErrorMapper.MapException(
+            errors.Add(_errorMapper.MapException(
                 ex,
                 "REVIEW_REJECT",
                 operationId: request.OperationId,
-                message: "Manual review rejection could not be completed."));
+                message: _localizer.Get("Reconciliation.ManualReviewRejectionCouldNotComplete")));
 
             return new RejectResponse
             {
                 OperationId = request.OperationId,
                 Result = "Failed",
-                Message = "Manual review rejection failed. See errors for details.",
+                Message = _localizer.Get("Reconciliation.ManualReviewRejectionFailedSeeErrors"),
                 Errors = errors,
                 ErrorCount = errors.Count
             };
@@ -186,8 +196,8 @@ internal sealed class ReviewService
                     ExpiresAt = review.ExpiresAt,
                     ExpirationAction = review.ExpirationAction.ToString(),
                     ExpirationFlowAction = review.ExpirationFlowAction.ToString(),
-                    ApprovalMessage = "If approved, the transaction will follow the 'Approve' flow.",
-                    RejectionMessage = "If rejected, the transaction will follow the 'Reject' flow."
+                    ApprovalMessage = _localizer.Get("Reconciliation.ApprovalMessage"),
+                    RejectionMessage = _localizer.Get("Reconciliation.RejectionMessage")
                 };
 
                 var key = (op.EvaluationId, ParentSequenceIndex: (int?)op.SequenceIndex);
@@ -202,20 +212,13 @@ internal sealed class ReviewService
                     };
 
                     if (string.Equals(b.Branch, Branches.Approve, StringComparison.OrdinalIgnoreCase))
-                    {
                         manualReview.ApproveBranchOperations.Add(branchOperation);
-                    }
                     else if (string.Equals(b.Branch, Branches.Reject, StringComparison.OrdinalIgnoreCase))
-                    {
                         manualReview.RejectBranchOperations.Add(branchOperation);
-                    }
                 }
-
 
                 if (string.Equals(op.Code, OperationCodes.CreateManualReview, StringComparison.Ordinal))
-                {
                     manualReview.OperationPayload = BuildManualReviewPayload(manualReview);
-                }
 
                 items.Add(manualReview);
             }
@@ -235,10 +238,10 @@ internal sealed class ReviewService
         }
         catch (Exception ex)
         {
-            errors.Add(ReconciliationErrorMapper.MapException(
+            errors.Add(_errorMapper.MapException(
                 ex,
                 "GET_PENDING_REVIEWS_QUERY",
-                message: "Pending reconciliation reviews could not be loaded."));
+                message: _localizer.Get("Reconciliation.PendingReviewsLoadFailed")));
 
             return new PendingReviewsResponse
             {
@@ -258,73 +261,126 @@ internal sealed class ReviewService
     {
         try
         {
-            var currentReviewerId = ResolveReviewerId(reviewerId);
-            var auditStamp = _auditStampService.CreateStamp();
-            var now = DateTime.Now;
-
-            // Atomic update with Pending guard — eliminates race between concurrent approve/reject calls
-            var updatedReviewRows = await _dbContext.ReconciliationReviews
-                .Where(x => x.OperationId == operationId && x.Decision == ReviewDecision.Pending)
-                .ExecuteUpdateAsync(update => update
-                    .SetProperty(x => x.ReviewerId, currentReviewerId)
-                    .SetProperty(x => x.Decision, decision)
-                    .SetProperty(x => x.Comment, comment)
-                    .SetProperty(x => x.DecisionAt, now)
-                    .SetProperty(x => x.UpdateDate, auditStamp.Timestamp)
-                    .SetProperty(x => x.LastModifiedBy, auditStamp.UserId),
-                    cancellationToken);
-
-            if (updatedReviewRows == 0)
+            var strategy = _dbContext.Database.CreateExecutionStrategy();
+            return await strategy.ExecuteAsync(async () =>
             {
-                var exists = await _dbContext.ReconciliationReviews
-                    .AsNoTracking()
-                    .AnyAsync(x => x.OperationId == operationId, cancellationToken);
+                await using var transaction = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
 
-                if (!exists)
+                var currentReviewerId = ResolveReviewerId(reviewerId);
+                var auditStamp = _auditStampService.CreateStamp();
+                var now = DateTime.Now;
+
+                var updatedReviewRows = await _dbContext.ReconciliationReviews
+                    .Where(x => x.OperationId == operationId && x.Decision == ReviewDecision.Pending)
+                    .ExecuteUpdateAsync(update => update
+                        .SetProperty(x => x.ReviewerId, currentReviewerId)
+                        .SetProperty(x => x.Decision, decision)
+                        .SetProperty(x => x.Comment, comment)
+                        .SetProperty(x => x.DecisionAt, now)
+                        .SetProperty(x => x.UpdateDate, auditStamp.Timestamp)
+                        .SetProperty(x => x.LastModifiedBy, auditStamp.UserId),
+                        cancellationToken);
+
+                if (updatedReviewRows == 0)
                 {
-                    errors?.Add(ReconciliationErrorMapper.Create(
-                        "REVIEW_NOT_FOUND",
-                        "Review record was not found for the manual operation.",
-                        "REVIEW_DECISION",
-                        operationId: operationId));
-                    return ("NotFound", "Review record was not found for the manual operation.");
+                    await transaction.RollbackAsync(cancellationToken);
+                    return await BuildMissingOrFinalizedReviewResultAsync(operationId, errors, cancellationToken);
                 }
 
-                errors?.Add(ReconciliationErrorMapper.Create(
-                    "REVIEW_ALREADY_FINALIZED",
-                    "Review decision is already finalized.",
-                    "REVIEW_DECISION",
-                    operationId: operationId));
-                return ("Invalid", "Review decision is already finalized.");
-            }
+                var updatedOperationRows = await _dbContext.ReconciliationOperations
+                    .Where(x => x.Id == operationId)
+                    .Where(x =>
+                        x.Status != OperationStatus.Completed &&
+                        x.Status != OperationStatus.Cancelled &&
+                        x.Status != OperationStatus.Failed)
+                    .ExecuteUpdateAsync(update => update
+                        .SetProperty(x => x.NextAttemptAt, now)
+                        .SetProperty(x => x.LeaseExpiresAt, (DateTime?)null)
+                        .SetProperty(x => x.LeaseOwner, (string?)null)
+                        .SetProperty(x => x.UpdateDate, auditStamp.Timestamp)
+                        .SetProperty(x => x.LastModifiedBy, auditStamp.UserId),
+                        cancellationToken);
 
-            // Unblock the operation so execution can pick it up
-            await _dbContext.ReconciliationOperations
-                .Where(x => x.Id == operationId)
-                .Where(x =>
-                    x.Status != OperationStatus.Completed &&
-                    x.Status != OperationStatus.Cancelled &&
-                    x.Status != OperationStatus.Failed)
-                .ExecuteUpdateAsync(update => update
-                    .SetProperty(x => x.NextAttemptAt, now)
-                    .SetProperty(x => x.LeaseExpiresAt, (DateTime?)null)
-                    .SetProperty(x => x.LeaseOwner, (string?)null)
-                    .SetProperty(x => x.UpdateDate, auditStamp.Timestamp)
-                    .SetProperty(x => x.LastModifiedBy, auditStamp.UserId),
-                    cancellationToken);
+                if (updatedOperationRows == 0)
+                {
+                    await transaction.RollbackAsync(cancellationToken);
+                    return await BuildNonRequeueableOperationResultAsync(operationId, errors, cancellationToken);
+                }
 
-            var result = decision == ReviewDecision.Approved ? "Approved" : "Rejected";
-            return (result, $"Manual review {result.ToLowerInvariant()}.");
+                await transaction.CommitAsync(cancellationToken);
+
+                var result = decision == ReviewDecision.Approved ? "Approved" : "Rejected";
+                return (result, _localizer.Get("Reconciliation.ManualReviewResult", result.ToLowerInvariant()));
+            });
         }
         catch (Exception ex)
         {
-            errors?.Add(ReconciliationErrorMapper.MapException(
+            errors?.Add(_errorMapper.MapException(
                 ex,
                 "REVIEW_DECISION",
                 operationId: operationId,
-                message: "Manual review decision could not be persisted."));
-            return ("Failed", "Manual review decision failed. See errors for details.");
+                message: _localizer.Get("Reconciliation.ManualReviewDecisionPersistFailed")));
+            return ("Failed", _localizer.Get("Reconciliation.ManualReviewDecisionFailedSeeErrors"));
         }
+    }
+
+    private async Task<(string Result, string Message)> BuildMissingOrFinalizedReviewResultAsync(
+        Guid operationId,
+        List<ReconciliationErrorDetail>? errors,
+        CancellationToken cancellationToken)
+    {
+        var exists = await _dbContext.ReconciliationReviews
+            .AsNoTracking()
+            .AnyAsync(x => x.OperationId == operationId, cancellationToken);
+
+        if (!exists)
+        {
+            var notFoundMsg = _localizer.Get("Reconciliation.ReviewNotFound");
+            errors?.Add(_errorMapper.Create(
+                "REVIEW_NOT_FOUND",
+                notFoundMsg,
+                "REVIEW_DECISION",
+                operationId: operationId));
+            return ("NotFound", notFoundMsg);
+        }
+
+        var finalizedMsg = _localizer.Get("Reconciliation.ReviewAlreadyFinalized");
+        errors?.Add(_errorMapper.Create(
+            "REVIEW_ALREADY_FINALIZED",
+            finalizedMsg,
+            "REVIEW_DECISION",
+            operationId: operationId));
+        return ("Invalid", finalizedMsg);
+    }
+
+    private async Task<(string Result, string Message)> BuildNonRequeueableOperationResultAsync(
+        Guid operationId,
+        List<ReconciliationErrorDetail>? errors,
+        CancellationToken cancellationToken)
+    {
+        var operation = await _dbContext.ReconciliationOperations
+            .AsNoTracking()
+            .SingleOrDefaultAsync(x => x.Id == operationId, cancellationToken);
+
+        if (operation is null)
+        {
+            var notFoundMsg = _localizer.Get("Reconciliation.ReviewOperationNotFound");
+            errors?.Add(_errorMapper.Create(
+                "REVIEW_OPERATION_NOT_FOUND",
+                notFoundMsg,
+                "REVIEW_DECISION",
+                operationId: operationId));
+            return ("NotFound", notFoundMsg);
+        }
+
+        var invalidMsg = _localizer.Get("Reconciliation.ReviewOperationNotRequeueable", operation.Status);
+        errors?.Add(_errorMapper.Create(
+            "REVIEW_OPERATION_NOT_REQUEUEABLE",
+            invalidMsg,
+            "REVIEW_DECISION",
+            operationId: operationId,
+            detail: $"Operation status: {operation.Status}"));
+        return ("Invalid", invalidMsg);
     }
 
     private Guid ResolveReviewerId(Guid? requestedReviewerId)
@@ -340,15 +396,15 @@ internal sealed class ReviewService
             return currentReviewerId;
         }
 
-        throw new InvalidOperationException("Reviewer identifier could not be resolved from the authenticated user or request payload.");
+        throw new ReconciliationConfigurationException(ApiErrorCode.ReconciliationReviewerNotResolved, _localizer.Get("Reconciliation.ReviewerNotResolved"));
     }
 
     private static string BuildManualReviewPayload(ManualReview manualReview)
     {
         var payload = new
         {
-            approveOperations = string.Join(",",manualReview.ApproveBranchOperations.Select(x=>x.Code)),
-            rejectOperations = string.Join(",",manualReview.RejectBranchOperations.Select(x=>x.Code)),
+            approveOperations = string.Join(",", manualReview.ApproveBranchOperations.Select(x => x.Code)),
+            rejectOperations = string.Join(",", manualReview.RejectBranchOperations.Select(x => x.Code)),
         };
 
         return JsonSerializer.Serialize(payload);

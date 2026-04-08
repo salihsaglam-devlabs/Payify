@@ -1,5 +1,5 @@
 using LinkPara.Card.Application.Commons.Models.FileIngestion;
-using LinkPara.Card.Application.Commons.Interfaces.Localization;
+using Microsoft.Extensions.Localization;
 using LinkPara.Card.Domain.Enums.FileIngestion;
 using Microsoft.Extensions.Options;
 using System.Net;
@@ -11,12 +11,12 @@ namespace LinkPara.Card.Infrastructure.Services.FileIngestion.Transports;
 public class FtpFileTransferClient : IFileTransferClient
 {
     private readonly FileIngestionOptions _options = new();
-    private readonly ICardResourceLocalizer _localizer;
+    private readonly IStringLocalizer _localizer;
 
-    public FtpFileTransferClient(IOptions<FileIngestionOptions> options, ICardResourceLocalizer localizer)
+    public FtpFileTransferClient(IOptions<FileIngestionOptions> options, Func<LinkPara.Card.Application.Commons.Localization.LocalizerResource, IStringLocalizer> localizerFactory)
     {
         _options = options.Value;
-        _localizer = localizer;
+        _localizer = localizerFactory(LinkPara.Card.Application.Commons.Localization.LocalizerResource.Messages);
     }
 
     public FileSourceType SourceType => FileSourceType.Remote;

@@ -1,5 +1,5 @@
 using LinkPara.Card.Application.Commons.Models.FileIngestion;
-using LinkPara.Card.Application.Commons.Interfaces.Localization;
+using Microsoft.Extensions.Localization;
 using LinkPara.Card.Domain.Enums.FileIngestion;
 using Microsoft.Extensions.Options;
 
@@ -9,16 +9,16 @@ public class FileTransferClientResolver : IFileTransferClientResolver
 {
     private readonly IEnumerable<IFileTransferClient> _clients;
     private readonly FileIngestionOptions _options = new();
-    private readonly ICardResourceLocalizer _localizer;
+    private readonly IStringLocalizer _localizer;
 
     public FileTransferClientResolver(
         IEnumerable<IFileTransferClient> clients,
         IOptions<FileIngestionOptions> options,
-        ICardResourceLocalizer localizer)
+        Func<LinkPara.Card.Application.Commons.Localization.LocalizerResource, IStringLocalizer> localizerFactory)
     {
         _clients = clients;
         _options = options.Value;
-        _localizer = localizer;
+        _localizer = localizerFactory(LinkPara.Card.Application.Commons.Localization.LocalizerResource.Messages);
     }
 
     public IFileTransferClient Create(

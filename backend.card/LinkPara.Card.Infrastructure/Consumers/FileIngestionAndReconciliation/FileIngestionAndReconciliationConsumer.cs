@@ -4,7 +4,8 @@ using LinkPara.Card.Application.Features.FileIngestion.Commands.IngestFile;
 using LinkPara.Card.Application.Features.Reconciliation.Commands.Evaluate;
 using LinkPara.Card.Application.Features.Reconciliation.Commands.Execute;
 using LinkPara.Card.Application.Commons.Models.FileIngestion;
-using LinkPara.Card.Application.Commons.Interfaces.Localization;
+using Microsoft.Extensions.Localization;
+using Microsoft.Extensions.Options;
 using LinkPara.Card.Infrastructure.Services.Audit;
 using LinkPara.Card.Domain.Enums.FileIngestion;
 using MassTransit;
@@ -16,16 +17,19 @@ public class FileIngestionAndReconciliationConsumer : IConsumer<FileIngestionAnd
 {
     private readonly ISender _mediator;
     private readonly IAuditUserContextAccessor _auditUserContextAccessor;
-    private readonly ICardResourceLocalizer _localizer;
+    private readonly IStringLocalizer _localizer;
+    private readonly bool _respondToContext;
 
     public FileIngestionAndReconciliationConsumer(
         ISender mediator,
         IAuditUserContextAccessor auditUserContextAccessor,
-        ICardResourceLocalizer localizer)
+        IOptions<ReconciliationOptions> reconciliationOptions,
+        Func<LinkPara.Card.Application.Commons.Localization.LocalizerResource, IStringLocalizer> localizerFactory)
     {
         _mediator = mediator;
         _auditUserContextAccessor = auditUserContextAccessor;
-        _localizer = localizer;
+        _localizer = localizerFactory(LinkPara.Card.Application.Commons.Localization.LocalizerResource.Messages);
+        _respondToContext = reconciliationOptions.Value.Consumer.RespondToContext;
     }
 
     public async Task Consume(ConsumeContext<FileIngestionAndReconciliationJobRequest> context)
@@ -41,7 +45,15 @@ public class FileIngestionAndReconciliationConsumer : IConsumer<FileIngestionAnd
                 case FileIngestionAndReconciliationJobType.IngestFile:
                 {
                     if (message.IngestionRequest is null)
-                        throw new InvalidOperationException(_localizer.Get("FileIngestion.ConsumerRequestMissing"));
+                    {
+                        await RespondIfEnabled(context, new FileIngestionAndReconciliationJobResponse
+                        {
+                            Type = message.Type,
+                            IsSuccess = false
+                        });
+
+                        return;
+                    }
 
                     var ingestCmd = new FileIngestionCommand
                     {
@@ -53,7 +65,7 @@ public class FileIngestionAndReconciliationConsumer : IConsumer<FileIngestionAnd
 
                     var result = await _mediator.Send(ingestCmd, context.CancellationToken);
 
-                    await context.RespondAsync(new FileIngestionAndReconciliationJobResponse
+                    await RespondIfEnabled(context, new FileIngestionAndReconciliationJobResponse
                     {
                         Type = message.Type,
                         IsSuccess = IsSuccessful(result),
@@ -71,7 +83,7 @@ public class FileIngestionAndReconciliationConsumer : IConsumer<FileIngestionAnd
                         new EvaluateCommand { Request = evalReq },
                         context.CancellationToken);
 
-                    await context.RespondAsync(new FileIngestionAndReconciliationJobResponse
+                    await RespondIfEnabled(context, new FileIngestionAndReconciliationJobResponse
                     {
                         Type = message.Type,
                         IsSuccess = IsSuccessful(result),
@@ -89,7 +101,7 @@ public class FileIngestionAndReconciliationConsumer : IConsumer<FileIngestionAnd
                         new ExecuteCommand { Request = execReq },
                         context.CancellationToken);
 
-                    await context.RespondAsync(new FileIngestionAndReconciliationJobResponse
+                    await RespondIfEnabled(context, new FileIngestionAndReconciliationJobResponse
                     {
                         Type = message.Type,
                         IsSuccess = IsSuccessful(result),
@@ -100,24 +112,40 @@ public class FileIngestionAndReconciliationConsumer : IConsumer<FileIngestionAnd
                 }
 
                 default:
-                    throw new NotSupportedException(_localizer.Get("Reconciliation.ConsumerUnsupportedJobType", message.Type));
+                {
+                    await RespondIfEnabled(context, new FileIngestionAndReconciliationJobResponse
+                    {
+                        Type = message.Type,
+                        IsSuccess = false
+                    });
+
+                    return;
+                }
             }
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            await context.RespondAsync(new FileIngestionAndReconciliationJobResponse
+            await RespondIfEnabled(context, new FileIngestionAndReconciliationJobResponse
             {
                 Type = message.Type,
-                IsSuccess = false,
-                ErrorMessage = ex.Message
+                IsSuccess = false
             });
-
-            throw;
+            return;
         }
         finally
         {
             _auditUserContextAccessor.CurrentUserId = previousUserId;
         }
+    }
+
+    private async Task RespondIfEnabled(
+        ConsumeContext<FileIngestionAndReconciliationJobRequest> context,
+        FileIngestionAndReconciliationJobResponse response)
+    {
+        if (!_respondToContext)
+            return;
+
+        await context.RespondAsync(response);
     }
 
     private static string? ResolveInitiatedByUserId(ConsumeContext<FileIngestionAndReconciliationJobRequest> context)

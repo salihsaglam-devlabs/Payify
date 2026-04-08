@@ -1,4 +1,6 @@
+using LinkPara.Card.Application.Commons.Exceptions;
 using LinkPara.Card.Application.Commons.Helpers.Reconciliation;
+using LinkPara.Card.Application.Commons.Interfaces.Reconciliation;
 using LinkPara.Card.Application.Commons.Models.Reconciliation;
 using System.Text.Json;
 using LinkPara.Card.Domain.Entities.FileIngestion;
@@ -6,6 +8,7 @@ using LinkPara.Card.Domain.Enums.FileIngestion;
 using LinkPara.Card.Infrastructure.Persistence;
 using LinkPara.Card.Infrastructure.Services.Reconciliation.Integrations.Emoney;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Localization;
 
 namespace LinkPara.Card.Infrastructure.Services.Reconciliation.Evaluate;
 
@@ -18,13 +21,19 @@ internal sealed class ContextBuilder : IContextBuilder
 
     private readonly CardDbContext _dbContext;
     private readonly IEmoneyService _emoneyService;
+    private readonly IReconciliationErrorMapper _errorMapper;
+    private readonly IStringLocalizer _localizer;
 
     public ContextBuilder(
         CardDbContext dbContext,
-        IEmoneyService emoneyService)
+        IEmoneyService emoneyService,
+        IReconciliationErrorMapper errorMapper,
+        Func<LinkPara.Card.Application.Commons.Localization.LocalizerResource, IStringLocalizer> localizerFactory)
     {
         _dbContext = dbContext;
         _emoneyService = emoneyService;
+        _errorMapper = errorMapper;
+        _localizer = localizerFactory(LinkPara.Card.Application.Commons.Localization.LocalizerResource.Messages);
     }
 
     public async Task<IReadOnlyDictionary<Guid, EvaluationContext>> BuildManyAsync(
@@ -105,7 +114,7 @@ internal sealed class ContextBuilder : IContextBuilder
 
             if (!rootFiles.TryGetValue(row.IngestionFileId, out var rootFile))
             {
-                throw new InvalidOperationException($"IngestionFile '{row.IngestionFileId}' could not be resolved.");
+                throw new ReconciliationContextException(ApiErrorCode.ReconciliationFileNotResolved, _localizer.Get("Reconciliation.FileNotResolved", row.IngestionFileId));
             }
 
             var emoneyTransactions = new List<EmoneyCustomerTransactionDto>();
@@ -114,9 +123,9 @@ internal sealed class ContextBuilder : IContextBuilder
                 var emoneyFetchResult = await emoneyTasks[correlationValue];
                 if (!emoneyFetchResult.IsSuccess)
                 {
-                    errors?.Add(ReconciliationErrorMapper.Create(
+                    errors?.Add(_errorMapper.Create(
                         code: "EMONEY_LOOKUP_FAILED",
-                        message: "Emoney transaction lookup failed. Evaluation skipped for related rows.",
+                        message: _localizer.Get("Reconciliation.EmoneyLookupFailed"),
                         step: "EMONEY_LOOKUP",
                         detail: emoneyFetchResult.ErrorMessage,
                         severity: "Error"));
@@ -126,13 +135,7 @@ internal sealed class ContextBuilder : IContextBuilder
                 emoneyTransactions = emoneyFetchResult.Transactions.ToList();
             }
 
-            contexts[row.Id] = BuildTypedContext(
-                rootFile,
-                row,
-                correlationKey,
-                correlationValue,
-                rowGroup,
-                emoneyTransactions);
+            contexts[row.Id] = BuildTypedContext(rootFile, row, correlationKey, correlationValue, rowGroup, emoneyTransactions);
         }
 
         return contexts;
@@ -153,7 +156,7 @@ internal sealed class ContextBuilder : IContextBuilder
         catch (EmoneyIntegrationException ex)
         {
             return EmoneyFetchResult.Fail(
-                $"customerTransactionId '{customerTransactionId}' lookup failed. {ex.Message}");
+                _localizer.Get("Reconciliation.CustomerTxnLookupFailed", customerTransactionId, ex.Message));
         }
         finally
         {
@@ -161,7 +164,7 @@ internal sealed class ContextBuilder : IContextBuilder
         }
     }
 
-    private static EvaluationContext BuildTypedContext(
+    private EvaluationContext BuildTypedContext(
         IngestionFile rootFile,
         IngestionFileLine row,
         string correlationKey,
@@ -173,83 +176,52 @@ internal sealed class ContextBuilder : IContextBuilder
         {
             FileContentType.Bkm => new BkmEvaluationContext
             {
-                RootRow = row,
-                RootFile = rootFile,
-                CorrelationKey = correlationKey,
-                CorrelationValue = correlationValue,
+                RootRow = row, RootFile = rootFile, CorrelationKey = correlationKey, CorrelationValue = correlationValue,
                 CardDetails = CollectDetails<CardBkmDetail>(correlatedRows, FileType.Card, FileContentType.Bkm),
                 ClearingDetails = CollectDetails<ClearingBkmDetail>(correlatedRows, FileType.Clearing, FileContentType.Bkm),
                 EmoneyTransactions = emoneyTransactions
             },
             FileContentType.Visa => new VisaEvaluationContext
             {
-                RootRow = row,
-                RootFile = rootFile,
-                CorrelationKey = correlationKey,
-                CorrelationValue = correlationValue,
+                RootRow = row, RootFile = rootFile, CorrelationKey = correlationKey, CorrelationValue = correlationValue,
                 CardDetails = CollectDetails<CardVisaDetail>(correlatedRows, FileType.Card, FileContentType.Visa),
                 ClearingDetails = CollectDetails<ClearingVisaDetail>(correlatedRows, FileType.Clearing, FileContentType.Visa),
                 EmoneyTransactions = emoneyTransactions
             },
             FileContentType.Msc => new MscEvaluationContext
             {
-                RootRow = row,
-                RootFile = rootFile,
-                CorrelationKey = correlationKey,
-                CorrelationValue = correlationValue,
+                RootRow = row, RootFile = rootFile, CorrelationKey = correlationKey, CorrelationValue = correlationValue,
                 CardDetails = CollectDetails<CardMscDetail>(correlatedRows, FileType.Card, FileContentType.Msc),
                 ClearingDetails = CollectDetails<ClearingMscDetail>(correlatedRows, FileType.Clearing, FileContentType.Msc),
                 EmoneyTransactions = emoneyTransactions
             },
-            _ => throw new InvalidOperationException($"Unsupported reconciliation content type '{rootFile.ContentType}'.")
+            _ => throw new ReconciliationBusinessRuleException(ApiErrorCode.ReconciliationUnsupportedContentType, _localizer.Get("Reconciliation.UnsupportedContentType", rootFile.ContentType))
         };
     }
 
     private static List<TDetail> CollectDetails<TDetail>(
-        IEnumerable<IngestionFileLine> rows,
-        FileType fileType,
-        FileContentType contentType)
+        IEnumerable<IngestionFileLine> rows, FileType fileType, FileContentType contentType)
         where TDetail : class
     {
         return rows
-            .Where(x =>
-                x.IngestionFile.FileType == fileType &&
-                x.IngestionFile.ContentType == contentType &&
-                string.Equals(x.RecordType, "D", StringComparison.OrdinalIgnoreCase))
+            .Where(x => x.IngestionFile.FileType == fileType && x.IngestionFile.ContentType == contentType && string.Equals(x.RecordType, "D", StringComparison.OrdinalIgnoreCase))
             .Select(x => Deserialize<TDetail>(x.ParsedData))
             .Where(x => x is not null)
             .Cast<TDetail>()
             .ToList();
     }
 
-    private static TModel? Deserialize<TModel>(string json)
-        where TModel : class
+    private static TModel? Deserialize<TModel>(string json) where TModel : class
     {
-        if (string.IsNullOrWhiteSpace(json))
-        {
-            return null;
-        }
-
-        try
-        {
-            return JsonSerializer.Deserialize<TModel>(json, JsonOptions);
-        }
-        catch
-        {
-            return null;
-        }
+        if (string.IsNullOrWhiteSpace(json)) return null;
+        try { return JsonSerializer.Deserialize<TModel>(json, JsonOptions); }
+        catch { return null; }
     }
 
-    private sealed record EmoneyFetchResult(
-        bool IsSuccess,
-        IReadOnlyCollection<EmoneyCustomerTransactionDto> Transactions,
-        string? ErrorMessage)
+    private sealed record EmoneyFetchResult(bool IsSuccess, IReadOnlyCollection<EmoneyCustomerTransactionDto> Transactions, string? ErrorMessage)
     {
-        public static EmoneyFetchResult Success(IReadOnlyCollection<EmoneyCustomerTransactionDto> transactions)
-            => new(true, transactions, null);
-
-        public static EmoneyFetchResult Fail(string errorMessage)
-            => new(false, Array.Empty<EmoneyCustomerTransactionDto>(), errorMessage);
+        public static EmoneyFetchResult Success(IReadOnlyCollection<EmoneyCustomerTransactionDto> transactions) => new(true, transactions, null);
+        public static EmoneyFetchResult Fail(string errorMessage) => new(false, Array.Empty<EmoneyCustomerTransactionDto>(), errorMessage);
     }
 
     private static IEnumerable<string[]> Batch(string[] source, int batchSize)
@@ -262,5 +234,4 @@ internal sealed class ContextBuilder : IContextBuilder
             yield return batch;
         }
     }
-
 }

@@ -1,6 +1,8 @@
 using System.Text.Json;
 using System.Data;
+using LinkPara.Card.Application.Commons.Exceptions;
 using LinkPara.Card.Application.Commons.Helpers.Reconciliation;
+using LinkPara.Card.Application.Commons.Interfaces.Reconciliation;
 using LinkPara.Card.Application.Commons.Models.Reconciliation;
 using LinkPara.Card.Domain.Entities.FileIngestion;
 using LinkPara.Card.Domain.Entities.Reconciliation;
@@ -10,16 +12,20 @@ using LinkPara.Card.Infrastructure.Persistence;
 using LinkPara.Card.Infrastructure.Services.Audit;
 using LinkPara.SharedModels.Persistence;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 
 namespace LinkPara.Card.Infrastructure.Services.Reconciliation.Evaluate;
 
 internal sealed class EvaluateService : IEvaluateService
 {
+    private const string ClaimMarkerPrefix = "EVAL_CLAIM:";
     private readonly CardDbContext _dbContext;
     private readonly IContextBuilder _contextBuilder;
     private readonly EvaluatorResolver _evaluatorResolver;
     private readonly IAuditStampService _auditStampService;
+    private readonly IReconciliationErrorMapper _errorMapper;
+    private readonly IStringLocalizer _localizer;
     private readonly ReconciliationOptions _options = new();
 
     public EvaluateService(
@@ -27,13 +33,17 @@ internal sealed class EvaluateService : IEvaluateService
         IContextBuilder contextBuilder,
         EvaluatorResolver evaluatorResolver,
         IAuditStampService auditStampService,
-        IOptions<ReconciliationOptions> options)
+        IOptions<ReconciliationOptions> options,
+        IReconciliationErrorMapper errorMapper,
+        Func<LinkPara.Card.Application.Commons.Localization.LocalizerResource, IStringLocalizer> localizerFactory)
     {
         _dbContext = dbContext;
         _contextBuilder = contextBuilder;
         _evaluatorResolver = evaluatorResolver;
         _auditStampService = auditStampService;
         _options = options.Value;
+        _errorMapper = errorMapper;
+        _localizer = localizerFactory(LinkPara.Card.Application.Commons.Localization.LocalizerResource.Messages);
     }
 
     public async Task<EvaluateResponse> EvaluateAsync(
@@ -54,15 +64,13 @@ internal sealed class EvaluateService : IEvaluateService
             while (true)
             {
                 var rows = await ClaimReadyChunkAsync(fileId, chunkSize, cancellationToken);
-                if (rows.Count == 0)
-                {
-                    break;
-                }
+                if (rows.Count == 0) break;
 
                 IReadOnlyDictionary<Guid, EvaluationContext> contextMap;
                 try
                 {
                     contextMap = await _contextBuilder.BuildManyAsync(rows, errors, cancellationToken);
+                    await RefreshClaimAsync(rows.Select(x => x.Id).ToList(), cancellationToken);
                 }
                 catch (Exception ex)
                 {
@@ -75,37 +83,31 @@ internal sealed class EvaluateService : IEvaluateService
                 foreach (var row in rows)
                 {
                     cancellationToken.ThrowIfCancellationRequested();
-
                     try
                     {
+                        await RefreshClaimAsync(new List<Guid> { row.Id }, cancellationToken);
+
                         if (!contextMap.TryGetValue(row.Id, out var context))
                         {
-                            throw new InvalidOperationException($"Evaluation context could not be built for row '{row.Id}'.");
+                            throw new ReconciliationContextException(ApiErrorCode.ReconciliationEvaluationContextNotBuilt, _localizer.Get("Reconciliation.EvaluationContextNotBuilt", row.Id));
                         }
 
                         var evaluator = _evaluatorResolver.Resolve(context.RootFile.ContentType);
                         var result = await evaluator.EvaluateAsync(context, cancellationToken);
-
                         successfulEvaluations.Add(new SuccessfulEvaluationPersistence(row, result));
                     }
                     catch (Exception ex)
                     {
-                        errors.Add(ReconciliationErrorMapper.MapException(
-                            ex,
-                            "EVALUATION_ROW",
-                            fileLineId: row.Id,
-                            message: $"Reconciliation evaluation failed for file line '{row.Id}'."));
+                        errors.Add(_errorMapper.MapException(
+                            ex, "EVALUATION_ROW", fileLineId: row.Id,
+                            message: _localizer.Get("Reconciliation.EvaluationRowFailed", row.Id)));
                         await CreateFailedEvaluationAsync(row.Id, ex.Message, groupId, cancellationToken);
                         await MarkRowAsync(row.Id, ReconciliationStatus.Failed, ex.Message, cancellationToken);
                         skippedCount++;
                     }
                 }
 
-                createdOperationCount += await PersistSuccessfulEvaluationsAsync(
-                    successfulEvaluations,
-                    groupId,
-                    errors,
-                    cancellationToken);
+                createdOperationCount += await PersistSuccessfulEvaluationsAsync(successfulEvaluations, groupId, errors, cancellationToken);
             }
         }
 
@@ -158,7 +160,7 @@ internal sealed class EvaluateService : IEvaluateService
         CancellationToken cancellationToken)
     {
         var auditStamp = _auditStampService.CreateStamp();
-        var claimMarker = $"EVAL_CLAIM:{Guid.NewGuid():N}";
+        var claimMarker = $"{ClaimMarkerPrefix}{Guid.NewGuid():N}";
         var claimTimeout = TimeSpan.FromSeconds(Math.Max(30, _options.Evaluate.ClaimTimeoutSeconds));
         var staleCutoff = auditStamp.Timestamp.Add(-claimTimeout);
 
@@ -271,31 +273,20 @@ internal sealed class EvaluateService : IEvaluateService
         List<ReconciliationErrorDetail> errors,
         CancellationToken cancellationToken)
     {
-        if (items.Count == 0)
-        {
-            return 0;
-        }
+        if (items.Count == 0) return 0;
 
         try
         {
             var batch = items.Select(item => CreatePersistedEvaluation(item.Row, item.Result, groupId)).ToList();
-
             await ExecuteInTransactionAsync(async () =>
             {
                 await _dbContext.ReconciliationEvaluations.AddRangeAsync(batch.Select(x => x.Evaluation), cancellationToken);
-
                 var operations = batch.SelectMany(x => x.Operations).ToList();
                 if (operations.Count > 0)
-                {
                     await _dbContext.ReconciliationOperations.AddRangeAsync(operations, cancellationToken);
-                }
-
                 var reviews = batch.SelectMany(x => x.Reviews).ToList();
                 if (reviews.Count > 0)
-                {
                     await _dbContext.ReconciliationReviews.AddRangeAsync(reviews, cancellationToken);
-                }
-
                 await _dbContext.SaveChangesAsync(cancellationToken);
             }, cancellationToken);
 
@@ -319,16 +310,13 @@ internal sealed class EvaluateService : IEvaluateService
                 }
                 catch (Exception ex)
                 {
-                    errors.Add(ReconciliationErrorMapper.MapException(
-                        ex,
-                        "EVALUATION_ROW",
-                        fileLineId: item.Row.Id,
-                        message: $"Reconciliation evaluation failed for file line '{item.Row.Id}'."));
+                    errors.Add(_errorMapper.MapException(
+                        ex, "EVALUATION_ROW", fileLineId: item.Row.Id,
+                        message: _localizer.Get("Reconciliation.EvaluationRowFailed", item.Row.Id)));
                     await CreateFailedEvaluationAsync(item.Row.Id, ex.Message, groupId, cancellationToken);
                     await MarkRowAsync(item.Row.Id, ReconciliationStatus.Failed, ex.Message, cancellationToken);
                 }
             }
-
             return createdOperationCount;
         }
     }
@@ -387,7 +375,7 @@ internal sealed class EvaluateService : IEvaluateService
             .ToList();
     }
 
-    private static List<ReconciliationOperation> BuildOperations(
+    private List<ReconciliationOperation> BuildOperations(
         Guid transactionFileDataId,
         Guid evaluationId,
         Guid groupId,
@@ -451,7 +439,7 @@ internal sealed class EvaluateService : IEvaluateService
         return $"{prefix}:{operation.Branch}";
     }
 
-    private static int? ResolveParentSequenceIndex(
+    private int? ResolveParentSequenceIndex(
         EvaluationOperation operation,
         IReadOnlyList<ReconciliationOperation> operations)
     {
@@ -468,15 +456,11 @@ internal sealed class EvaluateService : IEvaluateService
         return operations[^1].SequenceIndex;
     }
 
-    private static int FindRequiredManualGateSequence(IReadOnlyList<ReconciliationOperation> operations)
+    private int FindRequiredManualGateSequence(IReadOnlyList<ReconciliationOperation> operations)
     {
         var manualGateSequence = operations.LastOrDefault(x => x.IsManual)?.SequenceIndex;
-        if (manualGateSequence.HasValue)
-        {
-            return manualGateSequence.Value;
-        }
-
-        throw new InvalidOperationException("Branch operations require a preceding manual gate operation.");
+        if (manualGateSequence.HasValue) return manualGateSequence.Value;
+        throw new ReconciliationBusinessRuleException(ApiErrorCode.ReconciliationBranchRequiresManualGate, _localizer.Get("Reconciliation.BranchRequiresManualGate"));
     }
 
     private static DateTime? ResolveReviewExpirationAt(EvaluationOperation operation)
@@ -554,11 +538,9 @@ internal sealed class EvaluateService : IEvaluateService
 
         foreach (var row in rows)
         {
-            errors.Add(ReconciliationErrorMapper.MapException(
-                ex,
-                "EVALUATION_CHUNK",
-                fileLineId: row.Id,
-                message: $"Evaluation chunk preparation failed for file line '{row.Id}'."));
+            errors.Add(_errorMapper.MapException(
+                ex, "EVALUATION_CHUNK", fileLineId: row.Id,
+                message: _localizer.Get("Reconciliation.EvaluationChunkFailed", row.Id)));
 
             var evaluation = new ReconciliationEvaluation
             {
@@ -586,7 +568,6 @@ internal sealed class EvaluateService : IEvaluateService
         }
 
         _auditStampService.StampForCreate(evaluations.Cast<AuditEntity>().Concat(alerts.Cast<AuditEntity>()));
-
         await ExecuteInTransactionAsync(async () =>
         {
             await _dbContext.ReconciliationEvaluations.AddRangeAsync(evaluations, cancellationToken);
@@ -635,16 +616,31 @@ internal sealed class EvaluateService : IEvaluateService
                 cancellationToken);
     }
 
+    private async Task RefreshClaimAsync(
+        List<Guid> rowIds,
+        CancellationToken cancellationToken)
+    {
+        if (rowIds.Count == 0)
+            return;
+
+        var auditStamp = _auditStampService.CreateStamp();
+        await _dbContext.IngestionFileLines
+            .Where(x => rowIds.Contains(x.Id))
+            .Where(x => x.ReconciliationStatus == ReconciliationStatus.Processing)
+            .Where(x => x.Message != null && x.Message.StartsWith(ClaimMarkerPrefix))
+            .ExecuteUpdateAsync(update => update
+                .SetProperty(x => x.UpdateDate, auditStamp.Timestamp)
+                .SetProperty(x => x.LastModifiedBy, auditStamp.UserId),
+                cancellationToken);
+    }
+
     private int ResolveChunkSize(EvaluateRequest request)
     {
         return Math.Clamp(request.Options?.ChunkSize ?? _options.Evaluate.ChunkSize, 100, 10_000);
     }
 
-    private static EvaluateResponse CreateResponse(
-        Guid runId,
-        int fileCount,
-        int createdOperationCount,
-        int skippedCount,
+    private EvaluateResponse CreateResponse(
+        Guid runId, int fileCount, int createdOperationCount, int skippedCount,
         List<ReconciliationErrorDetail> errors)
     {
         return new EvaluateResponse
@@ -653,8 +649,8 @@ internal sealed class EvaluateService : IEvaluateService
             CreatedOperationsCount = createdOperationCount,
             SkippedCount = skippedCount,
             Message = errors.Count == 0
-                ? $"Reconciliation evaluation completed for {fileCount} file(s)."
-                : $"Reconciliation evaluation completed with {errors.Count} error(s) for {fileCount} file(s).",
+                ? _localizer.Get("Reconciliation.EvaluationCompletedSuccess", fileCount)
+                : _localizer.Get("Reconciliation.EvaluationCompletedWithErrors", errors.Count, fileCount),
             ErrorCount = errors.Count,
             Errors = errors
         };

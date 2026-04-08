@@ -13,6 +13,4 @@ public class EvaluateResponse : ReconciliationResponseBase
     [Range(0, int.MaxValue)]
     public int SkippedCount { get; set; }
 
-    [MaxLength(1000)]
-    public string Message { get; set; }
 }

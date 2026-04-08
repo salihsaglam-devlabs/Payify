@@ -8,7 +8,7 @@ public class ExecuteCommandValidator : AbstractValidator<ExecuteCommand>
 {
     public ExecuteCommandValidator(IStringLocalizerFactory factory)
     {
-        var localizer = factory.Create("Exceptions", "LinkPara.Card.API");
+        var localizer = factory.Create("Messages", "LinkPara.Card.API");
 
         RuleFor(x => x.Request)
             .NotNull();

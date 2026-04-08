@@ -1,5 +1,7 @@
 using System.Text.Json;
 using System.Globalization;
+using LinkPara.Card.Application.Commons.Exceptions;
+using Microsoft.Extensions.Localization;
 
 namespace LinkPara.Card.Infrastructure.Services.Reconciliation.Execute;
 
@@ -7,29 +9,32 @@ internal sealed class OperationPayloadAccessor
 {
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
     private readonly Dictionary<string, List<OperationPayloadEntry>> _payload;
+    private readonly IStringLocalizer _localizer;
 
-    public OperationPayloadAccessor(string? payloadJson)
+    public OperationPayloadAccessor(string? payloadJson, IStringLocalizer localizer)
     {
+        _localizer = localizer;
+
         if (string.IsNullOrWhiteSpace(payloadJson))
         {
-            throw new InvalidOperationException("Operation payload is empty.");
+            throw new ReconciliationPayloadException(ApiErrorCode.ReconciliationOperationPayloadEmpty, _localizer.Get("Reconciliation.OperationPayloadEmpty"));
         }
 
         _payload = JsonSerializer.Deserialize<Dictionary<string, List<OperationPayloadEntry>>>(payloadJson, JsonOptions)
-            ?? throw new InvalidOperationException("Operation payload could not be deserialized.");
+            ?? throw new ReconciliationPayloadException(ApiErrorCode.ReconciliationOperationPayloadDeserializeFailed, _localizer.Get("Reconciliation.OperationPayloadDeserializeFailed"));
     }
 
     public T GetRequiredValue<T>(string group, string key)
     {
         if (!_payload.TryGetValue(group, out var items))
         {
-            throw new InvalidOperationException($"Operation payload value '{group}.{key}' is missing.");
+            throw new ReconciliationPayloadException(ApiErrorCode.ReconciliationOperationPayloadValueMissing, _localizer.Get("Reconciliation.OperationPayloadValueMissing", group, key));
         }
 
         var entry = items.FirstOrDefault(x => string.Equals(x.Key, key, StringComparison.Ordinal));
         if (entry is null || string.IsNullOrWhiteSpace(entry.Value))
         {
-            throw new InvalidOperationException($"Operation payload value '{group}.{key}' is missing.");
+            throw new ReconciliationPayloadException(ApiErrorCode.ReconciliationOperationPayloadValueMissing, _localizer.Get("Reconciliation.OperationPayloadValueMissing", group, key));
         }
 
         return ConvertValue<T>(entry.Value);
@@ -51,7 +56,7 @@ internal sealed class OperationPayloadAccessor
         return ConvertValue<T>(entry.Value);
     }
 
-    private static T ConvertValue<T>(string value)
+    private T ConvertValue<T>(string value)
     {
         var targetType = Nullable.GetUnderlyingType(typeof(T)) ?? typeof(T);
 
@@ -83,7 +88,7 @@ internal sealed class OperationPayloadAccessor
 
         if (parsed is null)
         {
-            throw new InvalidOperationException($"Operation payload value '{value}' could not be converted to '{targetType.Name}'.");
+            throw new ReconciliationPayloadException(ApiErrorCode.ReconciliationOperationPayloadConversionFailed, _localizer.Get("Reconciliation.OperationPayloadConversionFailed", value, targetType.Name));
         }
 
         return (T)parsed;

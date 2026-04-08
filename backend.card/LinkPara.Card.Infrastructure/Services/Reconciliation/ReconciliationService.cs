@@ -1,4 +1,5 @@
 using LinkPara.Card.Application.Commons.Helpers.Reconciliation;
+using Microsoft.Extensions.Localization;
 using LinkPara.Card.Application.Commons.Interfaces.Reconciliation;
 using LinkPara.Card.Application.Commons.Models.Reconciliation;
 using LinkPara.Card.Infrastructure.Services.Reconciliation.Execute.Flow;
@@ -14,17 +15,23 @@ internal sealed class ReconciliationService : IReconciliationService
     private readonly ExecuteService _executeService;
     private readonly ReviewService _reviewService;
     private readonly GetAlertsService _alertsService;
+    private readonly IReconciliationErrorMapper _errorMapper;
+    private readonly IStringLocalizer _localizer;
 
     public ReconciliationService(
         IEvaluateService evaluateService,
         ExecuteService executeService,
         ReviewService reviewService,
-        GetAlertsService alertsService)
+        GetAlertsService alertsService,
+        IReconciliationErrorMapper errorMapper,
+        Func<LinkPara.Card.Application.Commons.Localization.LocalizerResource, IStringLocalizer> localizerFactory)
     {
         _evaluateService = evaluateService;
         _executeService = executeService;
         _reviewService = reviewService;
         _alertsService = alertsService;
+        _errorMapper = errorMapper;
+        _localizer = localizerFactory(LinkPara.Card.Application.Commons.Localization.LocalizerResource.Messages);
     }
 
     public async Task<EvaluateResponse> EvaluateAsync(EvaluateRequest request, CancellationToken cancellationToken = default)
@@ -39,10 +46,10 @@ internal sealed class ReconciliationService : IReconciliationService
         }
         catch (Exception ex)
         {
-            errors.Add(ReconciliationErrorMapper.MapException(ex, "RECONCILIATION_SERVICE_EVALUATE"));
+            errors.Add(_errorMapper.MapException(ex, "RECONCILIATION_SERVICE_EVALUATE"));
             return new EvaluateResponse
             {
-                Message = BuildFailureMessage("Reconciliation evaluation failed.", errors),
+                Message = BuildFailureMessage(_localizer.Get("Reconciliation.EvaluationFailed"), errors),
                 Errors = errors,
                 ErrorCount = errors.Count
             };
@@ -61,9 +68,10 @@ internal sealed class ReconciliationService : IReconciliationService
         }
         catch (Exception ex)
         {
-            errors.Add(ReconciliationErrorMapper.MapException(ex, "RECONCILIATION_SERVICE_EXECUTE"));
+            errors.Add(_errorMapper.MapException(ex, "RECONCILIATION_SERVICE_EXECUTE"));
             return new ExecuteResponse
             {
+                Message = BuildFailureMessage(_localizer.Get("Reconciliation.OperationExecutionFailed"), errors),
                 Errors = errors,
                 ErrorCount = errors.Count
             };
@@ -82,7 +90,7 @@ internal sealed class ReconciliationService : IReconciliationService
         }
         catch (Exception ex)
         {
-            errors.Add(ReconciliationErrorMapper.MapException(
+            errors.Add(_errorMapper.MapException(
                 ex,
                 "RECONCILIATION_SERVICE_APPROVE",
                 operationId: request.OperationId));
@@ -90,7 +98,7 @@ internal sealed class ReconciliationService : IReconciliationService
             {
                 OperationId = request.OperationId,
                 Result = "Failed",
-                Message = BuildFailureMessage("Manual review approval failed.", errors),
+                Message = BuildFailureMessage(_localizer.Get("Reconciliation.ManualReviewApprovalFailed"), errors),
                 Errors = errors,
                 ErrorCount = errors.Count
             };
@@ -109,7 +117,7 @@ internal sealed class ReconciliationService : IReconciliationService
         }
         catch (Exception ex)
         {
-            errors.Add(ReconciliationErrorMapper.MapException(
+            errors.Add(_errorMapper.MapException(
                 ex,
                 "RECONCILIATION_SERVICE_REJECT",
                 operationId: request.OperationId));
@@ -117,7 +125,7 @@ internal sealed class ReconciliationService : IReconciliationService
             {
                 OperationId = request.OperationId,
                 Result = "Failed",
-                Message = BuildFailureMessage("Manual review rejection failed.", errors),
+                Message = BuildFailureMessage(_localizer.Get("Reconciliation.ManualReviewRejectionFailed"), errors),
                 Errors = errors,
                 ErrorCount = errors.Count
             };
@@ -136,9 +144,10 @@ internal sealed class ReconciliationService : IReconciliationService
         }
         catch (Exception ex)
         {
-            errors.Add(ReconciliationErrorMapper.MapException(ex, "RECONCILIATION_SERVICE_GET_PENDING_REVIEWS"));
+            errors.Add(_errorMapper.MapException(ex, "RECONCILIATION_SERVICE_GET_PENDING_REVIEWS"));
             return new PendingReviewsResponse
             {
+                Message = BuildFailureMessage(_localizer.Get("Reconciliation.PendingReviewsLoadFailed"), errors),
                 Errors = errors,
                 ErrorCount = errors.Count
             };
@@ -157,9 +166,10 @@ internal sealed class ReconciliationService : IReconciliationService
         }
         catch (Exception ex)
         {
-            errors.Add(ReconciliationErrorMapper.MapException(ex, "RECONCILIATION_SERVICE_GET_ALERTS"));
+            errors.Add(_errorMapper.MapException(ex, "RECONCILIATION_SERVICE_GET_ALERTS"));
             return new GetAlertsResponse
             {
+                Message = BuildFailureMessage(_localizer.Get("Reconciliation.AlertsLoadFailed"), errors),
                 Errors = errors,
                 ErrorCount = errors.Count
             };

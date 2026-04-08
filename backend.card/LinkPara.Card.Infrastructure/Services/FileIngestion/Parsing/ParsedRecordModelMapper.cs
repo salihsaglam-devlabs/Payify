@@ -1,5 +1,6 @@
 using LinkPara.Card.Domain.Entities.FileIngestion;
-using LinkPara.Card.Application.Commons.Interfaces.Localization;
+using Microsoft.Extensions.Localization;
+using LinkPara.Card.Application.Commons.Exceptions;
 using System.Globalization;
 using System.Reflection;
 using System.Runtime.Serialization;
@@ -8,11 +9,11 @@ namespace LinkPara.Card.Infrastructure.Services.FileIngestion.Parsing;
 
 public class ParsedRecordModelMapper : IParsedRecordModelMapper
 {
-    private readonly ICardResourceLocalizer _localizer;
+    private readonly IStringLocalizer _localizer;
 
-    public ParsedRecordModelMapper(ICardResourceLocalizer localizer)
+    public ParsedRecordModelMapper(Func<LinkPara.Card.Application.Commons.Localization.LocalizerResource, IStringLocalizer> localizerFactory)
     {
-        _localizer = localizer;
+        _localizer = localizerFactory(LinkPara.Card.Application.Commons.Localization.LocalizerResource.Messages);
     }
 
     public object Create(string profileKey, ParsedFileLine parsedLine)
@@ -37,11 +38,11 @@ public class ParsedRecordModelMapper : IParsedRecordModelMapper
             ("CardBkm", "H") => MapCardBkmHeader(parsedLine),
             ("CardBkm", "D") => MapCardBkmDetail(parsedLine),
             ("CardBkm", "F") => MapCardBkmFooter(parsedLine),
-            _ => throw new InvalidOperationException(_localizer.Get("FileIngestion.TypedSchemaMapperMissing", profileKey, parsedLine.RecordType))
+            _ => throw new FileIngestionMappingException(ApiErrorCode.FileIngestionTypedSchemaMapperMissing, _localizer.Get("FileIngestion.TypedSchemaMapperMissing", profileKey, parsedLine.RecordType))
         };
     }
 
-    private static ClearingVisaHeader MapClearingVisaHeader(ParsedFileLine line) => new()
+    private ClearingVisaHeader MapClearingVisaHeader(ParsedFileLine line) => new()
     {
         HeaderCode = EnumValue<ClearingVisaHeaderCode>(line, nameof(ClearingVisaHeader.HeaderCode), "HeaderCode"),
         FileDate = Value(line, nameof(ClearingVisaHeader.FileDate)),
@@ -49,7 +50,7 @@ public class ParsedRecordModelMapper : IParsedRecordModelMapper
         FileVersionNumber = Value(line, nameof(ClearingVisaHeader.FileVersionNumber))
     };
 
-    private static ClearingVisaDetail MapClearingVisaDetail(ParsedFileLine line) => new()
+    private ClearingVisaDetail MapClearingVisaDetail(ParsedFileLine line) => new()
     {
         TxnType = EnumValue<ClearingVisaTxnType>(line, nameof(ClearingVisaDetail.TxnType)),
         IoDate = Value(line, nameof(ClearingVisaDetail.IoDate)),
@@ -84,14 +85,14 @@ public class ParsedRecordModelMapper : IParsedRecordModelMapper
         FileId = Value(line, nameof(ClearingVisaDetail.FileId))
     };
 
-    private static ClearingVisaFooter MapClearingVisaFooter(ParsedFileLine line) => new()
+    private ClearingVisaFooter MapClearingVisaFooter(ParsedFileLine line) => new()
     {
         FooterCode = EnumValue<ClearingVisaFooterCode>(line, nameof(ClearingVisaFooter.FooterCode)),
         FileDate = Value(line, nameof(ClearingVisaFooter.FileDate)),
         TxnCount = LongValue(line, nameof(ClearingVisaFooter.TxnCount))
     };
 
-    private static ClearingMscHeader MapClearingMscHeader(ParsedFileLine line) => new()
+    private ClearingMscHeader MapClearingMscHeader(ParsedFileLine line) => new()
     {
         HeaderCode = EnumValue<ClearingMscHeaderCode>(line, nameof(ClearingMscHeader.HeaderCode)),
         FileDate = Value(line, nameof(ClearingMscHeader.FileDate)),
@@ -99,7 +100,7 @@ public class ParsedRecordModelMapper : IParsedRecordModelMapper
         FileVersionNumber = Value(line, nameof(ClearingMscHeader.FileVersionNumber))
     };
 
-    private static ClearingMscDetail MapClearingMscDetail(ParsedFileLine line) => new()
+    private ClearingMscDetail MapClearingMscDetail(ParsedFileLine line) => new()
     {
         TxnType = EnumValue<ClearingMscTxnType>(line, nameof(ClearingMscDetail.TxnType)),
         IoDate = Value(line, nameof(ClearingMscDetail.IoDate)),
@@ -138,14 +139,14 @@ public class ParsedRecordModelMapper : IParsedRecordModelMapper
         FileId = Value(line, nameof(ClearingMscDetail.FileId))
     };
 
-    private static ClearingMscFooter MapClearingMscFooter(ParsedFileLine line) => new()
+    private ClearingMscFooter MapClearingMscFooter(ParsedFileLine line) => new()
     {
         FooterCode = EnumValue<ClearingMscFooterCode>(line, nameof(ClearingMscFooter.FooterCode)),
         FileDate = Value(line, nameof(ClearingMscFooter.FileDate)),
         TxnCount = LongValue(line, nameof(ClearingMscFooter.TxnCount))
     };
 
-    private static ClearingBkmHeader MapClearingBkmHeader(ParsedFileLine line) => new()
+    private ClearingBkmHeader MapClearingBkmHeader(ParsedFileLine line) => new()
     {
         HeaderCode = EnumValue<ClearingBkmHeaderCode>(line, nameof(ClearingBkmHeader.HeaderCode)),
         FileDate = Value(line, nameof(ClearingBkmHeader.FileDate)),
@@ -153,7 +154,7 @@ public class ParsedRecordModelMapper : IParsedRecordModelMapper
         FileVersionNumber = Value(line, nameof(ClearingBkmHeader.FileVersionNumber))
     };
 
-    private static ClearingBkmDetail MapClearingBkmDetail(ParsedFileLine line) => new()
+    private ClearingBkmDetail MapClearingBkmDetail(ParsedFileLine line) => new()
     {
         TxnType = EnumValue<ClearingBkmTxnType>(line, nameof(ClearingBkmDetail.TxnType)),
         IoDate = Value(line, nameof(ClearingBkmDetail.IoDate)),
@@ -189,14 +190,14 @@ public class ParsedRecordModelMapper : IParsedRecordModelMapper
         FileId = Value(line, nameof(ClearingBkmDetail.FileId))
     };
 
-    private static ClearingBkmFooter MapClearingBkmFooter(ParsedFileLine line) => new()
+    private ClearingBkmFooter MapClearingBkmFooter(ParsedFileLine line) => new()
     {
         FooterCode = EnumValue<ClearingBkmFooterCode>(line, nameof(ClearingBkmFooter.FooterCode)),
         FileDate = Value(line, nameof(ClearingBkmFooter.FileDate)),
         TxnCount = LongValue(line, nameof(ClearingBkmFooter.TxnCount))
     };
 
-    private static CardVisaHeader MapCardVisaHeader(ParsedFileLine line) => new()
+    private CardVisaHeader MapCardVisaHeader(ParsedFileLine line) => new()
     {
         HeaderCode = EnumValue<CardVisaHeaderCode>(line, nameof(CardVisaHeader.HeaderCode)),
         FileDate = Value(line, nameof(CardVisaHeader.FileDate)),
@@ -204,7 +205,7 @@ public class ParsedRecordModelMapper : IParsedRecordModelMapper
         FileVersionNumber = Value(line, nameof(CardVisaHeader.FileVersionNumber))
     };
 
-    private static CardVisaDetail MapCardVisaDetail(ParsedFileLine line) => new()
+    private CardVisaDetail MapCardVisaDetail(ParsedFileLine line) => new()
     {
         TransactionDate = IntValue(line, nameof(CardVisaDetail.TransactionDate)),
         TransactionTime = IntValue(line, nameof(CardVisaDetail.TransactionTime)),
@@ -269,14 +270,14 @@ public class ParsedRecordModelMapper : IParsedRecordModelMapper
         CcPointAmount = DecimalValue(line, nameof(CardVisaDetail.CcPointAmount))
     };
 
-    private static CardVisaFooter MapCardVisaFooter(ParsedFileLine line) => new()
+    private CardVisaFooter MapCardVisaFooter(ParsedFileLine line) => new()
     {
         FooterCode = EnumValue<CardVisaFooterCode>(line, nameof(CardVisaFooter.FooterCode)),
         FileDate = Value(line, nameof(CardVisaFooter.FileDate)),
         TxnCount = LongValue(line, nameof(CardVisaFooter.TxnCount))
     };
 
-    private static CardMscHeader MapCardMscHeader(ParsedFileLine line) => new()
+    private CardMscHeader MapCardMscHeader(ParsedFileLine line) => new()
     {
         HeaderCode = EnumValue<CardMscHeaderCode>(line, nameof(CardMscHeader.HeaderCode)),
         FileDate = Value(line, nameof(CardMscHeader.FileDate)),
@@ -284,7 +285,7 @@ public class ParsedRecordModelMapper : IParsedRecordModelMapper
         FileVersionNumber = Value(line, nameof(CardMscHeader.FileVersionNumber))
     };
 
-    private static CardMscDetail MapCardMscDetail(ParsedFileLine line) => new()
+    private CardMscDetail MapCardMscDetail(ParsedFileLine line) => new()
     {
         TransactionDate = IntValue(line, nameof(CardMscDetail.TransactionDate)),
         TransactionTime = IntValue(line, nameof(CardMscDetail.TransactionTime)),
@@ -349,14 +350,14 @@ public class ParsedRecordModelMapper : IParsedRecordModelMapper
         CcPointAmount = DecimalValue(line, nameof(CardMscDetail.CcPointAmount))
     };
 
-    private static CardMscFooter MapCardMscFooter(ParsedFileLine line) => new()
+    private CardMscFooter MapCardMscFooter(ParsedFileLine line) => new()
     {
         FooterCode = EnumValue<CardMscFooterCode>(line, nameof(CardMscFooter.FooterCode)),
         FileDate = Value(line, nameof(CardMscFooter.FileDate)),
         TxnCount = LongValue(line, nameof(CardMscFooter.TxnCount))
     };
 
-    private static CardBkmHeader MapCardBkmHeader(ParsedFileLine line) => new()
+    private CardBkmHeader MapCardBkmHeader(ParsedFileLine line) => new()
     {
         HeaderCode = EnumValue<CardBkmHeaderCode>(line, nameof(CardBkmHeader.HeaderCode)),
         FileDate = Value(line, nameof(CardBkmHeader.FileDate)),
@@ -364,7 +365,7 @@ public class ParsedRecordModelMapper : IParsedRecordModelMapper
         FileVersionNumber = Value(line, nameof(CardBkmHeader.FileVersionNumber))
     };
 
-    private static CardBkmDetail MapCardBkmDetail(ParsedFileLine line) => new()
+    private CardBkmDetail MapCardBkmDetail(ParsedFileLine line) => new()
     {
         TransactionDate = IntValue(line, nameof(CardBkmDetail.TransactionDate)),
         TransactionTime = IntValue(line, nameof(CardBkmDetail.TransactionTime)),
@@ -429,7 +430,7 @@ public class ParsedRecordModelMapper : IParsedRecordModelMapper
         CcPointAmount = DecimalValue(line, nameof(CardBkmDetail.CcPointAmount))
     };
 
-    private static CardBkmFooter MapCardBkmFooter(ParsedFileLine line) => new()
+    private CardBkmFooter MapCardBkmFooter(ParsedFileLine line) => new()
     {
         FooterCode = EnumValue<CardBkmFooterCode>(line, nameof(CardBkmFooter.FooterCode)),
         FileDate = Value(line, nameof(CardBkmFooter.FileDate)),
@@ -450,7 +451,7 @@ public class ParsedRecordModelMapper : IParsedRecordModelMapper
         return string.Empty;
     }
 
-    private static decimal DecimalValue(ParsedFileLine line, string key, params string[] aliases)
+    private decimal DecimalValue(ParsedFileLine line, string key, params string[] aliases)
     {
         var rawValue = Value(line, key, aliases);
         if (string.IsNullOrWhiteSpace(rawValue))
@@ -462,10 +463,10 @@ public class ParsedRecordModelMapper : IParsedRecordModelMapper
         if (decimal.TryParse(rawValue, NumberStyles.Any, CultureInfo.GetCultureInfo("tr-TR"), out var trValue))
             return trValue;
 
-        throw new InvalidOperationException(_localizer.Get("FileIngestion.DecimalValueInvalid", rawValue, key));
+        throw new FileIngestionValueConversionException(ApiErrorCode.FileIngestionDecimalValueInvalid, _localizer.Get("FileIngestion.DecimalValueInvalid", rawValue, key));
     }
 
-    private static int IntValue(ParsedFileLine line, string key, params string[] aliases)
+    private int IntValue(ParsedFileLine line, string key, params string[] aliases)
     {
         var rawValue = Value(line, key, aliases);
         if (string.IsNullOrWhiteSpace(rawValue))
@@ -477,10 +478,10 @@ public class ParsedRecordModelMapper : IParsedRecordModelMapper
         if (int.TryParse(rawValue, NumberStyles.Integer, CultureInfo.GetCultureInfo("tr-TR"), out var trValue))
             return trValue;
 
-        throw new InvalidOperationException(_localizer.Get("FileIngestion.IntValueInvalid", rawValue, key));
+        throw new FileIngestionValueConversionException(ApiErrorCode.FileIngestionIntValueInvalid, _localizer.Get("FileIngestion.IntValueInvalid", rawValue, key));
     }
 
-    private static long LongValue(ParsedFileLine line, string key, params string[] aliases)
+    private long LongValue(ParsedFileLine line, string key, params string[] aliases)
     {
         var rawValue = Value(line, key, aliases);
         if (string.IsNullOrWhiteSpace(rawValue))
@@ -492,10 +493,10 @@ public class ParsedRecordModelMapper : IParsedRecordModelMapper
         if (long.TryParse(rawValue, NumberStyles.Integer, CultureInfo.GetCultureInfo("tr-TR"), out var trValue))
             return trValue;
 
-        throw new InvalidOperationException(_localizer.Get("FileIngestion.LongValueInvalid", rawValue, key));
+        throw new FileIngestionValueConversionException(ApiErrorCode.FileIngestionLongValueInvalid, _localizer.Get("FileIngestion.LongValueInvalid", rawValue, key));
     }
 
-    private static TEnum EnumValue<TEnum>(ParsedFileLine line, string key, params string[] aliases)
+    private TEnum EnumValue<TEnum>(ParsedFileLine line, string key, params string[] aliases)
         where TEnum : struct, Enum
     {
         var rawValue = Value(line, key, aliases);
@@ -505,7 +506,7 @@ public class ParsedRecordModelMapper : IParsedRecordModelMapper
         return ParseEnumMember<TEnum>(rawValue);
     }
 
-    private static TEnum? NullableEnumValue<TEnum>(ParsedFileLine line, string key, params string[] aliases)
+    private TEnum? NullableEnumValue<TEnum>(ParsedFileLine line, string key, params string[] aliases)
         where TEnum : struct, Enum
     {
         var rawValue = Value(line, key, aliases);
@@ -515,7 +516,7 @@ public class ParsedRecordModelMapper : IParsedRecordModelMapper
         return ParseEnumMember<TEnum>(rawValue);
     }
 
-    private static TEnum ParseEnumMember<TEnum>(string rawValue)
+    private TEnum ParseEnumMember<TEnum>(string rawValue)
         where TEnum : struct, Enum
     {
         foreach (var field in typeof(TEnum).GetFields(BindingFlags.Public | BindingFlags.Static))
@@ -528,6 +529,6 @@ public class ParsedRecordModelMapper : IParsedRecordModelMapper
                 return (TEnum)field.GetValue(null)!;
         }
 
-        throw new InvalidOperationException(_localizer.Get("FileIngestion.EnumValueInvalid", rawValue, typeof(TEnum).Name));
+        throw new FileIngestionValueConversionException(ApiErrorCode.FileIngestionEnumValueInvalid, _localizer.Get("FileIngestion.EnumValueInvalid", rawValue, typeof(TEnum).Name));
     }
 }

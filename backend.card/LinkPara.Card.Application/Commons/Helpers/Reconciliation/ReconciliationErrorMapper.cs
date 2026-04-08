@@ -1,6 +1,6 @@
 #nullable enable
 using System.Text;
-using LinkPara.Card.Application.Commons.Interfaces.Localization;
+using Microsoft.Extensions.Localization;
 using LinkPara.Card.Application.Commons.Interfaces.Reconciliation;
 using LinkPara.Card.Application.Commons.Models.Reconciliation;
 
@@ -8,11 +8,11 @@ namespace LinkPara.Card.Application.Commons.Helpers.Reconciliation;
 
 public sealed class ReconciliationErrorMapper : IReconciliationErrorMapper
 {
-    private readonly ICardResourceLocalizer _localizer;
+    private readonly IStringLocalizer _localizer;
 
-    public ReconciliationErrorMapper(ICardResourceLocalizer localizer)
+    public ReconciliationErrorMapper(Func<LinkPara.Card.Application.Commons.Localization.LocalizerResource, IStringLocalizer> localizerFactory)
     {
-        _localizer = localizer;
+        _localizer = localizerFactory(LinkPara.Card.Application.Commons.Localization.LocalizerResource.Messages);
     }
 
     public ReconciliationErrorDetail MapException(

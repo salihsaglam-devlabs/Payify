@@ -1,0 +1,894 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <!-- 
+    Microsoft ResX Schema 
+    
+    Version 2.0
+    
+    The primary goals of this format is to allow a simple XML format 
+    that is mostly human readable. The generation and parsing of the 
+    various data types are done through the TypeConverter classes 
+    associated with the data types.
+    
+    Example:
+    
+    ... ado.net/XML headers & schema ...
+    <resheader name="resmimetype">text/microsoft-resx</resheader>
+    <resheader name="version">2.0</resheader>
+    <resheader name="reader">System.Resources.ResXResourceReader, System.Windows.Forms, ...</resheader>
+    <resheader name="writer">System.Resources.ResXResourceWriter, System.Windows.Forms, ...</resheader>
+    <data name="Name1"><value>this is my long string</value><comment>this is a comment</comment></data>
+    <data name="Color1" type="System.Drawing.Color, System.Drawing">Blue</data>
+    <data name="Bitmap1" mimetype="application/x-microsoft.net.object.binary.base64">
+        <value>[base64 mime encoded serialized .NET Framework object]</value>
+    </data>
+    <data name="Icon1" type="System.Drawing.Icon, System.Drawing" mimetype="application/x-microsoft.net.object.bytearray.base64">
+        <value>[base64 mime encoded string representing a byte array form of the .NET Framework object]</value>
+        <comment>This is a comment</comment>
+    </data>
+                
+    There are any number of "resheader" rows that contain simple 
+    name/value pairs.
+    
+    Each data row contains a name, and value. The row also contains a 
+    type or mimetype. Type corresponds to a .NET class that support 
+    text/value conversion through the TypeConverter architecture. 
+    Classes that don't support this are serialized and stored with the 
+    mimetype set.
+    
+    The mimetype is used for serialized objects, and tells the 
+    ResXResourceReader how to depersist the object. This is currently not 
+    extensible. For a given mimetype the value must be set accordingly:
+    
+    Note - application/x-microsoft.net.object.binary.base64 is the format 
+    that the ResXResourceWriter will generate, however the reader can 
+    read any of the formats listed below.
+    
+    mimetype: application/x-microsoft.net.object.binary.base64
+    value   : The object must be serialized with 
+            : System.Runtime.Serialization.Formatters.Binary.BinaryFormatter
+            : and then encoded with base64 encoding.
+    
+    mimetype: application/x-microsoft.net.object.soap.base64
+    value   : The object must be serialized with 
+            : System.Runtime.Serialization.Formatters.Soap.SoapFormatter
+            : and then encoded with base64 encoding.
+
+    mimetype: application/x-microsoft.net.object.bytearray.base64
+    value   : The object must be serialized into a byte array 
+            : using a System.ComponentModel.TypeConverter
+            : and then encoded with base64 encoding.
+    -->
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="metadata">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" />
+              </xsd:sequence>
+              <xsd:attribute name="name" use="required" type="xsd:string" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="assembly">
+            <xsd:complexType>
+              <xsd:attribute name="alias" type="xsd:string" />
+              <xsd:attribute name="name" type="xsd:string" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1" />
+              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
+              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+
+  <!-- ════════════════════════════════════════════ -->
+  <!-- Common                                       -->
+  <!-- ════════════════════════════════════════════ -->
+  <data name="Common.OperationCancelled" xml:space="preserve">
+    <value>Operation was cancelled.</value>
+  </data>
+
+  <!-- ════════════════════════════════════════════ -->
+  <!-- Validation                                   -->
+  <!-- ════════════════════════════════════════════ -->
+  <data name="Validation.FilePathMustBeEmptyForRemote" xml:space="preserve">
+    <value>File path must be empty for remote file sources.</value>
+  </data>
+  <data name="Validation.FilePathRequiredForLocal" xml:space="preserve">
+    <value>File path is required for local file sources.</value>
+  </data>
+  <data name="Validation.IngestionFileIdsDistinct" xml:space="preserve">
+    <value>Ingestion file IDs must be unique.</value>
+  </data>
+  <data name="Validation.GroupIdsDistinct" xml:space="preserve">
+    <value>Group IDs must be unique.</value>
+  </data>
+  <data name="Validation.EvaluationIdsDistinct" xml:space="preserve">
+    <value>Evaluation IDs must be unique.</value>
+  </data>
+  <data name="Validation.OperationIdsDistinct" xml:space="preserve">
+    <value>Operation IDs must be unique.</value>
+  </data>
+
+  <!-- ════════════════════════════════════════════ -->
+  <!-- FileIngestion – Error Mapper                 -->
+  <!-- ════════════════════════════════════════════ -->
+  <data name="FileIngestion.ParseError" xml:space="preserve">
+    <value>Failed to parse field '{0}'.</value>
+  </data>
+  <data name="FileIngestion.ParseErrorDetail" xml:space="preserve">
+    <value>Field '{0}' could not be parsed. Attempted value: '{1}'. Expected format: '{2}'.</value>
+  </data>
+  <data name="FileIngestion.DatabaseOperationFailed" xml:space="preserve">
+    <value>Database operation failed.</value>
+  </data>
+  <data name="FileIngestion.FileNotFoundForFile" xml:space="preserve">
+    <value>File not found: '{0}'.</value>
+  </data>
+  <data name="FileIngestion.AccessDeniedForFile" xml:space="preserve">
+    <value>Access denied for file: '{0}'.</value>
+  </data>
+  <data name="FileIngestion.IoErrorForFile" xml:space="preserve">
+    <value>I/O error occurred for file: '{0}'.</value>
+  </data>
+  <data name="FileIngestion.OperationFailedForFile" xml:space="preserve">
+    <value>Operation failed for file: '{0}'.</value>
+  </data>
+  <data name="FileIngestion.TransferFailed" xml:space="preserve">
+    <value>File transfer failed.</value>
+  </data>
+  <data name="FileIngestion.FileNotFound" xml:space="preserve">
+    <value>File not found.</value>
+  </data>
+  <data name="FileIngestion.AccessDenied" xml:space="preserve">
+    <value>Access denied.</value>
+  </data>
+  <data name="FileIngestion.IoError" xml:space="preserve">
+    <value>I/O error occurred.</value>
+  </data>
+  <data name="FileIngestion.InvalidOperation" xml:space="preserve">
+    <value>Invalid operation.</value>
+  </data>
+  <data name="FileIngestion.InvalidArgument" xml:space="preserve">
+    <value>Invalid argument.</value>
+  </data>
+  <data name="FileIngestion.FormatError" xml:space="preserve">
+    <value>Format error.</value>
+  </data>
+  <data name="FileIngestion.NotSupported" xml:space="preserve">
+    <value>Operation not supported.</value>
+  </data>
+  <data name="FileIngestion.Timeout" xml:space="preserve">
+    <value>Operation timed out.</value>
+  </data>
+  <data name="FileIngestion.HttpError" xml:space="preserve">
+    <value>HTTP request failed.</value>
+  </data>
+  <data name="FileIngestion.InternalError" xml:space="preserve">
+    <value>An internal error occurred.</value>
+  </data>
+
+  <!-- ════════════════════════════════════════════ -->
+  <!-- FileIngestion – Orchestrator / Services      -->
+  <!-- ════════════════════════════════════════════ -->
+  <data name="FileIngestion.InvalidRequest" xml:space="preserve">
+    <value>Invalid ingestion request.</value>
+  </data>
+  <data name="FileIngestion.NoMatchingFile" xml:space="preserve">
+    <value>No matching files found for profile '{0}'.</value>
+  </data>
+  <data name="FileIngestion.Cancelled" xml:space="preserve">
+    <value>File ingestion was cancelled.</value>
+  </data>
+  <data name="FileIngestion.ImportFailed" xml:space="preserve">
+    <value>File import failed.</value>
+  </data>
+  <data name="FileIngestion.OperationCancelled" xml:space="preserve">
+    <value>File ingestion operation was cancelled.</value>
+  </data>
+  <data name="FileIngestion.ImportStarted" xml:space="preserve">
+    <value>Import started.</value>
+  </data>
+  <data name="FileIngestion.ReArchiveStarted" xml:space="preserve">
+    <value>Previously archived file data changed. Re-archiving started.</value>
+  </data>
+  <data name="FileIngestion.DuplicateFileReceived" xml:space="preserve">
+    <value>The same file was received successfully before.</value>
+  </data>
+  <data name="FileIngestion.ReprocessedSuccessfully" xml:space="preserve">
+    <value>Reprocessed successfully.</value>
+  </data>
+  <data name="FileIngestion.RowRetryLimitExceeded" xml:space="preserve">
+    <value>Row retry limit exceeded for line {0}.</value>
+  </data>
+  <data name="FileIngestion.ParsedAndPersistedSuccessfully" xml:space="preserve">
+    <value>Parsed and persisted successfully.</value>
+  </data>
+  <data name="FileIngestion.ReconciliationKeyNotGenerated" xml:space="preserve">
+    <value>{0} Reconciliation key could not be generated.</value>
+  </data>
+  <data name="FileIngestion.ExpectedCountMismatch" xml:space="preserve">
+    <value>The expected detail line count ({0}) does not match the processed line count ({1}).</value>
+  </data>
+  <data name="FileIngestion.LinesInvalid" xml:space="preserve">
+    <value>{0} lines are invalid.</value>
+  </data>
+  <data name="FileIngestion.FileCopyFailed" xml:space="preserve">
+    <value>The file could not be copied to the target path.</value>
+  </data>
+  <data name="FileIngestion.FileImportedNotArchived" xml:space="preserve">
+    <value>The file was imported into the environment but could not be archived. Error: {0}</value>
+  </data>
+  <data name="FileIngestion.FileProcessedSuccessfully" xml:space="preserve">
+    <value>The file was processed successfully.</value>
+  </data>
+  <data name="FileIngestion.IngestionFailedDefault" xml:space="preserve">
+    <value>File ingestion failed. See errors for details.</value>
+  </data>
+  <data name="FileIngestion.IngestionFailedWithMessage" xml:space="preserve">
+    <value>File ingestion failed. {0}</value>
+  </data>
+  <data name="FileIngestion.ArchiveStatusUpdateRowMismatch" xml:space="preserve">
+    <value>Archive status update affected {0} rows for IngestionFileId={1}.</value>
+  </data>
+  <data name="FileIngestion.HeaderNotResolved" xml:space="preserve">
+    <value>Header record could not be resolved from file '{0}'.</value>
+  </data>
+  <data name="FileIngestion.FooterNotResolved" xml:space="preserve">
+    <value>Footer record could not be resolved from file '{0}'.</value>
+  </data>
+  <data name="FileIngestion.HeaderNotFound" xml:space="preserve">
+    <value>Header record not found in file '{0}': {1}</value>
+  </data>
+  <data name="FileIngestion.FooterNotFound" xml:space="preserve">
+    <value>Footer record not found in file '{0}': {1}</value>
+  </data>
+  <data name="FileIngestion.InvalidBoundaryRecord" xml:space="preserve">
+    <value>Invalid boundary record in file '{0}': {1}</value>
+  </data>
+  <data name="FileIngestion.BoundaryRecordReadFailed" xml:space="preserve">
+    <value>Failed to read the boundary records from file '{0}': {1}</value>
+  </data>
+  <data name="FileIngestion.BoundaryRecordEmpty" xml:space="preserve">
+    <value>File {0} record could not be resolved.</value>
+  </data>
+  <data name="FileIngestion.RecordTypeMismatch" xml:space="preserve">
+    <value>Expected record type '{0}' but found '{1}'.</value>
+  </data>
+  <data name="FileIngestion.PropertyNotDefined" xml:space="preserve">
+    <value>Property '{0}' is not defined on '{1}'.</value>
+  </data>
+  <data name="FileIngestion.PropertyEmpty" xml:space="preserve">
+    <value>Property '{0}' is empty on '{1}'.</value>
+  </data>
+  <data name="FileIngestion.FooterTxnCountMissing" xml:space="preserve">
+    <value>Footer model '{0}' does not define TxnCount.</value>
+  </data>
+  <data name="FileIngestion.FilePatternMismatch" xml:space="preserve">
+    <value>File '{0}' does not match configured profile pattern.</value>
+  </data>
+  <data name="FileIngestion.ProfileNotConfigured" xml:space="preserve">
+    <value>File profile '{0}' is not configured.</value>
+  </data>
+  <data name="FileIngestion.ParsingNotDefined" xml:space="preserve">
+    <value>File profile parsing configuration is not defined.</value>
+  </data>
+  <data name="FileIngestion.RecordNotFoundFromStart" xml:space="preserve">
+    <value>Record '{0}' could not be found from the file start.</value>
+  </data>
+  <data name="FileIngestion.RecordNotFoundFromEnd" xml:space="preserve">
+    <value>Record '{0}' could not be found from the file end.</value>
+  </data>
+  <data name="FileIngestion.EntityTypeNotMapped" xml:space="preserve">
+    <value>IngestionFileLine entity type is not mapped.</value>
+  </data>
+  <data name="FileIngestion.SqlBulkInsertFailed" xml:space="preserve">
+    <value>SQL Server bulk insert operation failed: {0}</value>
+  </data>
+  <data name="FileIngestion.PostgreBulkInsertFailed" xml:space="preserve">
+    <value>PostgreSQL bulk insert operation failed: {0}</value>
+  </data>
+  <data name="FileIngestion.BulkPropertyMappingNotDefined" xml:space="preserve">
+    <value>Bulk property mapping is not defined for entity '{0}'.</value>
+  </data>
+  <data name="FileIngestion.PropertyNotMapped" xml:space="preserve">
+    <value>Property '{0}' is not mapped for entity '{1}'.</value>
+  </data>
+  <data name="FileIngestion.UnsupportedBulkType" xml:space="preserve">
+    <value>Unsupported PostgreSQL bulk type '{0}'.</value>
+  </data>
+  <data name="FileIngestion.Detail.BoundaryReadFailed" xml:space="preserve">
+    <value>Failed to read or parse file boundary records: {0}</value>
+  </data>
+  <data name="FileIngestion.Detail.FileKeyGenerationFailed" xml:space="preserve">
+    <value>Failed to generate unique file key from header and footer records.</value>
+  </data>
+  <data name="FileIngestion.Detail.DuplicateCheckFailed" xml:space="preserve">
+    <value>Failed to check if the file was previously ingested.</value>
+  </data>
+  <data name="FileIngestion.Detail.DuplicateInsertNotResolved" xml:space="preserve">
+    <value>A duplicate file insert was detected, but the existing file record could not be resolved.</value>
+  </data>
+  <data name="FileIngestion.Detail.FileEntityCreateFailed" xml:space="preserve">
+    <value>Failed to create the transaction file record in the database.</value>
+  </data>
+  <data name="FileIngestion.Detail.ArchiveOpenFailed" xml:space="preserve">
+    <value>Failed to open the target archive for writing.</value>
+  </data>
+  <data name="FileIngestion.Detail.FileStreamOpenFailed" xml:space="preserve">
+    <value>Failed to open the source file for reading.</value>
+  </data>
+  <data name="FileIngestion.Detail.FileProcessingError" xml:space="preserve">
+    <value>Error during file line processing at line {0}: {1}</value>
+  </data>
+  <data name="FileIngestion.Detail.ArchiveFinalizeFailed" xml:space="preserve">
+    <value>Failed to finalize the target archive.</value>
+  </data>
+  <data name="FileIngestion.Detail.ArchiveError" xml:space="preserve">
+    <value> Archive error: {0}</value>
+  </data>
+  <data name="FileIngestion.Detail.ArchiveStatusUpdateFailed" xml:space="preserve">
+    <value>Failed to update the archive status in the database.</value>
+  </data>
+  <data name="FileIngestion.Detail.FileFinalizeFailed" xml:space="preserve">
+    <value>Failed to finalize the file state in the database.</value>
+  </data>
+  <data name="FileIngestion.Detail.FileRetrievalFailed" xml:space="preserve">
+    <value>Failed to retrieve the finalized file record.</value>
+  </data>
+  <data name="FileIngestion.Detail.RecoveryInitFailed" xml:space="preserve">
+    <value>Failed to retrieve the file for recovery.</value>
+  </data>
+  <data name="FileIngestion.Detail.RecoveryMissingRowsFailed" xml:space="preserve">
+    <value>Failed to recover missing rows for the file.</value>
+  </data>
+  <data name="FileIngestion.Detail.RecoveryFailedRowsFailed" xml:space="preserve">
+    <value>Failed to retry failed rows for the file.</value>
+  </data>
+  <data name="FileIngestion.Detail.RecoveryStatusCheckFailed" xml:space="preserve">
+    <value>Failed to check the file status during recovery.</value>
+  </data>
+  <data name="FileIngestion.Detail.RecoveryArchiveFailed" xml:space="preserve">
+    <value>Failed to retry the archive operation during recovery.</value>
+  </data>
+  <data name="FileIngestion.Detail.RecoveryFinalizeFailed" xml:space="preserve">
+    <value>Failed to finalize the file state after recovery.</value>
+  </data>
+  <data name="FileIngestion.Detail.RecoveryFinalRetrievalFailed" xml:space="preserve">
+    <value>Failed to retrieve the recovered file.</value>
+  </data>
+  <data name="FileIngestion.Detail.RecoveryStreamOpenFailed" xml:space="preserve">
+    <value>Failed to open the source file for recovery.</value>
+  </data>
+  <data name="FileIngestion.Detail.RecoveryMissingRowsProcessingError" xml:space="preserve">
+    <value>Error processing missing rows at line {0}: {1}</value>
+  </data>
+  <data name="FileIngestion.Detail.RowRetryFailed" xml:space="preserve">
+    <value>Failed to reprocess row {0}: {1}</value>
+  </data>
+  <data name="FileIngestion.Detail.FailedRowBatchRetryFailed" xml:space="preserve">
+    <value>Failed to retry the failed row batch.</value>
+  </data>
+  <data name="FileIngestion.Detail.ArchiveRetryInitFailed" xml:space="preserve">
+    <value>Failed to retrieve the file for archive retry.</value>
+  </data>
+  <data name="FileIngestion.Detail.ArchiveStreamOpenTargetFailed" xml:space="preserve">
+    <value>Failed to open the target archive stream for writing.</value>
+  </data>
+  <data name="FileIngestion.Detail.ArchiveStreamOpenSourceFailed" xml:space="preserve">
+    <value>Failed to open the source file stream for reading during archive.</value>
+  </data>
+  <data name="FileIngestion.Detail.ArchiveStreamCopyFailed" xml:space="preserve">
+    <value>Failed to copy the source file to the archive.</value>
+  </data>
+  <data name="FileIngestion.Detail.ArchiveMarkCompleteFailed" xml:space="preserve">
+    <value>Failed to mark the file as archived.</value>
+  </data>
+  <data name="FileIngestion.Detail.ArchiveMarkIncompleteFailed" xml:space="preserve">
+    <value>Failed to mark the file as not archived after the archive failure.</value>
+  </data>
+  <data name="FileIngestion.Detail.ArchiveRetryFinalizeFailed" xml:space="preserve">
+    <value>Failed to finalize the file state after archive retry.</value>
+  </data>
+  <data name="FileIngestion.Detail.ArchiveRetryFinalRetrievalFailed" xml:space="preserve">
+    <value>Failed to retrieve the file after archive retry.</value>
+  </data>
+
+  <!-- FileIngestion – Transport -->
+  <data name="FileIngestion.UnsupportedProtocol" xml:space="preserve">
+    <value>Unsupported file transfer protocol: '{0}'.</value>
+  </data>
+  <data name="FileIngestion.SftpPathNotConfigured" xml:space="preserve">
+    <value>SFTP path is not configured for profile '{0}'.</value>
+  </data>
+  <data name="FileIngestion.FtpPathNotConfigured" xml:space="preserve">
+    <value>FTP path is not configured for profile '{0}'.</value>
+  </data>
+  <data name="FileIngestion.LocalPathNotConfigured" xml:space="preserve">
+    <value>Local path is not configured for profile '{0}'.</value>
+  </data>
+  <data name="FileIngestion.LocalRootPathEmpty" xml:space="preserve">
+    <value>Local root path is empty for profile '{0}'.</value>
+  </data>
+
+  <!-- FileIngestion – Parser -->
+  <data name="FileIngestion.ParserLineEmpty" xml:space="preserve">
+    <value>Line is empty and cannot be parsed.</value>
+  </data>
+  <data name="FileIngestion.ParserUnsupportedRecordType" xml:space="preserve">
+    <value>Unsupported record type: '{0}'.</value>
+  </data>
+  <data name="FileIngestion.ParserRecordTypeError" xml:space="preserve">
+    <value>Error parsing record type '{0}': {1}</value>
+  </data>
+  <data name="FileIngestion.TypedSchemaMapperMissing" xml:space="preserve">
+    <value>Typed schema mapper not found for profile '{0}' with record type '{1}'.</value>
+  </data>
+  <data name="FileIngestion.DecimalValueInvalid" xml:space="preserve">
+    <value>Value '{0}' could not be parsed as decimal for field '{1}'.</value>
+  </data>
+  <data name="FileIngestion.IntValueInvalid" xml:space="preserve">
+    <value>Value '{0}' could not be parsed as integer for field '{1}'.</value>
+  </data>
+  <data name="FileIngestion.LongValueInvalid" xml:space="preserve">
+    <value>Value '{0}' could not be parsed as long for field '{1}'.</value>
+  </data>
+  <data name="FileIngestion.EnumValueInvalid" xml:space="preserve">
+    <value>Value '{0}' is not a valid member of enum '{1}'.</value>
+  </data>
+
+  <!-- ════════════════════════════════════════════ -->
+  <!-- Reconciliation – Error Mapper                -->
+  <!-- ════════════════════════════════════════════ -->
+  <data name="Reconciliation.OperationCancelled" xml:space="preserve">
+    <value>Reconciliation operation was cancelled.</value>
+  </data>
+  <data name="Reconciliation.InvalidOperation" xml:space="preserve">
+    <value>Invalid operation.</value>
+  </data>
+  <data name="Reconciliation.InvalidArgument" xml:space="preserve">
+    <value>Invalid argument.</value>
+  </data>
+  <data name="Reconciliation.FormatError" xml:space="preserve">
+    <value>Format error.</value>
+  </data>
+  <data name="Reconciliation.Timeout" xml:space="preserve">
+    <value>Operation timed out.</value>
+  </data>
+  <data name="Reconciliation.InternalError" xml:space="preserve">
+    <value>An internal error occurred.</value>
+  </data>
+
+  <!-- ════════════════════════════════════════════ -->
+  <!-- Reconciliation – Service / Execute / Review  -->
+  <!-- ════════════════════════════════════════════ -->
+  <data name="Reconciliation.EvaluationFailed" xml:space="preserve">
+    <value>Reconciliation evaluation failed.</value>
+  </data>
+  <data name="Reconciliation.ManualReviewApprovalFailed" xml:space="preserve">
+    <value>Manual review approval failed.</value>
+  </data>
+  <data name="Reconciliation.ManualReviewRejectionFailed" xml:space="preserve">
+    <value>Manual review rejection failed.</value>
+  </data>
+  <data name="Reconciliation.ManualReviewApprovalCouldNotComplete" xml:space="preserve">
+    <value>Manual review approval could not be completed.</value>
+  </data>
+  <data name="Reconciliation.ManualReviewApprovalFailedSeeErrors" xml:space="preserve">
+    <value>Manual review approval failed. See errors for details.</value>
+  </data>
+  <data name="Reconciliation.ManualReviewRejectionCouldNotComplete" xml:space="preserve">
+    <value>Manual review rejection could not be completed.</value>
+  </data>
+  <data name="Reconciliation.ManualReviewRejectionFailedSeeErrors" xml:space="preserve">
+    <value>Manual review rejection failed. See errors for details.</value>
+  </data>
+  <data name="Reconciliation.ApprovalMessage" xml:space="preserve">
+    <value>If approved, the transaction will follow the 'Approve' flow.</value>
+  </data>
+  <data name="Reconciliation.RejectionMessage" xml:space="preserve">
+    <value>If rejected, the transaction will follow the 'Reject' flow.</value>
+  </data>
+  <data name="Reconciliation.PendingReviewsLoadFailed" xml:space="preserve">
+    <value>Pending reconciliation reviews could not be loaded.</value>
+  </data>
+  <data name="Reconciliation.ReviewNotFound" xml:space="preserve">
+    <value>Review record was not found for the manual operation.</value>
+  </data>
+  <data name="Reconciliation.ReviewAlreadyFinalized" xml:space="preserve">
+    <value>Review decision is already finalized.</value>
+  </data>
+  <data name="Reconciliation.ReviewOperationNotFound" xml:space="preserve">
+    <value>The operation linked to the manual review was not found.</value>
+  </data>
+  <data name="Reconciliation.ReviewOperationNotRequeueable" xml:space="preserve">
+    <value>The manual review decision could not be applied because the operation is in '{0}' status.</value>
+  </data>
+  <data name="Reconciliation.ManualReviewResult" xml:space="preserve">
+    <value>Manual review {0}.</value>
+  </data>
+  <data name="Reconciliation.ManualReviewDecisionPersistFailed" xml:space="preserve">
+    <value>Manual review decision could not be persisted.</value>
+  </data>
+  <data name="Reconciliation.ManualReviewDecisionFailedSeeErrors" xml:space="preserve">
+    <value>Manual review decision failed. See errors for details.</value>
+  </data>
+  <data name="Reconciliation.ReviewerNotResolved" xml:space="preserve">
+    <value>Reviewer identifier could not be resolved from the authenticated user or request payload.</value>
+  </data>
+  <data name="Reconciliation.AlertsLoadFailed" xml:space="preserve">
+    <value>Failed to load reconciliation alerts.</value>
+  </data>
+  <data name="Reconciliation.OperationAlreadyApplied" xml:space="preserve">
+    <value>Operation was already applied for this transaction.</value>
+  </data>
+  <data name="Reconciliation.OperationFailed" xml:space="preserve">
+    <value>Operation '{0}' failed.</value>
+  </data>
+  <data name="Reconciliation.UnexpectedOperationError" xml:space="preserve">
+    <value>Unexpected error occurred while executing operation '{0}'.</value>
+  </data>
+  <data name="Reconciliation.OperationExecutionFailed" xml:space="preserve">
+    <value>Operation execution failed.</value>
+  </data>
+  <data name="Reconciliation.ManualReviewNotResolved" xml:space="preserve">
+    <value>Manual review record could not be resolved.</value>
+  </data>
+  <data name="Reconciliation.ManualReviewDecisionPending" xml:space="preserve">
+    <value>Manual review decision is pending.</value>
+  </data>
+  <data name="Reconciliation.ManualGateResolved" xml:space="preserve">
+    <value>Manual gate resolved with decision '{0}'.</value>
+  </data>
+  <data name="Reconciliation.OperationCompletedSuccessfully" xml:space="preserve">
+    <value>Operation completed successfully.</value>
+  </data>
+  <data name="Reconciliation.RequestFailed" xml:space="preserve">
+    <value>Request failed.</value>
+  </data>
+  <data name="Reconciliation.UnsupportedOperationCode" xml:space="preserve">
+    <value>Unsupported reconciliation operation code '{0}'.</value>
+  </data>
+  <data name="Reconciliation.AlertAlreadyExists" xml:space="preserve">
+    <value>Alert already exists for the operation.</value>
+  </data>
+  <data name="Reconciliation.AlertCreated" xml:space="preserve">
+    <value>Alert record was created.</value>
+  </data>
+  <data name="Reconciliation.ManualReviewGateHandled" xml:space="preserve">
+    <value>Manual review gate is handled by the reconciliation execution flow.</value>
+  </data>
+  <data name="Reconciliation.CaseRequeued" xml:space="preserve">
+    <value>Case was re-queued after {0}.</value>
+  </data>
+  <data name="Reconciliation.ManualBranchCompleted" xml:space="preserve">
+    <value>Manual branch completed with {0}.</value>
+  </data>
+  <data name="Reconciliation.WalletBindingMissing" xml:space="preserve">
+    <value>Wallet binding could not be resolved for the card.</value>
+  </data>
+  <data name="Reconciliation.ChargebackContextInvalid" xml:space="preserve">
+    <value>Chargeback requires an existing Payify transaction and wallet binding.</value>
+  </data>
+  <data name="Reconciliation.ChargebackDescription" xml:space="preserve">
+    <value>Reconciliation chargeback: {0}</value>
+  </data>
+  <data name="Reconciliation.EvaluationContextNotBuilt" xml:space="preserve">
+    <value>Evaluation context could not be built for row '{0}'.</value>
+  </data>
+  <data name="Reconciliation.EvaluationRowFailed" xml:space="preserve">
+    <value>Reconciliation evaluation failed for file line '{0}'.</value>
+  </data>
+  <data name="Reconciliation.EvaluationChunkFailed" xml:space="preserve">
+    <value>Evaluation chunk preparation failed for file line '{0}'.</value>
+  </data>
+  <data name="Reconciliation.EvaluationCompletedSuccess" xml:space="preserve">
+    <value>Reconciliation evaluation completed for {0} file(s).</value>
+  </data>
+  <data name="Reconciliation.EvaluationCompletedWithErrors" xml:space="preserve">
+    <value>Reconciliation evaluation completed with {0} error(s) for {1} file(s).</value>
+  </data>
+  <data name="Reconciliation.BranchRequiresManualGate" xml:space="preserve">
+    <value>Branch operations require a preceding manual gate operation.</value>
+  </data>
+  <data name="Reconciliation.FileNotResolved" xml:space="preserve">
+    <value>IngestionFile '{0}' could not be resolved.</value>
+  </data>
+  <data name="Reconciliation.EmoneyLookupFailed" xml:space="preserve">
+    <value>Emoney transaction lookup failed. Evaluation skipped for related rows.</value>
+  </data>
+  <data name="Reconciliation.UnsupportedContentType" xml:space="preserve">
+    <value>Unsupported reconciliation content type '{0}'.</value>
+  </data>
+  <data name="Reconciliation.NoEvaluatorRegistered" xml:space="preserve">
+    <value>No reconciliation evaluator registered for '{0}'.</value>
+  </data>
+  <data name="Reconciliation.OperationPayloadEmpty" xml:space="preserve">
+    <value>Operation payload is empty.</value>
+  </data>
+  <data name="Reconciliation.OperationPayloadDeserializeFailed" xml:space="preserve">
+    <value>Operation payload could not be deserialized.</value>
+  </data>
+  <data name="Reconciliation.OperationPayloadValueMissing" xml:space="preserve">
+    <value>Operation payload value '{0}.{1}' is missing.</value>
+  </data>
+  <data name="Reconciliation.OperationPayloadConversionFailed" xml:space="preserve">
+    <value>Operation payload value '{0}' could not be converted to '{1}'.</value>
+  </data>
+  <data name="Reconciliation.EmoneyLookupStatusFailed" xml:space="preserve">
+    <value>Emoney transaction lookup failed with status code {0} for customerTransactionId '{1}'.</value>
+  </data>
+  <data name="Reconciliation.EmoneyLookupForCustomerFailed" xml:space="preserve">
+    <value>Emoney transaction lookup failed for customerTransactionId '{0}'.</value>
+  </data>
+  <data name="Reconciliation.EmoneyLookupStatusFailedForTransaction" xml:space="preserve">
+    <value>Emoney transaction lookup failed with status code {0} for transactionId '{1}'.</value>
+  </data>
+  <data name="Reconciliation.EmoneyLookupForTransactionFailed" xml:space="preserve">
+    <value>Emoney transaction lookup failed for transactionId '{0}'.</value>
+  </data>
+  <data name="Reconciliation.ExternalCommandStubbed" xml:space="preserve">
+    <value>External command was stubbed and accepted.</value>
+  </data>
+  <data name="Reconciliation.CustomerTxnLookupFailed" xml:space="preserve">
+    <value>customerTransactionId '{0}' lookup failed. {1}</value>
+  </data>
+
+  <!-- ════════════════════════════════════════════ -->
+  <!-- FileIngestion – Orchestrator remaining       -->
+  <!-- ════════════════════════════════════════════ -->
+  <data name="FileIngestion.RequestIsNull" xml:space="preserve">
+    <value>File ingestion request is null.</value>
+  </data>
+  <data name="FileIngestion.NoFileMatchedProfile" xml:space="preserve">
+    <value>No file matched profile '{0}'. Please verify the file path and profile configuration.</value>
+  </data>
+  <data name="FileIngestion.ImportFailedNoDetails" xml:space="preserve">
+    <value>File import failed without specific error details.</value>
+  </data>
+
+  <!-- ════════════════════════════════════════════ -->
+  <!-- Reconciliation – BKM Evaluator               -->
+  <!-- ════════════════════════════════════════════ -->
+  <data name="Reconciliation.Bkm.CurrentCardRowMissing" xml:space="preserve">
+    <value>Current card row is missing.</value>
+  </data>
+  <data name="Reconciliation.Bkm.FileLengthValidationNote" xml:space="preserve">
+    <value>File-level length validation failed. Raise an alert.</value>
+  </data>
+  <data name="Reconciliation.Bkm.FileLengthValidationOp" xml:space="preserve">
+    <value>File-level length validation failed.</value>
+  </data>
+  <data name="Reconciliation.Bkm.OriginalTxnNotResolvedNote" xml:space="preserve">
+    <value>The original transaction could not be resolved for the cancel/reversal record. Raise an alert and require manual review.</value>
+  </data>
+  <data name="Reconciliation.Bkm.OriginalTxnNotResolvedOp" xml:space="preserve">
+    <value>The original transaction could not be resolved for the cancel/reversal record.</value>
+  </data>
+  <data name="Reconciliation.Bkm.CancelReversalManualReviewOp" xml:space="preserve">
+    <value>The cancel/reversal record is sent to manual review.</value>
+  </data>
+  <data name="Reconciliation.Bkm.BindOriginalAndReEvaluate" xml:space="preserve">
+    <value>Bind the original transaction and re-evaluate the flow.</value>
+  </data>
+  <data name="Reconciliation.Bkm.CloseCancelReversalManually" xml:space="preserve">
+    <value>Close the cancel/reversal record manually.</value>
+  </data>
+  <data name="Reconciliation.Bkm.AlreadyCancelledNote" xml:space="preserve">
+    <value>The transaction is already cancelled. No action is required.</value>
+  </data>
+  <data name="Reconciliation.Bkm.ReversalNotCancelledNote" xml:space="preserve">
+    <value>This is a reversal/void record for a transaction that is not yet cancelled. Cancel the original transaction and create the reverse entry.</value>
+  </data>
+  <data name="Reconciliation.Bkm.MarkOriginalCancelledOp" xml:space="preserve">
+    <value>Mark the original transaction as cancelled.</value>
+  </data>
+  <data name="Reconciliation.Bkm.ReverseOriginalOp" xml:space="preserve">
+    <value>Reverse the effect of the original transaction.</value>
+  </data>
+  <data name="Reconciliation.Bkm.FailedBothNote" xml:space="preserve">
+    <value>The Card Transaction record is FAILED and the Payify record is also FAILED. No action is required.</value>
+  </data>
+  <data name="Reconciliation.Bkm.FailedMissingPayifyNote" xml:space="preserve">
+    <value>The Card Transaction record is FAILED and there is no Payify record. No action is required.</value>
+  </data>
+  <data name="Reconciliation.Bkm.FailedSuccessfulPayifyNote" xml:space="preserve">
+    <value>The Card Transaction record is FAILED while the Payify record is SUCCESSFUL. Correct the response code and transaction status, then reverse the balance effect.</value>
+  </data>
+  <data name="Reconciliation.Bkm.CorrectResponseCodeOp" xml:space="preserve">
+    <value>Correct the response code.</value>
+  </data>
+  <data name="Reconciliation.Bkm.ConvertToFailedOp" xml:space="preserve">
+    <value>Move the transaction to FAILED status.</value>
+  </data>
+  <data name="Reconciliation.Bkm.ReverseByBalanceOp" xml:space="preserve">
+    <value>Create a reverse entry based on the balance effect.</value>
+  </data>
+  <data name="Reconciliation.Bkm.ExpiredPayifyFailedNote" xml:space="preserve">
+    <value>The Payify status is FAILED. Move the transaction to EXPIRE status and close the flow.</value>
+  </data>
+  <data name="Reconciliation.Bkm.MoveToExpiredOp" xml:space="preserve">
+    <value>Move the transaction to EXPIRE status.</value>
+  </data>
+  <data name="Reconciliation.Bkm.ExpiredMissingPayifyNote" xml:space="preserve">
+    <value>There is no Payify record. Create the transaction and move it to EXPIRE status.</value>
+  </data>
+  <data name="Reconciliation.Bkm.CreateTransactionOp" xml:space="preserve">
+    <value>Create the missing transaction.</value>
+  </data>
+  <data name="Reconciliation.Bkm.MoveCreatedToExpiredOp" xml:space="preserve">
+    <value>Move the created transaction to EXPIRE status.</value>
+  </data>
+  <data name="Reconciliation.Bkm.AccPendingMatchNote" xml:space="preserve">
+    <value>An ACC ControlStat=P match was found within the last 20 days for the EXPIRE record. Raise an alert and require manual review.</value>
+  </data>
+  <data name="Reconciliation.Bkm.AccPendingMatchOp" xml:space="preserve">
+    <value>An ACC ControlStat=P match was found for the EXPIRE record.</value>
+  </data>
+  <data name="Reconciliation.Bkm.ExpiredManualReviewOp" xml:space="preserve">
+    <value>Send the EXPIRE record to manual review.</value>
+  </data>
+  <data name="Reconciliation.Bkm.CloseAfterManualReview" xml:space="preserve">
+    <value>Close the case after manual review.</value>
+  </data>
+  <data name="Reconciliation.Bkm.ExpiredSuccessfulNoAccNote" xml:space="preserve">
+    <value>The Card Transaction record is EXPIRE, the Payify record is SUCCESSFUL, and there is no ACC match. Move the transaction to EXPIRE status and reverse the balance effect.</value>
+  </data>
+  <data name="Reconciliation.Bkm.NotSettledNote" xml:space="preserve">
+    <value>TxnSettle != Y. No action is required.</value>
+  </data>
+  <data name="Reconciliation.Bkm.SuccessfulFailedPayifyNote" xml:space="preserve">
+    <value>The Card Transaction record is SUCCESSFUL while the Payify record is FAILED. Correct the response code and transaction status, then reverse the balance effect.</value>
+  </data>
+  <data name="Reconciliation.Bkm.ConvertToSuccessfulOp" xml:space="preserve">
+    <value>Move the transaction to SUCCESSFUL status.</value>
+  </data>
+  <data name="Reconciliation.Bkm.SuccessfulMissingRefundNote" xml:space="preserve">
+    <value>The Card Transaction record is SUCCESSFUL while the Payify record is MISSING. Create the transaction and apply the refund/effect based on the original transaction.</value>
+  </data>
+  <data name="Reconciliation.Bkm.CreateTransactionGenericOp" xml:space="preserve">
+    <value>Create the transaction.</value>
+  </data>
+  <data name="Reconciliation.Bkm.ApplyOriginalEffectOp" xml:space="preserve">
+    <value>Execute the refund by original transaction.</value>
+  </data>
+  <data name="Reconciliation.Bkm.PayifyNotResolvedNote" xml:space="preserve">
+    <value>The Payify record could not be resolved. Raise an alert and require manual review.</value>
+  </data>
+  <data name="Reconciliation.Bkm.PayifyNotResolvedOp" xml:space="preserve">
+    <value>The Payify record could not be resolved.</value>
+  </data>
+  <data name="Reconciliation.Bkm.SendToManualReviewOp" xml:space="preserve">
+    <value>Send the record to manual review.</value>
+  </data>
+  <data name="Reconciliation.Bkm.ApproveCaseManually" xml:space="preserve">
+    <value>Approve the case manually.</value>
+  </data>
+  <data name="Reconciliation.Bkm.RejectCaseManually" xml:space="preserve">
+    <value>Reject the case manually.</value>
+  </data>
+  <data name="Reconciliation.Bkm.AmountsEqualNote" xml:space="preserve">
+    <value>Transaction.Amount equals CardTransaction.BillingAmount. No action is required.</value>
+  </data>
+  <data name="Reconciliation.Bkm.AmountLessThanBillingNote" xml:space="preserve">
+    <value>Transaction.Amount is less than CardTransaction.BillingAmount. Create a shadow balance entry.</value>
+  </data>
+  <data name="Reconciliation.Bkm.InsertShadowBalanceOp" xml:space="preserve">
+    <value>Create a shadow balance entry.</value>
+  </data>
+  <data name="Reconciliation.Bkm.RunShadowBalanceOp" xml:space="preserve">
+    <value>Run the shadow balance process.</value>
+  </data>
+  <data name="Reconciliation.Bkm.AmountGreaterNote" xml:space="preserve">
+    <value>Transaction.Amount is greater than BillingAmount. No action is required.</value>
+  </data>
+  <data name="Reconciliation.Bkm.LinkedRefundNote" xml:space="preserve">
+    <value>The refund is linked. Execute the matched refund.</value>
+  </data>
+  <data name="Reconciliation.Bkm.LinkedRefundOp" xml:space="preserve">
+    <value>Execute the matched refund.</value>
+  </data>
+  <data name="Reconciliation.Bkm.UnlinkedRefundNote" xml:space="preserve">
+    <value>The refund is unlinked. Create a manual review item and await approve/reject.</value>
+  </data>
+  <data name="Reconciliation.Bkm.UnlinkedRefundManualOp" xml:space="preserve">
+    <value>Create a manual review item for the unlinked refund.</value>
+  </data>
+  <data name="Reconciliation.Bkm.ApplyEffectAfterApproval" xml:space="preserve">
+    <value>Apply the effect execution plan after approval.</value>
+  </data>
+  <data name="Reconciliation.Bkm.StartChargebackAfterRejection" xml:space="preserve">
+    <value>Start the chargeback flow after rejection.</value>
+  </data>
+  <data name="Reconciliation.Bkm.UnmatchedFlowNote" xml:space="preserve">
+    <value>The record does not match any supported flow. Raise an alert and require manual review.</value>
+  </data>
+  <data name="Reconciliation.Bkm.UnmatchedFlowOp" xml:space="preserve">
+    <value>The record does not match any supported flow.</value>
+  </data>
+  <data name="Reconciliation.Bkm.CloseCaseManually" xml:space="preserve">
+    <value>Close the case manually.</value>
+  </data>
+  <data name="Reconciliation.Bkm.CardRowMissingNote" xml:space="preserve">
+    <value>The Card Transaction row could not be resolved. Raise an alert and require manual review.</value>
+  </data>
+  <data name="Reconciliation.Bkm.CardRowMissingOp" xml:space="preserve">
+    <value>The Card Transaction row could not be resolved.</value>
+  </data>
+  <data name="Reconciliation.Bkm.RequeueForReEvaluation" xml:space="preserve">
+    <value>Requeue the record for re-evaluation.</value>
+  </data>
+  <data name="Reconciliation.Bkm.CloseRecordManually" xml:space="preserve">
+    <value>Close the record manually.</value>
+  </data>
+  <data name="Reconciliation.Bkm.DuplicateConflictNote" xml:space="preserve">
+    <value>The duplicate records are conflicting. Do not process both records and raise an alert.</value>
+  </data>
+  <data name="Reconciliation.Bkm.DuplicateConflictOp" xml:space="preserve">
+    <value>The duplicate records are conflicting.</value>
+  </data>
+  <data name="Reconciliation.Bkm.DuplicateEquivalentNote" xml:space="preserve">
+    <value>Equivalent duplicate records will be processed as a single transaction. Raise an alert.</value>
+  </data>
+  <data name="Reconciliation.Bkm.DuplicateEquivalentOp" xml:space="preserve">
+    <value>Equivalent duplicate records were detected.</value>
+  </data>
+  <data name="Reconciliation.Bkm.AmbiguousPayifyNote" xml:space="preserve">
+    <value>The Payify lookup returned multiple candidates. Raise an alert and require manual review.</value>
+  </data>
+  <data name="Reconciliation.Bkm.AmbiguousPayifyOp" xml:space="preserve">
+    <value>The Payify lookup returned multiple candidates.</value>
+  </data>
+  <data name="Reconciliation.Bkm.ReEvaluateWithSelected" xml:space="preserve">
+    <value>Re-evaluate the flow with the selected record.</value>
+  </data>
+  <data name="Reconciliation.Bkm.CloseAmbiguousManually" xml:space="preserve">
+    <value>Close the ambiguous record manually.</value>
+  </data>
+
+  <!-- Reconciliation – MSC / Visa Evaluator -->
+  <data name="Reconciliation.Msc.RulesNotDefined" xml:space="preserve">
+    <value>MSC evaluator rules are not defined yet. No automatic or manual action was produced.</value>
+  </data>
+  <data name="Reconciliation.Visa.RulesNotDefined" xml:space="preserve">
+    <value>Visa evaluator rules are not defined yet. No automatic or manual action was produced.</value>
+  </data>
+
+</root>

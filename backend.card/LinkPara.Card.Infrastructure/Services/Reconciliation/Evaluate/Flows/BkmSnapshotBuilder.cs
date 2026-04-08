@@ -1,4 +1,5 @@
 using System.Text.Json;
+using LinkPara.Card.Application.Commons.Exceptions;
 using LinkPara.Card.Domain.Entities.FileIngestion;
 using LinkPara.Card.Infrastructure.Services.Reconciliation.Execute;
 using LinkPara.Card.Infrastructure.Services.Reconciliation.Integrations.Emoney;
@@ -8,6 +9,7 @@ namespace LinkPara.Card.Infrastructure.Services.Reconciliation.Evaluate;
 internal static class BkmSnapshotBuilder
 {
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
+    private const string CurrentCardRowMissingMessage = "Current card row is missing.";
 
     public static Dictionary<string, List<OperationPayloadItem>> Create(
         BkmEvaluationContext context,
@@ -16,7 +18,7 @@ internal static class BkmSnapshotBuilder
         params (string Key, object? Value)[] extra)
     {
         var detail = context.CachedRootDetail ?? DeserializeRootCardDetail(context.RootRow)
-            ?? throw new InvalidOperationException("Current card row is missing.");
+            ?? throw new ReconciliationContextException(ApiErrorCode.ReconciliationCurrentCardRowMissing, CurrentCardRowMissingMessage);
         var latestEmoney = context.EmoneyTransactions
             .OrderByDescending(x => x.TransactionDate)
             .ThenByDescending(x => x.Id)

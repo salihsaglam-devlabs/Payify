@@ -1,4 +1,7 @@
 {
+  "Consumer": {
+    "RespondToContext": false
+  },
   "Alert": {
     "BatchSize": 10000000,
     "DefaultLanguage": "tr",

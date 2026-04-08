@@ -9,7 +9,7 @@ public class FileIngestionCommandValidator : AbstractValidator<FileIngestionComm
 {
     public FileIngestionCommandValidator(IStringLocalizerFactory factory)
     {
-        var localizer = factory.Create("Exceptions", "LinkPara.Card.API");
+        var localizer = factory.Create("Messages", "LinkPara.Card.API");
 
         RuleFor(x => x.FilePath)
             .Must(path => string.IsNullOrWhiteSpace(path))

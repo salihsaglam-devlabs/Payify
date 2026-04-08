@@ -1,22 +1,23 @@
 using LinkPara.Card.Application.Commons.Models.FileIngestion;
 using LinkPara.Card.Application.Commons.Helpers;
-using LinkPara.Card.Application.Commons.Interfaces.Localization;
+using Microsoft.Extensions.Localization;
+using LinkPara.Card.Application.Commons.Exceptions;
 
 namespace LinkPara.Card.Infrastructure.Services.FileIngestion.Parsing;
 
 public class FixedWidthRecordParser : IFixedWidthRecordParser
 {
-    private readonly ICardResourceLocalizer _localizer;
+    private readonly IStringLocalizer _localizer;
 
-    public FixedWidthRecordParser(ICardResourceLocalizer localizer)
+    public FixedWidthRecordParser(Func<LinkPara.Card.Application.Commons.Localization.LocalizerResource, IStringLocalizer> localizerFactory)
     {
-        _localizer = localizer;
+        _localizer = localizerFactory(LinkPara.Card.Application.Commons.Localization.LocalizerResource.Messages);
     }
 
     public ParsedFileLine Parse(string line, ParsingOptions parsingRule)
     {
         if (string.IsNullOrWhiteSpace(line))
-            throw new InvalidOperationException(_localizer.Get("FileIngestion.ParserLineEmpty"));
+            throw new FileIngestionParsingException(ApiErrorCode.FileIngestionParserLineEmpty, _localizer.Get("FileIngestion.ParserLineEmpty"));
         
         var recordType = string.IsNullOrWhiteSpace(line)
             ? string.Empty
@@ -28,7 +29,7 @@ public class FixedWidthRecordParser : IFixedWidthRecordParser
             };
         
         if (!parsingRule.Records.TryGetValue(recordType, out var recordRule))
-            throw new InvalidOperationException(_localizer.Get("FileIngestion.ParserUnsupportedRecordType", recordType));
+            throw new FileIngestionParsingException(ApiErrorCode.FileIngestionParserUnsupportedRecordType, _localizer.Get("FileIngestion.ParserUnsupportedRecordType", recordType));
 
         var parsed = new ParsedFileLine
         {
@@ -53,7 +54,8 @@ public class FixedWidthRecordParser : IFixedWidthRecordParser
         }
         catch (Exception ex)
         {
-            throw new InvalidOperationException(
+            throw new FileIngestionParsingException(
+                ApiErrorCode.FileIngestionBoundaryRecordReadFailed,
                 _localizer.Get("FileIngestion.ParserRecordTypeError", recordType, ex.Message),
                 ex);
         }

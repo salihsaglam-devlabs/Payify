@@ -2,10 +2,10 @@ using LinkPara.Audit;
 using LinkPara.Cache;
 using LinkPara.Card.Application.Commons.Interfaces;
 using LinkPara.Card.Application.Commons.Interfaces.FileIngestion;
-using LinkPara.Card.Application.Commons.Interfaces.Localization;
 using LinkPara.Card.Application.Commons.Interfaces.Reconciliation;
 using LinkPara.Card.Application.Commons.Helpers.FileIngestion;
 using LinkPara.Card.Application.Commons.Helpers.Reconciliation;
+using LinkPara.Card.Application.Commons.Localization;
 using LinkPara.Card.Application.Commons.Models.EventBusConfiguration;
 using LinkPara.Card.Application.Commons.Models.FileIngestion;
 using LinkPara.Card.Application.Commons.Models.Reconciliation;
@@ -39,6 +39,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using System.Reflection;
 using LinkPara.Card.Application.Features.PaycoreServices.CardPinServices.Services;
@@ -47,7 +48,6 @@ using LinkPara.Card.Infrastructure.Services.Audit;
 using LinkPara.Card.Infrastructure.Services.AlertService;
 using LinkPara.Card.Infrastructure.Services.Notifications;
 using LinkPara.Card.Infrastructure.Services.WalletServices.Services;
-using LinkPara.Card.Infrastructure.Services.Localization;
 
 namespace LinkPara.Card.Infrastructure;
 
@@ -100,7 +100,11 @@ public static class DependencyInjection
     private static void ConfigureServices(IServiceCollection services)
     {
         services.AddScoped(typeof(IGenericRepository<>), typeof(Repository<>));
-        services.AddScoped<ICardResourceLocalizer, CardResourceLocalizer>();
+        services.AddScoped<Func<LocalizerResource, IStringLocalizer>>(sp =>
+        {
+            var factory = sp.GetRequiredService<IStringLocalizerFactory>();
+            return resource => factory.Create(resource.ToString(), "LinkPara.Card.API");
+        });
         services.AddScoped<IIngestionErrorMapper, IngestionErrorMapper>();
         services.AddScoped<IReconciliationErrorMapper, ReconciliationErrorMapper>();
         services.AddScoped<DbContext, CardDbContext>();

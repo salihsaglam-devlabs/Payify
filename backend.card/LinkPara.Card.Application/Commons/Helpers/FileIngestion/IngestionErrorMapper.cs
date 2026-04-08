@@ -1,18 +1,18 @@
 #nullable enable
 using System.Text;
 using LinkPara.Card.Application.Commons.Interfaces.FileIngestion;
-using LinkPara.Card.Application.Commons.Interfaces.Localization;
+using Microsoft.Extensions.Localization;
 using LinkPara.Card.Application.Commons.Models.FileIngestion.Contracts.Responses;
 
 namespace LinkPara.Card.Application.Commons.Helpers.FileIngestion;
 
 public sealed class IngestionErrorMapper : IIngestionErrorMapper
 {
-    private readonly ICardResourceLocalizer _localizer;
+    private readonly IStringLocalizer _localizer;
 
-    public IngestionErrorMapper(ICardResourceLocalizer localizer)
+    public IngestionErrorMapper(Func<LinkPara.Card.Application.Commons.Localization.LocalizerResource, IStringLocalizer> localizerFactory)
     {
-        _localizer = localizer;
+        _localizer = localizerFactory(LinkPara.Card.Application.Commons.Localization.LocalizerResource.Messages);
     }
 
     public IngestionErrorDetail MapException(

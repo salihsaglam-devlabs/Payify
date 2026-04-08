@@ -1,4 +1,5 @@
-using LinkPara.Card.Application.Commons.Helpers.Reconciliation;
+using Microsoft.Extensions.Localization;
+using LinkPara.Card.Application.Commons.Interfaces.Reconciliation;
 using LinkPara.Card.Application.Commons.Models.Reconciliation;
 using LinkPara.Card.Domain.Enums.Reconciliation;
 using LinkPara.Card.Infrastructure.Persistence;
@@ -9,10 +10,17 @@ namespace LinkPara.Card.Infrastructure.Services.Reconciliation.GetAlerts;
 internal sealed class GetAlertsService
 {
     private readonly CardDbContext _dbContext;
+    private readonly IReconciliationErrorMapper _errorMapper;
+    private readonly IStringLocalizer _localizer;
 
-    public GetAlertsService(CardDbContext dbContext)
+    public GetAlertsService(
+        CardDbContext dbContext,
+        IReconciliationErrorMapper errorMapper,
+        Func<LinkPara.Card.Application.Commons.Localization.LocalizerResource, IStringLocalizer> localizerFactory)
     {
         _dbContext = dbContext;
+        _errorMapper = errorMapper;
+        _localizer = localizerFactory(LinkPara.Card.Application.Commons.Localization.LocalizerResource.Messages);
     }
 
     public async Task<GetAlertsResponse> GetAsync(
@@ -80,10 +88,10 @@ internal sealed class GetAlertsService
         }
         catch (Exception ex)
         {
-            errors.Add(ReconciliationErrorMapper.MapException(
+            errors.Add(_errorMapper.MapException(
                 ex,
                 "GET_ALERTS_QUERY",
-                message: "Failed to load reconciliation alerts."));
+                message: _localizer.Get("Reconciliation.AlertsLoadFailed")));
 
             return new GetAlertsResponse
             {
