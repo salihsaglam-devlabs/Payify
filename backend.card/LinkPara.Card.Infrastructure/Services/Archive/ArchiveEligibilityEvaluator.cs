@@ -16,7 +16,7 @@ internal sealed class ArchiveEligibilityEvaluator
     {
         var result = new ArchiveEligibilityResult
         {
-            IngestionFileId = snapshot?.IngestionFileId ?? Guid.Empty,
+            AggregateId = snapshot?.AggregateId ?? Guid.Empty,
             IsEligible = true
         };
 

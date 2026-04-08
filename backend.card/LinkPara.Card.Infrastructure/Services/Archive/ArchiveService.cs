@@ -23,7 +23,7 @@ internal sealed class ArchiveService : IArchiveService
         _options = options.Value;
     }
 
-    public async Task<ArchivePreviewResponse> PreviewIngestionFilesAsync(
+    public async Task<ArchivePreviewResponse> PreviewAsync(
         ArchivePreviewRequest request,
         CancellationToken cancellationToken = default)
     {
@@ -31,7 +31,7 @@ internal sealed class ArchiveService : IArchiveService
         var effectiveBeforeDate = ResolveBeforeDate(effectiveRequest.BeforeDate);
         var effectiveLimit = effectiveRequest.Limit ?? _options.Defaults.PreviewLimit;
         var candidateIds = await _reader.ResolveCandidateFileIdsAsync(
-            effectiveRequest.FileIds ?? Array.Empty<Guid>(),
+            effectiveRequest.AggregateIds ?? Array.Empty<Guid>(),
             effectiveBeforeDate,
             effectiveLimit,
             cancellationToken);
@@ -43,7 +43,7 @@ internal sealed class ArchiveService : IArchiveService
             var eligibility = _evaluator.Evaluate(snapshot, DateTime.UtcNow);
             response.Candidates.Add(new ArchiveCandidateResult
             {
-                IngestionFileId = candidateId,
+                AggregateId = candidateId,
                 IsEligible = eligibility.IsEligible,
                 FailureReasons = eligibility.FailureReasons,
                 Counts = snapshot?.Counts ?? new ArchiveAggregateCounts()
@@ -53,7 +53,7 @@ internal sealed class ArchiveService : IArchiveService
         return response;
     }
 
-    public async Task<ArchiveRunResponse> RunIngestionFilesAsync(
+    public async Task<ArchiveRunResponse> RunAsync(
         ArchiveRunRequest request,
         CancellationToken cancellationToken = default)
     {
@@ -62,7 +62,7 @@ internal sealed class ArchiveService : IArchiveService
         var effectiveMaxFiles = effectiveRequest.MaxFiles ?? _options.Defaults.MaxRunCount;
         var continueOnError = effectiveRequest.ContinueOnError ?? _options.Defaults.ContinueOnError;
         var candidateIds = await _reader.ResolveCandidateFileIdsAsync(
-            effectiveRequest.FileIds ?? Array.Empty<Guid>(),
+            effectiveRequest.AggregateIds ?? Array.Empty<Guid>(),
             effectiveBeforeDate,
             effectiveMaxFiles,
             cancellationToken);

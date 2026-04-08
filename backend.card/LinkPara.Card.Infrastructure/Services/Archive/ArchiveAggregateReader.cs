@@ -59,7 +59,7 @@ internal sealed class ArchiveAggregateReader
 
         var snapshot = new ArchiveAggregateSnapshot
         {
-            IngestionFileId = file.Id,
+            AggregateId = file.Id,
             FileCreateDateUtc = DateTime.SpecifyKind(file.CreateDate, DateTimeKind.Utc),
             LastUpdateUtc = DateTime.SpecifyKind(file.LastUpdate, DateTimeKind.Utc)
         };

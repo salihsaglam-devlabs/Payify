@@ -19,6 +19,6 @@ public class RunArchiveCommandHandler : IRequestHandler<RunArchiveCommand, Archi
 
     public Task<ArchiveRunResponse> Handle(RunArchiveCommand request, CancellationToken cancellationToken)
     {
-        return _archiveService.RunIngestionFilesAsync(request.Request, cancellationToken);
+        return _archiveService.RunAsync(request.Request, cancellationToken);
     }
 }

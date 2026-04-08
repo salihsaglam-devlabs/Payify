@@ -1,7 +1,7 @@
+using LinkPara.Card.Domain.Entities.Archive;
 using LinkPara.Card.Domain.Entities.FileIngestion;
 using LinkPara.Card.Domain.Entities.Reconciliation;
 using LinkPara.Card.Infrastructure.Persistence;
-using LinkPara.Card.Infrastructure.Persistence.ArchiveEntities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata;
 

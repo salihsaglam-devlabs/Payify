@@ -1,7 +1,7 @@
 using System.Text.Json;
 using LinkPara.Card.Application.Commons.Models.Archive;
+using LinkPara.Card.Domain.Entities.Archive;
 using LinkPara.Card.Infrastructure.Persistence;
-using LinkPara.Card.Infrastructure.Persistence.ArchiveEntities;
 using LinkPara.Card.Infrastructure.Services.Audit;
 using Microsoft.EntityFrameworkCore;
 
@@ -47,7 +47,7 @@ internal sealed class ArchiveExecutor
                 await transaction.RollbackAsync(cancellationToken);
                 return new ArchiveRunItemResult
                 {
-                    IngestionFileId = ingestionFileId,
+                    AggregateId = ingestionFileId,
                     Status = "Skipped",
                     FailureReasons = eligibility.FailureReasons
                 };
@@ -69,7 +69,7 @@ internal sealed class ArchiveExecutor
 
             return new ArchiveRunItemResult
             {
-                IngestionFileId = ingestionFileId,
+                AggregateId = ingestionFileId,
                 Status = "Archived",
                 ArchiveRunId = archiveRunId
             };
@@ -79,7 +79,7 @@ internal sealed class ArchiveExecutor
             await transaction.RollbackAsync(cancellationToken);
             return new ArchiveRunItemResult
             {
-                IngestionFileId = ingestionFileId,
+                AggregateId = ingestionFileId,
                 Status = "Failed",
                 Message = ex.Message,
                 FailureReasons = new List<string> { "ARCHIVE_EXECUTION_FAILED" }
@@ -116,7 +116,7 @@ internal sealed class ArchiveExecutor
         {
             Id = Guid.NewGuid(),
             BatchId = batchId,
-            IngestionFileId = item.IngestionFileId,
+            IngestionFileId = item.AggregateId,
             ArchiveRunId = item.ArchiveRunId,
             Status = item.Status,
             Message = item.Message,

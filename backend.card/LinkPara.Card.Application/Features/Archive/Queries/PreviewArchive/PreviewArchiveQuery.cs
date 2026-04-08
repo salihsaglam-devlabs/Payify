@@ -19,6 +19,6 @@ public class PreviewArchiveQueryHandler : IRequestHandler<PreviewArchiveQuery, A
 
     public Task<ArchivePreviewResponse> Handle(PreviewArchiveQuery request, CancellationToken cancellationToken)
     {
-        return _archiveService.PreviewIngestionFilesAsync(request.Request, cancellationToken);
+        return _archiveService.PreviewAsync(request.Request, cancellationToken);
     }
 }

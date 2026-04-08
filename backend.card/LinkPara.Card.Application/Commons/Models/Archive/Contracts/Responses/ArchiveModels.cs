@@ -4,7 +4,7 @@ namespace LinkPara.Card.Application.Commons.Models.Archive;
 
 public class ArchiveCandidateResult
 {
-    public Guid IngestionFileId { get; set; }
+    public Guid AggregateId { get; set; }
 
     public bool IsEligible { get; set; }
 
@@ -16,7 +16,7 @@ public class ArchiveCandidateResult
 
 public class ArchiveRunItemResult
 {
-    public Guid IngestionFileId { get; set; }
+    public Guid AggregateId { get; set; }
 
     [Required]
     [MaxLength(32)]
@@ -33,7 +33,7 @@ public class ArchiveRunItemResult
 
 public class ArchiveEligibilityResult
 {
-    public Guid IngestionFileId { get; set; }
+    public Guid AggregateId { get; set; }
 
     public bool IsEligible { get; set; }
 
@@ -59,7 +59,7 @@ public class ArchiveAggregateCounts
 
 public class ArchiveAggregateSnapshot
 {
-    public Guid IngestionFileId { get; set; }
+    public Guid AggregateId { get; set; }
 
     public DateTime? FileCreateDateUtc { get; set; }
 

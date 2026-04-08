@@ -1,6 +1,6 @@
 using LinkPara.Card.Application.Commons.Models.Archive;
+using LinkPara.Card.Domain.Entities.Archive;
 using LinkPara.Card.Infrastructure.Persistence;
-using LinkPara.Card.Infrastructure.Persistence.ArchiveEntities;
 using Microsoft.EntityFrameworkCore;
 
 namespace LinkPara.Card.Infrastructure.Services.Archive;
