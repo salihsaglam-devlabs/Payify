@@ -32,10 +32,5 @@ public class IngestionFileConfiguration : IEntityTypeConfiguration<IngestionFile
         builder.Property(x => x.LastProcessedLineNumber).HasColumnName("last_processed_line_number");
         builder.Property(x => x.LastProcessedByteOffset).HasColumnName("last_processed_byte_offset");
         builder.Property(x => x.IsArchived).HasColumnName("is_archived");
-        builder.Property(x => x.ArchiveRecordWrittenAt).HasColumnName("archive_record_written_at");
-        builder.Property(x => x.ArchiveRecordRunId).HasColumnName("archive_record_run_id");
-        builder.Property(x => x.ArchiveChildrenTransitionedAt).HasColumnName("archive_children_transitioned_at");
-        builder.Property(x => x.ArchiveCleanupEligibleAt).HasColumnName("archive_cleanup_eligible_at");
-        builder.Property(x => x.ArchiveCleanupCompletedAt).HasColumnName("archive_cleanup_completed_at");
     }
 }

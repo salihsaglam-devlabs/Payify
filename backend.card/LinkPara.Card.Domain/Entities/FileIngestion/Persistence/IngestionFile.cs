@@ -20,9 +20,4 @@ public class IngestionFile : AuditEntity
     public long LastProcessedLineNumber { get; set; }
     public long LastProcessedByteOffset { get; set; }
     public bool IsArchived { get; set; }
-    public DateTime? ArchiveRecordWrittenAt { get; set; }
-    public Guid? ArchiveRecordRunId { get; set; }
-    public DateTime? ArchiveChildrenTransitionedAt { get; set; }
-    public DateTime? ArchiveCleanupEligibleAt { get; set; }
-    public DateTime? ArchiveCleanupCompletedAt { get; set; }
 }

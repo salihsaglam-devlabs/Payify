@@ -48,11 +48,7 @@ internal sealed class ArchiveAggregateReader
                 x.Id,
                 Status = x.Status.ToString(),
                 x.CreateDate,
-                LastUpdate = x.UpdateDate ?? x.CreateDate,
-                x.ArchiveRecordWrittenAt,
-                x.ArchiveChildrenTransitionedAt,
-                x.ArchiveCleanupEligibleAt,
-                x.ArchiveCleanupCompletedAt
+                LastUpdate = x.UpdateDate ?? x.CreateDate
             })
             .SingleOrDefaultAsync(cancellationToken);
 
@@ -72,14 +68,29 @@ internal sealed class ArchiveAggregateReader
         snapshot.Counts.IngestionFileCount = 1;
         snapshot.IngestionFileStatuses.Add(file.Status);
 
-        snapshot.Lifecycle.ArchiveRecordWrittenAtUtc = AsUtc(file.ArchiveRecordWrittenAt);
-        snapshot.Lifecycle.ChildrenTransitionedAtUtc = AsUtc(file.ArchiveChildrenTransitionedAt);
-        snapshot.Lifecycle.CleanupEligibleAtUtc = AsUtc(file.ArchiveCleanupEligibleAt);
-        snapshot.Lifecycle.CleanupCompletedAtUtc = AsUtc(file.ArchiveCleanupCompletedAt);
-        snapshot.Lifecycle.ArchiveRecordWritten = file.ArchiveRecordWrittenAt.HasValue;
-        snapshot.Lifecycle.ChildrenFullyTransitioned = file.ArchiveChildrenTransitionedAt.HasValue;
-        snapshot.Lifecycle.CleanupEligible = file.ArchiveCleanupEligibleAt.HasValue;
-        snapshot.Lifecycle.CleanupCompleted = file.ArchiveCleanupCompletedAt.HasValue;
+        var archiveFileRecord = await _dbContext.ArchiveIngestionFiles
+            .AsNoTracking()
+            .Where(x => x.Id == ingestionFileId)
+            .Select(x => new
+            {
+                x.ArchivedAt,
+                x.ArchiveRecordWrittenAt,
+                x.ArchiveRecordRunId,
+                x.ArchiveChildrenTransitionedAt,
+                x.ArchiveCleanupEligibleAt,
+                x.ArchiveCleanupCompletedAt
+            })
+            .SingleOrDefaultAsync(cancellationToken);
+
+        snapshot.ExistsInArchive = archiveFileRecord is not null;
+        snapshot.Lifecycle.ArchiveRecordWritten = archiveFileRecord is not null;
+        snapshot.Lifecycle.ArchiveRecordWrittenAtUtc = AsUtc(archiveFileRecord?.ArchiveRecordWrittenAt ?? archiveFileRecord?.ArchivedAt);
+        snapshot.Lifecycle.ChildrenTransitionedAtUtc = AsUtc(archiveFileRecord?.ArchiveChildrenTransitionedAt);
+        snapshot.Lifecycle.CleanupEligibleAtUtc = AsUtc(archiveFileRecord?.ArchiveCleanupEligibleAt);
+        snapshot.Lifecycle.CleanupCompletedAtUtc = AsUtc(archiveFileRecord?.ArchiveCleanupCompletedAt);
+        snapshot.Lifecycle.ChildrenFullyTransitioned = archiveFileRecord?.ArchiveChildrenTransitionedAt.HasValue == true;
+        snapshot.Lifecycle.CleanupEligible = archiveFileRecord?.ArchiveCleanupEligibleAt.HasValue == true;
+        snapshot.Lifecycle.CleanupCompleted = archiveFileRecord?.ArchiveCleanupCompletedAt.HasValue == true;
 
         snapshot.Counts.IngestionFileLineCount = await _dbContext.IngestionFileLines
             .AsNoTracking()
@@ -114,7 +125,6 @@ internal sealed class ArchiveAggregateReader
                 x.Id,
                 Status = x.Status.ToString(),
                 ReconciliationStatus = x.ReconciliationStatus != null ? x.ReconciliationStatus.Value.ToString() : null,
-                x.ArchiveTransitionedAt,
                 LastActivity = x.UpdateDate ?? x.CreateDate
             })
             .ToListAsync(cancellationToken);
@@ -123,13 +133,6 @@ internal sealed class ArchiveAggregateReader
 
         if (fileLineIds.Count == 0)
         {
-            snapshot.ExistsInArchive = await ExistsInArchiveAsync(ingestionFileId, cancellationToken);
-            snapshot.Lifecycle.ArchiveRecordWritten |= snapshot.ExistsInArchive;
-            if (snapshot.ExistsInArchive && snapshot.Lifecycle.ArchiveRecordWrittenAtUtc is null)
-            {
-                snapshot.Lifecycle.ArchiveRecordWrittenAtUtc = await GetArchiveFileArchivedAtAsync(ingestionFileId, cancellationToken);
-            }
-
             return snapshot;
         }
 
@@ -223,7 +226,7 @@ internal sealed class ArchiveAggregateReader
             x => new ArchiveAtomicItemSnapshot
             {
                 FileLineId = x.Id,
-                IsArchived = x.ArchiveTransitionedAt.HasValue || archiveLineIdSet.Contains(x.Id)
+                IsArchived = archiveLineIdSet.Contains(x.Id)
             });
 
         foreach (var line in liveLines)
@@ -257,12 +260,6 @@ internal sealed class ArchiveAggregateReader
             }
         }
 
-        snapshot.ExistsInArchive = await ExistsInArchiveAsync(ingestionFileId, cancellationToken);
-        snapshot.Lifecycle.ArchiveRecordWritten |= snapshot.ExistsInArchive;
-        if (snapshot.ExistsInArchive && snapshot.Lifecycle.ArchiveRecordWrittenAtUtc is null)
-        {
-            snapshot.Lifecycle.ArchiveRecordWrittenAtUtc = await GetArchiveFileArchivedAtAsync(ingestionFileId, cancellationToken);
-        }
 
         snapshot.ItemSnapshots = itemLookup.Values
             .OrderBy(x => x.FileLineId)
@@ -274,23 +271,6 @@ internal sealed class ArchiveAggregateReader
         return snapshot;
     }
 
-    private async Task<bool> ExistsInArchiveAsync(Guid ingestionFileId, CancellationToken cancellationToken)
-    {
-        return await _dbContext.ArchiveIngestionFiles
-            .AsNoTracking()
-            .AnyAsync(x => x.Id == ingestionFileId, cancellationToken);
-    }
-
-    private async Task<DateTime?> GetArchiveFileArchivedAtAsync(Guid ingestionFileId, CancellationToken cancellationToken)
-    {
-        var archivedAt = await _dbContext.ArchiveIngestionFiles
-            .AsNoTracking()
-            .Where(x => x.Id == ingestionFileId)
-            .Select(x => (DateTime?)x.ArchivedAt)
-            .SingleOrDefaultAsync(cancellationToken);
-
-        return AsUtc(archivedAt);
-    }
 
     private static void AddStatuses<T>(
         IEnumerable<T> rows,

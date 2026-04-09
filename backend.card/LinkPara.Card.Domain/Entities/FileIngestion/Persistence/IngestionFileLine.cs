@@ -22,6 +22,4 @@ public class IngestionFileLine : AuditEntity
     public string DuplicateStatus { get; set; }
     public Guid? DuplicateGroupId { get; set; }
     public ReconciliationStatus? ReconciliationStatus { get; set; }
-    public DateTime? ArchiveTransitionedAt { get; set; }
-    public Guid? ArchiveTransitionRunId { get; set; }
 }
