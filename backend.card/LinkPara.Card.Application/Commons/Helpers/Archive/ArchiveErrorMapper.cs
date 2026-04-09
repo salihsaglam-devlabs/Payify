@@ -18,7 +18,7 @@ public sealed class ArchiveErrorMapper : IArchiveErrorMapper
     public ArchiveErrorDetail MapException(
         Exception ex,
         string step,
-        Guid? aggregateId = null,
+        Guid? ingestionFileId = null,
         string? detail = null,
         string? message = null)
     {
@@ -33,7 +33,7 @@ public sealed class ArchiveErrorMapper : IArchiveErrorMapper
             Message = Trim(message ?? defaultMessage, 2000),
             Detail = string.IsNullOrWhiteSpace(defaultDetail) ? finalDetail : $"{defaultDetail} | {finalDetail}",
             Step = step,
-            AggregateId = aggregateId,
+            IngestionFileId = ingestionFileId,
             Severity = DetermineSeverity(code)
         };
     }
@@ -42,7 +42,7 @@ public sealed class ArchiveErrorMapper : IArchiveErrorMapper
         string code,
         string message,
         string step,
-        Guid? aggregateId = null,
+        Guid? ingestionFileId = null,
         string? detail = null,
         string severity = "Error")
     {
@@ -52,7 +52,7 @@ public sealed class ArchiveErrorMapper : IArchiveErrorMapper
             Message = message,
             Detail = detail,
             Step = step,
-            AggregateId = aggregateId,
+            IngestionFileId = ingestionFileId,
             Severity = severity
         };
     }

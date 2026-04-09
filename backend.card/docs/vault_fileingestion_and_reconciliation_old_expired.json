@@ -1,0 +1,952 @@
+{
+  "FileIngestion": {
+    "Alarm": {
+      "Enabled": true,
+      "TemplateName": "CardReconciliationAlarm",
+      "ToEmails": [
+        "test@payify.com",
+        "dev@payify.com"
+      ]
+    },
+    "FileDetection": {
+      "CardFileNamePatterns": [
+        "^CARD_TRANSACTIONS_\\d{8}_\\d+$"
+      ],
+      "ClearingFileNamePatterns": [
+        "^(BKMACC|MSCACC|VISAACC)\\d{8}\\d+$"
+      ],
+      "SupportedExtensions": [
+        ".txt",
+        ".dat"
+      ]
+    },
+    "FileEncoding": "UTF-8",
+    "Ftp": {
+      "Source": {
+        "BkmClearingOutgoingPath": "/turkonay/PROD/PTS2TURKONAY/BKM_REPORTS/OUTGOING",
+        "CardTransactionsPath": "/turkonay/PROD/PTS2TURKONAY/PAYCORE_REPORTS",
+        "Host": "",
+        "KnownHostFingerprint": "",
+        "MastercardClearingOutgoingPath": "/turkonay/PROD/PTS2TURKONAY/MASTERCARD_REPORTS/OUTGOING",
+        "Password": "",
+        "Port": 21,
+        "PrivateKeyPassphrase": "",
+        "PrivateKeyPath": "",
+        "Protocol": "FTP",
+        "TimeoutSeconds": 30,
+        "UsePassive": true,
+        "Username": "",
+        "VisaClearingOutgoingPath": "/turkonay/PROD/PTS2TURKONAY/VISA_REPORTS/OUTGOING"
+      },
+      "Target": {
+        "Enabled": false,
+        "Host": "",
+        "KnownHostFingerprint": "",
+        "Password": "",
+        "Port": 21,
+        "PrivateKeyPassphrase": "",
+        "PrivateKeyPath": "",
+        "Protocol": "FTP",
+        "RootPath": "/archive",
+        "TimeoutSeconds": 30,
+        "UsePassive": true,
+        "Username": ""
+      }
+    },
+    "Local": {
+      "ArchiveEnabled": true,
+      "BkmClearingPath": "",
+      "CardTransactionsPath": "",
+      "DefaultDriveCode": "C:",
+      "Defaults": {
+        "Linux": {
+          "BkmClearingPath": "/turkonay/PROD/PTS2TURKONAY/BKM_REPORTS/OUTGOING",
+          "CardTransactionsPath": "/turkonay/PROD/PTS2TURKONAY/PAYCORE_REPORTS",
+          "MastercardClearingPath": "/turkonay/PROD/PTS2TURKONAY/MASTERCARD_REPORTS/OUTGOING",
+          "VisaClearingPath": "/turkonay/PROD/PTS2TURKONAY/VISA_REPORTS/OUTGOING"
+        },
+        "MacOS": {
+          "BkmClearingPath": "/Users/shared/turkonay/PROD/PTS2TURKONAY/BKM_REPORTS/OUTGOING",
+          "CardTransactionsPath": "/Users/shared/turkonay/PROD/PTS2TURKONAY/PAYCORE_REPORTS",
+          "MastercardClearingPath": "/Users/shared/turkonay/PROD/PTS2TURKONAY/MASTERCARD_REPORTS/OUTGOING",
+          "VisaClearingPath": "/Users/shared/turkonay/PROD/PTS2TURKONAY/VISA_REPORTS/OUTGOING"
+        },
+        "Windows": {
+          "BkmClearingPath": "\\turkonay\\PROD\\PTS2TURKONAY\\BKM_REPORTS\\OUTGOING",
+          "CardTransactionsPath": "\\turkonay\\PROD\\PTS2TURKONAY\\PAYCORE_REPORTS",
+          "MastercardClearingPath": "\\turkonay\\PROD\\PTS2TURKONAY\\MASTERCARD_REPORTS\\OUTGOING",
+          "VisaClearingPath": "\\turkonay\\PROD\\PTS2TURKONAY\\VISA_REPORTS\\OUTGOING"
+        }
+      },
+      "MastercardClearingPath": "",
+      "VisaClearingPath": ""
+    },
+    "MaxFilesPerRun": 10,
+    "ReconciliationProcessing": {
+      "EnableAutoOperationTrigger": true,
+      "EnableParallelEvaluation": false,
+      "EvaluationDegreeOfParallelism": 4,
+      "ExpireControlStatPLookbackDays": 20,
+      "OriginalTxnMatchingLookbackDays": 10,
+      "PayifyLookupLookbackDays": 20,
+      "RegenerateCandidateLookbackDays": 2
+    },
+    "TimestampFormat": "yyyyMMdd_HHmmss"
+  },
+  "FileParsingRules": {
+    "Files": {
+      "CARD_TRANSACTIONS": {
+        "DetailLength": 706,
+        "FooterPrefix": "F",
+        "HeaderPrefix": "H",
+        "Records": {
+          "D": {
+            "Fields": {
+              "ARN": {
+                "Length": 11,
+                "Start": 113
+              },
+              "AcquirerId": {
+                "Length": 6,
+                "Start": 358
+              },
+              "BankingTxnCode": {
+                "Length": 30,
+                "Start": 210
+              },
+              "BcPoint": {
+                "Length": 19,
+                "Start": 593
+              },
+              "BcPointAmount": {
+                "Length": 19,
+                "Start": 650
+              },
+              "BillingAmount": {
+                "Length": 19,
+                "Start": 493
+              },
+              "BillingCurrency": {
+                "Length": 3,
+                "Start": 512
+              },
+              "BranchID": {
+                "Length": 16,
+                "Start": 85
+              },
+              "CardHolderBillingAmount": {
+                "Length": 19,
+                "Start": 471
+              },
+              "CardHolderBillingCurrency": {
+                "Length": 3,
+                "Start": 490
+              },
+              "CardNo": {
+                "Length": 19,
+                "Start": 34
+              },
+              "CashbackAmount": {
+                "Length": 19,
+                "Start": 553
+              },
+              "CcPoint": {
+                "Length": 19,
+                "Start": 631
+              },
+              "CcPointAmount": {
+                "Length": 19,
+                "Start": 688
+              },
+              "ChannelCode": {
+                "Length": 3,
+                "Start": 328
+              },
+              "EndOfDayDate": {
+                "Length": 8,
+                "Start": 26
+              },
+              "FinancialType": {
+                "Length": 1,
+                "Start": 322
+              },
+              "InstallCount": {
+                "Length": 2,
+                "Start": 373
+              },
+              "InstallOrder": {
+                "Length": 2,
+                "Start": 375
+              },
+              "IsSuccessfulTxn": {
+                "Length": 1,
+                "Start": 371
+              },
+              "IsTxnSettle": {
+                "Length": 1,
+                "Start": 367
+              },
+              "McPoint": {
+                "Length": 19,
+                "Start": 612
+              },
+              "McPointAmount": {
+                "Length": 19,
+                "Start": 669
+              },
+              "Mcc": {
+                "Length": 4,
+                "Start": 354
+              },
+              "MemberRefNo": {
+                "Length": 50,
+                "Start": 136
+              },
+              "MerchantCity": {
+                "Length": 13,
+                "Start": 305
+              },
+              "MerchantCountry": {
+                "Length": 2,
+                "Start": 320
+              },
+              "MerchantId": {
+                "Length": 15,
+                "Start": 339
+              },
+              "MerchantName": {
+                "Length": 25,
+                "Start": 280
+              },
+              "MerchantState": {
+                "Length": 2,
+                "Start": 318
+              },
+              "OceanMainTxnGuid": {
+                "Length": 16,
+                "Start": 69
+              },
+              "OceanTxnGuid": {
+                "Length": 16,
+                "Start": 53
+              },
+              "OperatorCode": {
+                "Length": 50,
+                "Start": 377
+              },
+              "OriginalAmount": {
+                "Length": 19,
+                "Start": 427
+              },
+              "OriginalCurrency": {
+                "Length": 3,
+                "Start": 446
+              },
+              "Otc": {
+                "Length": 4,
+                "Start": 201
+              },
+              "Ots": {
+                "Length": 4,
+                "Start": 205
+              },
+              "PointType": {
+                "Length": 2,
+                "Start": 591
+              },
+              "ProvisionCode": {
+                "Length": 6,
+                "Start": 124
+              },
+              "RRN": {
+                "Length": 12,
+                "Start": 101
+              },
+              "ResponseCode": {
+                "Length": 2,
+                "Start": 369
+              },
+              "SecurityLevelIndicator": {
+                "Length": 3,
+                "Start": 364
+              },
+              "SettlementAmount": {
+                "Length": 19,
+                "Start": 449
+              },
+              "SettlementCurrency": {
+                "Length": 3,
+                "Start": 468
+              },
+              "Stan": {
+                "Length": 6,
+                "Start": 130
+              },
+              "SurchargeAmount": {
+                "Length": 19,
+                "Start": 572
+              },
+              "Tax1": {
+                "Length": 19,
+                "Start": 515
+              },
+              "Tax2": {
+                "Length": 19,
+                "Start": 534
+              },
+              "TerminalId": {
+                "Length": 8,
+                "Start": 331
+              },
+              "TerminalType": {
+                "Length": 2,
+                "Start": 326
+              },
+              "TraceID": {
+                "Length": 15,
+                "Start": 186
+              },
+              "TransactionDate": {
+                "Length": 8,
+                "Start": 1
+              },
+              "TransactionTime": {
+                "Length": 9,
+                "Start": 9
+              },
+              "TxnDescription": {
+                "Length": 40,
+                "Start": 240
+              },
+              "TxnEffect": {
+                "Length": 1,
+                "Start": 323
+              },
+              "TxnInstallType": {
+                "Length": 1,
+                "Start": 209
+              },
+              "TxnOrigin": {
+                "Length": 1,
+                "Start": 372
+              },
+              "TxnRegion": {
+                "Length": 1,
+                "Start": 325
+              },
+              "TxnSource": {
+                "Length": 1,
+                "Start": 324
+              },
+              "TxnStat": {
+                "Length": 1,
+                "Start": 368
+              },
+              "ValueDate": {
+                "Length": 8,
+                "Start": 18
+              }
+            }
+          },
+          "F": {
+            "Fields": {
+              "FileDate": {
+                "Length": 8,
+                "Start": 2
+              },
+              "FooterCode": {
+                "Length": 1,
+                "Start": 1
+              },
+              "TxnCount": {
+                "Length": 10,
+                "Start": 10
+              }
+            }
+          },
+          "H": {
+            "Fields": {
+              "FileDate": {
+                "Length": 8,
+                "Start": 2
+              },
+              "FileNo": {
+                "Length": 16,
+                "Start": 10
+              },
+              "FileVersionNumber": {
+                "Length": 12,
+                "Start": 26
+              },
+              "HeaderCode": {
+                "Length": 1,
+                "Start": 1
+              }
+            }
+          }
+        },
+        "TreatFirstLineAsHeader": true
+      },
+      "CLEARING_BKM": {
+        "DetailLength": 331,
+        "FooterPrefix": "F",
+        "HeaderPrefix": "H",
+        "Records": {
+          "D": {
+            "Fields": {
+              "Arn": {
+                "Length": 23,
+                "Start": 55
+              },
+              "CardAcceptorId": {
+                "Length": 15,
+                "Start": 253
+              },
+              "CardDCI": {
+                "Length": 1,
+                "Start": 113
+              },
+              "CardNo": {
+                "Length": 19,
+                "Start": 94
+              },
+              "CashbackAmount": {
+                "Length": 17,
+                "Start": 173
+              },
+              "ClrNo": {
+                "Length": 16,
+                "Start": 27
+              },
+              "ControlStat": {
+                "Length": 1,
+                "Start": 132
+              },
+              "DestinationAmount": {
+                "Length": 17,
+                "Start": 153
+              },
+              "DestinationCurrency": {
+                "Length": 3,
+                "Start": 170
+              },
+              "DisputeCode": {
+                "Length": 1,
+                "Start": 131
+              },
+              "FileId": {
+                "Length": 50,
+                "Start": 282
+              },
+              "FunctionCode": {
+                "Length": 3,
+                "Start": 122
+              },
+              "IoDate": {
+                "Length": 8,
+                "Start": 2
+              },
+              "IoFlag": {
+                "Length": 1,
+                "Start": 10
+              },
+              "MCCCode": {
+                "Length": 4,
+                "Start": 114
+              },
+              "MerchantCity": {
+                "Length": 13,
+                "Start": 215
+              },
+              "MerchantName": {
+                "Length": 25,
+                "Start": 228
+              },
+              "MicrofilmNumber": {
+                "Length": 6,
+                "Start": 209
+              },
+              "Mtid": {
+                "Length": 4,
+                "Start": 118
+              },
+              "OceanTxnGuid": {
+                "Length": 16,
+                "Start": 11
+              },
+              "ProcessCode": {
+                "Length": 6,
+                "Start": 125
+              },
+              "ProvisionCode": {
+                "Length": 8,
+                "Start": 86
+              },
+              "ReasonCode": {
+                "Length": 4,
+                "Start": 78
+              },
+              "ReimbursementAmount": {
+                "Length": 17,
+                "Start": 190
+              },
+              "ReimbursementAttribute": {
+                "Length": 2,
+                "Start": 207
+              },
+              "Reserved": {
+                "Length": 4,
+                "Start": 82
+              },
+              "Rrn": {
+                "Length": 12,
+                "Start": 43
+              },
+              "SourceAmount": {
+                "Length": 17,
+                "Start": 133
+              },
+              "SourceCurrency": {
+                "Length": 3,
+                "Start": 150
+              },
+              "TxnDate": {
+                "Length": 8,
+                "Start": 268
+              },
+              "TxnTime": {
+                "Length": 6,
+                "Start": 276
+              },
+              "TxnType": {
+                "Length": 1,
+                "Start": 1
+              }
+            }
+          },
+          "F": {
+            "Fields": {
+              "FileDate": {
+                "Length": 8,
+                "Start": 2
+              },
+              "FooterCode": {
+                "Length": 1,
+                "Start": 1
+              },
+              "TxnCount": {
+                "Length": 10,
+                "Start": 10
+              }
+            }
+          },
+          "H": {
+            "Fields": {
+              "FileDate": {
+                "Length": 8,
+                "Start": 2
+              },
+              "FileNo": {
+                "Length": 16,
+                "Start": 10
+              },
+              "FileVersionNumber": {
+                "Length": 12,
+                "Start": 26
+              },
+              "HeaderCode": {
+                "Length": 1,
+                "Start": 1
+              }
+            }
+          }
+        },
+        "TreatFirstLineAsHeader": true
+      },
+      "CLEARING_MSC": {
+        "DetailLength": 347,
+        "FooterPrefix": "F",
+        "HeaderPrefix": "H",
+        "Records": {
+          "D": {
+            "Fields": {
+              "AncillaryTransactionAmount": {
+                "Length": 15,
+                "Start": 210
+              },
+              "AncillaryTransactionCode": {
+                "Length": 5,
+                "Start": 205
+              },
+              "Arn": {
+                "Length": 23,
+                "Start": 55
+              },
+              "CardAcceptorId": {
+                "Length": 15,
+                "Start": 269
+              },
+              "CardDCI": {
+                "Length": 1,
+                "Start": 113
+              },
+              "CardNo": {
+                "Length": 19,
+                "Start": 94
+              },
+              "CashbackAmount": {
+                "Length": 12,
+                "Start": 174
+              },
+              "ClrNo": {
+                "Length": 16,
+                "Start": 27
+              },
+              "ControlStat": {
+                "Length": 1,
+                "Start": 133
+              },
+              "DestinationAmount": {
+                "Length": 17,
+                "Start": 154
+              },
+              "DestinationCurrency": {
+                "Length": 3,
+                "Start": 171
+              },
+              "DisputeCode": {
+                "Length": 1,
+                "Start": 132
+              },
+              "FileId": {
+                "Length": 50,
+                "Start": 298
+              },
+              "FunctionCode": {
+                "Length": 3,
+                "Start": 122
+              },
+              "IoDate": {
+                "Length": 8,
+                "Start": 2
+              },
+              "IoFlag": {
+                "Length": 1,
+                "Start": 10
+              },
+              "MCCCode": {
+                "Length": 4,
+                "Start": 114
+              },
+              "MerchantCity": {
+                "Length": 13,
+                "Start": 231
+              },
+              "MerchantName": {
+                "Length": 25,
+                "Start": 244
+              },
+              "MicrofilmNumber": {
+                "Length": 6,
+                "Start": 225
+              },
+              "Mtid": {
+                "Length": 4,
+                "Start": 118
+              },
+              "OceanTxnGuid": {
+                "Length": 16,
+                "Start": 11
+              },
+              "ProcessCode": {
+                "Length": 6,
+                "Start": 125
+              },
+              "ProvisionCode": {
+                "Length": 8,
+                "Start": 86
+              },
+              "ReasonCode": {
+                "Length": 4,
+                "Start": 78
+              },
+              "ReimbursementAmount": {
+                "Length": 17,
+                "Start": 186
+              },
+              "ReimbursementAttribute": {
+                "Length": 2,
+                "Start": 203
+              },
+              "Reserved": {
+                "Length": 4,
+                "Start": 82
+              },
+              "ReversalIndicator": {
+                "Length": 1,
+                "Start": 131
+              },
+              "Rrn": {
+                "Length": 12,
+                "Start": 43
+              },
+              "SourceAmount": {
+                "Length": 17,
+                "Start": 134
+              },
+              "SourceCurrency": {
+                "Length": 3,
+                "Start": 151
+              },
+              "TxnDate": {
+                "Length": 8,
+                "Start": 284
+              },
+              "TxnTime": {
+                "Length": 6,
+                "Start": 292
+              },
+              "TxnType": {
+                "Length": 1,
+                "Start": 1
+              }
+            }
+          },
+          "F": {
+            "Fields": {
+              "FileDate": {
+                "Length": 8,
+                "Start": 2
+              },
+              "FooterCode": {
+                "Length": 1,
+                "Start": 1
+              },
+              "TxnCount": {
+                "Length": 10,
+                "Start": 10
+              }
+            }
+          },
+          "H": {
+            "Fields": {
+              "FileDate": {
+                "Length": 8,
+                "Start": 2
+              },
+              "FileNo": {
+                "Length": 16,
+                "Start": 10
+              },
+              "FileVersionNumber": {
+                "Length": 12,
+                "Start": 26
+              },
+              "HeaderCode": {
+                "Length": 1,
+                "Start": 1
+              }
+            }
+          }
+        },
+        "TreatFirstLineAsHeader": true
+      },
+      "CLEARING_VISA": {
+        "DetailLength": 321,
+        "FooterPrefix": "F",
+        "HeaderPrefix": "H",
+        "Records": {
+          "D": {
+            "Fields": {
+              "Arn": {
+                "Length": 23,
+                "Start": 55
+              },
+              "CardAcceptorId": {
+                "Length": 15,
+                "Start": 243
+              },
+              "CardDCI": {
+                "Length": 1,
+                "Start": 113
+              },
+              "CardNo": {
+                "Length": 19,
+                "Start": 94
+              },
+              "CashbackAmount": {
+                "Length": 17,
+                "Start": 163
+              },
+              "ClrNo": {
+                "Length": 16,
+                "Start": 27
+              },
+              "ControlStat": {
+                "Length": 1,
+                "Start": 122
+              },
+              "DestinationAmount": {
+                "Length": 17,
+                "Start": 143
+              },
+              "DestinationCurrency": {
+                "Length": 3,
+                "Start": 160
+              },
+              "DisputeCode": {
+                "Length": 1,
+                "Start": 121
+              },
+              "FileId": {
+                "Length": 50,
+                "Start": 272
+              },
+              "IoDate": {
+                "Length": 8,
+                "Start": 2
+              },
+              "IoFlag": {
+                "Length": 1,
+                "Start": 10
+              },
+              "MCCCode": {
+                "Length": 4,
+                "Start": 114
+              },
+              "MerchantCity": {
+                "Length": 13,
+                "Start": 205
+              },
+              "MerchantName": {
+                "Length": 25,
+                "Start": 218
+              },
+              "MicrofilmNumber": {
+                "Length": 6,
+                "Start": 199
+              },
+              "OceanTxnGuid": {
+                "Length": 16,
+                "Start": 11
+              },
+              "ProvisionCode": {
+                "Length": 8,
+                "Start": 86
+              },
+              "ReasonCode": {
+                "Length": 4,
+                "Start": 78
+              },
+              "ReimbursementAmount": {
+                "Length": 17,
+                "Start": 180
+              },
+              "ReimbursementAttribute": {
+                "Length": 2,
+                "Start": 197
+              },
+              "Reserved": {
+                "Length": 4,
+                "Start": 82
+              },
+              "Rrn": {
+                "Length": 12,
+                "Start": 43
+              },
+              "SourceAmount": {
+                "Length": 17,
+                "Start": 123
+              },
+              "SourceCurrency": {
+                "Length": 3,
+                "Start": 140
+              },
+              "TC": {
+                "Length": 2,
+                "Start": 118
+              },
+              "TxnDate": {
+                "Length": 8,
+                "Start": 258
+              },
+              "TxnTime": {
+                "Length": 6,
+                "Start": 266
+              },
+              "TxnType": {
+                "Length": 1,
+                "Start": 1
+              },
+              "UsageCode": {
+                "Length": 1,
+                "Start": 120
+              }
+            }
+          },
+          "F": {
+            "Fields": {
+              "FileDate": {
+                "Length": 8,
+                "Start": 2
+              },
+              "FooterCode": {
+                "Length": 1,
+                "Start": 1
+              },
+              "TxnCount": {
+                "Length": 10,
+                "Start": 10
+              }
+            }
+          },
+          "H": {
+            "Fields": {
+              "FileDate": {
+                "Length": 8,
+                "Start": 2
+              },
+              "FileNo": {
+                "Length": 16,
+                "Start": 10
+              },
+              "FileVersionNumber": {
+                "Length": 12,
+                "Start": 26
+              },
+              "HeaderCode": {
+                "Length": 1,
+                "Start": 1
+              }
+            }
+          }
+        },
+        "TreatFirstLineAsHeader": true
+      }
+    }
+  },
+  "ProcessExecutionLockSettings": {
+    "Acquire": {
+      "RetryIntervalMilliseconds": 250,
+      "WaitTimeoutSeconds": 5
+    },
+    "Cleanup": {
+      "Enabled": true
+    },
+    "Enabled": true,
+    "Policies": {
+      "CardFileIngestion": {
+        "MaxRunSeconds": 1800
+      },
+      "CardReconciliation": {
+        "MaxRunSeconds": 2700
+      }
+    },
+    "Renewal": {
+      "EnableHeartbeat": false,
+      "IntervalSeconds": 20,
+      "LeaseTtlSeconds": 60,
+      "MissedHeartbeatsBeforeExpire": 2
+    }
+  }
+}

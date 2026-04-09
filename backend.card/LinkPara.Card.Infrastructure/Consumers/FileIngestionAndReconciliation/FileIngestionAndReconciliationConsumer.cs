@@ -29,7 +29,7 @@ public class FileIngestionAndReconciliationConsumer : IConsumer<FileIngestionAnd
         _mediator = mediator;
         _auditUserContextAccessor = auditUserContextAccessor;
         _localizer = localizerFactory(LinkPara.Card.Application.Commons.Localization.LocalizerResource.Messages);
-        _respondToContext = reconciliationOptions.Value.Consumer.RespondToContext;
+        _respondToContext = reconciliationOptions.Value.Consumer.RespondToContext.Value;
     }
 
     public async Task Consume(ConsumeContext<FileIngestionAndReconciliationJobRequest> context)

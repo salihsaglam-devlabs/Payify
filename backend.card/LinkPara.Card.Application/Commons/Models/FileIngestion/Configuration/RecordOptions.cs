@@ -2,5 +2,5 @@ namespace LinkPara.Card.Application.Commons.Models.FileIngestion;
 
 public class RecordOptions
 {
-    public Dictionary<string, FieldOptions> Fields { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+    public Dictionary<string, FieldOptions> Fields { get; set; }
 }

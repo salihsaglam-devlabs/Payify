@@ -27,7 +27,7 @@ internal sealed class ExecuteService
     private readonly IAuditStampService _auditStampService;
     private readonly IReconciliationErrorMapper _errorMapper;
     private readonly IStringLocalizer _localizer;
-    private readonly ReconciliationOptions _options = new();
+    private readonly ReconciliationOptions _options;
 
     public ExecuteService(
         CardDbContext dbContext,
@@ -62,12 +62,12 @@ internal sealed class ExecuteService
             Errors = errors
         };
 
-        var remaining = executeOptions.MaxEvaluations;
+        var remaining = executeOptions.MaxEvaluations.Value;
 
         var evaluationIds = await ResolveTargetEvaluationIdsAsync(
             request,
             now,
-            executeOptions.MaxEvaluations,
+            executeOptions.MaxEvaluations.Value,
             cancellationToken);
 
         foreach (var evaluationId in evaluationIds)
@@ -81,7 +81,7 @@ internal sealed class ExecuteService
                 evaluationId,
                 now,
                 remaining,
-                executeOptions.LeaseSeconds,
+                executeOptions.LeaseSeconds.Value,
                 selection,
                 errors,
                 cancellationToken);
@@ -96,7 +96,7 @@ internal sealed class ExecuteService
                 }
             }
 
-            remaining = executeOptions.MaxEvaluations - response.TotalAttempted;
+            remaining = executeOptions.MaxEvaluations.Value - response.TotalAttempted;
         }
 
         try

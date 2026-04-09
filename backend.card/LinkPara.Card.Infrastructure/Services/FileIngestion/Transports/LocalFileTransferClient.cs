@@ -10,7 +10,7 @@ namespace LinkPara.Card.Infrastructure.Services.FileIngestion.Transports;
 
 public class LocalFileTransferClient : IFileTransferClient
 {
-    private readonly FileIngestionOptions _options = new();
+    private readonly FileIngestionOptions _options;
     private readonly IStringLocalizer _localizer;
 
     public LocalFileTransferClient(IOptions<FileIngestionOptions> options, Func<LinkPara.Card.Application.Commons.Localization.LocalizerResource, IStringLocalizer> localizerFactory)

@@ -4,6 +4,7 @@ using LinkPara.Card.Application.Features.PaycoreServices.ParameterServices.Queri
 using LinkPara.Card.Infrastructure.Services.PaycoreServices.Models;
 using LinkPara.HttpProviders.Vault;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 
 namespace LinkPara.Card.Infrastructure.Services.PaycoreServices.Services;
 
@@ -13,10 +14,12 @@ public class PaycoreParameterService : IPaycoreParameterService
     private readonly IConfiguration _configuration;
     private readonly IVaultClient _vaultClient;
     private readonly PaycoreSettings _paycoreSettings;
+    private readonly ILogger<PaycoreParameterService> _logger;
 
-    public PaycoreParameterService(PaycoreClientService clientService, 
-        IConfiguration configuration, 
-        IVaultClient vaultClient)
+    public PaycoreParameterService(PaycoreClientService clientService,
+        IConfiguration configuration,
+        IVaultClient vaultClient,
+        ILogger<PaycoreParameterService> logger)
     {
         _clientService = clientService;
         _configuration = configuration;
@@ -24,6 +27,7 @@ public class PaycoreParameterService : IPaycoreParameterService
         _paycoreSettings = new PaycoreSettings();
         _configuration.GetSection(nameof(PaycoreSettings)).Bind(_paycoreSettings);
         _paycoreSettings.VaultSettings = _vaultClient.GetSecretValue<PaycoreVaultSettings>("CardSecrets", "PaycoreSettings");
+        _logger = logger;
     }
 
     public async Task<GetProductsResponse> GetProductsAsync(GetProductsQuery query)
@@ -37,11 +41,13 @@ public class PaycoreParameterService : IPaycoreParameterService
             return new GetProductsResponse
             {
                 IsSuccess = productResponse.IsSuccess,
-                Result = productResponse.Result
+                Result = productResponse.Result,
+                Description = productResponse.message
             };
         }
-        catch (Exception ex)
+        catch (Exception exception)
         {
+            _logger.LogError("Get Paycore Products Error : {exception}", exception);
             return new GetProductsResponse
             {
                 IsSuccess = false,

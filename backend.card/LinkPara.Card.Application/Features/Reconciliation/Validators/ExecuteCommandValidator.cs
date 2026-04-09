@@ -42,9 +42,11 @@ public class ExecuteCommandValidator : AbstractValidator<ExecuteCommand>
             When(x => x.Request.Options is not null, () =>
             {
                 RuleFor(x => x.Request.Options!.MaxEvaluations)
+                    .NotNull()
                     .InclusiveBetween(1, 5000);
 
                 RuleFor(x => x.Request.Options!.LeaseSeconds)
+                    .NotNull()
                     .InclusiveBetween(1, 3600);
             });
         });

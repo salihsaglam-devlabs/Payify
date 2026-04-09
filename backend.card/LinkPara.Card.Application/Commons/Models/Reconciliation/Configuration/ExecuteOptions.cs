@@ -1,12 +1,20 @@
-using System.ComponentModel.DataAnnotations;
-
 namespace LinkPara.Card.Application.Commons.Models.Reconciliation;
 
 public class ExecuteOptions
 {
-    [Range(1, 5000)]
-    public int MaxEvaluations { get; set; } = 5000;
+    public int? MaxEvaluations { get; set; }
 
-    [Range(1, 3600)]
-    public int LeaseSeconds { get; set; } = 30;
+    public int? LeaseSeconds { get; set; }
+
+    public void Validate()
+    {
+        if (MaxEvaluations is null)
+            throw new InvalidOperationException("Vault configuration missing: Reconciliation.Execute.MaxEvaluations");
+        if (LeaseSeconds is null)
+            throw new InvalidOperationException("Vault configuration missing: Reconciliation.Execute.LeaseSeconds");
+        if (MaxEvaluations <= 0)
+            throw new InvalidOperationException($"Reconciliation.Execute.MaxEvaluations must be positive. Current: {MaxEvaluations}");
+        if (LeaseSeconds <= 0)
+            throw new InvalidOperationException($"Reconciliation.Execute.LeaseSeconds must be positive. Current: {LeaseSeconds}");
+    }
 }

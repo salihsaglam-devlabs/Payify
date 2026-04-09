@@ -10,7 +10,7 @@ namespace LinkPara.Card.Infrastructure.Services.FileIngestion.Transports;
 
 public class FtpFileTransferClient : IFileTransferClient
 {
-    private readonly FileIngestionOptions _options = new();
+    private readonly FileIngestionOptions _options;
     private readonly IStringLocalizer _localizer;
 
     public FtpFileTransferClient(IOptions<FileIngestionOptions> options, Func<LinkPara.Card.Application.Commons.Localization.LocalizerResource, IStringLocalizer> localizerFactory)
@@ -142,13 +142,13 @@ public class FtpFileTransferClient : IFileTransferClient
     private FtpWebRequest CreateRequest(string remotePath, string method, FileTransferEndpointType endpointType)
     {
         var ftpOptions = GetFtpOptions(endpointType);
-        var request = (FtpWebRequest)WebRequest.Create(new Uri($"ftp://{ftpOptions.Host}:{ftpOptions.Port}{NormalizeRemotePath(remotePath)}"));
+        var request = (FtpWebRequest)WebRequest.Create(new Uri($"ftp://{ftpOptions.Host}:{ftpOptions.Port.Value}{NormalizeRemotePath(remotePath)}"));
         request.Method = method;
         request.Credentials = new NetworkCredential(ftpOptions.Username, ftpOptions.Password);
         request.UseBinary = true;
-        request.UsePassive = ftpOptions.UsePassive;
-        request.Timeout = ftpOptions.TimeoutSeconds * 1000;
-        request.ReadWriteTimeout = ftpOptions.TimeoutSeconds * 1000;
+        request.UsePassive = ftpOptions.UsePassive.Value;
+        request.Timeout = ftpOptions.TimeoutSeconds.Value * 1000;
+        request.ReadWriteTimeout = ftpOptions.TimeoutSeconds.Value * 1000;
         return request;
     }
 

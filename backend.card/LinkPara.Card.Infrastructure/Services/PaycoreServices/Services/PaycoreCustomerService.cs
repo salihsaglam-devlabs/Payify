@@ -18,7 +18,6 @@ using LinkPara.ContextProvider;
 using LinkPara.HttpProviders.Vault;
 using LinkPara.Security;
 using LinkPara.SharedModels.Persistence;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using System.Globalization;
 
@@ -52,27 +51,29 @@ public class PaycoreCustomerService : IPaycoreCustomerService
     }
     public async Task<PaycoreResponse> CreateCustomerAsync(CreateCustomerCommand command)
     {
-        var customerWallet = await _customerWalletCard
+        var customerWallets = _customerWalletCard
             .GetAll()
-            .FirstOrDefaultAsync(x => 
-                      x.WalletNumber == command.WalletNumber &&
-                      x.ProductCode == command.ProductCode);
+            .Where(x => x.WalletNumber == command.WalletNumber &&
+                        x.RecordStatus == RecordStatus.Active);
 
-        if (customerWallet is not null)
+        if (customerWallets.Any())
         {
-            if (!customerWallet.IsActive)
-            {
-                var customerWalletCard = new CustomerWalletCard
-                {
-                    WalletNumber = command.WalletNumber,
-                    ProductCode = command.ProductCode,
-                    BankingCustomerNo = customerWallet.BankingCustomerNo,
-                    IsActive = true,
-                    CreatedBy = _contextProvider.CurrentContext.UserId
-                };
+            var customerWallet = customerWallets.FirstOrDefault(x => x.ProductCode == command.ProductCode);
 
-                await _customerWalletCard.AddAsync(customerWalletCard);
+            if (customerWallet is not null)
+            {
+                if (!customerWallet.IsActive)
+                {
+                    await CreateCustomerWallet(command, customerWallet);
+                }
+                return new PaycoreResponse()
+                {
+                    IsSuccess = true
+                };
             }
+
+            await CreateCustomerWallet(command, customerWallets.FirstOrDefault());
+
             return new PaycoreResponse()
             {
                 IsSuccess = true
@@ -122,6 +123,20 @@ public class PaycoreCustomerService : IPaycoreCustomerService
             IsSuccess = true,
             Description = "Success"//todo const
         };
+    }
+
+    private async Task CreateCustomerWallet(CreateCustomerCommand command, CustomerWalletCard customerWallet)
+    {
+        var customerWalletCard = new CustomerWalletCard
+        {
+            WalletNumber = command.WalletNumber,
+            ProductCode = command.ProductCode,
+            BankingCustomerNo = customerWallet.BankingCustomerNo,
+            IsActive = true,
+            CreatedBy = _contextProvider.CurrentContext.UserId
+        };
+
+        await _customerWalletCard.AddAsync(customerWalletCard);
     }
 
     public async Task<GetCustomerInformationResponse> GetCustomerInformationAsync(GetCustomerInformationQuery query)

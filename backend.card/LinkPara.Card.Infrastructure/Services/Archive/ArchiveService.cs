@@ -1,6 +1,8 @@
 using LinkPara.Card.Application.Commons.Exceptions;
 using LinkPara.Card.Application.Commons.Interfaces.Archive;
 using LinkPara.Card.Application.Commons.Models.Archive;
+using LinkPara.Card.Infrastructure.Services.Audit;
+using LinkPara.ContextProvider;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
@@ -9,6 +11,8 @@ namespace LinkPara.Card.Infrastructure.Services.Archive;
 
 internal sealed class ArchiveService : IArchiveService
 {
+    private const string SystemUserId = "SYSTEM_ARCHIVE";
+
     private static readonly HashSet<string> SupportedBeforeDateStrategies =
         new(StringComparer.OrdinalIgnoreCase) { "None", "RetentionDays" };
 
@@ -18,6 +22,8 @@ internal sealed class ArchiveService : IArchiveService
     private readonly IArchiveErrorMapper _errorMapper;
     private readonly IStringLocalizer _localizer;
     private readonly IServiceProvider _serviceProvider;
+    private readonly IAuditUserContextAccessor _auditUserContextAccessor;
+    private readonly IContextProvider _contextProvider;
 
     public ArchiveService(
         ArchiveAggregateReader reader,
@@ -25,16 +31,18 @@ internal sealed class ArchiveService : IArchiveService
         IOptions<ArchiveOptions> options,
         IArchiveErrorMapper errorMapper,
         Func<LinkPara.Card.Application.Commons.Localization.LocalizerResource, IStringLocalizer> localizerFactory,
-        IServiceProvider serviceProvider)
+        IServiceProvider serviceProvider,
+        IAuditUserContextAccessor auditUserContextAccessor,
+        IContextProvider contextProvider)
     {
         _reader = reader;
         _evaluator = evaluator;
-        _options = (options.Value ?? new ArchiveOptions()).Normalize();
+        _options = options.Value ?? throw new InvalidOperationException("ArchiveOptions is not configured.");
         _errorMapper = errorMapper;
         _localizer = localizerFactory(LinkPara.Card.Application.Commons.Localization.LocalizerResource.Messages);
         _serviceProvider = serviceProvider;
-
-        ValidateOptions(_options);
+        _auditUserContextAccessor = auditUserContextAccessor;
+        _contextProvider = contextProvider;
     }
 
     public async Task<ArchivePreviewResponse> PreviewAsync(
@@ -47,10 +55,10 @@ internal sealed class ArchiveService : IArchiveService
             var effectiveRequest = request ?? new ArchivePreviewRequest();
             var effectiveBeforeDate = ResolveBeforeDate(effectiveRequest.BeforeDate);
             var effectiveLimit = effectiveRequest.Limit is null or 0
-                ? _options.Defaults.PreviewLimit
+                ? _options.Defaults.PreviewLimit.Value
                 : effectiveRequest.Limit.Value;
             var candidateIds = await _reader.ResolveCandidateFileIdsAsync(
-                effectiveRequest.AggregateIds ?? Array.Empty<Guid>(),
+                effectiveRequest.IngestionFileIds ?? Array.Empty<Guid>(),
                 effectiveBeforeDate,
                 effectiveLimit,
                 cancellationToken);
@@ -64,7 +72,7 @@ internal sealed class ArchiveService : IArchiveService
                     var eligibility = _evaluator.Evaluate(snapshot, DateTime.UtcNow);
                     response.Candidates.Add(new ArchiveCandidateResult
                     {
-                        AggregateId = candidateId,
+                        IngestionFileId = candidateId,
                         IsEligible = eligibility.IsEligible,
                         FailureReasons = eligibility.FailureReasons,
                         Counts = snapshot?.Counts ?? new ArchiveAggregateCounts()
@@ -72,10 +80,10 @@ internal sealed class ArchiveService : IArchiveService
                 }
                 catch (Exception ex)
                 {
-                    errors.Add(_errorMapper.MapException(ex, "ARCHIVE_PREVIEW_CANDIDATE", aggregateId: candidateId));
+                    errors.Add(_errorMapper.MapException(ex, "ARCHIVE_PREVIEW_CANDIDATE", ingestionFileId: candidateId));
                     response.Candidates.Add(new ArchiveCandidateResult
                     {
-                        AggregateId = candidateId,
+                        IngestionFileId = candidateId,
                         IsEligible = false,
                         FailureReasons = new List<string> { "PREVIEW_EVALUATION_FAILED" }
                     });
@@ -102,6 +110,7 @@ internal sealed class ArchiveService : IArchiveService
         ArchiveRunRequest request,
         CancellationToken cancellationToken = default)
     {
+        EnsureAuditContext();
         var executor = _serviceProvider.GetRequiredService<ArchiveExecutor>();
         var errors = new List<ArchiveErrorDetail>();
         try
@@ -109,11 +118,11 @@ internal sealed class ArchiveService : IArchiveService
             var effectiveRequest = request ?? new ArchiveRunRequest();
             var effectiveBeforeDate = ResolveBeforeDate(effectiveRequest.BeforeDate);
             var effectiveMaxFiles = effectiveRequest.MaxFiles is null or 0
-                ? _options.Defaults.MaxRunCount
+                ? _options.Defaults.MaxRunCount.Value
                 : effectiveRequest.MaxFiles.Value;
-            var continueOnError = effectiveRequest.ContinueOnError ?? _options.Defaults.ContinueOnError;
+            var continueOnError = effectiveRequest.ContinueOnError ?? _options.Defaults.ContinueOnError.Value;
             var candidateIds = await _reader.ResolveCandidateFileIdsAsync(
-                effectiveRequest.AggregateIds ?? Array.Empty<Guid>(),
+                effectiveRequest.IngestionFileIds ?? Array.Empty<Guid>(),
                 effectiveBeforeDate,
                 effectiveMaxFiles,
                 cancellationToken);
@@ -145,10 +154,10 @@ internal sealed class ArchiveService : IArchiveService
                 }
                 catch (Exception ex)
                 {
-                    errors.Add(_errorMapper.MapException(ex, "ARCHIVE_EXECUTE", aggregateId: candidateId));
+                    errors.Add(_errorMapper.MapException(ex, "ARCHIVE_EXECUTE", ingestionFileId: candidateId));
                     item = new ArchiveRunItemResult
                     {
-                        AggregateId = candidateId,
+                        IngestionFileId = candidateId,
                         Status = "Failed",
                         Message = ex.InnerException != null
                             ? $"{ex.Message} | Inner: {ex.InnerException.Message}"
@@ -179,7 +188,7 @@ internal sealed class ArchiveService : IArchiveService
                 }
                 catch (Exception ex)
                 {
-                    errors.Add(_errorMapper.MapException(ex, "ARCHIVE_BATCH_ITEM_INSERT", aggregateId: candidateId));
+                    errors.Add(_errorMapper.MapException(ex, "ARCHIVE_BATCH_ITEM_INSERT", ingestionFileId: candidateId));
                 }
 
                 if (item.Status == "Failed" && !continueOnError)
@@ -215,7 +224,7 @@ internal sealed class ArchiveService : IArchiveService
 
     private DateTime? ResolveBeforeDate(DateTime? requestBeforeDate)
     {
-        if (_options.Defaults.UseConfiguredBeforeDateOnly)
+        if (_options.Defaults.UseConfiguredBeforeDateOnly.Value)
         {
             return ResolveConfiguredBeforeDate();
         }
@@ -236,7 +245,7 @@ internal sealed class ArchiveService : IArchiveService
 
         return strategy switch
         {
-            "RetentionDays" => DateTime.UtcNow.AddDays(-_options.Rules.RetentionDays),
+            "RetentionDays" => DateTime.UtcNow.AddDays(-_options.Rules.RetentionDays.Value),
             "None" => null,
             _ => throw new ArchiveBusinessException(
                 "CONFIGURATION_ERROR",
@@ -244,43 +253,6 @@ internal sealed class ArchiveService : IArchiveService
         };
     }
 
-    private static void ValidateOptions(ArchiveOptions options)
-    {
-        if (!SupportedBeforeDateStrategies.Contains(options.Defaults.DefaultBeforeDateStrategy))
-        {
-            throw new ArchiveBusinessException(
-                "CONFIGURATION_ERROR",
-                $"Unsupported DefaultBeforeDateStrategy: '{options.Defaults.DefaultBeforeDateStrategy}'. Supported values: {string.Join(", ", SupportedBeforeDateStrategies)}.");
-        }
-
-        if (options.Rules.RetentionDays < 0)
-        {
-            throw new ArchiveBusinessException(
-                "CONFIGURATION_ERROR",
-                $"RetentionDays must be non-negative. Current value: {options.Rules.RetentionDays}.");
-        }
-
-        if (options.Rules.MinLastUpdateAgeHours < 0)
-        {
-            throw new ArchiveBusinessException(
-                "CONFIGURATION_ERROR",
-                $"MinLastUpdateAgeHours must be non-negative. Current value: {options.Rules.MinLastUpdateAgeHours}.");
-        }
-
-        if (options.Defaults.PreviewLimit <= 0)
-        {
-            throw new ArchiveBusinessException(
-                "CONFIGURATION_ERROR",
-                $"PreviewLimit must be positive. Current value: {options.Defaults.PreviewLimit}.");
-        }
-
-        if (options.Defaults.MaxRunCount <= 0)
-        {
-            throw new ArchiveBusinessException(
-                "CONFIGURATION_ERROR",
-                $"MaxRunCount must be positive. Current value: {options.Defaults.MaxRunCount}.");
-        }
-    }
 
     private static string BuildFailureMessage(string fallbackMessage, IReadOnlyCollection<ArchiveErrorDetail> errors)
     {
@@ -291,5 +263,16 @@ internal sealed class ArchiveService : IArchiveService
         }
 
         return $"{fallbackMessage} {firstMessage}";
+    }
+
+    private void EnsureAuditContext()
+    {
+        if (!string.IsNullOrWhiteSpace(_auditUserContextAccessor.CurrentUserId))
+            return;
+
+        var contextUserId = _contextProvider.CurrentContext?.UserId;
+        _auditUserContextAccessor.CurrentUserId = !string.IsNullOrWhiteSpace(contextUserId)
+            ? contextUserId
+            : SystemUserId;
     }
 }

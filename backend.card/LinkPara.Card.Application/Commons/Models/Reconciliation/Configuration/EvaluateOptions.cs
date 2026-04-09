@@ -1,15 +1,26 @@
-using System.ComponentModel.DataAnnotations;
-
 namespace LinkPara.Card.Application.Commons.Models.Reconciliation;
 
 public class EvaluateOptions
 {
-    [Range(1, 10000)]
-    public int ChunkSize { get; set; } = 500;
+    public int? ChunkSize { get; set; }
 
-    [Range(30, 3600)]
-    public int ClaimTimeoutSeconds { get; set; } = 300;
+    public int? ClaimTimeoutSeconds { get; set; }
 
-    [Range(1, 10)]
-    public int ClaimRetryCount { get; set; } = 3;
+    public int? ClaimRetryCount { get; set; }
+
+    public void Validate()
+    {
+        if (ChunkSize is null)
+            throw new InvalidOperationException("Vault configuration missing: Reconciliation.Evaluate.ChunkSize");
+        if (ClaimTimeoutSeconds is null)
+            throw new InvalidOperationException("Vault configuration missing: Reconciliation.Evaluate.ClaimTimeoutSeconds");
+        if (ClaimRetryCount is null)
+            throw new InvalidOperationException("Vault configuration missing: Reconciliation.Evaluate.ClaimRetryCount");
+        if (ChunkSize <= 0)
+            throw new InvalidOperationException($"Reconciliation.Evaluate.ChunkSize must be positive. Current: {ChunkSize}");
+        if (ClaimTimeoutSeconds <= 0)
+            throw new InvalidOperationException($"Reconciliation.Evaluate.ClaimTimeoutSeconds must be positive. Current: {ClaimTimeoutSeconds}");
+        if (ClaimRetryCount <= 0)
+            throw new InvalidOperationException($"Reconciliation.Evaluate.ClaimRetryCount must be positive. Current: {ClaimRetryCount}");
+    }
 }

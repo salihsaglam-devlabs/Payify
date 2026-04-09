@@ -38,78 +38,83 @@ internal sealed class ArchiveExecutor
         var archiveRunId = Guid.NewGuid();
         var currentStep = "INITIALIZATION";
 
-        await using var transaction = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
-        try
+        var strategy = _dbContext.Database.CreateExecutionStrategy();
+
+        return await strategy.ExecuteAsync(async () =>
         {
-            currentStep = "SNAPSHOT_LOAD";
-            var snapshot = await _reader.GetSnapshotAsync(ingestionFileId, cancellationToken);
-            if (snapshot is null)
+            await using var transaction = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
+            try
             {
-                await transaction.RollbackAsync(cancellationToken);
+                currentStep = "SNAPSHOT_LOAD";
+                var snapshot = await _reader.GetSnapshotAsync(ingestionFileId, cancellationToken);
+                if (snapshot is null)
+                {
+                    await transaction.RollbackAsync(cancellationToken);
+                    return new ArchiveRunItemResult
+                    {
+                        IngestionFileId = ingestionFileId,
+                        Status = "Skipped",
+                        Message = "Snapshot not found for the given ingestion file.",
+                        FailureReasons = new List<string> { "SNAPSHOT_NOT_FOUND" }
+                    };
+                }
+
+                currentStep = "ELIGIBILITY_CHECK";
+                var eligibility = _evaluator.Evaluate(snapshot, DateTime.UtcNow);
+                if (!eligibility.IsEligible)
+                {
+                    await transaction.RollbackAsync(cancellationToken);
+                    return new ArchiveRunItemResult
+                    {
+                        IngestionFileId = ingestionFileId,
+                        Status = "Skipped",
+                        Message = $"Eligibility check failed: {string.Join(", ", eligibility.FailureReasons)}",
+                        FailureReasons = eligibility.FailureReasons
+                    };
+                }
+
+                currentStep = "LIVE_COUNT_SNAPSHOT";
+                var liveCounts = await _verifier.GetLiveCountsAsync(ingestionFileId, cancellationToken);
+
+                currentStep = "ARCHIVE_COPY";
+                await CopyAggregateAsync(ingestionFileId, auditStamp.Timestamp, auditStamp.UserId, archiveRunId, cancellationToken);
+
+                currentStep = "ARCHIVE_COPY_VERIFICATION";
+                var archiveCounts = await _verifier.GetArchiveCountsAsync(ingestionFileId, cancellationToken);
+                _verifier.EnsureArchiveCountsMatch(liveCounts, archiveCounts);
+
+                currentStep = "LIVE_DELETE";
+                await DeleteAggregateAsync(ingestionFileId, cancellationToken);
+
+                currentStep = "LIVE_DELETE_VERIFICATION";
+                var remainingLiveCounts = await _verifier.GetLiveCountsAsync(ingestionFileId, cancellationToken);
+                _verifier.EnsureLiveCountsCleared(remainingLiveCounts);
+
+                await transaction.CommitAsync(cancellationToken);
+
                 return new ArchiveRunItemResult
                 {
-                    AggregateId = ingestionFileId,
-                    Status = "Skipped",
-                    Message = "Snapshot not found for the given ingestion file.",
-                    FailureReasons = new List<string> { "SNAPSHOT_NOT_FOUND" }
+                    IngestionFileId = ingestionFileId,
+                    Status = "Archived",
+                    ArchiveRunId = archiveRunId
                 };
             }
-
-            currentStep = "ELIGIBILITY_CHECK";
-            var eligibility = _evaluator.Evaluate(snapshot, DateTime.UtcNow);
-            if (!eligibility.IsEligible)
+            catch (Exception ex)
             {
                 await transaction.RollbackAsync(cancellationToken);
+
+                var failureReason = MapStepToFailureReason(currentStep);
+                var safeMessage = BuildSafeMessage(failureReason, ex);
+
                 return new ArchiveRunItemResult
                 {
-                    AggregateId = ingestionFileId,
-                    Status = "Skipped",
-                    Message = $"Eligibility check failed: {string.Join(", ", eligibility.FailureReasons)}",
-                    FailureReasons = eligibility.FailureReasons
+                    IngestionFileId = ingestionFileId,
+                    Status = "Failed",
+                    Message = safeMessage,
+                    FailureReasons = new List<string> { failureReason }
                 };
             }
-
-            currentStep = "LIVE_COUNT_SNAPSHOT";
-            var liveCounts = await _verifier.GetLiveCountsAsync(ingestionFileId, cancellationToken);
-
-            currentStep = "ARCHIVE_COPY";
-            await CopyAggregateAsync(ingestionFileId, auditStamp.Timestamp, auditStamp.UserId, archiveRunId, cancellationToken);
-
-            currentStep = "ARCHIVE_COPY_VERIFICATION";
-            var archiveCounts = await _verifier.GetArchiveCountsAsync(ingestionFileId, cancellationToken);
-            _verifier.EnsureArchiveCountsMatch(liveCounts, archiveCounts);
-
-            currentStep = "LIVE_DELETE";
-            await DeleteAggregateAsync(ingestionFileId, cancellationToken);
-
-            currentStep = "LIVE_DELETE_VERIFICATION";
-            var remainingLiveCounts = await _verifier.GetLiveCountsAsync(ingestionFileId, cancellationToken);
-            _verifier.EnsureLiveCountsCleared(remainingLiveCounts);
-
-            await transaction.CommitAsync(cancellationToken);
-
-            return new ArchiveRunItemResult
-            {
-                AggregateId = ingestionFileId,
-                Status = "Archived",
-                ArchiveRunId = archiveRunId
-            };
-        }
-        catch (Exception ex)
-        {
-            await transaction.RollbackAsync(cancellationToken);
-
-            var failureReason = MapStepToFailureReason(currentStep);
-            var safeMessage = BuildSafeMessage(failureReason, ex);
-
-            return new ArchiveRunItemResult
-            {
-                AggregateId = ingestionFileId,
-                Status = "Failed",
-                Message = safeMessage,
-                FailureReasons = new List<string> { failureReason }
-            };
-        }
+        });
     }
 
     public async Task<Guid> CreateBatchAsync(ArchiveRunRequest? request, CancellationToken cancellationToken)
@@ -137,16 +142,17 @@ internal sealed class ArchiveExecutor
 
     public async Task InsertBatchItemAsync(Guid batchId, ArchiveRunItemResult item, CancellationToken cancellationToken)
     {
+        var stamp = _auditStampService.CreateStamp();
         var batchItem = new ArchiveBatchItem
         {
             Id = Guid.NewGuid(),
             BatchId = batchId,
-            IngestionFileId = item.AggregateId,
+            IngestionFileId = item.IngestionFileId,
             ArchiveRunId = item.ArchiveRunId,
             Status = item.Status,
             Message = item.Message,
             FailureReasonsJson = JsonSerializer.Serialize(item.FailureReasons ?? new List<string>()),
-            ProcessedAt = DateTime.UtcNow
+            ProcessedAt = stamp.Timestamp
         };
 
         _auditStampService.StampForCreate(batchItem);
@@ -156,8 +162,9 @@ internal sealed class ArchiveExecutor
 
     public async Task CompleteBatchAsync(Guid batchId, ArchiveRunResponse response, CancellationToken cancellationToken)
     {
-        var batch = await _dbContext.ArchiveBatches.SingleAsync(x => x.Id == batchId, cancellationToken);
-        batch.CompletedAt = DateTime.UtcNow;
+        var batch = await _dbContext.ArchiveBatches.AsTracking().SingleAsync(x => x.Id == batchId, cancellationToken);
+        var stamp = _auditStampService.CreateStamp();
+        batch.CompletedAt = stamp.Timestamp;
         batch.Status = DeriveBatchStatus(response);
         batch.ProcessedCount = response.ProcessedCount;
         batch.ArchivedCount = response.ArchivedCount;

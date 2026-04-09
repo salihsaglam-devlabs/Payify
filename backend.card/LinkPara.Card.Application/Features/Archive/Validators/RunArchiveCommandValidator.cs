@@ -11,14 +11,14 @@ public class RunArchiveCommandValidator : AbstractValidator<RunArchiveCommand>
 
         When(x => x.Request is not null, () =>
         {
-            RuleFor(x => x.Request.AggregateIds)
+            RuleFor(x => x.Request.IngestionFileIds)
                 .Must(ids => ids is null || ids.All(id => id != Guid.Empty))
-                .WithMessage("Archive run aggregateIds cannot contain empty guid values.");
+                .WithMessage("Archive run ingestionFileIds cannot contain empty guid values.");
 
-            RuleFor(x => x.Request.AggregateIds)
+            RuleFor(x => x.Request.IngestionFileIds)
                 .Must(ids => ids is null || ids.Distinct().Count() == ids.Length)
-                .When(x => x.Request.AggregateIds is { Length: > 0 })
-                .WithMessage("Archive run aggregateIds must be distinct.");
+                .When(x => x.Request.IngestionFileIds is { Length: > 0 })
+                .WithMessage("Archive run ingestionFileIds must be distinct.");
 
             RuleFor(x => x.Request.MaxFiles)
                 .InclusiveBetween(0, 1000)

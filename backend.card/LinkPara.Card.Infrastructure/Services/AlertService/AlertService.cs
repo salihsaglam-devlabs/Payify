@@ -21,7 +21,7 @@ internal sealed class AlertService : IAlertService
     private readonly CardDbContext _dbContext;
     private readonly INotificationEmailService _notificationEmailService;
     private readonly IAuditStampService _auditStampService;
-    private readonly ReconciliationOptions _options = new();
+    private readonly ReconciliationOptions _options;
     private readonly ILogger<AlertService> _logger;
     private readonly IStringLocalizer _localizer;
 
@@ -43,9 +43,9 @@ internal sealed class AlertService : IAlertService
 
     public async Task ExecuteAsync(CancellationToken cancellationToken = default)
     {
-        var alertOptions = _options.Alert ?? new AlertOptions();
+        var alertOptions = _options.Alert;
 
-        if (!alertOptions.Enabled)
+        if (alertOptions.Enabled != true)
         {
             _logger.LogInformation(_localizer.Get("Alert.Disabled"));
             return;
@@ -66,7 +66,7 @@ internal sealed class AlertService : IAlertService
         var toEmail = string.Join(";", recipients);
         var templateName = alertOptions.TemplateName;
 
-        var validStatuses = alertOptions.IncludeFailed
+        var validStatuses = alertOptions.IncludeFailed == true
             ? new[] { AlertStatus.Pending, AlertStatus.Failed }
             : new[] { AlertStatus.Pending };
 
@@ -74,7 +74,7 @@ internal sealed class AlertService : IAlertService
             .AsNoTracking()
             .Where(x => validStatuses.Contains(x.AlertStatus))
             .OrderBy(x => x.CreateDate)
-            .Take(alertOptions.BatchSize)
+            .Take(alertOptions.BatchSize.Value)
             .Select(x => new ReconciliationAlert
             {
                 Id = x.Id,

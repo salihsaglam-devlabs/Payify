@@ -5,6 +5,7 @@ using LinkPara.Card.Infrastructure.Services.PaycoreServices.Models.Response;
 using LinkPara.HttpProviders.Vault;
 using LinkPara.SharedModels.Pagination;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -21,8 +22,12 @@ public class PaycoreClientService
     private HttpClient _client;
     private readonly IConfiguration _configuration;
     private readonly PaycoreSettings _paycoreSettings;
+    private readonly ILogger<PaycoreClientService> _logger;
 
-    public PaycoreClientService(ICacheService cacheService, IVaultClient vaultClient, IConfiguration configuration)
+    public PaycoreClientService(ICacheService cacheService,
+        IVaultClient vaultClient,
+        IConfiguration configuration,
+        ILogger<PaycoreClientService> logger)
     {
         _cacheService = cacheService;
         _vaultClient = vaultClient;
@@ -30,6 +35,7 @@ public class PaycoreClientService
         _paycoreSettings = new PaycoreSettings();
         settings = _vaultClient.GetSecretValue<PaycoreVaultSettings>("CardSecrets", "PaycoreSettings");
         _configuration.GetSection(nameof(PaycoreSettings)).Bind(_paycoreSettings);
+        _logger = logger;
     }
 
     private async Task<string> GetPaycoreTokenAsync()
@@ -48,50 +54,58 @@ public class PaycoreClientService
 
     private async Task<PaycoreTokenResponse> GetToken()
     {
-        _client = new HttpClient();
-
-        _client.DefaultRequestHeaders.Add("x-api-version", _paycoreSettings.ApiVersion);
-        _client.DefaultRequestHeaders.Add("x-channel", _paycoreSettings.Channel);
-        _client.DefaultRequestHeaders.Add("x-language", _paycoreSettings.Language);
-
-        var options = new JsonSerializerOptions
+        try
         {
-            WriteIndented = false,
-            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
-        };
+            _client = new HttpClient();
 
-        var tokenRequest = new PaycoreTokenRequest
+            _client.DefaultRequestHeaders.Add("x-api-version", _paycoreSettings.ApiVersion);
+            _client.DefaultRequestHeaders.Add("x-channel", _paycoreSettings.Channel);
+            _client.DefaultRequestHeaders.Add("x-language", _paycoreSettings.Language);
+
+            var options = new JsonSerializerOptions
+            {
+                WriteIndented = false,
+                DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+            };
+
+            var tokenRequest = new PaycoreTokenRequest
+            {
+                mbrId = settings.MbrId,
+                password = settings.Password,
+                sessionTimeout = settings.SessionTimeout,
+                userCode = settings.UserCode,
+            };
+
+            var postRequest = new HttpRequestMessage(HttpMethod.Post, $"{settings.BaseUrl}{_paycoreSettings.Token}")
+            {
+                Content = new StringContent(JsonSerializer.Serialize(tokenRequest, options), Encoding.UTF8, "application/json")
+            };
+            var response = await _client.SendAsync(postRequest);
+
+            var responseString = await response.Content.ReadAsStringAsync();
+            return JsonSerializer.Deserialize<PaycoreTokenResponse>(responseString);
+        }
+        catch (Exception exception)
         {
-            mbrId = settings.MbrId,
-            password = settings.Password,
-            sessionTimeout = settings.SessionTimeout,
-            userCode = settings.UserCode,
-        };
-
-        var postRequest = new HttpRequestMessage(HttpMethod.Post, $"{settings.BaseUrl}{_paycoreSettings.Token}")
-        {
-            Content = new StringContent(JsonSerializer.Serialize(tokenRequest, options), Encoding.UTF8, "application/json")
-        };
-        var response = await _client.SendAsync(postRequest);
-
-        var responseString = await response.Content.ReadAsStringAsync();
-        return JsonSerializer.Deserialize<PaycoreTokenResponse>(responseString);
+            var endpoint = $"{settings.BaseUrl}{_paycoreSettings.Token}";
+            _logger.LogError("Paycore Client Service Error (GetToken - Endpoint : {endpoint}): {exception}", endpoint, exception);
+            throw;
+        }
     }
 
     public async Task<PaycoreResponseModel<T>> ExecuteAsync<T>(string endPoint, PaycoreRequestType requestType, object parameters = null)
     {
         _client = new HttpClient();
-
-        var token = await GetPaycoreTokenAsync();
-
-        _client.DefaultRequestHeaders.Add("x-token", token);
-        _client.DefaultRequestHeaders.Add("x-api-version", _paycoreSettings.ApiVersion);
-        _client.DefaultRequestHeaders.Add("x-channel", _paycoreSettings.Channel);
-        _client.DefaultRequestHeaders.Add("x-language", _paycoreSettings.Language);
-
         //todo integration log
         try
         {
+            var token = await GetPaycoreTokenAsync();
+
+            _client.DefaultRequestHeaders.Add("x-token", token);
+            _client.DefaultRequestHeaders.Add("x-api-version", _paycoreSettings.ApiVersion);
+            _client.DefaultRequestHeaders.Add("x-channel", _paycoreSettings.Channel);
+            _client.DefaultRequestHeaders.Add("x-language", _paycoreSettings.Language);
+
             HttpResponseMessage response = new();
 
             if (requestType == PaycoreRequestType.Get)
@@ -121,11 +135,11 @@ public class PaycoreClientService
         }
         catch (Exception exception)
         {
-            //todo elastic
+            _logger.LogError("Paycore Client Service Error (ExecuteAsync - Endpoint : {endPoint}): {exception}", endPoint, exception);
             return new PaycoreResponseModel<T>
             {
                 exception = new PaycoreException(),
-                message = exception.Message
+                message = "Service Error"
             };
         }
     }
@@ -133,17 +147,17 @@ public class PaycoreClientService
     public async Task<T> ExecuteGenericAsync<T>(string endPoint, PaycoreRequestType requestType, object parameters = null)
     {
         _client = new HttpClient();
-
-        var token = await GetPaycoreTokenAsync();
-
-        _client.DefaultRequestHeaders.Add("x-token", token);
-        _client.DefaultRequestHeaders.Add("x-api-version", _paycoreSettings.ApiVersion);
-        _client.DefaultRequestHeaders.Add("x-channel", _paycoreSettings.Channel);
-        _client.DefaultRequestHeaders.Add("x-language", _paycoreSettings.Language);
-
         //todo integration log
         try
         {
+
+            var token = await GetPaycoreTokenAsync();
+
+            _client.DefaultRequestHeaders.Add("x-token", token);
+            _client.DefaultRequestHeaders.Add("x-api-version", _paycoreSettings.ApiVersion);
+            _client.DefaultRequestHeaders.Add("x-channel", _paycoreSettings.Channel);
+            _client.DefaultRequestHeaders.Add("x-language", _paycoreSettings.Language);
+
             HttpResponseMessage response = new();
 
             if (requestType == PaycoreRequestType.Get)
@@ -173,8 +187,8 @@ public class PaycoreClientService
         }
         catch (Exception exception)
         {
-            //todo elastic
-            throw exception;
+            _logger.LogError("Paycore Client Service Error (ExecuteGenericAsync - Endpoint : {endPoint}): {exception}", endPoint, exception);
+            throw;
         }
     }
 

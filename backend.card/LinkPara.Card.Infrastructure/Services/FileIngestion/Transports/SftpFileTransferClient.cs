@@ -11,7 +11,7 @@ namespace LinkPara.Card.Infrastructure.Services.FileIngestion.Transports;
 
 public class SftpFileTransferClient : IFileTransferClient
 {
-    private readonly FileIngestionOptions _options = new();
+    private readonly FileIngestionOptions _options;
     private readonly IStringLocalizer _localizer;
 
     public SftpFileTransferClient(IOptions<FileIngestionOptions> options, Func<LinkPara.Card.Application.Commons.Localization.LocalizerResource, IStringLocalizer> localizerFactory)
@@ -170,7 +170,7 @@ public class SftpFileTransferClient : IFileTransferClient
 
         var connectionInfo = new ConnectionInfo(
             sftpOptions.Host,
-            sftpOptions.Port,
+            sftpOptions.Port.Value,
             sftpOptions.Username,
             authenticationMethods.ToArray());
         var client = new SftpClient(connectionInfo);

@@ -135,7 +135,7 @@ internal sealed class EvaluateService : IEvaluateService
         int chunkSize,
         CancellationToken cancellationToken)
     {
-        var maxAttempts = Math.Max(1, _options.Evaluate.ClaimRetryCount);
+        var maxAttempts = Math.Max(1, _options.Evaluate.ClaimRetryCount.Value);
 
         for (var attempt = 0; attempt < maxAttempts; attempt++)
         {
@@ -161,7 +161,7 @@ internal sealed class EvaluateService : IEvaluateService
     {
         var auditStamp = _auditStampService.CreateStamp();
         var claimMarker = $"{ClaimMarkerPrefix}{Guid.NewGuid():N}";
-        var claimTimeout = TimeSpan.FromSeconds(Math.Max(30, _options.Evaluate.ClaimTimeoutSeconds));
+        var claimTimeout = TimeSpan.FromSeconds(Math.Max(30, _options.Evaluate.ClaimTimeoutSeconds.Value));
         var staleCutoff = auditStamp.Timestamp.Add(-claimTimeout);
 
         var strategy = _dbContext.Database.CreateExecutionStrategy();
@@ -636,7 +636,7 @@ internal sealed class EvaluateService : IEvaluateService
 
     private int ResolveChunkSize(EvaluateRequest request)
     {
-        return Math.Clamp(request.Options?.ChunkSize ?? _options.Evaluate.ChunkSize, 100, 10_000);
+        return Math.Clamp(request.Options?.ChunkSize ?? _options.Evaluate.ChunkSize.Value, 100, 10_000);
     }
 
     private EvaluateResponse CreateResponse(

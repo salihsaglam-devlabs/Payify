@@ -9,18 +9,18 @@ internal sealed class ArchiveEligibilityEvaluator
 
     public ArchiveEligibilityEvaluator(IOptions<ArchiveOptions> options)
     {
-        _options = (options.Value ?? new ArchiveOptions()).Normalize();
+        _options = options.Value ?? throw new InvalidOperationException("ArchiveOptions is not configured.");
     }
 
     public ArchiveEligibilityResult Evaluate(ArchiveAggregateSnapshot? snapshot, DateTime utcNow)
     {
         var result = new ArchiveEligibilityResult
         {
-            AggregateId = snapshot?.AggregateId ?? Guid.Empty,
+            IngestionFileId = snapshot?.IngestionFileId ?? Guid.Empty,
             IsEligible = true
         };
 
-        if (!_options.Enabled)
+        if (_options.Enabled != true)
         {
             result.FailureReasons.Add("ARCHIVE_DISABLED");
             result.IsEligible = false;
@@ -40,64 +40,38 @@ internal sealed class ArchiveEligibilityEvaluator
         }
 
         if (snapshot.FileCreateDateUtc.HasValue &&
-            snapshot.FileCreateDateUtc.Value > utcNow.AddDays(-_options.Rules.RetentionDays))
+            snapshot.FileCreateDateUtc.Value > utcNow.AddDays(-_options.Rules.RetentionDays.Value))
         {
             result.FailureReasons.Add("RETENTION_WINDOW_NOT_REACHED");
         }
 
         if (snapshot.LastUpdateUtc.HasValue &&
-            snapshot.LastUpdateUtc.Value > utcNow.AddHours(-_options.Rules.MinLastUpdateAgeHours))
+            snapshot.LastUpdateUtc.Value > utcNow.AddHours(-_options.Rules.MinLastUpdateAgeHours.Value))
         {
             result.FailureReasons.Add("MIN_LAST_UPDATE_AGE_NOT_REACHED");
         }
 
-        if (_options.Rules.ActiveLeaseEnabled && snapshot.HasAnyOperationLease)
+        if (_options.Rules.RetentionOnlyMode != true)
         {
-            result.FailureReasons.Add("ACTIVE_LEASE_EXISTS");
+            var t = _options.TerminalStatuses;
+
+            EnsureAllTerminal(snapshot.IngestionFileStatuses, t.IngestionFile, "INGESTION_FILE_NOT_TERMINAL", result);
+            EnsureAllTerminal(snapshot.IngestionFileLineStatuses, t.IngestionFileLine, "INGESTION_FILE_LINE_NOT_TERMINAL", result);
+            EnsureAllTerminal(snapshot.IngestionFileLineReconciliationStatuses, t.IngestionFileLineReconciliation, "INGESTION_FILE_LINE_RECONCILIATION_NOT_TERMINAL", result);
+            EnsureAllTerminal(snapshot.ReconciliationEvaluationStatuses, t.ReconciliationEvaluation, "RECONCILIATION_EVALUATION_NOT_TERMINAL", result);
+            EnsureAllTerminal(snapshot.ReconciliationOperationStatuses, t.ReconciliationOperation, "RECONCILIATION_OPERATION_NOT_TERMINAL", result);
+            EnsureAllTerminal(snapshot.ReconciliationReviewStatuses, t.ReconciliationReview, "RECONCILIATION_REVIEW_NOT_TERMINAL", result);
+            EnsureAllTerminal(snapshot.ReconciliationOperationExecutionStatuses, t.ReconciliationOperationExecution, "RECONCILIATION_OPERATION_EXECUTION_NOT_TERMINAL", result);
+            EnsureAllTerminal(snapshot.ReconciliationAlertStatuses, t.ReconciliationAlert, "RECONCILIATION_ALERT_NOT_TERMINAL", result);
         }
-
-        if (snapshot.HasScheduledRetryAttempt)
-        {
-            result.FailureReasons.Add("RETRY_SCHEDULE_EXISTS");
-        }
-
-        EnsureTerminal(snapshot.IngestionFileStatuses, _options.Statuses.TerminalStatuses.IngestionFile, "INGESTION_FILE_NOT_TERMINAL", result);
-        EnsureTerminal(snapshot.IngestionFileLineStatuses, _options.Statuses.TerminalStatuses.IngestionFileLine, "INGESTION_FILE_LINE_NOT_TERMINAL", result);
-        EnsureTerminal(snapshot.IngestionFileLineReconciliationStatuses, _options.Statuses.TerminalStatuses.IngestionFileLineReconciliation, "INGESTION_FILE_LINE_RECONCILIATION_NOT_TERMINAL", result);
-        EnsureTerminal(snapshot.ReconciliationEvaluationStatuses, _options.Statuses.TerminalStatuses.ReconciliationEvaluation, "RECONCILIATION_EVALUATION_NOT_TERMINAL", result);
-        EnsureTerminal(snapshot.ReconciliationOperationStatuses, _options.Statuses.TerminalStatuses.ReconciliationOperation, "RECONCILIATION_OPERATION_NOT_TERMINAL", result);
-        EnsureTerminal(snapshot.ReconciliationReviewStatuses, _options.Statuses.TerminalStatuses.ReconciliationReview, "RECONCILIATION_REVIEW_NOT_TERMINAL", result);
-        EnsureTerminal(snapshot.ReconciliationOperationExecutionStatuses, _options.Statuses.TerminalStatuses.ReconciliationOperationExecution, "RECONCILIATION_OPERATION_EXECUTION_NOT_TERMINAL", result);
-        EnsureTerminal(snapshot.ReconciliationAlertStatuses, _options.Statuses.TerminalStatuses.ReconciliationAlert, "RECONCILIATION_ALERT_NOT_TERMINAL", result);
-
-        EnsureBlockingAbsent(snapshot.IngestionFileStatuses, _options.Statuses.NonTerminalBlockingStatuses.IngestionFile, "INGESTION_FILE_BLOCKING_STATUS_EXISTS", result);
-        EnsureBlockingAbsent(snapshot.IngestionFileLineStatuses, _options.Statuses.NonTerminalBlockingStatuses.IngestionFileLine, "INGESTION_FILE_LINE_BLOCKING_STATUS_EXISTS", result);
-        EnsureBlockingAbsent(snapshot.IngestionFileLineReconciliationStatuses, _options.Statuses.NonTerminalBlockingStatuses.IngestionFileLineReconciliation, "INGESTION_FILE_LINE_RECON_BLOCKING_STATUS_EXISTS", result);
-        EnsureBlockingAbsent(snapshot.ReconciliationEvaluationStatuses, _options.Statuses.NonTerminalBlockingStatuses.ReconciliationEvaluation, "RECONCILIATION_EVALUATION_BLOCKING_STATUS_EXISTS", result);
-        EnsureBlockingAbsent(snapshot.ReconciliationOperationStatuses, _options.Statuses.NonTerminalBlockingStatuses.ReconciliationOperation, "RECONCILIATION_OPERATION_BLOCKING_STATUS_EXISTS", result);
-        EnsureBlockingAbsent(snapshot.ReconciliationReviewStatuses, _options.Statuses.NonTerminalBlockingStatuses.ReconciliationReview, "RECONCILIATION_REVIEW_BLOCKING_STATUS_EXISTS", result);
-        EnsureBlockingAbsent(snapshot.ReconciliationOperationExecutionStatuses, _options.Statuses.NonTerminalBlockingStatuses.ReconciliationOperationExecution, "RECONCILIATION_OPERATION_EXECUTION_BLOCKING_STATUS_EXISTS", result);
-        EnsureBlockingAbsent(snapshot.ReconciliationAlertStatuses, _options.Statuses.NonTerminalBlockingStatuses.ReconciliationAlert, "RECONCILIATION_ALERT_BLOCKING_STATUS_EXISTS", result);
-
-        if (_options.Rules.RequireAllReviewsClosed)
-        {
-            EnsureBlockingAbsent(snapshot.ReconciliationReviewStatuses, _options.Statuses.ReviewPendingStatuses, "REVIEW_PENDING_STATUS_EXISTS", result);
-        }
-
-        if (_options.Rules.RequireAllAlertsResolved)
-        {
-            EnsureBlockingAbsent(snapshot.ReconciliationAlertStatuses, _options.Statuses.AlertPendingStatuses, "ALERT_PENDING_STATUS_EXISTS", result);
-        }
-
-        EnsureBlockingAbsent(snapshot.ReconciliationOperationStatuses, _options.Statuses.RetryPendingOperationStatuses, "RETRY_PENDING_OPERATION_STATUS_EXISTS", result);
 
         result.IsEligible = result.FailureReasons.Count == 0;
         return result;
     }
 
-    private static void EnsureTerminal(
+    private static void EnsureAllTerminal(
         IReadOnlyCollection<string> actualStatuses,
-        IReadOnlyCollection<string> configuredStatuses,
+        IReadOnlyCollection<string> terminalStatuses,
         string failureReason,
         ArchiveEligibilityResult result)
     {
@@ -106,33 +80,13 @@ internal sealed class ArchiveEligibilityEvaluator
             return;
         }
 
-        var allowed = CreateSet(configuredStatuses);
+        var allowed = new HashSet<string>(
+            terminalStatuses.Where(x => !string.IsNullOrWhiteSpace(x)),
+            StringComparer.OrdinalIgnoreCase);
+
         if (allowed.Count == 0 || actualStatuses.Any(x => !allowed.Contains(x)))
         {
             result.FailureReasons.Add(failureReason);
         }
-    }
-
-    private static void EnsureBlockingAbsent(
-        IReadOnlyCollection<string> actualStatuses,
-        IReadOnlyCollection<string> configuredBlockingStatuses,
-        string failureReason,
-        ArchiveEligibilityResult result)
-    {
-        var blocking = CreateSet(configuredBlockingStatuses);
-        if (blocking.Count == 0)
-        {
-            return;
-        }
-
-        if (actualStatuses.Any(blocking.Contains))
-        {
-            result.FailureReasons.Add(failureReason);
-        }
-    }
-
-    private static HashSet<string> CreateSet(IEnumerable<string> values)
-    {
-        return new HashSet<string>(values.Where(x => !string.IsNullOrWhiteSpace(x)), StringComparer.OrdinalIgnoreCase);
     }
 }

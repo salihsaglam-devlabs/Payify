@@ -40,7 +40,7 @@ public class FileIngestionOrchestrator : IFileIngestionService
     private readonly IFileTransferClientResolver _fileTransferClientResolver;
     private readonly IFixedWidthRecordParser _fixedWidthRecordParser;
     private readonly IParsedRecordModelMapper _parsedRecordModelMapper;
-    private readonly FileIngestionOptions _options = new();
+    private readonly FileIngestionOptions _options;
     private readonly IServiceScopeFactory _serviceScopeFactory;
     private readonly IIngestionErrorMapper _ingestionErrorMapper;
     private readonly IStringLocalizer _localizer;
@@ -140,9 +140,9 @@ public class FileIngestionOrchestrator : IFileIngestionService
             var responsesArray = new FileIngestionResponse[fileList.Count];
             var tasks = new List<Task>();
 
-            if (_options.Processing.EnableParallelProcessing && fileList.Count > 1)
+            if (_options.Processing.EnableParallelProcessing == true && fileList.Count > 1)
             {
-                var maxDop = Math.Max(1, _options.Processing.MaxDegreeOfParallelism);
+                var maxDop = Math.Max(1, _options.Processing.MaxDegreeOfParallelism.Value);
                 var semaphore = new SemaphoreSlim(maxDop);
 
                 for (int i = 0; i < fileList.Count; i++)
@@ -1251,7 +1251,7 @@ public class FileIngestionOrchestrator : IFileIngestionService
         if (rows.Count == 0)
             return;
 
-        if (!_options.Processing.UseBulkInsert)
+        if (_options.Processing.UseBulkInsert != true)
         {
             _auditStampService.StampForCreate(rows.Cast<AuditEntity>());
             await _dbContext.IngestionFileLines.AddRangeAsync(rows, cancellationToken);
@@ -2202,11 +2202,11 @@ public class FileIngestionOrchestrator : IFileIngestionService
             ?? throw new FileIngestionConfigurationException(ApiErrorCode.FileIngestionParsingNotDefined, _localizer.Get("FileIngestion.ParsingNotDefined"));
     }
 
-    private int GetBatchSize() => Math.Max(1, _options.Processing.BatchSize);
+    private int GetBatchSize() => Math.Max(1, _options.Processing.BatchSize.Value);
 
-    private int GetRetryBatchSize() => Math.Max(1, _options.Processing.RetryBatchSize);
+    private int GetRetryBatchSize() => Math.Max(1, _options.Processing.RetryBatchSize.Value);
 
-    private int GetFailedRowMaxRetryCount() => Math.Max(1, _options.Processing.FailedRowMaxRetryCount);
+    private int GetFailedRowMaxRetryCount() => Math.Max(1, _options.Processing.FailedRowMaxRetryCount.Value);
 
     private static string BuildProfileKey(FileType fileType, FileContentType contentType) => $"{fileType}{contentType}";
 

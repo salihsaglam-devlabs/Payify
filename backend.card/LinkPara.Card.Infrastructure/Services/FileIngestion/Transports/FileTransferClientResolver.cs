@@ -8,7 +8,7 @@ namespace LinkPara.Card.Infrastructure.Services.FileIngestion.Transports;
 public class FileTransferClientResolver : IFileTransferClientResolver
 {
     private readonly IEnumerable<IFileTransferClient> _clients;
-    private readonly FileIngestionOptions _options = new();
+    private readonly FileIngestionOptions _options;
     private readonly IStringLocalizer _localizer;
 
     public FileTransferClientResolver(

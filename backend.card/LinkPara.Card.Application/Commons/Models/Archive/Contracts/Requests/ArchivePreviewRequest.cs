@@ -2,7 +2,7 @@ namespace LinkPara.Card.Application.Commons.Models.Archive;
 
 public class ArchivePreviewRequest
 {
-    public Guid[]? AggregateIds { get; set; }
+    public Guid[]? IngestionFileIds { get; set; }
 
     public DateTime? BeforeDate { get; set; }
 

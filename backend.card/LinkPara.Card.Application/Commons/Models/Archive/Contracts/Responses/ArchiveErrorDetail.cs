@@ -18,7 +18,7 @@ public class ArchiveErrorDetail
     [MaxLength(200)]
     public string? Step { get; set; }
 
-    public Guid? AggregateId { get; set; }
+    public Guid? IngestionFileId { get; set; }
 
     [MaxLength(20)]
     public string Severity { get; set; } = "Error";

@@ -26,12 +26,15 @@ public class EvaluateCommandValidator : AbstractValidator<EvaluateCommand>
             When(x => x.Request.Options is not null, () =>
             {
                 RuleFor(x => x.Request.Options!.ChunkSize)
+                    .NotNull()
                     .InclusiveBetween(100, 10_000);
 
                 RuleFor(x => x.Request.Options!.ClaimTimeoutSeconds)
+                    .NotNull()
                     .InclusiveBetween(30, 3600);
 
                 RuleFor(x => x.Request.Options!.ClaimRetryCount)
+                    .NotNull()
                     .InclusiveBetween(1, 10);
             });
         });

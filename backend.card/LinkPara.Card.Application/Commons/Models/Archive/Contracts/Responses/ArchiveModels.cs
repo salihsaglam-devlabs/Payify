@@ -4,7 +4,7 @@ namespace LinkPara.Card.Application.Commons.Models.Archive;
 
 public class ArchiveCandidateResult
 {
-    public Guid AggregateId { get; set; }
+    public Guid IngestionFileId { get; set; }
 
     public bool IsEligible { get; set; }
 
@@ -16,7 +16,7 @@ public class ArchiveCandidateResult
 
 public class ArchiveRunItemResult
 {
-    public Guid AggregateId { get; set; }
+    public Guid IngestionFileId { get; set; }
 
     [Required]
     [MaxLength(32)]
@@ -33,7 +33,7 @@ public class ArchiveRunItemResult
 
 public class ArchiveEligibilityResult
 {
-    public Guid AggregateId { get; set; }
+    public Guid IngestionFileId { get; set; }
 
     public bool IsEligible { get; set; }
 
@@ -59,7 +59,7 @@ public class ArchiveAggregateCounts
 
 public class ArchiveAggregateSnapshot
 {
-    public Guid AggregateId { get; set; }
+    public Guid IngestionFileId { get; set; }
 
     public DateTime? FileCreateDateUtc { get; set; }
 
@@ -85,11 +85,6 @@ public class ArchiveAggregateSnapshot
 
     public HashSet<string> ReconciliationAlertStatuses { get; set; } = new(StringComparer.OrdinalIgnoreCase);
 
-    public bool HasActiveLease { get; set; }
-
-    public bool HasAnyOperationLease { get; set; }
-
-    public bool HasScheduledRetryAttempt { get; set; }
 
     public bool ExistsInArchive { get; set; }
 }

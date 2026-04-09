@@ -95,11 +95,13 @@ public static class DependencyInjection
     {
         var reconciliation = vaultClient.GetSecretValue<ReconciliationOptions>("CardSecrets", ReconciliationOptions.SectionName, null)
             ?? throw new InvalidOperationException("Vault key missing: CardSecrets/Reconciliation");
+        reconciliation.Validate();
         var fileIngestion = vaultClient.GetSecretValue<FileIngestionOptions>("CardSecrets", FileIngestionOptions.SectionName, null)
             ?? throw new InvalidOperationException("Vault key missing: CardSecrets/FileIngestion");
+        fileIngestion.Validate();
         var archive = vaultClient.GetSecretValue<ArchiveOptions>("CardSecrets", ArchiveOptions.SectionName, null)
             ?? throw new InvalidOperationException("Vault key missing: CardSecrets/Archive");
-        archive.Normalize();
+        archive.Validate();
 
         services.AddSingleton<IOptions<ReconciliationOptions>>(Options.Create(reconciliation));
         services.AddSingleton<IOptions<FileIngestionOptions>>(Options.Create(fileIngestion));

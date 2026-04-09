@@ -59,7 +59,7 @@ internal sealed class ArchiveAggregateReader
 
         var snapshot = new ArchiveAggregateSnapshot
         {
-            AggregateId = file.Id,
+            IngestionFileId = file.Id,
             FileCreateDateUtc = DateTime.SpecifyKind(file.CreateDate, DateTimeKind.Utc),
             LastUpdateUtc = DateTime.SpecifyKind(file.LastUpdate, DateTimeKind.Utc)
         };
@@ -124,22 +124,14 @@ internal sealed class ArchiveAggregateReader
             .Where(x => fileLineIds.Contains(x.FileLineId))
             .CountAsync(cancellationToken);
 
-        foreach (var operation in await _dbContext.ReconciliationOperations
+        foreach (var status in await _dbContext.ReconciliationOperations
                      .AsNoTracking()
                      .Where(x => fileLineIds.Contains(x.FileLineId))
-                     .Select(x => new { Status = x.Status.ToString(), x.LeaseExpiresAt, x.NextAttemptAt })
+                     .Select(x => x.Status.ToString())
+                     .Distinct()
                      .ToListAsync(cancellationToken))
         {
-            snapshot.ReconciliationOperationStatuses.Add(operation.Status);
-            if (operation.LeaseExpiresAt.HasValue && operation.LeaseExpiresAt.Value > DateTime.UtcNow)
-            {
-                snapshot.HasAnyOperationLease = true;
-            }
-
-            if (operation.NextAttemptAt.HasValue)
-            {
-                snapshot.HasScheduledRetryAttempt = true;
-            }
+            snapshot.ReconciliationOperationStatuses.Add(status);
         }
 
         snapshot.Counts.ReconciliationReviewCount = await _dbContext.ReconciliationReviews

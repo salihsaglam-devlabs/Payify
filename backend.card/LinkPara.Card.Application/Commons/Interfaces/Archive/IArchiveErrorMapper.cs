@@ -8,7 +8,7 @@ public interface IArchiveErrorMapper
     ArchiveErrorDetail MapException(
         Exception ex,
         string step,
-        Guid? aggregateId = null,
+        Guid? ingestionFileId = null,
         string? detail = null,
         string? message = null);
 
@@ -16,7 +16,7 @@ public interface IArchiveErrorMapper
         string code,
         string message,
         string step,
-        Guid? aggregateId = null,
+        Guid? ingestionFileId = null,
         string? detail = null,
         string severity = "Error");
 }
