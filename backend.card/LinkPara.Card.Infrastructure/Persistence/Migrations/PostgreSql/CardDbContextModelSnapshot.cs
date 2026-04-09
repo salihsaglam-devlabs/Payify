@@ -186,26 +186,6 @@ namespace LinkPara.Card.Infrastructure.Persistence.Migrations.PostgreSql
                         .HasColumnType("uuid")
                         .HasColumnName("id");
 
-                    b.Property<DateTime?>("ArchiveChildrenTransitionedAt")
-                        .HasColumnType("timestamp without time zone")
-                        .HasColumnName("archive_children_transitioned_at");
-
-                    b.Property<DateTime?>("ArchiveCleanupCompletedAt")
-                        .HasColumnType("timestamp without time zone")
-                        .HasColumnName("archive_cleanup_completed_at");
-
-                    b.Property<DateTime?>("ArchiveCleanupEligibleAt")
-                        .HasColumnType("timestamp without time zone")
-                        .HasColumnName("archive_cleanup_eligible_at");
-
-                    b.Property<Guid?>("ArchiveRecordRunId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("archive_record_run_id");
-
-                    b.Property<DateTime?>("ArchiveRecordWrittenAt")
-                        .HasColumnType("timestamp without time zone")
-                        .HasColumnName("archive_record_written_at");
-
                     b.Property<Guid>("ArchiveRunId")
                         .HasColumnType("uuid")
                         .HasColumnName("archive_run_id");
@@ -335,14 +315,6 @@ namespace LinkPara.Card.Infrastructure.Persistence.Migrations.PostgreSql
                     b.Property<Guid>("ArchiveRunId")
                         .HasColumnType("uuid")
                         .HasColumnName("archive_run_id");
-
-                    b.Property<Guid?>("ArchiveTransitionRunId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("archive_transition_run_id");
-
-                    b.Property<DateTime?>("ArchiveTransitionedAt")
-                        .HasColumnType("timestamp without time zone")
-                        .HasColumnName("archive_transitioned_at");
 
                     b.Property<DateTime>("ArchivedAt")
                         .HasColumnType("timestamp without time zone")
@@ -1338,7 +1310,6 @@ namespace LinkPara.Card.Infrastructure.Persistence.Migrations.PostgreSql
                         .HasColumnType("uuid")
                         .HasColumnName("id");
 
-
                     b.Property<string>("ContentType")
                         .IsRequired()
                         .HasMaxLength(50)
@@ -1458,7 +1429,6 @@ namespace LinkPara.Card.Infrastructure.Persistence.Migrations.PostgreSql
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid")
                         .HasColumnName("id");
-
 
                     b.Property<int>("ByteLength")
                         .HasColumnType("integer")

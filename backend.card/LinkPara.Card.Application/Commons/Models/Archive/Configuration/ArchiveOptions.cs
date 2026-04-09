@@ -52,17 +52,11 @@ public class ArchiveRuleOptions
 
     public int MinLastUpdateAgeHours { get; set; } = 24;
 
-    public bool UseAggregateLastActivityForMinAge { get; set; } = true;
-
     public bool RequireAllReviewsClosed { get; set; } = true;
 
     public bool RequireAllAlertsResolved { get; set; } = true;
 
     public bool ActiveLeaseEnabled { get; set; } = true;
-
-    public bool RequireFileArchiveRecordBeforeCleanup { get; set; } = true;
-
-    public bool RequireAllAtomicItemsArchivedBeforeCleanup { get; set; } = true;
 }
 
 public class ArchiveStatusOptions

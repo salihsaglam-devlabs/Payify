@@ -57,65 +57,6 @@ public class ArchiveAggregateCounts
     public int ReconciliationAlertCount { get; set; }
 }
 
-public class ArchiveAtomicItemSummary
-{
-    public int TotalCount { get; set; }
-
-    public int CompletedCount { get; set; }
-
-    public int EligibleCount { get; set; }
-
-    public int ArchivedCount { get; set; }
-}
-
-public class ArchiveFileLifecycleState
-{
-    public bool ArchiveRecordWritten { get; set; }
-
-    public bool ChildrenFullyTransitioned { get; set; }
-
-    public bool CleanupEligible { get; set; }
-
-    public bool CleanupCompleted { get; set; }
-
-    public DateTime? ArchiveRecordWrittenAtUtc { get; set; }
-
-    public DateTime? ChildrenTransitionedAtUtc { get; set; }
-
-    public DateTime? CleanupEligibleAtUtc { get; set; }
-
-    public DateTime? CleanupCompletedAtUtc { get; set; }
-}
-
-public class ArchiveAtomicItemSnapshot
-{
-    public Guid FileLineId { get; set; }
-
-    public HashSet<string> FileLineStatuses { get; set; } = new(StringComparer.OrdinalIgnoreCase);
-
-    public HashSet<string> FileLineReconciliationStatuses { get; set; } = new(StringComparer.OrdinalIgnoreCase);
-
-    public HashSet<string> EvaluationStatuses { get; set; } = new(StringComparer.OrdinalIgnoreCase);
-
-    public HashSet<string> OperationStatuses { get; set; } = new(StringComparer.OrdinalIgnoreCase);
-
-    public HashSet<string> ReviewStatuses { get; set; } = new(StringComparer.OrdinalIgnoreCase);
-
-    public HashSet<string> OperationExecutionStatuses { get; set; } = new(StringComparer.OrdinalIgnoreCase);
-
-    public HashSet<string> AlertStatuses { get; set; } = new(StringComparer.OrdinalIgnoreCase);
-
-    public bool IsCompleted { get; set; }
-
-    public bool IsEligible { get; set; }
-
-    public bool IsArchived { get; set; }
-
-    public bool HasActiveLease { get; set; }
-
-    public bool HasScheduledRetryAttempt { get; set; }
-}
-
 public class ArchiveAggregateSnapshot
 {
     public Guid AggregateId { get; set; }
@@ -151,12 +92,4 @@ public class ArchiveAggregateSnapshot
     public bool HasScheduledRetryAttempt { get; set; }
 
     public bool ExistsInArchive { get; set; }
-
-    public DateTime? AggregateLastActivityUtc { get; set; }
-
-    public ArchiveAtomicItemSummary AtomicItems { get; set; } = new();
-
-    public ArchiveFileLifecycleState Lifecycle { get; set; } = new();
-
-    public List<ArchiveAtomicItemSnapshot> ItemSnapshots { get; set; } = new();
 }

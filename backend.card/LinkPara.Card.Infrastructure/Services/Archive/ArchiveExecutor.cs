@@ -1,8 +1,6 @@
 using System.Text.Json;
 using LinkPara.Card.Application.Commons.Models.Archive;
 using LinkPara.Card.Domain.Entities.Archive;
-using LinkPara.Card.Domain.Entities.FileIngestion;
-using LinkPara.Card.Domain.Entities.Reconciliation;
 using LinkPara.Card.Infrastructure.Persistence;
 using LinkPara.Card.Infrastructure.Services.Audit;
 using Microsoft.EntityFrameworkCore;
@@ -14,6 +12,8 @@ internal sealed class ArchiveExecutor
     private readonly CardDbContext _dbContext;
     private readonly ArchiveAggregateReader _reader;
     private readonly ArchiveEligibilityEvaluator _evaluator;
+    private readonly ArchiveVerifier _verifier;
+    private readonly IArchiveSqlDialect _sqlDialect;
     private readonly IAuditStampService _auditStampService;
 
     public ArchiveExecutor(
@@ -27,6 +27,8 @@ internal sealed class ArchiveExecutor
         _dbContext = dbContext;
         _reader = reader;
         _evaluator = evaluator;
+        _verifier = verifier;
+        _sqlDialect = sqlDialect;
         _auditStampService = auditStampService;
     }
 
@@ -34,93 +36,78 @@ internal sealed class ArchiveExecutor
     {
         var auditStamp = _auditStampService.CreateStamp();
         var archiveRunId = Guid.NewGuid();
+        var currentStep = "INITIALIZATION";
 
         await using var transaction = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
         try
         {
+            currentStep = "SNAPSHOT_LOAD";
             var snapshot = await _reader.GetSnapshotAsync(ingestionFileId, cancellationToken);
-            var eligibility = _evaluator.Evaluate(snapshot, auditStamp.Timestamp);
-            if (!eligibility.IsEligible || snapshot is null)
+            if (snapshot is null)
             {
                 await transaction.RollbackAsync(cancellationToken);
                 return new ArchiveRunItemResult
                 {
                     AggregateId = ingestionFileId,
                     Status = "Skipped",
-                    Message = snapshot is null
-                        ? "Snapshot not found for the given ingestion file."
-                        : $"Eligibility check failed: {string.Join(", ", eligibility.FailureReasons)}",
-                    FailureReasons = snapshot is null
-                        ? new List<string> { "SNAPSHOT_NOT_FOUND" }
-                        : eligibility.FailureReasons
+                    Message = "Snapshot not found for the given ingestion file.",
+                    FailureReasons = new List<string> { "SNAPSHOT_NOT_FOUND" }
                 };
             }
 
-            var eligibleItemIds = snapshot.ItemSnapshots
-                .Where(x => x.IsEligible)
-                .Select(x => x.FileLineId)
-                .ToArray();
-
-            var file = await _dbContext.IngestionFiles
-                .AsTracking()
-                .SingleAsync(x => x.Id == ingestionFileId, cancellationToken);
-
-            var actions = new List<string>();
-
-            var archiveFileExists = snapshot.ExistsInArchive;
-
-            var requiresArchiveFileRecord =
-                !archiveFileExists &&
-                (eligibleItemIds.Length > 0 ||
-                 snapshot.ItemSnapshots.Any(x => x.IsArchived) ||
-                 snapshot.AtomicItems.TotalCount == 0);
-
-            if (requiresArchiveFileRecord)
+            currentStep = "ELIGIBILITY_CHECK";
+            var eligibility = _evaluator.Evaluate(snapshot, DateTime.UtcNow);
+            if (!eligibility.IsEligible)
             {
-                await EnsureArchiveFileRecordAsync(file, auditStamp, archiveRunId, cancellationToken);
-                actions.Add("FILE_ARCHIVE_RECORD_READY");
+                await transaction.RollbackAsync(cancellationToken);
+                return new ArchiveRunItemResult
+                {
+                    AggregateId = ingestionFileId,
+                    Status = "Skipped",
+                    Message = $"Eligibility check failed: {string.Join(", ", eligibility.FailureReasons)}",
+                    FailureReasons = eligibility.FailureReasons
+                };
             }
 
-            if (eligibleItemIds.Length > 0)
-            {
-                await ArchiveAtomicItemsAsync(file, eligibleItemIds, auditStamp, archiveRunId, cancellationToken);
-                actions.Add($"ATOMIC_ITEMS_ARCHIVED:{eligibleItemIds.Length}");
-            }
+            currentStep = "LIVE_COUNT_SNAPSHOT";
+            var liveCounts = await _verifier.GetLiveCountsAsync(ingestionFileId, cancellationToken);
 
-            await RefreshArchiveLifecycleAsync(file.Id, archiveRunId, auditStamp, cancellationToken);
+            currentStep = "ARCHIVE_COPY";
+            await CopyAggregateAsync(ingestionFileId, auditStamp.Timestamp, auditStamp.UserId, archiveRunId, cancellationToken);
 
-            var archiveFile = await _dbContext.ArchiveIngestionFiles
-                .AsNoTracking()
-                .Where(x => x.Id == file.Id)
-                .Select(x => new { x.ArchiveCleanupEligibleAt })
-                .SingleOrDefaultAsync(cancellationToken);
+            currentStep = "ARCHIVE_COPY_VERIFICATION";
+            var archiveCounts = await _verifier.GetArchiveCountsAsync(ingestionFileId, cancellationToken);
+            _verifier.EnsureArchiveCountsMatch(liveCounts, archiveCounts);
 
-            if (archiveFile?.ArchiveCleanupEligibleAt.HasValue == true)
-            {
-                await CleanupLiveAggregateAsync(file.Id, auditStamp, archiveRunId, cancellationToken);
-                actions.Add("LIVE_AGGREGATE_CLEANED");
-            }
+            currentStep = "LIVE_DELETE";
+            await DeleteAggregateAsync(ingestionFileId, cancellationToken);
+
+            currentStep = "LIVE_DELETE_VERIFICATION";
+            var remainingLiveCounts = await _verifier.GetLiveCountsAsync(ingestionFileId, cancellationToken);
+            _verifier.EnsureLiveCountsCleared(remainingLiveCounts);
 
             await transaction.CommitAsync(cancellationToken);
 
             return new ArchiveRunItemResult
             {
                 AggregateId = ingestionFileId,
-                Status = actions.Count == 0 ? "Skipped" : "Archived",
-                ArchiveRunId = archiveRunId,
-                Message = actions.Count == 0 ? "No archive or cleanup action was required." : string.Join(", ", actions)
+                Status = "Archived",
+                ArchiveRunId = archiveRunId
             };
         }
         catch (Exception ex)
         {
             await transaction.RollbackAsync(cancellationToken);
 
+            var failureReason = MapStepToFailureReason(currentStep);
+            var safeMessage = BuildSafeMessage(failureReason, ex);
+
             return new ArchiveRunItemResult
             {
                 AggregateId = ingestionFileId,
                 Status = "Failed",
-                Message = BuildSafeMessage(ex),
-                FailureReasons = new List<string> { "EXECUTION_ERROR" }
+                Message = safeMessage,
+                FailureReasons = new List<string> { failureReason }
             };
         }
     }
@@ -179,7 +166,7 @@ internal sealed class ArchiveExecutor
         _auditStampService.StampForUpdate(batch);
         await _dbContext.SaveChangesAsync(cancellationToken);
     }
-
+    
     private static string DeriveBatchStatus(ArchiveRunResponse response)
     {
         if (response.ProcessedCount == 0)
@@ -196,599 +183,73 @@ internal sealed class ArchiveExecutor
 
         return "PartiallyCompleted";
     }
-
-    private async Task EnsureArchiveFileRecordAsync(
-        IngestionFile file,
-        AuditStamp auditStamp,
-        Guid archiveRunId,
-        CancellationToken cancellationToken)
-    {
-        var archiveFile = await _dbContext.ArchiveIngestionFiles
-            .AsTracking()
-            .SingleOrDefaultAsync(x => x.Id == file.Id, cancellationToken);
-
-        if (archiveFile is null)
-        {
-            archiveFile = CloneArchiveFile(file, auditStamp, archiveRunId);
-            await _dbContext.ArchiveIngestionFiles.AddAsync(archiveFile, cancellationToken);
-        }
-        else
-        {
-            archiveFile.UpdateDate = auditStamp.Timestamp;
-            archiveFile.LastModifiedBy = auditStamp.UserId;
-        }
-
-        await _dbContext.SaveChangesAsync(cancellationToken);
-    }
-
-    private async Task ArchiveAtomicItemsAsync(
-        IngestionFile file,
-        IReadOnlyCollection<Guid> eligibleItemIds,
-        AuditStamp auditStamp,
-        Guid archiveRunId,
-        CancellationToken cancellationToken)
-    {
-        var liveLines = await _dbContext.IngestionFileLines
-            .AsTracking()
-            .Where(x => eligibleItemIds.Contains(x.Id))
-            .OrderBy(x => x.LineNumber)
-            .ToListAsync(cancellationToken);
-
-        await UpsertArchiveLinesAsync(liveLines, auditStamp, archiveRunId, cancellationToken);
-        await UpsertArchiveEvaluationsAsync(eligibleItemIds, auditStamp, archiveRunId, cancellationToken);
-        await UpsertArchiveOperationsAsync(eligibleItemIds, auditStamp, archiveRunId, cancellationToken);
-        await UpsertArchiveReviewsAsync(eligibleItemIds, auditStamp, archiveRunId, cancellationToken);
-        await UpsertArchiveExecutionsAsync(eligibleItemIds, auditStamp, archiveRunId, cancellationToken);
-        await UpsertArchiveAlertsAsync(eligibleItemIds, auditStamp, archiveRunId, cancellationToken);
-
-        await _dbContext.SaveChangesAsync(cancellationToken);
-
-        await EnsureAtomicArchiveIntegrityAsync(file.Id, eligibleItemIds, cancellationToken);
-    }
-
-    private async Task RefreshArchiveLifecycleAsync(
+    
+    private async Task CopyAggregateAsync(
         Guid ingestionFileId,
-        Guid archiveRunId,
-        AuditStamp auditStamp,
-        CancellationToken cancellationToken)
-    {
-        var archiveFile = await _dbContext.ArchiveIngestionFiles
-            .AsTracking()
-            .SingleOrDefaultAsync(x => x.Id == ingestionFileId, cancellationToken);
-
-        if (archiveFile is null)
-        {
-            return;
-        }
-
-        archiveFile.ArchiveRecordWrittenAt ??= auditStamp.Timestamp;
-        archiveFile.ArchiveRecordRunId ??= archiveRunId;
-
-        var totalDetailCount = await _dbContext.IngestionFileLines
-            .AsNoTracking()
-            .Where(x => x.IngestionFileId == ingestionFileId && x.RecordType == "D")
-            .CountAsync(cancellationToken);
-
-        var archivedDetailCount = await _dbContext.ArchiveIngestionFileLines
-            .AsNoTracking()
-            .Where(x => x.IngestionFileId == ingestionFileId)
-            .CountAsync(cancellationToken);
-
-        if (totalDetailCount > 0 && totalDetailCount == archivedDetailCount)
-        {
-            archiveFile.ArchiveChildrenTransitionedAt ??= auditStamp.Timestamp;
-        }
-
-        var snapshot = await _reader.GetSnapshotAsync(ingestionFileId, cancellationToken);
-        var eligibility = _evaluator.Evaluate(snapshot, auditStamp.Timestamp);
-
-        if (snapshot?.Lifecycle.CleanupEligible == true && eligibility.IsEligible)
-        {
-            archiveFile.ArchiveCleanupEligibleAt ??= auditStamp.Timestamp;
-        }
-
-        archiveFile.UpdateDate = auditStamp.Timestamp;
-        archiveFile.LastModifiedBy = auditStamp.UserId;
-        await _dbContext.SaveChangesAsync(cancellationToken);
-    }
-
-    private async Task CleanupLiveAggregateAsync(
-        Guid ingestionFileId,
-        AuditStamp auditStamp,
+        DateTime archivedAt,
+        string archivedBy,
         Guid archiveRunId,
         CancellationToken cancellationToken)
     {
-        var archiveFile = await _dbContext.ArchiveIngestionFiles
-            .AsTracking()
-            .SingleAsync(x => x.Id == ingestionFileId, cancellationToken);
-
-        archiveFile.ArchiveCleanupEligibleAt ??= auditStamp.Timestamp;
-        archiveFile.ArchiveCleanupCompletedAt ??= auditStamp.Timestamp;
-        archiveFile.ArchiveChildrenTransitionedAt ??= auditStamp.Timestamp;
-        archiveFile.ArchiveRecordRunId ??= archiveRunId;
-        archiveFile.UpdateDate = auditStamp.Timestamp;
-        archiveFile.LastModifiedBy = auditStamp.UserId;
-
-        await _dbContext.SaveChangesAsync(cancellationToken);
-
-        var fileLineIds = await _dbContext.IngestionFileLines
-            .AsNoTracking()
-            .Where(x => x.IngestionFileId == ingestionFileId)
-            .Select(x => x.Id)
-            .ToListAsync(cancellationToken);
-
-        if (fileLineIds.Count > 0)
+        var copySqls = new[]
         {
-            await _dbContext.ReconciliationAlerts
-                .Where(x => fileLineIds.Contains(x.FileLineId))
-                .ExecuteDeleteAsync(cancellationToken);
-            await _dbContext.ReconciliationOperationExecutions
-                .Where(x => fileLineIds.Contains(x.FileLineId))
-                .ExecuteDeleteAsync(cancellationToken);
-            await _dbContext.ReconciliationReviews
-                .Where(x => fileLineIds.Contains(x.FileLineId))
-                .ExecuteDeleteAsync(cancellationToken);
-            await _dbContext.ReconciliationOperations
-                .Where(x => fileLineIds.Contains(x.FileLineId))
-                .ExecuteDeleteAsync(cancellationToken);
-            await _dbContext.ReconciliationEvaluations
-                .Where(x => fileLineIds.Contains(x.FileLineId))
-                .ExecuteDeleteAsync(cancellationToken);
-        }
+            _sqlDialect.BuildCopyIngestionFileSql(),
+            _sqlDialect.BuildCopyIngestionFileLineSql(),
+            _sqlDialect.BuildCopyReconciliationEvaluationSql(),
+            _sqlDialect.BuildCopyReconciliationOperationSql(),
+            _sqlDialect.BuildCopyReconciliationReviewSql(),
+            _sqlDialect.BuildCopyReconciliationOperationExecutionSql(),
+            _sqlDialect.BuildCopyReconciliationAlertSql()
+        };
 
-        await _dbContext.IngestionFileLines
-            .Where(x => x.IngestionFileId == ingestionFileId)
-            .ExecuteDeleteAsync(cancellationToken);
-        await _dbContext.IngestionFiles
-            .Where(x => x.Id == ingestionFileId)
-            .ExecuteDeleteAsync(cancellationToken);
-    }
-
-    private async Task EnsureAtomicArchiveIntegrityAsync(
-        Guid ingestionFileId,
-        IReadOnlyCollection<Guid> itemIds,
-        CancellationToken cancellationToken)
-    {
-        var liveLineCount = await _dbContext.IngestionFileLines
-            .AsNoTracking()
-            .Where(x => itemIds.Contains(x.Id))
-            .CountAsync(cancellationToken);
-        var archiveLineCount = await _dbContext.ArchiveIngestionFileLines
-            .AsNoTracking()
-            .Where(x => itemIds.Contains(x.Id))
-            .CountAsync(cancellationToken);
-
-        if (liveLineCount != archiveLineCount)
+        foreach (var sql in copySqls)
         {
-            throw new InvalidOperationException("Archive verification failed for archive.ingestion_file_line.");
-        }
-
-        await EnsureReconCountsMatchAsync<ReconciliationEvaluation, ArchiveReconciliationEvaluation>(itemIds, cancellationToken);
-        await EnsureReconCountsMatchAsync<ReconciliationOperation, ArchiveReconciliationOperation>(itemIds, cancellationToken);
-        await EnsureReconCountsMatchAsync<ReconciliationReview, ArchiveReconciliationReview>(itemIds, cancellationToken);
-        await EnsureReconCountsMatchAsync<ReconciliationOperationExecution, ArchiveReconciliationOperationExecution>(itemIds, cancellationToken);
-        await EnsureReconCountsMatchAsync<ReconciliationAlert, ArchiveReconciliationAlert>(itemIds, cancellationToken);
-
-        var archiveFileExists = await _dbContext.ArchiveIngestionFiles
-            .AsNoTracking()
-            .AnyAsync(x => x.Id == ingestionFileId, cancellationToken);
-
-        if (!archiveFileExists)
-        {
-            throw new InvalidOperationException("Archive verification failed for archive.ingestion_file.");
+            await _dbContext.Database.ExecuteSqlRawAsync(
+                sql,
+                new object[] { archivedAt, archivedBy, archiveRunId, ingestionFileId },
+                cancellationToken);
         }
     }
 
-    private async Task EnsureReconCountsMatchAsync<TLive, TArchive>(
-        IReadOnlyCollection<Guid> itemIds,
-        CancellationToken cancellationToken)
-        where TLive : class
-        where TArchive : class
+    private async Task DeleteAggregateAsync(Guid ingestionFileId, CancellationToken cancellationToken)
     {
-        var liveCount = await _dbContext.Set<TLive>()
-            .AsNoTracking()
-            .CountAsync(CreateFileLinePredicate<TLive>(itemIds), cancellationToken);
-        var archiveCount = await _dbContext.Set<TArchive>()
-            .AsNoTracking()
-            .CountAsync(CreateFileLinePredicate<TArchive>(itemIds), cancellationToken);
-
-        if (liveCount != archiveCount)
+        var deleteSqls = new[]
         {
-            throw new InvalidOperationException($"Archive verification failed for {typeof(TArchive).Name}.");
+            _sqlDialect.BuildDeleteReconciliationAlertSql(),
+            _sqlDialect.BuildDeleteReconciliationOperationExecutionSql(),
+            _sqlDialect.BuildDeleteReconciliationReviewSql(),
+            _sqlDialect.BuildDeleteReconciliationOperationSql(),
+            _sqlDialect.BuildDeleteReconciliationEvaluationSql(),
+            _sqlDialect.BuildDeleteIngestionFileLineSql(),
+            _sqlDialect.BuildDeleteIngestionFileSql()
+        };
+
+        foreach (var sql in deleteSqls)
+        {
+            await _dbContext.Database.ExecuteSqlRawAsync(sql, new object[] { ingestionFileId }, cancellationToken);
         }
     }
 
-    private static System.Linq.Expressions.Expression<Func<TEntity, bool>> CreateFileLinePredicate<TEntity>(
-        IReadOnlyCollection<Guid> itemIds)
+    private static string MapStepToFailureReason(string step)
     {
-        var parameter = System.Linq.Expressions.Expression.Parameter(typeof(TEntity), "x");
-        var property = System.Linq.Expressions.Expression.Property(parameter, nameof(ReconciliationEvaluation.FileLineId));
-        var itemIdsConstant = System.Linq.Expressions.Expression.Constant(itemIds);
-        var contains = System.Linq.Expressions.Expression.Call(
-            typeof(Enumerable),
-            nameof(Enumerable.Contains),
-            new[] { typeof(Guid) },
-            itemIdsConstant,
-            property);
-
-        return System.Linq.Expressions.Expression.Lambda<Func<TEntity, bool>>(contains, parameter);
-    }
-
-    private async Task UpsertArchiveLinesAsync(
-        IReadOnlyCollection<IngestionFileLine> liveLines,
-        AuditStamp auditStamp,
-        Guid archiveRunId,
-        CancellationToken cancellationToken)
-    {
-        var lineIds = liveLines.Select(x => x.Id).ToArray();
-        var existingIds = await _dbContext.ArchiveIngestionFileLines
-            .AsNoTracking()
-            .Where(x => lineIds.Contains(x.Id))
-            .Select(x => x.Id)
-            .ToListAsync(cancellationToken);
-
-        var missing = liveLines
-            .Where(x => !existingIds.Contains(x.Id))
-            .Select(x => CloneArchiveLine(x, auditStamp, archiveRunId))
-            .ToList();
-
-        if (missing.Count > 0)
+        return step switch
         {
-            await _dbContext.ArchiveIngestionFileLines.AddRangeAsync(missing, cancellationToken);
-        }
-    }
-
-    private async Task UpsertArchiveEvaluationsAsync(
-        IReadOnlyCollection<Guid> itemIds,
-        AuditStamp auditStamp,
-        Guid archiveRunId,
-        CancellationToken cancellationToken)
-    {
-        var live = await _dbContext.ReconciliationEvaluations
-            .AsNoTracking()
-            .Where(x => itemIds.Contains(x.FileLineId))
-            .ToListAsync(cancellationToken);
-
-        var existingIds = await _dbContext.ArchiveReconciliationEvaluations
-            .AsNoTracking()
-            .Where(x => itemIds.Contains(x.FileLineId))
-            .Select(x => x.Id)
-            .ToListAsync(cancellationToken);
-
-        var missing = live
-            .Where(x => !existingIds.Contains(x.Id))
-            .Select(x => CloneArchiveEvaluation(x, auditStamp, archiveRunId))
-            .ToList();
-
-        if (missing.Count > 0)
-        {
-            await _dbContext.ArchiveReconciliationEvaluations.AddRangeAsync(missing, cancellationToken);
-        }
-    }
-
-    private async Task UpsertArchiveOperationsAsync(
-        IReadOnlyCollection<Guid> itemIds,
-        AuditStamp auditStamp,
-        Guid archiveRunId,
-        CancellationToken cancellationToken)
-    {
-        var live = await _dbContext.ReconciliationOperations
-            .AsNoTracking()
-            .Where(x => itemIds.Contains(x.FileLineId))
-            .ToListAsync(cancellationToken);
-
-        var existingIds = await _dbContext.ArchiveReconciliationOperations
-            .AsNoTracking()
-            .Where(x => itemIds.Contains(x.FileLineId))
-            .Select(x => x.Id)
-            .ToListAsync(cancellationToken);
-
-        var missing = live
-            .Where(x => !existingIds.Contains(x.Id))
-            .Select(x => CloneArchiveOperation(x, auditStamp, archiveRunId))
-            .ToList();
-
-        if (missing.Count > 0)
-        {
-            await _dbContext.ArchiveReconciliationOperations.AddRangeAsync(missing, cancellationToken);
-        }
-    }
-
-    private async Task UpsertArchiveReviewsAsync(
-        IReadOnlyCollection<Guid> itemIds,
-        AuditStamp auditStamp,
-        Guid archiveRunId,
-        CancellationToken cancellationToken)
-    {
-        var live = await _dbContext.ReconciliationReviews
-            .AsNoTracking()
-            .Where(x => itemIds.Contains(x.FileLineId))
-            .ToListAsync(cancellationToken);
-
-        var existingIds = await _dbContext.ArchiveReconciliationReviews
-            .AsNoTracking()
-            .Where(x => itemIds.Contains(x.FileLineId))
-            .Select(x => x.Id)
-            .ToListAsync(cancellationToken);
-
-        var missing = live
-            .Where(x => !existingIds.Contains(x.Id))
-            .Select(x => CloneArchiveReview(x, auditStamp, archiveRunId))
-            .ToList();
-
-        if (missing.Count > 0)
-        {
-            await _dbContext.ArchiveReconciliationReviews.AddRangeAsync(missing, cancellationToken);
-        }
-    }
-
-    private async Task UpsertArchiveExecutionsAsync(
-        IReadOnlyCollection<Guid> itemIds,
-        AuditStamp auditStamp,
-        Guid archiveRunId,
-        CancellationToken cancellationToken)
-    {
-        var live = await _dbContext.ReconciliationOperationExecutions
-            .AsNoTracking()
-            .Where(x => itemIds.Contains(x.FileLineId))
-            .ToListAsync(cancellationToken);
-
-        var existingIds = await _dbContext.ArchiveReconciliationOperationExecutions
-            .AsNoTracking()
-            .Where(x => itemIds.Contains(x.FileLineId))
-            .Select(x => x.Id)
-            .ToListAsync(cancellationToken);
-
-        var missing = live
-            .Where(x => !existingIds.Contains(x.Id))
-            .Select(x => CloneArchiveExecution(x, auditStamp, archiveRunId))
-            .ToList();
-
-        if (missing.Count > 0)
-        {
-            await _dbContext.ArchiveReconciliationOperationExecutions.AddRangeAsync(missing, cancellationToken);
-        }
-    }
-
-    private async Task UpsertArchiveAlertsAsync(
-        IReadOnlyCollection<Guid> itemIds,
-        AuditStamp auditStamp,
-        Guid archiveRunId,
-        CancellationToken cancellationToken)
-    {
-        var live = await _dbContext.ReconciliationAlerts
-            .AsNoTracking()
-            .Where(x => itemIds.Contains(x.FileLineId))
-            .ToListAsync(cancellationToken);
-
-        var existingIds = await _dbContext.ArchiveReconciliationAlerts
-            .AsNoTracking()
-            .Where(x => itemIds.Contains(x.FileLineId))
-            .Select(x => x.Id)
-            .ToListAsync(cancellationToken);
-
-        var missing = live
-            .Where(x => !existingIds.Contains(x.Id))
-            .Select(x => CloneArchiveAlert(x, auditStamp, archiveRunId))
-            .ToList();
-
-        if (missing.Count > 0)
-        {
-            await _dbContext.ArchiveReconciliationAlerts.AddRangeAsync(missing, cancellationToken);
-        }
-    }
-
-    private static string BuildSafeMessage(Exception ex)
-    {
-        var message = ex.Message;
-        if (message.Length > 500)
-        {
-            message = message[..500];
-        }
-
-        return $"[EXECUTION_ERROR] {message}";
-    }
-
-    private static ArchiveIngestionFile CloneArchiveFile(IngestionFile source, AuditStamp auditStamp, Guid archiveRunId)
-    {
-        return new ArchiveIngestionFile
-        {
-            Id = source.Id,
-            FileKey = source.FileKey,
-            FileName = source.FileName,
-            FullPath = source.FullPath,
-            SourceType = source.SourceType,
-            FileType = source.FileType,
-            ContentType = source.ContentType,
-            Status = source.Status,
-            Message = source.Message,
-            ExpectedCount = source.ExpectedCount,
-            TotalCount = source.TotalCount,
-            SuccessCount = source.SuccessCount,
-            ErrorCount = source.ErrorCount,
-            LastProcessedLineNumber = source.LastProcessedLineNumber,
-            LastProcessedByteOffset = source.LastProcessedByteOffset,
-            IsArchived = source.IsArchived,
-            ArchiveRecordWrittenAt = auditStamp.Timestamp,
-            ArchiveRecordRunId = archiveRunId,
-            CreateDate = source.CreateDate,
-            CreatedBy = source.CreatedBy,
-            UpdateDate = source.UpdateDate,
-            LastModifiedBy = source.LastModifiedBy,
-            RecordStatus = source.RecordStatus,
-            ArchivedAt = auditStamp.Timestamp,
-            ArchivedBy = auditStamp.UserId,
-            ArchiveRunId = archiveRunId
+            "SNAPSHOT_LOAD" => "SNAPSHOT_NOT_FOUND",
+            "ELIGIBILITY_CHECK" => "ELIGIBILITY_FAILED",
+            "ARCHIVE_COPY" => "SQL_GENERATION_FAILED",
+            "ARCHIVE_COPY_VERIFICATION" => "ARCHIVE_COPY_COUNT_MISMATCH",
+            "LIVE_DELETE" => "LIVE_DELETE_NOT_CLEARED",
+            "LIVE_DELETE_VERIFICATION" => "LIVE_DELETE_NOT_CLEARED",
+            _ => "EXECUTION_ERROR"
         };
     }
 
-    private static ArchiveIngestionFileLine CloneArchiveLine(IngestionFileLine source, AuditStamp auditStamp, Guid archiveRunId)
+    private static string BuildSafeMessage(string failureReason, Exception ex)
     {
-        return new ArchiveIngestionFileLine
-        {
-            Id = source.Id,
-            IngestionFileId = source.IngestionFileId,
-            LineNumber = source.LineNumber,
-            ByteOffset = source.ByteOffset,
-            ByteLength = source.ByteLength,
-            RecordType = source.RecordType,
-            RawData = source.RawData,
-            ParsedData = source.ParsedData,
-            Status = source.Status,
-            Message = source.Message,
-            RetryCount = source.RetryCount,
-            CorrelationKey = source.CorrelationKey,
-            CorrelationValue = source.CorrelationValue,
-            DuplicateDetectionKey = source.DuplicateDetectionKey,
-            DuplicateStatus = source.DuplicateStatus,
-            DuplicateGroupId = source.DuplicateGroupId,
-            ReconciliationStatus = source.ReconciliationStatus,
-            ArchiveTransitionedAt = auditStamp.Timestamp,
-            ArchiveTransitionRunId = archiveRunId,
-            CreateDate = source.CreateDate,
-            CreatedBy = source.CreatedBy,
-            UpdateDate = source.UpdateDate,
-            LastModifiedBy = source.LastModifiedBy,
-            RecordStatus = source.RecordStatus,
-            ArchivedAt = auditStamp.Timestamp,
-            ArchivedBy = auditStamp.UserId,
-            ArchiveRunId = archiveRunId
-        };
-    }
+        var baseMessage = ex.Message;
+        if (baseMessage.Length > 500)
+            baseMessage = baseMessage[..500];
 
-    private static ArchiveReconciliationEvaluation CloneArchiveEvaluation(ReconciliationEvaluation source, AuditStamp auditStamp, Guid archiveRunId)
-    {
-        return new ArchiveReconciliationEvaluation
-        {
-            Id = source.Id,
-            FileLineId = source.FileLineId,
-            GroupId = source.GroupId,
-            Status = source.Status,
-            Message = source.Message,
-            CreatedOperationCount = source.CreatedOperationCount,
-            CreateDate = source.CreateDate,
-            CreatedBy = source.CreatedBy,
-            UpdateDate = source.UpdateDate,
-            LastModifiedBy = source.LastModifiedBy,
-            RecordStatus = source.RecordStatus,
-            ArchivedAt = auditStamp.Timestamp,
-            ArchivedBy = auditStamp.UserId,
-            ArchiveRunId = archiveRunId
-        };
-    }
-
-    private static ArchiveReconciliationOperation CloneArchiveOperation(ReconciliationOperation source, AuditStamp auditStamp, Guid archiveRunId)
-    {
-        return new ArchiveReconciliationOperation
-        {
-            Id = source.Id,
-            FileLineId = source.FileLineId,
-            EvaluationId = source.EvaluationId,
-            GroupId = source.GroupId,
-            SequenceIndex = source.SequenceIndex,
-            ParentSequenceIndex = source.ParentSequenceIndex,
-            Code = source.Code,
-            Note = source.Note,
-            Payload = source.Payload,
-            IsManual = source.IsManual,
-            Branch = source.Branch,
-            Status = source.Status,
-            LeaseOwner = source.LeaseOwner,
-            LeaseExpiresAt = source.LeaseExpiresAt,
-            RetryCount = source.RetryCount,
-            MaxRetries = source.MaxRetries,
-            NextAttemptAt = source.NextAttemptAt,
-            IdempotencyKey = source.IdempotencyKey,
-            LastError = source.LastError,
-            CreateDate = source.CreateDate,
-            CreatedBy = source.CreatedBy,
-            UpdateDate = source.UpdateDate,
-            LastModifiedBy = source.LastModifiedBy,
-            RecordStatus = source.RecordStatus,
-            ArchivedAt = auditStamp.Timestamp,
-            ArchivedBy = auditStamp.UserId,
-            ArchiveRunId = archiveRunId
-        };
-    }
-
-    private static ArchiveReconciliationReview CloneArchiveReview(ReconciliationReview source, AuditStamp auditStamp, Guid archiveRunId)
-    {
-        return new ArchiveReconciliationReview
-        {
-            Id = source.Id,
-            FileLineId = source.FileLineId,
-            GroupId = source.GroupId,
-            EvaluationId = source.EvaluationId,
-            OperationId = source.OperationId,
-            ReviewerId = source.ReviewerId,
-            Decision = source.Decision,
-            Comment = source.Comment,
-            DecisionAt = source.DecisionAt,
-            ExpiresAt = source.ExpiresAt,
-            ExpirationAction = source.ExpirationAction,
-            ExpirationFlowAction = source.ExpirationFlowAction,
-            CreateDate = source.CreateDate,
-            CreatedBy = source.CreatedBy,
-            UpdateDate = source.UpdateDate,
-            LastModifiedBy = source.LastModifiedBy,
-            RecordStatus = source.RecordStatus,
-            ArchivedAt = auditStamp.Timestamp,
-            ArchivedBy = auditStamp.UserId,
-            ArchiveRunId = archiveRunId
-        };
-    }
-
-    private static ArchiveReconciliationOperationExecution CloneArchiveExecution(ReconciliationOperationExecution source, AuditStamp auditStamp, Guid archiveRunId)
-    {
-        return new ArchiveReconciliationOperationExecution
-        {
-            Id = source.Id,
-            FileLineId = source.FileLineId,
-            GroupId = source.GroupId,
-            EvaluationId = source.EvaluationId,
-            OperationId = source.OperationId,
-            AttemptNumber = source.AttemptNumber,
-            StartedAt = source.StartedAt,
-            FinishedAt = source.FinishedAt,
-            Status = source.Status,
-            RequestPayload = source.RequestPayload,
-            ResponsePayload = source.ResponsePayload,
-            ResultCode = source.ResultCode,
-            ResultMessage = source.ResultMessage,
-            ErrorCode = source.ErrorCode,
-            ErrorMessage = source.ErrorMessage,
-            CreateDate = source.CreateDate,
-            CreatedBy = source.CreatedBy,
-            UpdateDate = source.UpdateDate,
-            LastModifiedBy = source.LastModifiedBy,
-            RecordStatus = source.RecordStatus,
-            ArchivedAt = auditStamp.Timestamp,
-            ArchivedBy = auditStamp.UserId,
-            ArchiveRunId = archiveRunId
-        };
-    }
-
-    private static ArchiveReconciliationAlert CloneArchiveAlert(ReconciliationAlert source, AuditStamp auditStamp, Guid archiveRunId)
-    {
-        return new ArchiveReconciliationAlert
-        {
-            Id = source.Id,
-            FileLineId = source.FileLineId,
-            GroupId = source.GroupId,
-            EvaluationId = source.EvaluationId,
-            OperationId = source.OperationId,
-            Severity = source.Severity,
-            AlertType = source.AlertType,
-            Message = source.Message,
-            AlertStatus = source.AlertStatus,
-            CreateDate = source.CreateDate,
-            CreatedBy = source.CreatedBy,
-            UpdateDate = source.UpdateDate,
-            LastModifiedBy = source.LastModifiedBy,
-            RecordStatus = source.RecordStatus,
-            ArchivedAt = auditStamp.Timestamp,
-            ArchivedBy = auditStamp.UserId,
-            ArchiveRunId = archiveRunId
-        };
+        return $"[{failureReason}] {baseMessage}";
     }
 }

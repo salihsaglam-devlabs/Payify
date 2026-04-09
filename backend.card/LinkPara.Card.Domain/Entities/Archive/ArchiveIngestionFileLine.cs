@@ -7,7 +7,5 @@ public class ArchiveIngestionFileLine : IngestionFileLine
     public DateTime ArchivedAt { get; set; }
     public string ArchivedBy { get; set; } = string.Empty;
     public Guid ArchiveRunId { get; set; }
-    public DateTime? ArchiveTransitionedAt { get; set; }
-    public Guid? ArchiveTransitionRunId { get; set; }
 }
 
