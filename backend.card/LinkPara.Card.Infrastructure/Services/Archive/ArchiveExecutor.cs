@@ -36,11 +36,26 @@ internal sealed class ArchiveExecutor
     {
         var auditStamp = _auditStampService.CreateStamp();
         var archiveRunId = Guid.NewGuid();
+        var currentStep = "INITIALIZATION";
 
         await using var transaction = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
         try
         {
+            currentStep = "SNAPSHOT_LOAD";
             var snapshot = await _reader.GetSnapshotAsync(ingestionFileId, cancellationToken);
+            if (snapshot is null)
+            {
+                await transaction.RollbackAsync(cancellationToken);
+                return new ArchiveRunItemResult
+                {
+                    AggregateId = ingestionFileId,
+                    Status = "Skipped",
+                    Message = "Snapshot not found for the given ingestion file.",
+                    FailureReasons = new List<string> { "SNAPSHOT_NOT_FOUND" }
+                };
+            }
+
+            currentStep = "ELIGIBILITY_CHECK";
             var eligibility = _evaluator.Evaluate(snapshot, DateTime.UtcNow);
             if (!eligibility.IsEligible)
             {
@@ -49,19 +64,25 @@ internal sealed class ArchiveExecutor
                 {
                     AggregateId = ingestionFileId,
                     Status = "Skipped",
+                    Message = $"Eligibility check failed: {string.Join(", ", eligibility.FailureReasons)}",
                     FailureReasons = eligibility.FailureReasons
                 };
             }
 
+            currentStep = "LIVE_COUNT_SNAPSHOT";
             var liveCounts = await _verifier.GetLiveCountsAsync(ingestionFileId, cancellationToken);
 
-            await CopyAggregateAsync(ingestionFileId, auditStamp.Timestamp, cancellationToken);
+            currentStep = "ARCHIVE_COPY";
+            await CopyAggregateAsync(ingestionFileId, auditStamp.Timestamp, auditStamp.UserId, archiveRunId, cancellationToken);
 
+            currentStep = "ARCHIVE_COPY_VERIFICATION";
             var archiveCounts = await _verifier.GetArchiveCountsAsync(ingestionFileId, cancellationToken);
             _verifier.EnsureArchiveCountsMatch(liveCounts, archiveCounts);
 
+            currentStep = "LIVE_DELETE";
             await DeleteAggregateAsync(ingestionFileId, cancellationToken);
 
+            currentStep = "LIVE_DELETE_VERIFICATION";
             var remainingLiveCounts = await _verifier.GetLiveCountsAsync(ingestionFileId, cancellationToken);
             _verifier.EnsureLiveCountsCleared(remainingLiveCounts);
 
@@ -77,15 +98,16 @@ internal sealed class ArchiveExecutor
         catch (Exception ex)
         {
             await transaction.RollbackAsync(cancellationToken);
-            var message = ex.InnerException != null
-                ? $"{ex.Message} | Inner: {ex.InnerException.GetType().Name} - {ex.InnerException.Message}"
-                : ex.Message;
+
+            var failureReason = MapStepToFailureReason(currentStep);
+            var safeMessage = BuildSafeMessage(failureReason, ex);
+
             return new ArchiveRunItemResult
             {
                 AggregateId = ingestionFileId,
                 Status = "Failed",
-                Message = message,
-                FailureReasons = new List<string> { "ARCHIVE_EXECUTION_FAILED" }
+                Message = safeMessage,
+                FailureReasons = new List<string> { failureReason }
             };
         }
     }
@@ -123,7 +145,7 @@ internal sealed class ArchiveExecutor
             ArchiveRunId = item.ArchiveRunId,
             Status = item.Status,
             Message = item.Message,
-            FailureReasonsJson = JsonSerializer.Serialize(item.FailureReasons),
+            FailureReasonsJson = JsonSerializer.Serialize(item.FailureReasons ?? new List<string>()),
             ProcessedAt = DateTime.UtcNow
         };
 
@@ -136,7 +158,7 @@ internal sealed class ArchiveExecutor
     {
         var batch = await _dbContext.ArchiveBatches.SingleAsync(x => x.Id == batchId, cancellationToken);
         batch.CompletedAt = DateTime.UtcNow;
-        batch.Status = "Completed";
+        batch.Status = DeriveBatchStatus(response);
         batch.ProcessedCount = response.ProcessedCount;
         batch.ArchivedCount = response.ArchivedCount;
         batch.SkippedCount = response.SkippedCount;
@@ -144,12 +166,30 @@ internal sealed class ArchiveExecutor
         _auditStampService.StampForUpdate(batch);
         await _dbContext.SaveChangesAsync(cancellationToken);
     }
+    
+    private static string DeriveBatchStatus(ArchiveRunResponse response)
+    {
+        if (response.ProcessedCount == 0)
+            return "Completed";
 
-    /// <summary>
-    /// Copies the aggregate to archive tables using raw SQL.
-    /// Parameters: {0}=archivedAt, {1}=ingestionFileId
-    /// </summary>
-    private async Task CopyAggregateAsync(Guid ingestionFileId, DateTime archivedAt, CancellationToken cancellationToken)
+        if (response.FailedCount == response.ProcessedCount)
+            return "Failed";
+
+        if (response.SkippedCount == response.ProcessedCount)
+            return "Skipped";
+
+        if (response.ArchivedCount == response.ProcessedCount)
+            return "Completed";
+
+        return "PartiallyCompleted";
+    }
+    
+    private async Task CopyAggregateAsync(
+        Guid ingestionFileId,
+        DateTime archivedAt,
+        string archivedBy,
+        Guid archiveRunId,
+        CancellationToken cancellationToken)
     {
         var copySqls = new[]
         {
@@ -164,7 +204,10 @@ internal sealed class ArchiveExecutor
 
         foreach (var sql in copySqls)
         {
-            await _dbContext.Database.ExecuteSqlRawAsync(sql, new object[] { archivedAt, ingestionFileId }, cancellationToken);
+            await _dbContext.Database.ExecuteSqlRawAsync(
+                sql,
+                new object[] { archivedAt, archivedBy, archiveRunId, ingestionFileId },
+                cancellationToken);
         }
     }
 
@@ -185,5 +228,28 @@ internal sealed class ArchiveExecutor
         {
             await _dbContext.Database.ExecuteSqlRawAsync(sql, new object[] { ingestionFileId }, cancellationToken);
         }
+    }
+
+    private static string MapStepToFailureReason(string step)
+    {
+        return step switch
+        {
+            "SNAPSHOT_LOAD" => "SNAPSHOT_NOT_FOUND",
+            "ELIGIBILITY_CHECK" => "ELIGIBILITY_FAILED",
+            "ARCHIVE_COPY" => "SQL_GENERATION_FAILED",
+            "ARCHIVE_COPY_VERIFICATION" => "ARCHIVE_COPY_COUNT_MISMATCH",
+            "LIVE_DELETE" => "LIVE_DELETE_NOT_CLEARED",
+            "LIVE_DELETE_VERIFICATION" => "LIVE_DELETE_NOT_CLEARED",
+            _ => "EXECUTION_ERROR"
+        };
+    }
+
+    private static string BuildSafeMessage(string failureReason, Exception ex)
+    {
+        var baseMessage = ex.Message;
+        if (baseMessage.Length > 500)
+            baseMessage = baseMessage[..500];
+
+        return $"[{failureReason}] {baseMessage}";
     }
 }

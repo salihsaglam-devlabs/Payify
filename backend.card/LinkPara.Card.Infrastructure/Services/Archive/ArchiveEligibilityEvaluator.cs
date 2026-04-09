@@ -9,7 +9,7 @@ internal sealed class ArchiveEligibilityEvaluator
 
     public ArchiveEligibilityEvaluator(IOptions<ArchiveOptions> options)
     {
-        _options = options.Value;
+        _options = (options.Value ?? new ArchiveOptions()).Normalize();
     }
 
     public ArchiveEligibilityResult Evaluate(ArchiveAggregateSnapshot? snapshot, DateTime utcNow)
@@ -40,13 +40,13 @@ internal sealed class ArchiveEligibilityEvaluator
         }
 
         if (snapshot.FileCreateDateUtc.HasValue &&
-            snapshot.FileCreateDateUtc.Value > utcNow.AddDays(-Math.Abs(_options.Rules.RetentionDays)))
+            snapshot.FileCreateDateUtc.Value > utcNow.AddDays(-_options.Rules.RetentionDays))
         {
             result.FailureReasons.Add("RETENTION_WINDOW_NOT_REACHED");
         }
 
         if (snapshot.LastUpdateUtc.HasValue &&
-            snapshot.LastUpdateUtc.Value > utcNow.AddHours(-Math.Abs(_options.Rules.MinLastUpdateAgeHours)))
+            snapshot.LastUpdateUtc.Value > utcNow.AddHours(-_options.Rules.MinLastUpdateAgeHours))
         {
             result.FailureReasons.Add("MIN_LAST_UPDATE_AGE_NOT_REACHED");
         }

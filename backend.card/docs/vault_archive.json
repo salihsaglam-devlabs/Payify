@@ -9,8 +9,8 @@
       "DefaultBeforeDateStrategy": "RetentionDays"
     },
     "Rules": {
-      "RetentionDays": 30,
-      "MinLastUpdateAgeHours": 24,
+      "RetentionDays": 90,
+      "MinLastUpdateAgeHours": 72,
       "RequireAllReviewsClosed": true,
       "RequireAllAlertsResolved": true,
       "ActiveLeaseEnabled": true

@@ -99,6 +99,7 @@ public static class DependencyInjection
             ?? throw new InvalidOperationException("Vault key missing: CardSecrets/FileIngestion");
         var archive = vaultClient.GetSecretValue<ArchiveOptions>("CardSecrets", ArchiveOptions.SectionName, null)
             ?? throw new InvalidOperationException("Vault key missing: CardSecrets/Archive");
+        archive.Normalize();
 
         services.AddSingleton<IOptions<ReconciliationOptions>>(Options.Create(reconciliation));
         services.AddSingleton<IOptions<FileIngestionOptions>>(Options.Create(fileIngestion));

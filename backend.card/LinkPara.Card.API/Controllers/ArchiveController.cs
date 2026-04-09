@@ -10,14 +10,16 @@ namespace LinkPara.Card.API.Controllers;
 
 public class ArchiveController : ApiControllerBase
 {
-    [Authorize(Policy = ReconciliationPolicies.ReadAll)]
+    //[Authorize(Policy = ReconciliationPolicies.ReadAll)]
+    [AllowAnonymous]
     [HttpPost("Preview")]
     public Task<ArchivePreviewResponse> PreviewAsync([FromBody] ArchivePreviewRequest? request, CancellationToken cancellationToken = default)
     {
         return Mediator.Send(new PreviewArchiveQuery { Request = request ?? new ArchivePreviewRequest() }, cancellationToken);
     }
 
-    [Authorize(Policy = ReconciliationPolicies.Delete)]
+    //[Authorize(Policy = ReconciliationPolicies.Delete)]
+    [AllowAnonymous]
     [HttpPost("Run")]
     public Task<ArchiveRunResponse> RunAsync([FromBody] ArchiveRunRequest? request, CancellationToken cancellationToken = default)
     {

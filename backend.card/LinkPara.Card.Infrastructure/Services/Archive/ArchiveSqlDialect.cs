@@ -32,7 +32,15 @@ internal sealed class ArchiveSqlDialect : IArchiveSqlDialect
     
     private const string FileLineIdProperty = nameof(ReconciliationEvaluation.FileLineId);
     private const string IngestionFileIdProperty = nameof(IngestionFileLine.IngestionFileId);
-    private const string ArchivedAtProperty = nameof(ArchiveIngestionFile.ArchivedAt);
+    
+    private static readonly (string PropertyName, string ParamPlaceholder)[] ArchiveOnlyColumns =
+    [
+        (nameof(ArchiveIngestionFile.ArchivedAt), "{0}"),
+        (nameof(ArchiveIngestionFile.ArchivedBy), "{1}"),
+        (nameof(ArchiveIngestionFile.ArchiveRunId), "{2}")
+    ];
+
+    private const string FilterParamPlaceholder = "{3}";
 
     public ArchiveSqlDialect(CardDbContext dbContext)
     {
@@ -47,7 +55,7 @@ internal sealed class ArchiveSqlDialect : IArchiveSqlDialect
         return BuildCopySql<IngestionFile, ArchiveIngestionFile>(
             "s",
             $"FROM {Tbl<IngestionFile>()} s",
-            $"WHERE s.{pk} = {{1}}");
+            $"WHERE s.{pk} = {FilterParamPlaceholder}");
     }
 
     public string BuildCopyIngestionFileLineSql()
@@ -56,7 +64,7 @@ internal sealed class ArchiveSqlDialect : IArchiveSqlDialect
         return BuildCopySql<IngestionFileLine, ArchiveIngestionFileLine>(
             "s",
             $"FROM {Tbl<IngestionFileLine>()} s",
-            $"WHERE s.{fk} = {{1}}");
+            $"WHERE s.{fk} = {FilterParamPlaceholder}");
     }
 
     public string BuildCopyReconciliationEvaluationSql()
@@ -113,7 +121,7 @@ internal sealed class ArchiveSqlDialect : IArchiveSqlDialect
         return BuildCopySql<TSource, TArchive>(
             "s",
             $"FROM {Tbl<TSource>()} s JOIN {fileLineTable} l ON l.{fileLinePk} = s.{sourceFileLineId}",
-            $"WHERE l.{fileLineFileId} = {{1}}");
+            $"WHERE l.{fileLineFileId} = {FilterParamPlaceholder}");
     }
     
     private string BuildReconDeleteSql<TEntity>() where TEntity : class
@@ -130,15 +138,32 @@ internal sealed class ArchiveSqlDialect : IArchiveSqlDialect
         where TSource : class
         where TArchive : class
     {
-        var sourceEntity = _dbContext.Model.FindEntityType(typeof(TSource))
-            ?? throw new InvalidOperationException($"Entity type not found for {typeof(TSource).Name}.");
+        var sourceEntity = FindEntityType<TSource>();
+        var archiveEntity = FindEntityType<TArchive>();
 
-        var storeColumns = GetStoreColumnNames(sourceEntity);
+        var sourceColumns = GetStoreColumnNames(sourceEntity);
+        var sourceColumnSet = new HashSet<string>(sourceColumns, StringComparer.OrdinalIgnoreCase);
+
         var archiveTable = Tbl<TArchive>();
-        var archivedAtCol = Col<TArchive>(ArchivedAtProperty);
+        var archiveStoreObject = GetStoreObject(archiveEntity);
+        
+        var archiveOnlyInsertCols = new List<string>();
+        var archiveOnlySelectExprs = new List<string>();
 
-        var insertColumns = storeColumns.Concat(new[] { archivedAtCol });
-        var selectColumns = storeColumns.Select(col => $"{sourceAlias}.{col}").Concat(new[] { "{0}" });
+        foreach (var (propertyName, paramPlaceholder) in ArchiveOnlyColumns)
+        {
+            var prop = archiveEntity.FindProperty(propertyName);
+            if (prop is null) continue;
+
+            var colName = QuoteIdentifier(prop.GetColumnName(archiveStoreObject)!);
+            if (sourceColumnSet.Contains(colName)) continue;
+
+            archiveOnlyInsertCols.Add(colName);
+            archiveOnlySelectExprs.Add(paramPlaceholder);
+        }
+
+        var insertColumns = sourceColumns.Concat(archiveOnlyInsertCols);
+        var selectColumns = sourceColumns.Select(col => $"{sourceAlias}.{col}").Concat(archiveOnlySelectExprs);
 
         return $"""
             INSERT INTO {archiveTable}

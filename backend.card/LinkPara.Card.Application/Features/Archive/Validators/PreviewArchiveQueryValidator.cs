@@ -11,16 +11,18 @@ public class PreviewArchiveQueryValidator : AbstractValidator<PreviewArchiveQuer
 
         When(x => x.Request is not null, () =>
         {
-            RuleForEach(x => x.Request.AggregateIds ?? Array.Empty<Guid>()).NotEqual(Guid.Empty);
+            RuleFor(x => x.Request.AggregateIds)
+                .Must(ids => ids is null || ids.All(id => id != Guid.Empty))
+                .WithMessage("Archive preview aggregateIds cannot contain empty guid values.");
 
-            RuleFor(x => x.Request.AggregateIds ?? Array.Empty<Guid>())
-                .Must(ids => ids.Distinct().Count() == ids.Length)
-                .When(x => (x.Request.AggregateIds?.Length ?? 0) > 0)
+            RuleFor(x => x.Request.AggregateIds)
+                .Must(ids => ids is null || ids.Distinct().Count() == ids.Length)
+                .When(x => x.Request.AggregateIds is { Length: > 0 })
                 .WithMessage("Archive preview aggregateIds must be distinct.");
 
             RuleFor(x => x.Request.Limit)
-                .InclusiveBetween(1, 1000)
-                .When(x => x.Request.Limit is > 0);
+                .InclusiveBetween(0, 1000)
+                .When(x => x.Request.Limit.HasValue);
         });
     }
 }

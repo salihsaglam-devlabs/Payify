@@ -11,6 +11,26 @@ public class ArchiveOptions
     public ArchiveRuleOptions Rules { get; set; } = new();
 
     public ArchiveStatusOptions Statuses { get; set; } = new();
+
+    public ArchiveOptions Normalize()
+    {
+        Defaults ??= new ArchiveDefaultOptions();
+        Rules ??= new ArchiveRuleOptions();
+        Statuses ??= new ArchiveStatusOptions();
+
+        Statuses.TerminalStatuses ??= new ArchiveEntityStatusOptions();
+        Statuses.NonTerminalBlockingStatuses ??= new ArchiveEntityStatusOptions();
+        Statuses.ReviewPendingStatuses ??= [];
+        Statuses.AlertPendingStatuses ??= [];
+        Statuses.RetryPendingOperationStatuses ??= [];
+
+        Statuses.TerminalStatuses.Normalize();
+        Statuses.NonTerminalBlockingStatuses.Normalize();
+
+        Defaults.DefaultBeforeDateStrategy ??= "RetentionDays";
+
+        return this;
+    }
 }
 
 public class ArchiveDefaultOptions
@@ -69,4 +89,16 @@ public class ArchiveEntityStatusOptions
     public string[] ReconciliationOperationExecution { get; set; } = [];
 
     public string[] ReconciliationAlert { get; set; } = [];
+
+    public void Normalize()
+    {
+        IngestionFile ??= [];
+        IngestionFileLine ??= [];
+        IngestionFileLineReconciliation ??= [];
+        ReconciliationEvaluation ??= [];
+        ReconciliationOperation ??= [];
+        ReconciliationReview ??= [];
+        ReconciliationOperationExecution ??= [];
+        ReconciliationAlert ??= [];
+    }
 }

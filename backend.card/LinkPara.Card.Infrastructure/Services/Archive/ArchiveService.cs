@@ -1,33 +1,40 @@
+using LinkPara.Card.Application.Commons.Exceptions;
 using LinkPara.Card.Application.Commons.Interfaces.Archive;
 using LinkPara.Card.Application.Commons.Models.Archive;
 using Microsoft.Extensions.Localization;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 
 namespace LinkPara.Card.Infrastructure.Services.Archive;
 
 internal sealed class ArchiveService : IArchiveService
 {
+    private static readonly HashSet<string> SupportedBeforeDateStrategies =
+        new(StringComparer.OrdinalIgnoreCase) { "None", "RetentionDays" };
+
     private readonly ArchiveAggregateReader _reader;
     private readonly ArchiveEligibilityEvaluator _evaluator;
-    private readonly ArchiveExecutor _executor;
     private readonly ArchiveOptions _options;
     private readonly IArchiveErrorMapper _errorMapper;
     private readonly IStringLocalizer _localizer;
+    private readonly IServiceProvider _serviceProvider;
 
     public ArchiveService(
         ArchiveAggregateReader reader,
         ArchiveEligibilityEvaluator evaluator,
-        ArchiveExecutor executor,
         IOptions<ArchiveOptions> options,
         IArchiveErrorMapper errorMapper,
-        Func<LinkPara.Card.Application.Commons.Localization.LocalizerResource, IStringLocalizer> localizerFactory)
+        Func<LinkPara.Card.Application.Commons.Localization.LocalizerResource, IStringLocalizer> localizerFactory,
+        IServiceProvider serviceProvider)
     {
         _reader = reader;
         _evaluator = evaluator;
-        _executor = executor;
-        _options = options.Value;
+        _options = (options.Value ?? new ArchiveOptions()).Normalize();
         _errorMapper = errorMapper;
         _localizer = localizerFactory(LinkPara.Card.Application.Commons.Localization.LocalizerResource.Messages);
+        _serviceProvider = serviceProvider;
+
+        ValidateOptions(_options);
     }
 
     public async Task<ArchivePreviewResponse> PreviewAsync(
@@ -95,6 +102,7 @@ internal sealed class ArchiveService : IArchiveService
         ArchiveRunRequest request,
         CancellationToken cancellationToken = default)
     {
+        var executor = _serviceProvider.GetRequiredService<ArchiveExecutor>();
         var errors = new List<ArchiveErrorDetail>();
         try
         {
@@ -115,7 +123,7 @@ internal sealed class ArchiveService : IArchiveService
 
             try
             {
-                batchId = await _executor.CreateBatchAsync(effectiveRequest, cancellationToken);
+                batchId = await executor.CreateBatchAsync(effectiveRequest, cancellationToken);
             }
             catch (Exception ex)
             {
@@ -133,7 +141,7 @@ internal sealed class ArchiveService : IArchiveService
                 ArchiveRunItemResult item;
                 try
                 {
-                    item = await _executor.ExecuteAsync(candidateId, cancellationToken);
+                    item = await executor.ExecuteAsync(candidateId, cancellationToken);
                 }
                 catch (Exception ex)
                 {
@@ -167,7 +175,7 @@ internal sealed class ArchiveService : IArchiveService
 
                 try
                 {
-                    await _executor.InsertBatchItemAsync(batchId.Value, item, cancellationToken);
+                    await executor.InsertBatchItemAsync(batchId.Value, item, cancellationToken);
                 }
                 catch (Exception ex)
                 {
@@ -182,7 +190,7 @@ internal sealed class ArchiveService : IArchiveService
 
             try
             {
-                await _executor.CompleteBatchAsync(batchId.Value, response, cancellationToken);
+                await executor.CompleteBatchAsync(batchId.Value, response, cancellationToken);
             }
             catch (Exception ex)
             {
@@ -217,12 +225,61 @@ internal sealed class ArchiveService : IArchiveService
 
     private DateTime? ResolveConfiguredBeforeDate()
     {
-        return _options.Defaults.DefaultBeforeDateStrategy switch
+        var strategy = _options.Defaults.DefaultBeforeDateStrategy;
+
+        if (!SupportedBeforeDateStrategies.Contains(strategy))
         {
-            "RetentionDays" => DateTime.UtcNow.AddDays(-Math.Abs(_options.Rules.RetentionDays)),
+            throw new ArchiveBusinessException(
+                "CONFIGURATION_ERROR",
+                $"Unsupported DefaultBeforeDateStrategy: '{strategy}'. Supported values: {string.Join(", ", SupportedBeforeDateStrategies)}.");
+        }
+
+        return strategy switch
+        {
+            "RetentionDays" => DateTime.UtcNow.AddDays(-_options.Rules.RetentionDays),
             "None" => null,
-            _ => DateTime.UtcNow.AddDays(-Math.Abs(_options.Rules.RetentionDays))
+            _ => throw new ArchiveBusinessException(
+                "CONFIGURATION_ERROR",
+                $"Unsupported DefaultBeforeDateStrategy: '{strategy}'.")
         };
+    }
+
+    private static void ValidateOptions(ArchiveOptions options)
+    {
+        if (!SupportedBeforeDateStrategies.Contains(options.Defaults.DefaultBeforeDateStrategy))
+        {
+            throw new ArchiveBusinessException(
+                "CONFIGURATION_ERROR",
+                $"Unsupported DefaultBeforeDateStrategy: '{options.Defaults.DefaultBeforeDateStrategy}'. Supported values: {string.Join(", ", SupportedBeforeDateStrategies)}.");
+        }
+
+        if (options.Rules.RetentionDays < 0)
+        {
+            throw new ArchiveBusinessException(
+                "CONFIGURATION_ERROR",
+                $"RetentionDays must be non-negative. Current value: {options.Rules.RetentionDays}.");
+        }
+
+        if (options.Rules.MinLastUpdateAgeHours < 0)
+        {
+            throw new ArchiveBusinessException(
+                "CONFIGURATION_ERROR",
+                $"MinLastUpdateAgeHours must be non-negative. Current value: {options.Rules.MinLastUpdateAgeHours}.");
+        }
+
+        if (options.Defaults.PreviewLimit <= 0)
+        {
+            throw new ArchiveBusinessException(
+                "CONFIGURATION_ERROR",
+                $"PreviewLimit must be positive. Current value: {options.Defaults.PreviewLimit}.");
+        }
+
+        if (options.Defaults.MaxRunCount <= 0)
+        {
+            throw new ArchiveBusinessException(
+                "CONFIGURATION_ERROR",
+                $"MaxRunCount must be positive. Current value: {options.Defaults.MaxRunCount}.");
+        }
     }
 
     private static string BuildFailureMessage(string fallbackMessage, IReadOnlyCollection<ArchiveErrorDetail> errors)
