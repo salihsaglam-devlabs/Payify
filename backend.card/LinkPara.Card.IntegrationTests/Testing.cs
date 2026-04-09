@@ -24,6 +24,11 @@ public class Testing
     [OneTimeSetUp]
     public void RunBeforeAnyTests()
     {
+        if (string.Equals(Environment.GetEnvironmentVariable("SKIP_INTEGRATION_TEST_BOOTSTRAP"), "true", StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
         var builder = new ConfigurationBuilder()
             .SetBasePath(Directory.GetCurrentDirectory())
             .AddJsonFile("appsettings.json", optional:true, reloadOnChange: true)

@@ -11,9 +11,12 @@
     "Rules": {
       "RetentionDays": 90,
       "MinLastUpdateAgeHours": 72,
+      "UseAggregateLastActivityForMinAge": true,
       "RequireAllReviewsClosed": true,
       "RequireAllAlertsResolved": true,
-      "ActiveLeaseEnabled": true
+      "ActiveLeaseEnabled": true,
+      "RequireFileArchiveRecordBeforeCleanup": true,
+      "RequireAllAtomicItemsArchivedBeforeCleanup": true
     },
     "Statuses": {
       "TerminalStatuses": {

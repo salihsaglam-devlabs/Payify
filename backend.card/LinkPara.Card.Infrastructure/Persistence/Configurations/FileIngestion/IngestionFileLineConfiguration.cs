@@ -44,5 +44,7 @@ public class IngestionFileLineConfiguration : IEntityTypeConfiguration<Ingestion
         builder.Property(x => x.DuplicateStatus).HasColumnName("duplicate_status").HasMaxLength(64);
         builder.Property(x => x.DuplicateGroupId).HasColumnName("duplicate_group_id");
         builder.Property(x => x.ReconciliationStatus).HasColumnName("reconciliation_status").HasConversion<string>().HasMaxLength(32);
+        builder.Property(x => x.ArchiveTransitionedAt).HasColumnName("archive_transitioned_at");
+        builder.Property(x => x.ArchiveTransitionRunId).HasColumnName("archive_transition_run_id");
     }
 }
