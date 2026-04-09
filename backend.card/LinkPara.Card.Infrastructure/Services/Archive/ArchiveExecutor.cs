@@ -77,11 +77,14 @@ internal sealed class ArchiveExecutor
         catch (Exception ex)
         {
             await transaction.RollbackAsync(cancellationToken);
+            var message = ex.InnerException != null
+                ? $"{ex.Message} | Inner: {ex.InnerException.GetType().Name} - {ex.InnerException.Message}"
+                : ex.Message;
             return new ArchiveRunItemResult
             {
                 AggregateId = ingestionFileId,
                 Status = "Failed",
-                Message = ex.Message,
+                Message = message,
                 FailureReasons = new List<string> { "ARCHIVE_EXECUTION_FAILED" }
             };
         }

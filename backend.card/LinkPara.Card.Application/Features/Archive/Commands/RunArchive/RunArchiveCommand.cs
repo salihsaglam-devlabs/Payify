@@ -1,3 +1,4 @@
+using LinkPara.Card.Application.Commons.Interfaces.Archive;
 using LinkPara.Card.Application.Commons.Models.Archive;
 using MediatR;
 
@@ -10,9 +11,9 @@ public class RunArchiveCommand : IRequest<ArchiveRunResponse>
 
 public class RunArchiveCommandHandler : IRequestHandler<RunArchiveCommand, ArchiveRunResponse>
 {
-    private readonly LinkPara.Card.Application.Commons.Interfaces.Archive.IArchiveService _archiveService;
+    private readonly IArchiveService _archiveService;
 
-    public RunArchiveCommandHandler(LinkPara.Card.Application.Commons.Interfaces.Archive.IArchiveService archiveService)
+    public RunArchiveCommandHandler(IArchiveService archiveService)
     {
         _archiveService = archiveService;
     }

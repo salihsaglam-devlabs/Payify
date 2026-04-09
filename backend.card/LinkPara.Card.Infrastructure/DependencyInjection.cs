@@ -6,6 +6,7 @@ using LinkPara.Card.Application.Commons.Interfaces.FileIngestion;
 using LinkPara.Card.Application.Commons.Interfaces.Reconciliation;
 using LinkPara.Card.Application.Commons.Helpers.FileIngestion;
 using LinkPara.Card.Application.Commons.Helpers.Reconciliation;
+using LinkPara.Card.Application.Commons.Helpers.Archive;
 using LinkPara.Card.Application.Commons.Localization;
 using LinkPara.Card.Application.Commons.Models.EventBusConfiguration;
 using LinkPara.Card.Application.Commons.Models.Archive;
@@ -96,25 +97,14 @@ public static class DependencyInjection
             ?? throw new InvalidOperationException("Vault key missing: CardSecrets/Reconciliation");
         var fileIngestion = vaultClient.GetSecretValue<FileIngestionOptions>("CardSecrets", FileIngestionOptions.SectionName, null)
             ?? throw new InvalidOperationException("Vault key missing: CardSecrets/FileIngestion");
-        var archive = ResolveArchiveOptions(configuration, vaultClient);
+        var archive = vaultClient.GetSecretValue<ArchiveOptions>("CardSecrets", ArchiveOptions.SectionName, null)
+            ?? throw new InvalidOperationException("Vault key missing: CardSecrets/Archive");
 
         services.AddSingleton<IOptions<ReconciliationOptions>>(Options.Create(reconciliation));
         services.AddSingleton<IOptions<FileIngestionOptions>>(Options.Create(fileIngestion));
         services.AddSingleton<IOptions<ArchiveOptions>>(Options.Create(archive));
     }
 
-    private static ArchiveOptions ResolveArchiveOptions(IConfiguration configuration, IVaultClient vaultClient)
-    {
-        var localArchive = configuration.GetSection($"LocalConfiguration:{ArchiveOptions.SectionName}").Get<ArchiveOptions>();
-        if (localArchive is not null)
-        {
-            return localArchive;
-        }
-
-        return vaultClient.GetSecretValue<ArchiveOptions>("CardSecrets", ArchiveOptions.SectionName, null)
-               ?? configuration.GetSection(ArchiveOptions.SectionName).Get<ArchiveOptions>()
-               ?? new ArchiveOptions();
-    }
 
     private static void ConfigureServices(IServiceCollection services)
     {
@@ -126,6 +116,7 @@ public static class DependencyInjection
         });
         services.AddScoped<IIngestionErrorMapper, IngestionErrorMapper>();
         services.AddScoped<IReconciliationErrorMapper, ReconciliationErrorMapper>();
+        services.AddScoped<IArchiveErrorMapper, ArchiveErrorMapper>();
         services.AddScoped<DbContext, CardDbContext>();
         services.AddScoped<IContextProvider, CurrentContextProvider>();
         services.AddScoped<IDomainEventService, DomainEventService>();

@@ -4,6 +4,9 @@ namespace LinkPara.Card.Application.Commons.Models.Archive;
 
 public class ArchiveRunResponse
 {
+    [MaxLength(2000)]
+    public string? Message { get; set; }
+
     [Range(0, int.MaxValue)]
     public int ProcessedCount { get; set; }
 
@@ -18,4 +21,8 @@ public class ArchiveRunResponse
 
     [Required]
     public List<ArchiveRunItemResult> Items { get; set; } = new();
+
+    public List<ArchiveErrorDetail> Errors { get; set; } = new();
+
+    public int ErrorCount { get; set; }
 }

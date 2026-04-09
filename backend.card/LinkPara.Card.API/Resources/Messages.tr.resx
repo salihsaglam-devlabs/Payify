@@ -887,4 +887,212 @@
     <value>Visa değerlendirici kuralları henüz tanımlanmamış. Otomatik veya manuel işlem üretilmedi.</value>
   </data>
 
+  <!-- ════════════════════════════════════════════ -->
+  <!-- Archive – Error Mapper                       -->
+  <!-- ════════════════════════════════════════════ -->
+  <data name="Archive.OperationCancelled" xml:space="preserve">
+    <value>Arşiv işlemi iptal edildi.</value>
+  </data>
+  <data name="Archive.InvalidOperation" xml:space="preserve">
+    <value>Geçersiz işlem.</value>
+  </data>
+  <data name="Archive.InvalidArgument" xml:space="preserve">
+    <value>Geçersiz parametre.</value>
+  </data>
+  <data name="Archive.Timeout" xml:space="preserve">
+    <value>İşlem zaman aşımına uğradı.</value>
+  </data>
+  <data name="Archive.InternalError" xml:space="preserve">
+    <value>Dahili bir hata oluştu.</value>
+  </data>
+
+  <!-- ════════════════════════════════════════════ -->
+  <!-- Archive – Service                            -->
+  <!-- ════════════════════════════════════════════ -->
+  <data name="Archive.PreviewFailed" xml:space="preserve">
+    <value>Arşiv önizleme başarısız oldu.</value>
+  </data>
+  <data name="Archive.RunFailed" xml:space="preserve">
+    <value>Arşiv çalıştırma başarısız oldu.</value>
+  </data>
+  <data name="Archive.BatchCreationFailed" xml:space="preserve">
+    <value>Arşiv toplu iş oluşturma başarısız oldu.</value>
+  </data>
+
+  <!-- ════════════════════════════════════════════ -->
+  <!-- Alert – Service                              -->
+  <!-- ════════════════════════════════════════════ -->
+  <data name="Alert.Disabled" xml:space="preserve">
+    <value>Uyarı ayarları devre dışı olduğu için AlertService atlandı.</value>
+  </data>
+  <data name="Alert.RecipientListEmpty" xml:space="preserve">
+    <value>Alıcı listesi boş olduğu için AlertService atlandı.</value>
+  </data>
+  <data name="Alert.NoAlertsToProcess" xml:space="preserve">
+    <value>İşlenecek uyarı bulunamadı.</value>
+  </data>
+  <data name="Alert.SkippedAlreadyPicked" xml:space="preserve">
+    <value>Uyarı başka bir süreç tarafından zaten alındığı için atlandı.</value>
+  </data>
+  <data name="Alert.ProcessedSuccessfully" xml:space="preserve">
+    <value>Uyarı başarıyla işlendi.</value>
+  </data>
+  <data name="Alert.ProcessingFailed" xml:space="preserve">
+    <value>AlertService uyarıyı işleyemedi.</value>
+  </data>
+  <data name="Alert.NoExecutionRecord" xml:space="preserve">
+    <value>Execution kaydı bulunamadı.</value>
+  </data>
+  <data name="Alert.Summary.AlertType" xml:space="preserve">
+    <value>Uyarı Tipi</value>
+  </data>
+  <data name="Alert.Summary.Severity" xml:space="preserve">
+    <value>Öncelik</value>
+  </data>
+  <data name="Alert.Summary.EvaluationStatus" xml:space="preserve">
+    <value>Değerlendirme Durumu</value>
+  </data>
+  <data name="Alert.Summary.OperationCode" xml:space="preserve">
+    <value>Operasyon Kodu</value>
+  </data>
+  <data name="Alert.Summary.Execution" xml:space="preserve">
+    <value>Yürütme</value>
+  </data>
+  <data name="Alert.Summary.Description" xml:space="preserve">
+    <value>Açıklama</value>
+  </data>
+
+  <!-- Alert – Detail Labels -->
+  <data name="Alert.Template.Title" xml:space="preserve">
+    <value>Mutabakat Uyari Bildirimi</value>
+  </data>
+  <data name="Alert.Template.Description" xml:space="preserve">
+    <value>Mutabakat surecinde dikkat gerektiren bir kayit tespit edilmistir.</value>
+  </data>
+  <data name="Alert.Template.LabelAlertType" xml:space="preserve">
+    <value>Uyari Tipi</value>
+  </data>
+  <data name="Alert.Template.LabelSeverity" xml:space="preserve">
+    <value>Oncelik</value>
+  </data>
+  <data name="Alert.Template.LabelRaisedAt" xml:space="preserve">
+    <value>Olusma Zamani</value>
+  </data>
+  <data name="Alert.Template.LabelSummary" xml:space="preserve">
+    <value>Ozet</value>
+  </data>
+  <data name="Alert.Template.LabelEvaluation" xml:space="preserve">
+    <value>Degerlendirme</value>
+  </data>
+  <data name="Alert.Template.LabelOperation" xml:space="preserve">
+    <value>Operasyon</value>
+  </data>
+  <data name="Alert.Template.LabelLatestExecution" xml:space="preserve">
+    <value>Son Yurutme</value>
+  </data>
+  <data name="Alert.Template.LabelError" xml:space="preserve">
+    <value>Hata</value>
+  </data>
+  <data name="Alert.Template.LabelTechnicalDetails" xml:space="preserve">
+    <value>Teknik Detay</value>
+  </data>
+
+  <!-- Alert – Detail Labels -->
+  <data name="Alert.Detail.AlertHeader" xml:space="preserve">
+    <value>Uyarı</value>
+  </data>
+  <data name="Alert.Detail.EvaluationHeader" xml:space="preserve">
+    <value>Değerlendirme</value>
+  </data>
+  <data name="Alert.Detail.OperationHeader" xml:space="preserve">
+    <value>Operasyon</value>
+  </data>
+  <data name="Alert.Detail.LatestExecutionHeader" xml:space="preserve">
+    <value>Son Yürütme</value>
+  </data>
+  <data name="Alert.Detail.ExecutionHistoryHeader" xml:space="preserve">
+    <value>Yürütme Geçmişi</value>
+  </data>
+  <data name="Alert.Detail.AlertId" xml:space="preserve">
+    <value>Uyarı Id</value>
+  </data>
+  <data name="Alert.Detail.AlertType" xml:space="preserve">
+    <value>Uyarı Tipi</value>
+  </data>
+  <data name="Alert.Detail.Severity" xml:space="preserve">
+    <value>Öncelik</value>
+  </data>
+  <data name="Alert.Detail.GroupId" xml:space="preserve">
+    <value>Grup Id</value>
+  </data>
+  <data name="Alert.Detail.FileLineId" xml:space="preserve">
+    <value>Dosya Satır Id</value>
+  </data>
+  <data name="Alert.Detail.Message" xml:space="preserve">
+    <value>Mesaj</value>
+  </data>
+  <data name="Alert.Detail.Id" xml:space="preserve">
+    <value>Id</value>
+  </data>
+  <data name="Alert.Detail.Status" xml:space="preserve">
+    <value>Durum</value>
+  </data>
+  <data name="Alert.Detail.CreatedOperationCount" xml:space="preserve">
+    <value>Oluşturulan Operasyon Sayısı</value>
+  </data>
+  <data name="Alert.Detail.Code" xml:space="preserve">
+    <value>Kod</value>
+  </data>
+  <data name="Alert.Detail.Note" xml:space="preserve">
+    <value>Not</value>
+  </data>
+  <data name="Alert.Detail.Branch" xml:space="preserve">
+    <value>Dal</value>
+  </data>
+  <data name="Alert.Detail.LeaseOwner" xml:space="preserve">
+    <value>Kiralama Sahibi</value>
+  </data>
+  <data name="Alert.Detail.RetryCount" xml:space="preserve">
+    <value>Yeniden Deneme Sayısı</value>
+  </data>
+  <data name="Alert.Detail.MaxRetries" xml:space="preserve">
+    <value>Maksimum Yeniden Deneme</value>
+  </data>
+  <data name="Alert.Detail.NextAttemptAt" xml:space="preserve">
+    <value>Sonraki Deneme Zamanı</value>
+  </data>
+  <data name="Alert.Detail.LastError" xml:space="preserve">
+    <value>Son Hata</value>
+  </data>
+  <data name="Alert.Detail.AttemptNumber" xml:space="preserve">
+    <value>Deneme Numarası</value>
+  </data>
+  <data name="Alert.Detail.StartedAt" xml:space="preserve">
+    <value>Başlangıç Zamanı</value>
+  </data>
+  <data name="Alert.Detail.FinishedAt" xml:space="preserve">
+    <value>Bitiş Zamanı</value>
+  </data>
+  <data name="Alert.Detail.ResultCode" xml:space="preserve">
+    <value>Sonuç Kodu</value>
+  </data>
+  <data name="Alert.Detail.ResultMessage" xml:space="preserve">
+    <value>Sonuç Mesajı</value>
+  </data>
+  <data name="Alert.Detail.ErrorCode" xml:space="preserve">
+    <value>Hata Kodu</value>
+  </data>
+  <data name="Alert.Detail.ErrorMessage" xml:space="preserve">
+    <value>Hata Mesajı</value>
+  </data>
+  <data name="Alert.Detail.RequestPayloadPreview" xml:space="preserve">
+    <value>İstek Yükü Önizleme</value>
+  </data>
+  <data name="Alert.Detail.ResponsePayloadPreview" xml:space="preserve">
+    <value>Yanıt Yükü Önizleme</value>
+  </data>
+  <data name="Alert.Detail.AttemptPrefix" xml:space="preserve">
+    <value>Deneme</value>
+  </data>
+
 </root>

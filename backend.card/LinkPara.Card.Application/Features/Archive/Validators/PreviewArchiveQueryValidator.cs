@@ -20,7 +20,7 @@ public class PreviewArchiveQueryValidator : AbstractValidator<PreviewArchiveQuer
 
             RuleFor(x => x.Request.Limit)
                 .InclusiveBetween(1, 1000)
-                .When(x => x.Request.Limit.HasValue);
+                .When(x => x.Request.Limit is > 0);
         });
     }
 }

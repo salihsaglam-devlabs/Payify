@@ -60,4 +60,12 @@ public static class ApiErrorCode
     public const string ReconciliationUnsupportedOperationCode = _prefix + "070";
     public const string ReconciliationConsumerUnsupportedJobType = _prefix + "071";
     public const string ReconciliationConsumerRequestMissing = _prefix + "072";
+
+    public const string ArchivePreviewFailed = _prefix + "080";
+    public const string ArchiveRunFailed = _prefix + "081";
+    public const string ArchiveExecutionFailed = _prefix + "082";
+    public const string ArchiveVerificationFailed = _prefix + "083";
+    public const string ArchiveEligibilityCheckFailed = _prefix + "084";
+    public const string ArchiveBatchCreationFailed = _prefix + "085";
+    public const string ArchiveBatchCompletionFailed = _prefix + "086";
 }

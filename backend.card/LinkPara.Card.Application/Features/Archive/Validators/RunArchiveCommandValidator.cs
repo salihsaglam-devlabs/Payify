@@ -20,7 +20,7 @@ public class RunArchiveCommandValidator : AbstractValidator<RunArchiveCommand>
 
             RuleFor(x => x.Request.MaxFiles)
                 .InclusiveBetween(1, 1000)
-                .When(x => x.Request.MaxFiles.HasValue);
+                .When(x => x.Request.MaxFiles is > 0);
         });
     }
 }

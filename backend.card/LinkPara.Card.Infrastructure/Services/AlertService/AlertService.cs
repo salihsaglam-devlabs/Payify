@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text;
 using LinkPara.Card.Application.Commons.Interfaces;
 using LinkPara.Card.Application.Commons.Models.Reconciliation;
@@ -7,6 +8,7 @@ using LinkPara.Card.Infrastructure.Persistence;
 using LinkPara.Card.Infrastructure.Services.Audit;
 using LinkPara.Card.Infrastructure.Services.Notifications;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -14,8 +16,6 @@ namespace LinkPara.Card.Infrastructure.Services.AlertService;
 
 internal sealed class AlertService : IAlertService
 {
-    private const string TurkishLanguage = "tr";
-    private const string EnglishLanguage = "en";
     private const int PayloadPreviewLength = 1000;
 
     private readonly CardDbContext _dbContext;
@@ -23,19 +23,22 @@ internal sealed class AlertService : IAlertService
     private readonly IAuditStampService _auditStampService;
     private readonly ReconciliationOptions _options = new();
     private readonly ILogger<AlertService> _logger;
+    private readonly IStringLocalizer _localizer;
 
     public AlertService(
         CardDbContext dbContext,
         INotificationEmailService notificationEmailService,
         IAuditStampService auditStampService,
         IOptions<ReconciliationOptions> options,
-        ILogger<AlertService> logger)
+        ILogger<AlertService> logger,
+        Func<LinkPara.Card.Application.Commons.Localization.LocalizerResource, IStringLocalizer> localizerFactory)
     {
         _dbContext = dbContext;
         _notificationEmailService = notificationEmailService;
         _auditStampService = auditStampService;
         _logger = logger;
         _options = options.Value;
+        _localizer = localizerFactory(LinkPara.Card.Application.Commons.Localization.LocalizerResource.Messages);
     }
 
     public async Task ExecuteAsync(CancellationToken cancellationToken = default)
@@ -44,7 +47,7 @@ internal sealed class AlertService : IAlertService
 
         if (!alertOptions.Enabled)
         {
-            _logger.LogInformation("AlertService skipped because alert settings are disabled.");
+            _logger.LogInformation(_localizer.Get("Alert.Disabled"));
             return;
         }
 
@@ -56,12 +59,12 @@ internal sealed class AlertService : IAlertService
 
         if (recipients.Length == 0)
         {
-            _logger.LogWarning("AlertService skipped because recipient list is empty.");
+            _logger.LogWarning(_localizer.Get("Alert.RecipientListEmpty"));
             return;
         }
 
         var toEmail = string.Join(";", recipients);
-        var templateName = ResolveTemplateName(alertOptions);
+        var templateName = alertOptions.TemplateName;
 
         var validStatuses = alertOptions.IncludeFailed
             ? new[] { AlertStatus.Pending, AlertStatus.Failed }
@@ -88,11 +91,10 @@ internal sealed class AlertService : IAlertService
 
         if (alerts.Count == 0)
         {
-            _logger.LogInformation("AlertService found no alerts to process.");
+            _logger.LogInformation(_localizer.Get("Alert.NoAlertsToProcess"));
             return;
         }
-
-        // Batch-preload related data to eliminate N+1 queries
+        
         var evaluationIds = alerts.Select(a => a.EvaluationId).Distinct().ToArray();
         var operationIds = alerts.Where(a => a.OperationId != Guid.Empty).Select(a => a.OperationId).Distinct().ToArray();
 
@@ -123,7 +125,7 @@ internal sealed class AlertService : IAlertService
             var processingUpdated = await TryMarkAsProcessingAsync(alert.Id, validStatuses, cancellationToken);
             if (!processingUpdated)
             {
-                _logger.LogDebug("Alert skipped because it was already picked by another process. AlertId={AlertId}", alert.Id);
+                _logger.LogDebug(_localizer.Get("Alert.SkippedAlreadyPicked") + " AlertId={AlertId}", alert.Id);
                 continue;
             }
 
@@ -143,7 +145,7 @@ internal sealed class AlertService : IAlertService
                     executions ??= [];
                 }
 
-                var templateData = BuildTemplateData(alert, evaluation, operation, executions, alertOptions);
+                var templateData = BuildTemplateData(alert, evaluation, operation, executions, _localizer);
 
                 await _notificationEmailService.SendEmailAsync(
                     templateName,
@@ -154,7 +156,7 @@ internal sealed class AlertService : IAlertService
                 await MarkAsConsumedAsync(alert.Id, cancellationToken);
 
                 _logger.LogInformation(
-                    "Alert processed successfully. AlertId={AlertId}, EvaluationId={EvaluationId}, OperationId={OperationId}",
+                    _localizer.Get("Alert.ProcessedSuccessfully") + " AlertId={AlertId}, EvaluationId={EvaluationId}, OperationId={OperationId}",
                     alert.Id,
                     alert.EvaluationId,
                     alert.OperationId);
@@ -163,7 +165,7 @@ internal sealed class AlertService : IAlertService
             {
                 _logger.LogError(
                     ex,
-                    "AlertService failed. AlertId={AlertId}, EvaluationId={EvaluationId}, OperationId={OperationId}",
+                    _localizer.Get("Alert.ProcessingFailed") + " AlertId={AlertId}, EvaluationId={EvaluationId}, OperationId={OperationId}",
                     alert.Id,
                     alert.EvaluationId,
                     alert.OperationId);
@@ -228,21 +230,36 @@ internal sealed class AlertService : IAlertService
         ReconciliationEvaluation? evaluation,
         ReconciliationOperation? operation,
         IReadOnlyCollection<ReconciliationOperationExecution> executions,
-        AlertOptions alertOptions)
+        IStringLocalizer localizer)
     {
-        var language = ResolveLanguage(alertOptions);
+        var culture = CultureInfo.CurrentCulture;
         var latestExecution = executions
             .OrderByDescending(x => x.AttemptNumber)
             .FirstOrDefault();
 
-        var detailMessage = BuildDetailMessage(alert, evaluation, operation, executions, latestExecution, language);
+        var detailMessage = BuildDetailMessage(alert, evaluation, operation, executions, latestExecution, localizer, culture);
 
         return new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
         {
+            // Template labels (localized for the HTML template)
+            ["emailsubject"] = localizer.Get("Alert.Template.Title"),
+            ["templatetitle"] = localizer.Get("Alert.Template.Title"),
+            ["templatedescription"] = localizer.Get("Alert.Template.Description"),
+            ["labelalerttype"] = localizer.Get("Alert.Template.LabelAlertType"),
+            ["labelseverity"] = localizer.Get("Alert.Template.LabelSeverity"),
+            ["labelraisedat"] = localizer.Get("Alert.Template.LabelRaisedAt"),
+            ["labelsummary"] = localizer.Get("Alert.Template.LabelSummary"),
+            ["labelevaluation"] = localizer.Get("Alert.Template.LabelEvaluation"),
+            ["labeloperation"] = localizer.Get("Alert.Template.LabelOperation"),
+            ["labellatestexecution"] = localizer.Get("Alert.Template.LabelLatestExecution"),
+            ["labelerror"] = localizer.Get("Alert.Template.LabelError"),
+            ["labeltechnicaldetails"] = localizer.Get("Alert.Template.LabelTechnicalDetails"),
+
+            // Data values
             ["alerttype"] = alert.AlertType ?? string.Empty,
             ["alertseverity"] = alert.Severity ?? string.Empty,
-            ["raisedat"] = DateTime.Now.ToString("dd.MM.yyyy HH:mm:ss"),
-            ["summary"] = BuildSummary(alert, evaluation, operation, latestExecution, language),
+            ["raisedat"] = DateTime.Now.ToString("G", culture),
+            ["summary"] = BuildSummary(alert, evaluation, operation, latestExecution, localizer),
 
             ["evaluationstatus"] = evaluation?.Status.ToString() ?? string.Empty,
             ["evaluationmessage"] = evaluation?.Message ?? string.Empty,
@@ -267,40 +284,22 @@ internal sealed class AlertService : IAlertService
         ReconciliationEvaluation? evaluation,
         ReconciliationOperation? operation,
         ReconciliationOperationExecution? latestExecution,
-        string language)
+        IStringLocalizer localizer)
     {
         var parts = new List<string>();
 
-        if (string.Equals(language, EnglishLanguage, StringComparison.OrdinalIgnoreCase))
-        {
-            if (!string.IsNullOrWhiteSpace(alert.AlertType))
-                parts.Add($"Alert Type: {alert.AlertType}");
-            if (!string.IsNullOrWhiteSpace(alert.Severity))
-                parts.Add($"Severity: {alert.Severity}");
-            if (evaluation is not null)
-                parts.Add($"Evaluation Status: {evaluation.Status}");
-            if (operation is not null && !string.IsNullOrWhiteSpace(operation.Code))
-                parts.Add($"Operation Code: {operation.Code}");
-            if (latestExecution is not null)
-                parts.Add($"Execution: {latestExecution.Status} / {latestExecution.ResultCode}");
-            if (!string.IsNullOrWhiteSpace(alert.Message))
-                parts.Add($"Description: {alert.Message}");
-
-            return string.Join(" | ", parts);
-        }
-
         if (!string.IsNullOrWhiteSpace(alert.AlertType))
-            parts.Add($"Uyari Tipi: {alert.AlertType}");
+            parts.Add($"{localizer.Get("Alert.Summary.AlertType")}: {alert.AlertType}");
         if (!string.IsNullOrWhiteSpace(alert.Severity))
-            parts.Add($"Oncelik: {alert.Severity}");
+            parts.Add($"{localizer.Get("Alert.Summary.Severity")}: {alert.Severity}");
         if (evaluation is not null)
-            parts.Add($"Evaluation Durumu: {evaluation.Status}");
+            parts.Add($"{localizer.Get("Alert.Summary.EvaluationStatus")}: {evaluation.Status}");
         if (operation is not null && !string.IsNullOrWhiteSpace(operation.Code))
-            parts.Add($"Operasyon Kodu: {operation.Code}");
+            parts.Add($"{localizer.Get("Alert.Summary.OperationCode")}: {operation.Code}");
         if (latestExecution is not null)
-            parts.Add($"Execution: {latestExecution.Status} / {latestExecution.ResultCode}");
+            parts.Add($"{localizer.Get("Alert.Summary.Execution")}: {latestExecution.Status} / {latestExecution.ResultCode}");
         if (!string.IsNullOrWhiteSpace(alert.Message))
-            parts.Add($"Aciklama: {alert.Message}");
+            parts.Add($"{localizer.Get("Alert.Summary.Description")}: {alert.Message}");
 
         return string.Join(" | ", parts);
     }
@@ -311,75 +310,72 @@ internal sealed class AlertService : IAlertService
         ReconciliationOperation? operation,
         IReadOnlyCollection<ReconciliationOperationExecution> executions,
         ReconciliationOperationExecution? latestExecution,
-        string language)
+        IStringLocalizer localizer,
+        CultureInfo culture)
     {
         var sb = new StringBuilder();
 
-        AppendLine(sb, "Alert");
-        AppendLine(sb, $"- Alert Id: {alert.Id}");
-        AppendLine(sb, $"- Alert Type: {alert.AlertType ?? string.Empty}");
-        AppendLine(sb, $"- Severity: {alert.Severity ?? string.Empty}");
-        AppendLine(sb, $"- Group Id: {alert.GroupId}");
-        AppendLine(sb, $"- File Line Id: {alert.FileLineId}");
-        AppendLine(sb, $"- Message: {alert.Message ?? string.Empty}");
+        AppendLine(sb, localizer.Get("Alert.Detail.AlertHeader"));
+        AppendLine(sb, $"- {localizer.Get("Alert.Detail.AlertId")}: {alert.Id}");
+        AppendLine(sb, $"- {localizer.Get("Alert.Detail.AlertType")}: {alert.AlertType ?? string.Empty}");
+        AppendLine(sb, $"- {localizer.Get("Alert.Detail.Severity")}: {alert.Severity ?? string.Empty}");
+        AppendLine(sb, $"- {localizer.Get("Alert.Detail.GroupId")}: {alert.GroupId}");
+        AppendLine(sb, $"- {localizer.Get("Alert.Detail.FileLineId")}: {alert.FileLineId}");
+        AppendLine(sb, $"- {localizer.Get("Alert.Detail.Message")}: {alert.Message ?? string.Empty}");
         AppendLine(sb);
 
-        AppendLine(sb, "Evaluation");
-        AppendLine(sb, $"- Id: {evaluation?.Id.ToString() ?? alert.EvaluationId.ToString()}");
-        AppendLine(sb, $"- Status: {evaluation?.Status.ToString() ?? string.Empty}");
-        AppendLine(sb, $"- Message: {evaluation?.Message ?? string.Empty}");
-        AppendLine(sb, $"- Created Operation Count: {evaluation?.CreatedOperationCount.ToString() ?? "0"}");
+        AppendLine(sb, localizer.Get("Alert.Detail.EvaluationHeader"));
+        AppendLine(sb, $"- {localizer.Get("Alert.Detail.Id")}: {evaluation?.Id.ToString() ?? alert.EvaluationId.ToString()}");
+        AppendLine(sb, $"- {localizer.Get("Alert.Detail.Status")}: {evaluation?.Status.ToString() ?? string.Empty}");
+        AppendLine(sb, $"- {localizer.Get("Alert.Detail.Message")}: {evaluation?.Message ?? string.Empty}");
+        AppendLine(sb, $"- {localizer.Get("Alert.Detail.CreatedOperationCount")}: {evaluation?.CreatedOperationCount.ToString() ?? "0"}");
         AppendLine(sb);
 
-        AppendLine(sb, "Operation");
-        AppendLine(sb, $"- Id: {GetOperationIdText(alert, operation)}");
-        AppendLine(sb, $"- Code: {operation?.Code ?? string.Empty}");
-        AppendLine(sb, $"- Status: {operation?.Status.ToString() ?? string.Empty}");
-        AppendLine(sb, $"- Note: {operation?.Note ?? string.Empty}");
-        AppendLine(sb, $"- Branch: {operation?.Branch ?? string.Empty}");
-        AppendLine(sb, $"- Lease Owner: {operation?.LeaseOwner ?? string.Empty}");
-        AppendLine(sb, $"- Retry Count: {operation?.RetryCount.ToString() ?? string.Empty}");
-        AppendLine(sb, $"- Max Retries: {operation?.MaxRetries.ToString() ?? string.Empty}");
-        AppendLine(sb, $"- Next Attempt At: {operation?.NextAttemptAt?.ToString("dd.MM.yyyy HH:mm:ss") ?? string.Empty}");
-        AppendLine(sb, $"- Last Error: {operation?.LastError ?? string.Empty}");
+        AppendLine(sb, localizer.Get("Alert.Detail.OperationHeader"));
+        AppendLine(sb, $"- {localizer.Get("Alert.Detail.Id")}: {GetOperationIdText(alert, operation)}");
+        AppendLine(sb, $"- {localizer.Get("Alert.Detail.Code")}: {operation?.Code ?? string.Empty}");
+        AppendLine(sb, $"- {localizer.Get("Alert.Detail.Status")}: {operation?.Status.ToString() ?? string.Empty}");
+        AppendLine(sb, $"- {localizer.Get("Alert.Detail.Note")}: {operation?.Note ?? string.Empty}");
+        AppendLine(sb, $"- {localizer.Get("Alert.Detail.Branch")}: {operation?.Branch ?? string.Empty}");
+        AppendLine(sb, $"- {localizer.Get("Alert.Detail.LeaseOwner")}: {operation?.LeaseOwner ?? string.Empty}");
+        AppendLine(sb, $"- {localizer.Get("Alert.Detail.RetryCount")}: {operation?.RetryCount.ToString() ?? string.Empty}");
+        AppendLine(sb, $"- {localizer.Get("Alert.Detail.MaxRetries")}: {operation?.MaxRetries.ToString() ?? string.Empty}");
+        AppendLine(sb, $"- {localizer.Get("Alert.Detail.NextAttemptAt")}: {operation?.NextAttemptAt?.ToString("G", culture) ?? string.Empty}");
+        AppendLine(sb, $"- {localizer.Get("Alert.Detail.LastError")}: {operation?.LastError ?? string.Empty}");
         AppendLine(sb);
 
-        AppendLine(sb, "Latest Execution");
-        AppendLine(sb, $"- Attempt Number: {latestExecution?.AttemptNumber.ToString() ?? string.Empty}");
-        AppendLine(sb, $"- Status: {latestExecution?.Status.ToString() ?? string.Empty}");
-        AppendLine(sb, $"- Started At: {latestExecution?.StartedAt.ToString("dd.MM.yyyy HH:mm:ss") ?? string.Empty}");
-        AppendLine(sb, $"- Finished At: {latestExecution?.FinishedAt?.ToString("dd.MM.yyyy HH:mm:ss") ?? string.Empty}");
-        AppendLine(sb, $"- Result Code: {latestExecution?.ResultCode ?? string.Empty}");
-        AppendLine(sb, $"- Result Message: {latestExecution?.ResultMessage ?? string.Empty}");
-        AppendLine(sb, $"- Error Code: {latestExecution?.ErrorCode ?? string.Empty}");
-        AppendLine(sb, $"- Error Message: {latestExecution?.ErrorMessage ?? string.Empty}");
-        AppendLine(sb, $"- Request Payload Preview: {TrimPayload(latestExecution?.RequestPayload)}");
-        AppendLine(sb, $"- Response Payload Preview: {TrimPayload(latestExecution?.ResponsePayload)}");
+        AppendLine(sb, localizer.Get("Alert.Detail.LatestExecutionHeader"));
+        AppendLine(sb, $"- {localizer.Get("Alert.Detail.AttemptNumber")}: {latestExecution?.AttemptNumber.ToString() ?? string.Empty}");
+        AppendLine(sb, $"- {localizer.Get("Alert.Detail.Status")}: {latestExecution?.Status.ToString() ?? string.Empty}");
+        AppendLine(sb, $"- {localizer.Get("Alert.Detail.StartedAt")}: {latestExecution?.StartedAt.ToString("G", culture) ?? string.Empty}");
+        AppendLine(sb, $"- {localizer.Get("Alert.Detail.FinishedAt")}: {latestExecution?.FinishedAt?.ToString("G", culture) ?? string.Empty}");
+        AppendLine(sb, $"- {localizer.Get("Alert.Detail.ResultCode")}: {latestExecution?.ResultCode ?? string.Empty}");
+        AppendLine(sb, $"- {localizer.Get("Alert.Detail.ResultMessage")}: {latestExecution?.ResultMessage ?? string.Empty}");
+        AppendLine(sb, $"- {localizer.Get("Alert.Detail.ErrorCode")}: {latestExecution?.ErrorCode ?? string.Empty}");
+        AppendLine(sb, $"- {localizer.Get("Alert.Detail.ErrorMessage")}: {latestExecution?.ErrorMessage ?? string.Empty}");
+        AppendLine(sb, $"- {localizer.Get("Alert.Detail.RequestPayloadPreview")}: {TrimPayload(latestExecution?.RequestPayload)}");
+        AppendLine(sb, $"- {localizer.Get("Alert.Detail.ResponsePayloadPreview")}: {TrimPayload(latestExecution?.ResponsePayload)}");
         AppendLine(sb);
 
-        AppendLine(sb, "Execution History");
+        AppendLine(sb, localizer.Get("Alert.Detail.ExecutionHistoryHeader"));
         if (executions.Count == 0)
         {
-            AppendLine(
-                sb,
-                string.Equals(language, EnglishLanguage, StringComparison.OrdinalIgnoreCase)
-                    ? "- No execution record found."
-                    : "- Execution kaydi bulunamadi.");
+            AppendLine(sb, $"- {localizer.Get("Alert.NoExecutionRecord")}");
         }
         else
         {
             foreach (var execution in executions.OrderBy(x => x.AttemptNumber))
             {
-                AppendLine(sb, $"- Attempt #{execution.AttemptNumber}");
-                AppendLine(sb, $"  Status: {execution.Status}");
-                AppendLine(sb, $"  Started: {execution.StartedAt:dd.MM.yyyy HH:mm:ss}");
-                AppendLine(sb, $"  Finished: {execution.FinishedAt?.ToString("dd.MM.yyyy HH:mm:ss") ?? "-"}");
-                AppendLine(sb, $"  Result Code: {execution.ResultCode ?? string.Empty}");
-                AppendLine(sb, $"  Result Message: {execution.ResultMessage ?? string.Empty}");
-                AppendLine(sb, $"  Error Code: {execution.ErrorCode ?? string.Empty}");
-                AppendLine(sb, $"  Error Message: {execution.ErrorMessage ?? string.Empty}");
-                AppendLine(sb, $"  Request Payload Preview: {TrimPayload(execution.RequestPayload)}");
-                AppendLine(sb, $"  Response Payload Preview: {TrimPayload(execution.ResponsePayload)}");
+                AppendLine(sb, $"- {localizer.Get("Alert.Detail.AttemptPrefix")} #{execution.AttemptNumber}");
+                AppendLine(sb, $"  {localizer.Get("Alert.Detail.Status")}: {execution.Status}");
+                AppendLine(sb, $"  {localizer.Get("Alert.Detail.StartedAt")}: {execution.StartedAt.ToString("G", culture)}");
+                AppendLine(sb, $"  {localizer.Get("Alert.Detail.FinishedAt")}: {execution.FinishedAt?.ToString("G", culture) ?? "-"}");
+                AppendLine(sb, $"  {localizer.Get("Alert.Detail.ResultCode")}: {execution.ResultCode ?? string.Empty}");
+                AppendLine(sb, $"  {localizer.Get("Alert.Detail.ResultMessage")}: {execution.ResultMessage ?? string.Empty}");
+                AppendLine(sb, $"  {localizer.Get("Alert.Detail.ErrorCode")}: {execution.ErrorCode ?? string.Empty}");
+                AppendLine(sb, $"  {localizer.Get("Alert.Detail.ErrorMessage")}: {execution.ErrorMessage ?? string.Empty}");
+                AppendLine(sb, $"  {localizer.Get("Alert.Detail.RequestPayloadPreview")}: {TrimPayload(execution.RequestPayload)}");
+                AppendLine(sb, $"  {localizer.Get("Alert.Detail.ResponsePayloadPreview")}: {TrimPayload(execution.ResponsePayload)}");
             }
         }
 
@@ -423,29 +419,5 @@ internal sealed class AlertService : IAlertService
             return errorMessage;
 
         return $"{currentMessage} | {errorMessage}";
-    }
-
-    private static string ResolveTemplateName(AlertOptions alertOptions)
-    {
-        var language = ResolveLanguage(alertOptions);
-
-        if (string.Equals(language, EnglishLanguage, StringComparison.OrdinalIgnoreCase))
-        {
-            return string.IsNullOrWhiteSpace(alertOptions.TemplateNameEn)
-                ? "ReconciliationAlertTemplate_EN"
-                : alertOptions.TemplateNameEn;
-        }
-
-        return string.IsNullOrWhiteSpace(alertOptions.TemplateNameTr)
-            ? "ReconciliationAlertTemplate_TR"
-            : alertOptions.TemplateNameTr;
-    }
-
-    private static string ResolveLanguage(AlertOptions alertOptions)
-    {
-        if (string.IsNullOrWhiteSpace(alertOptions.DefaultLanguage))
-            return TurkishLanguage;
-
-        return alertOptions.DefaultLanguage.Trim().ToLowerInvariant();
     }
 }

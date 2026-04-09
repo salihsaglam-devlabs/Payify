@@ -891,4 +891,212 @@
     <value>Visa evaluator rules are not defined yet. No automatic or manual action was produced.</value>
   </data>
 
+  <!-- ════════════════════════════════════════════ -->
+  <!-- Archive – Error Mapper                       -->
+  <!-- ════════════════════════════════════════════ -->
+  <data name="Archive.OperationCancelled" xml:space="preserve">
+    <value>Archive operation was cancelled.</value>
+  </data>
+  <data name="Archive.InvalidOperation" xml:space="preserve">
+    <value>Invalid operation.</value>
+  </data>
+  <data name="Archive.InvalidArgument" xml:space="preserve">
+    <value>Invalid argument.</value>
+  </data>
+  <data name="Archive.Timeout" xml:space="preserve">
+    <value>Operation timed out.</value>
+  </data>
+  <data name="Archive.InternalError" xml:space="preserve">
+    <value>An internal error occurred.</value>
+  </data>
+
+  <!-- ════════════════════════════════════════════ -->
+  <!-- Archive – Service                            -->
+  <!-- ════════════════════════════════════════════ -->
+  <data name="Archive.PreviewFailed" xml:space="preserve">
+    <value>Archive preview failed.</value>
+  </data>
+  <data name="Archive.RunFailed" xml:space="preserve">
+    <value>Archive run failed.</value>
+  </data>
+  <data name="Archive.BatchCreationFailed" xml:space="preserve">
+    <value>Archive batch creation failed.</value>
+  </data>
+
+  <!-- ════════════════════════════════════════════ -->
+  <!-- Alert – Service                              -->
+  <!-- ════════════════════════════════════════════ -->
+  <data name="Alert.Disabled" xml:space="preserve">
+    <value>AlertService skipped because alert settings are disabled.</value>
+  </data>
+  <data name="Alert.RecipientListEmpty" xml:space="preserve">
+    <value>AlertService skipped because recipient list is empty.</value>
+  </data>
+  <data name="Alert.NoAlertsToProcess" xml:space="preserve">
+    <value>AlertService found no alerts to process.</value>
+  </data>
+  <data name="Alert.SkippedAlreadyPicked" xml:space="preserve">
+    <value>Alert skipped because it was already picked by another process.</value>
+  </data>
+  <data name="Alert.ProcessedSuccessfully" xml:space="preserve">
+    <value>Alert processed successfully.</value>
+  </data>
+  <data name="Alert.ProcessingFailed" xml:space="preserve">
+    <value>AlertService failed to process alert.</value>
+  </data>
+  <data name="Alert.NoExecutionRecord" xml:space="preserve">
+    <value>No execution record found.</value>
+  </data>
+  <data name="Alert.Summary.AlertType" xml:space="preserve">
+    <value>Alert Type</value>
+  </data>
+  <data name="Alert.Summary.Severity" xml:space="preserve">
+    <value>Severity</value>
+  </data>
+  <data name="Alert.Summary.EvaluationStatus" xml:space="preserve">
+    <value>Evaluation Status</value>
+  </data>
+  <data name="Alert.Summary.OperationCode" xml:space="preserve">
+    <value>Operation Code</value>
+  </data>
+  <data name="Alert.Summary.Execution" xml:space="preserve">
+    <value>Execution</value>
+  </data>
+  <data name="Alert.Summary.Description" xml:space="preserve">
+    <value>Description</value>
+  </data>
+
+  <!-- Alert – Detail Labels -->
+  <data name="Alert.Template.Title" xml:space="preserve">
+    <value>Reconciliation Alert Notification</value>
+  </data>
+  <data name="Alert.Template.Description" xml:space="preserve">
+    <value>A record requiring attention has been detected during the reconciliation process.</value>
+  </data>
+  <data name="Alert.Template.LabelAlertType" xml:space="preserve">
+    <value>Alert Type</value>
+  </data>
+  <data name="Alert.Template.LabelSeverity" xml:space="preserve">
+    <value>Severity</value>
+  </data>
+  <data name="Alert.Template.LabelRaisedAt" xml:space="preserve">
+    <value>Raised At</value>
+  </data>
+  <data name="Alert.Template.LabelSummary" xml:space="preserve">
+    <value>Summary</value>
+  </data>
+  <data name="Alert.Template.LabelEvaluation" xml:space="preserve">
+    <value>Evaluation</value>
+  </data>
+  <data name="Alert.Template.LabelOperation" xml:space="preserve">
+    <value>Operation</value>
+  </data>
+  <data name="Alert.Template.LabelLatestExecution" xml:space="preserve">
+    <value>Latest Execution</value>
+  </data>
+  <data name="Alert.Template.LabelError" xml:space="preserve">
+    <value>Error</value>
+  </data>
+  <data name="Alert.Template.LabelTechnicalDetails" xml:space="preserve">
+    <value>Technical Details</value>
+  </data>
+
+  <!-- Alert – Detail Labels -->
+  <data name="Alert.Detail.AlertHeader" xml:space="preserve">
+    <value>Alert</value>
+  </data>
+  <data name="Alert.Detail.EvaluationHeader" xml:space="preserve">
+    <value>Evaluation</value>
+  </data>
+  <data name="Alert.Detail.OperationHeader" xml:space="preserve">
+    <value>Operation</value>
+  </data>
+  <data name="Alert.Detail.LatestExecutionHeader" xml:space="preserve">
+    <value>Latest Execution</value>
+  </data>
+  <data name="Alert.Detail.ExecutionHistoryHeader" xml:space="preserve">
+    <value>Execution History</value>
+  </data>
+  <data name="Alert.Detail.AlertId" xml:space="preserve">
+    <value>Alert Id</value>
+  </data>
+  <data name="Alert.Detail.AlertType" xml:space="preserve">
+    <value>Alert Type</value>
+  </data>
+  <data name="Alert.Detail.Severity" xml:space="preserve">
+    <value>Severity</value>
+  </data>
+  <data name="Alert.Detail.GroupId" xml:space="preserve">
+    <value>Group Id</value>
+  </data>
+  <data name="Alert.Detail.FileLineId" xml:space="preserve">
+    <value>File Line Id</value>
+  </data>
+  <data name="Alert.Detail.Message" xml:space="preserve">
+    <value>Message</value>
+  </data>
+  <data name="Alert.Detail.Id" xml:space="preserve">
+    <value>Id</value>
+  </data>
+  <data name="Alert.Detail.Status" xml:space="preserve">
+    <value>Status</value>
+  </data>
+  <data name="Alert.Detail.CreatedOperationCount" xml:space="preserve">
+    <value>Created Operation Count</value>
+  </data>
+  <data name="Alert.Detail.Code" xml:space="preserve">
+    <value>Code</value>
+  </data>
+  <data name="Alert.Detail.Note" xml:space="preserve">
+    <value>Note</value>
+  </data>
+  <data name="Alert.Detail.Branch" xml:space="preserve">
+    <value>Branch</value>
+  </data>
+  <data name="Alert.Detail.LeaseOwner" xml:space="preserve">
+    <value>Lease Owner</value>
+  </data>
+  <data name="Alert.Detail.RetryCount" xml:space="preserve">
+    <value>Retry Count</value>
+  </data>
+  <data name="Alert.Detail.MaxRetries" xml:space="preserve">
+    <value>Max Retries</value>
+  </data>
+  <data name="Alert.Detail.NextAttemptAt" xml:space="preserve">
+    <value>Next Attempt At</value>
+  </data>
+  <data name="Alert.Detail.LastError" xml:space="preserve">
+    <value>Last Error</value>
+  </data>
+  <data name="Alert.Detail.AttemptNumber" xml:space="preserve">
+    <value>Attempt Number</value>
+  </data>
+  <data name="Alert.Detail.StartedAt" xml:space="preserve">
+    <value>Started At</value>
+  </data>
+  <data name="Alert.Detail.FinishedAt" xml:space="preserve">
+    <value>Finished At</value>
+  </data>
+  <data name="Alert.Detail.ResultCode" xml:space="preserve">
+    <value>Result Code</value>
+  </data>
+  <data name="Alert.Detail.ResultMessage" xml:space="preserve">
+    <value>Result Message</value>
+  </data>
+  <data name="Alert.Detail.ErrorCode" xml:space="preserve">
+    <value>Error Code</value>
+  </data>
+  <data name="Alert.Detail.ErrorMessage" xml:space="preserve">
+    <value>Error Message</value>
+  </data>
+  <data name="Alert.Detail.RequestPayloadPreview" xml:space="preserve">
+    <value>Request Payload Preview</value>
+  </data>
+  <data name="Alert.Detail.ResponsePayloadPreview" xml:space="preserve">
+    <value>Response Payload Preview</value>
+  </data>
+  <data name="Alert.Detail.AttemptPrefix" xml:space="preserve">
+    <value>Attempt</value>
+  </data>
+
 </root>

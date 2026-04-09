@@ -1,3 +1,4 @@
+using LinkPara.Card.Application.Commons.Interfaces.Archive;
 using LinkPara.Card.Application.Commons.Models.Archive;
 using MediatR;
 
@@ -10,9 +11,9 @@ public class PreviewArchiveQuery : IRequest<ArchivePreviewResponse>
 
 public class PreviewArchiveQueryHandler : IRequestHandler<PreviewArchiveQuery, ArchivePreviewResponse>
 {
-    private readonly LinkPara.Card.Application.Commons.Interfaces.Archive.IArchiveService _archiveService;
+    private readonly IArchiveService _archiveService;
 
-    public PreviewArchiveQueryHandler(LinkPara.Card.Application.Commons.Interfaces.Archive.IArchiveService archiveService)
+    public PreviewArchiveQueryHandler(IArchiveService archiveService)
     {
         _archiveService = archiveService;
     }

@@ -4,11 +4,9 @@
   },
   "Alert": {
     "BatchSize": 10000000,
-    "DefaultLanguage": "tr",
     "Enabled": true,
     "IncludeFailed": true,
-    "TemplateNameEn": "ReconciliationAlertTemplate_EN",
-    "TemplateNameTr": "ReconciliationAlertTemplate_TR",
+    "TemplateName": "ReconciliationAlertTemplate",
     "ToEmails": [
       "operasyon@company.com"
     ]
