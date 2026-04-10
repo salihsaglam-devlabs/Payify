@@ -1,6 +1,5 @@
 using LinkPara.Card.Application.Commons.Interfaces;
 using LinkPara.Card.Application.Commons.Models.PaycoreModels;
-using LinkPara.Card.Application.Commons.Models.PaycoreModels.CustomerModels;
 using MediatR;
 
 namespace LinkPara.Card.Application.Features.PaycoreServices.CustomerServices.Commands.UpdateCustomer;

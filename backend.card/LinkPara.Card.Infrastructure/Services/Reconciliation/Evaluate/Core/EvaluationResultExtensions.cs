@@ -1,6 +1,6 @@
 using LinkPara.Card.Domain.Enums.Reconciliation;
 
-namespace LinkPara.Card.Infrastructure.Services.Reconciliation.Evaluate;
+namespace LinkPara.Card.Infrastructure.Services.Reconciliation.Evaluate.Core;
 
 internal static class EvaluationResultExtensions
 {

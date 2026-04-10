@@ -1,8 +1,9 @@
 #nullable enable
 using System.Text;
+using LinkPara.Card.Application.Commons.Extensions;
 using Microsoft.Extensions.Localization;
 using LinkPara.Card.Application.Commons.Interfaces.Archive;
-using LinkPara.Card.Application.Commons.Models.Archive;
+using LinkPara.Card.Application.Commons.Models.Archive.Contracts.Responses;
 
 namespace LinkPara.Card.Application.Commons.Helpers.Archive;
 

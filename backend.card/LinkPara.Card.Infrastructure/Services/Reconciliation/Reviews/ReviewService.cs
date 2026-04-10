@@ -1,13 +1,16 @@
 using System.Text.Json;
+using LinkPara.Card.Application.Commons.Interfaces;
 using Microsoft.Extensions.Localization;
 using LinkPara.Card.Application.Commons.Interfaces.Reconciliation;
-using LinkPara.Card.Application.Commons.Models.Reconciliation;
-using LinkPara.Card.Application.Commons.Exceptions;
+using LinkPara.Card.Application.Commons.Extensions;
+using LinkPara.Card.Application.Commons.Models.Reconciliation.Contracts.Requests;
+using LinkPara.Card.Application.Commons.Models.Reconciliation.Contracts.Responses;
+using LinkPara.Card.Application.Commons.Models.Reconciliation.Shared;
 using LinkPara.Card.Domain.Enums.Reconciliation;
 using LinkPara.Card.Infrastructure.Persistence;
 using LinkPara.Card.Infrastructure.Services.Audit;
-using LinkPara.Card.Infrastructure.Services.Reconciliation.Execute;
-using LinkPara.Card.Infrastructure.Services.Reconciliation.Evaluate;
+using LinkPara.Card.Infrastructure.Services.Reconciliation.Evaluate.Core;
+using LinkPara.Card.Infrastructure.Services.Reconciliation.Execute.Core;
 using Microsoft.EntityFrameworkCore;
 
 namespace LinkPara.Card.Infrastructure.Services.Reconciliation.Reviews;
@@ -18,15 +21,18 @@ internal sealed class ReviewService
     private readonly IAuditStampService _auditStampService;
     private readonly IReconciliationErrorMapper _errorMapper;
     private readonly IStringLocalizer _localizer;
+    private readonly ITimeProvider _timeProvider;
 
     public ReviewService(
         CardDbContext dbContext,
         IAuditStampService auditStampService,
+        ITimeProvider timeProvider,
         IReconciliationErrorMapper errorMapper,
         Func<LinkPara.Card.Application.Commons.Localization.LocalizerResource, IStringLocalizer> localizerFactory)
     {
         _dbContext = dbContext;
         _auditStampService = auditStampService;
+        _timeProvider = timeProvider;
         _errorMapper = errorMapper;
         _localizer = localizerFactory(LinkPara.Card.Application.Commons.Localization.LocalizerResource.Messages);
     }
@@ -303,7 +309,7 @@ internal sealed class ReviewService
 
                 var currentReviewerId = ResolveReviewerId(reviewerId);
                 var auditStamp = _auditStampService.CreateStamp();
-                var now = DateTime.Now;
+                var now = _timeProvider.Now;
 
                 var updatedReviewRows = await _dbContext.ReconciliationReviews
                     .Where(x => x.OperationId == operationId && x.Decision == ReviewDecision.Pending)

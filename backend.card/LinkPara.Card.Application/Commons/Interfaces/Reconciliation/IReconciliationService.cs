@@ -1,6 +1,5 @@
-using System.Threading;
-using System.Threading.Tasks;
-using LinkPara.Card.Application.Commons.Models.Reconciliation;
+using LinkPara.Card.Application.Commons.Models.Reconciliation.Contracts.Requests;
+using LinkPara.Card.Application.Commons.Models.Reconciliation.Contracts.Responses;
 
 namespace LinkPara.Card.Application.Commons.Interfaces.Reconciliation;
 

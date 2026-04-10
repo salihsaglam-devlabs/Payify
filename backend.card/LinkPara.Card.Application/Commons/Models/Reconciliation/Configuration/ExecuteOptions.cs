@@ -1,4 +1,4 @@
-namespace LinkPara.Card.Application.Commons.Models.Reconciliation;
+namespace LinkPara.Card.Application.Commons.Models.Reconciliation.Configuration;
 
 public class ExecuteOptions
 {

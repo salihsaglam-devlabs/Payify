@@ -1,4 +1,5 @@
-using LinkPara.Card.Application.Commons.Models.Archive;
+using LinkPara.Card.Application.Commons.Models.Archive.Configuration;
+using LinkPara.Card.Application.Commons.Models.Archive.Contracts.Responses;
 using Microsoft.Extensions.Options;
 
 namespace LinkPara.Card.Infrastructure.Services.Archive;

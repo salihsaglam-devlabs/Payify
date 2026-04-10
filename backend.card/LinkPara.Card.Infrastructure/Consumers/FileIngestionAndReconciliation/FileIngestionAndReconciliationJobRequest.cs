@@ -1,7 +1,7 @@
 using System.Text.Json.Serialization;
 using LinkPara.Card.Application.Commons.Helpers.Shared;
-using LinkPara.Card.Application.Commons.Models.FileIngestion;
-using LinkPara.Card.Application.Commons.Models.Reconciliation;
+using LinkPara.Card.Application.Commons.Models.FileIngestion.Contracts.Requests;
+using LinkPara.Card.Application.Commons.Models.Reconciliation.Contracts.Requests;
 
 namespace LinkPara.Card.Infrastructure.Consumers.FileIngestionAndReconciliation;
 

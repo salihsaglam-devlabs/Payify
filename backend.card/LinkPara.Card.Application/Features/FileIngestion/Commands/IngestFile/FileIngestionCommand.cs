@@ -1,5 +1,6 @@
 using LinkPara.Card.Application.Commons.Interfaces.FileIngestion;
-using LinkPara.Card.Application.Commons.Models.FileIngestion;
+using LinkPara.Card.Application.Commons.Models.FileIngestion.Contracts.Requests;
+using LinkPara.Card.Application.Commons.Models.FileIngestion.Contracts.Responses;
 using LinkPara.Card.Domain.Enums.FileIngestion;
 using MediatR;
 

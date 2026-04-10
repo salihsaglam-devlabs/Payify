@@ -1,8 +1,9 @@
 #nullable enable
 using System.Text;
+using LinkPara.Card.Application.Commons.Extensions;
 using Microsoft.Extensions.Localization;
 using LinkPara.Card.Application.Commons.Interfaces.Reconciliation;
-using LinkPara.Card.Application.Commons.Models.Reconciliation;
+using LinkPara.Card.Application.Commons.Models.Reconciliation.Shared;
 
 namespace LinkPara.Card.Application.Commons.Helpers.Reconciliation;
 

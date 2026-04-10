@@ -1,7 +1,7 @@
 using System.ComponentModel.DataAnnotations;
 using LinkPara.Card.Domain.Enums.Reconciliation;
 
-namespace LinkPara.Card.Application.Commons.Models.Reconciliation;
+namespace LinkPara.Card.Application.Commons.Models.Reconciliation.Contracts.Requests;
 
 public class GetAlertsRequest
 {

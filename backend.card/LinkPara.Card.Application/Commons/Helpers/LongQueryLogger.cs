@@ -1,4 +1,5 @@
-﻿using LinkPara.SharedModels.BusModels.IntegrationEvents.Logging;
+﻿using LinkPara.Card.Application.Commons.Interfaces;
+using LinkPara.SharedModels.BusModels.IntegrationEvents.Logging;
 using LinkPara.SharedModels.BusModels.IntegrationEvents.Logging.Enums;
 using MassTransit;
 using Microsoft.EntityFrameworkCore.Diagnostics;
@@ -11,10 +12,12 @@ public class LongQueryLogger : DbCommandInterceptor
 {
     private readonly IBus _bus;
     private readonly IConfiguration _configuration;
-    public LongQueryLogger(IBus bus, IConfiguration configuration)
+    private readonly ITimeProvider _timeProvider;
+    public LongQueryLogger(IBus bus, IConfiguration configuration, ITimeProvider timeProvider)
     {
         _bus = bus;
         _configuration = configuration;
+        _timeProvider = timeProvider;
     }
     public override ValueTask<DbDataReader> ReaderExecutedAsync(DbCommand command, CommandExecutedEventData eventData, DbDataReader result, CancellationToken cancellationToken = default)
     {
@@ -34,7 +37,7 @@ public class LongQueryLogger : DbCommandInterceptor
         {
             CorrelationId = correlationId.ToString(),
             DatabaseName = eventData.Command.Connection.Database,
-            Date = DateTime.Now,
+            Date = _timeProvider.Now,
             CommandText = eventData.Command.CommandText,
             Parameters = GetDbParameters(eventData),
             DurationInMilliseconds = Convert.ToDecimal(eventData.Duration.TotalMilliseconds),

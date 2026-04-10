@@ -1,5 +1,6 @@
 #nullable enable
 using System.Text;
+using LinkPara.Card.Application.Commons.Extensions;
 using LinkPara.Card.Application.Commons.Interfaces.FileIngestion;
 using Microsoft.Extensions.Localization;
 using LinkPara.Card.Application.Commons.Models.FileIngestion.Contracts.Responses;

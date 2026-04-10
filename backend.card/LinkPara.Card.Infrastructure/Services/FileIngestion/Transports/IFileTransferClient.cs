@@ -1,6 +1,6 @@
-using LinkPara.Card.Application.Commons.Models.FileIngestion;
 using LinkPara.Card.Domain.Enums.FileIngestion;
 using System.Text;
+using LinkPara.Card.Application.Commons.Models.FileIngestion.Configuration;
 
 namespace LinkPara.Card.Infrastructure.Services.FileIngestion.Transports;
 

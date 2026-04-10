@@ -1,5 +1,5 @@
-using LinkPara.Card.Application.Commons.Models.FileIngestion;
-using LinkPara.Card.Application.Commons.Models.Reconciliation;
+using LinkPara.Card.Application.Commons.Models.FileIngestion.Contracts.Responses;
+using LinkPara.Card.Application.Commons.Models.Reconciliation.Contracts.Responses;
 
 namespace LinkPara.Card.Infrastructure.Consumers.FileIngestionAndReconciliation;
 

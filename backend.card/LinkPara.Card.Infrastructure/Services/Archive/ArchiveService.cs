@@ -1,7 +1,11 @@
 using System.Text.Json;
 using LinkPara.Card.Application.Commons.Exceptions;
+using LinkPara.Card.Application.Commons.Extensions;
+using LinkPara.Card.Application.Commons.Interfaces;
 using LinkPara.Card.Application.Commons.Interfaces.Archive;
-using LinkPara.Card.Application.Commons.Models.Archive;
+using LinkPara.Card.Application.Commons.Models.Archive.Configuration;
+using LinkPara.Card.Application.Commons.Models.Archive.Contracts.Requests;
+using LinkPara.Card.Application.Commons.Models.Archive.Contracts.Responses;
 using LinkPara.Card.Infrastructure.Services.Audit;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.DependencyInjection;
@@ -21,6 +25,7 @@ internal sealed class ArchiveService : IArchiveService
     private readonly IStringLocalizer _localizer;
     private readonly IServiceProvider _serviceProvider;
     private readonly IAuditStampService _auditStampService;
+    private readonly ITimeProvider _timeProvider;
 
     public ArchiveService(
         ArchiveAggregateReader reader,
@@ -29,7 +34,8 @@ internal sealed class ArchiveService : IArchiveService
         IArchiveErrorMapper errorMapper,
         Func<LinkPara.Card.Application.Commons.Localization.LocalizerResource, IStringLocalizer> localizerFactory,
         IServiceProvider serviceProvider,
-        IAuditStampService auditStampService)
+        IAuditStampService auditStampService,
+        ITimeProvider timeProvider)
     {
         _reader = reader;
         _evaluator = evaluator;
@@ -38,6 +44,7 @@ internal sealed class ArchiveService : IArchiveService
         _localizer = localizerFactory(LinkPara.Card.Application.Commons.Localization.LocalizerResource.Messages);
         _serviceProvider = serviceProvider;
         _auditStampService = auditStampService;
+        _timeProvider = timeProvider;
     }
 
     public async Task<ArchivePreviewResponse> PreviewAsync(
@@ -58,7 +65,7 @@ internal sealed class ArchiveService : IArchiveService
                 effectiveLimit,
                 cancellationToken);
 
-            var now = DateTime.Now;
+            var now = _timeProvider.Now;
             var response = new ArchivePreviewResponse();
             foreach (var candidateId in candidateIds)
             {
@@ -218,7 +225,7 @@ internal sealed class ArchiveService : IArchiveService
 
         return strategy switch
         {
-            "RetentionDays" => DateTime.Now.AddDays(-_options.Rules.RetentionDays.Value),
+            "RetentionDays" => _timeProvider.Now.AddDays(-_options.Rules.RetentionDays.Value),
             "None" => null,
             _ => throw new ArchiveBusinessException(
                 "CONFIGURATION_ERROR",

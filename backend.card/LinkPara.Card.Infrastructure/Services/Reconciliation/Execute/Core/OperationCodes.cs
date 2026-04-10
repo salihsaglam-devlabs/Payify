@@ -1,4 +1,4 @@
-namespace LinkPara.Card.Infrastructure.Services.Reconciliation.Execute;
+namespace LinkPara.Card.Infrastructure.Services.Reconciliation.Execute.Core;
 
 internal static class OperationCodes
 {

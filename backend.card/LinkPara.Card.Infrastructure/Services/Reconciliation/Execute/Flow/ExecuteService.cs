@@ -1,15 +1,19 @@
 using System.Text.Json;
-using LinkPara.Card.Application.Commons.Helpers.Reconciliation;
+using LinkPara.Card.Application.Commons.Extensions;
+using LinkPara.Card.Application.Commons.Interfaces;
 using Microsoft.Extensions.Localization;
 using LinkPara.Card.Application.Commons.Interfaces.Reconciliation;
-using LinkPara.Card.Application.Commons.Models.Reconciliation;
-using LinkPara.Card.Domain.Entities.Reconciliation;
+using LinkPara.Card.Application.Commons.Models.Reconciliation.Configuration;
+using LinkPara.Card.Application.Commons.Models.Reconciliation.Contracts.Requests;
+using LinkPara.Card.Application.Commons.Models.Reconciliation.Contracts.Responses;
+using LinkPara.Card.Application.Commons.Models.Reconciliation.Shared;
+using LinkPara.Card.Domain.Entities.Reconciliation.Persistence;
 using LinkPara.Card.Domain.Enums.Reconciliation;
 using LinkPara.Card.Infrastructure.Persistence;
 using LinkPara.Card.Infrastructure.Services.Alert;
 using LinkPara.Card.Infrastructure.Services.Audit;
-using LinkPara.Card.Infrastructure.Services.Reconciliation.Execute;
-using LinkPara.Card.Infrastructure.Services.Reconciliation.Evaluate;
+using LinkPara.Card.Infrastructure.Services.Reconciliation.Evaluate.Core;
+using LinkPara.Card.Infrastructure.Services.Reconciliation.Execute.Core;
 using LinkPara.SharedModels.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
@@ -27,6 +31,7 @@ internal sealed class ExecuteService
     private readonly IAuditStampService _auditStampService;
     private readonly IReconciliationErrorMapper _errorMapper;
     private readonly IStringLocalizer _localizer;
+    private readonly ITimeProvider _timeProvider;
     private readonly ReconciliationOptions _options;
 
     public ExecuteService(
@@ -34,6 +39,7 @@ internal sealed class ExecuteService
         OperationExecutor operationExecutor,
         IAlertService alertService,
         IAuditStampService auditStampService,
+        ITimeProvider timeProvider,
         IOptions<ReconciliationOptions> options,
         IReconciliationErrorMapper errorMapper,
         Func<LinkPara.Card.Application.Commons.Localization.LocalizerResource, IStringLocalizer> localizerFactory)
@@ -42,6 +48,7 @@ internal sealed class ExecuteService
         _operationExecutor = operationExecutor;
         _alertService = alertService;
         _auditStampService = auditStampService;
+        _timeProvider = timeProvider;
         _options = options.Value;
         _errorMapper = errorMapper;
         _localizer = localizerFactory(LinkPara.Card.Application.Commons.Localization.LocalizerResource.Messages);
@@ -53,7 +60,7 @@ internal sealed class ExecuteService
         CancellationToken cancellationToken = default)
     {
         errors ??= new List<ReconciliationErrorDetail>();
-        var now = DateTime.Now;
+        var now = _timeProvider.Now;
         var executeOptions = ResolveExecuteOptions(request);
         var selection = ExecutionSelection.Create(request);
 
@@ -238,21 +245,26 @@ internal sealed class ExecuteService
                     return null;
                 }
 
-                operation.Status = OperationStatus.Planned;
-                ReleaseLease(operation);
             }
-
-            if (operation.Status == OperationStatus.Blocked)
+            else if (operation.Status == OperationStatus.Blocked)
             {
                 if (!CanPromoteToPlanned(operation, operations))
                 {
                     return null;
                 }
 
-                operation.Status = OperationStatus.Planned;
+            }
+            else if (operation.Status != OperationStatus.Planned)
+            {
+                return null;
             }
 
-            if (!IsReadyForExecution(operation, now))
+            if (operation.NextAttemptAt.HasValue && operation.NextAttemptAt.Value > now)
+            {
+                return null;
+            }
+
+            if (operation.LeaseExpiresAt.HasValue && operation.LeaseExpiresAt.Value > now)
             {
                 return null;
             }
@@ -296,12 +308,6 @@ internal sealed class ExecuteService
         return operation.LeaseExpiresAt.HasValue && operation.LeaseExpiresAt.Value <= now;
     }
 
-    private static bool IsReadyForExecution(ReconciliationOperation operation, DateTime now)
-    {
-        return operation.Status == OperationStatus.Planned &&
-               (!operation.NextAttemptAt.HasValue || operation.NextAttemptAt.Value <= now) &&
-               (!operation.LeaseExpiresAt.HasValue || operation.LeaseExpiresAt.Value <= now);
-    }
 
     private static bool IsRootOperation(ReconciliationOperation operation)
     {
@@ -460,7 +466,7 @@ internal sealed class ExecuteService
                     ? ExecutionStatus.Completed
                     : ExecutionStatus.Failed;
 
-            execution.FinishedAt = DateTime.Now;
+            execution.FinishedAt = _timeProvider.Now;
             execution.RequestPayload = JsonSerializer.Serialize(handlerResult.RequestPayload);
             execution.ResponsePayload = JsonSerializer.Serialize(handlerResult.ResponsePayload);
             execution.ResultCode = handlerResult.ResultCode;
@@ -497,7 +503,7 @@ internal sealed class ExecuteService
             ScheduleRetry(operation, now, ex.Message);
 
             execution.Status = ExecutionStatus.Failed;
-            execution.FinishedAt = DateTime.Now;
+            execution.FinishedAt = _timeProvider.Now;
             execution.ResultCode = "FAILED";
             execution.ResultMessage = _localizer.Get("Reconciliation.OperationExecutionFailed");
             execution.ErrorCode = "OPERATION_EXECUTION_FAILED";

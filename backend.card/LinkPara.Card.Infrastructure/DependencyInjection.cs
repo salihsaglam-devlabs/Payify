@@ -9,9 +9,6 @@ using LinkPara.Card.Application.Commons.Helpers.Reconciliation;
 using LinkPara.Card.Application.Commons.Helpers.Archive;
 using LinkPara.Card.Application.Commons.Localization;
 using LinkPara.Card.Application.Commons.Models.EventBusConfiguration;
-using LinkPara.Card.Application.Commons.Models.Archive;
-using LinkPara.Card.Application.Commons.Models.FileIngestion;
-using LinkPara.Card.Application.Commons.Models.Reconciliation;
 using LinkPara.Card.Infrastructure.Persistence;
 using LinkPara.Card.Infrastructure.Services;
 using LinkPara.Card.Infrastructure.Services.FileIngestion.Orchestration;
@@ -20,8 +17,6 @@ using LinkPara.Card.Infrastructure.Services.FileIngestion.Transports;
 using LinkPara.Card.Infrastructure.Services.PaycoreServices;
 using LinkPara.Card.Infrastructure.Services.PaycoreServices.Services;
 using LinkPara.Card.Infrastructure.Services.Reconciliation;
-using LinkPara.Card.Infrastructure.Services.Reconciliation.Evaluate;
-using LinkPara.Card.Infrastructure.Services.Reconciliation.Execute;
 using LinkPara.Card.Infrastructure.Services.Reconciliation.Execute.Flow;
 using LinkPara.Card.Infrastructure.Services.Reconciliation.GetAlerts;
 using LinkPara.Card.Infrastructure.Services.Reconciliation.Integrations.Emoney;
@@ -45,12 +40,18 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using System.Reflection;
+using LinkPara.Card.Application.Commons.Models.Archive.Configuration;
+using LinkPara.Card.Application.Commons.Models.FileIngestion.Configuration;
+using LinkPara.Card.Application.Commons.Models.Reconciliation.Configuration;
 using LinkPara.Card.Application.Features.PaycoreServices.CardPinServices.Services;
 using LinkPara.Card.Infrastructure.Consumers.FileIngestionAndReconciliation;
 using LinkPara.Card.Infrastructure.Services.Alert;
 using LinkPara.Card.Infrastructure.Services.Audit;
 using LinkPara.Card.Infrastructure.Services.Archive;
 using LinkPara.Card.Infrastructure.Services.Notifications;
+using LinkPara.Card.Infrastructure.Services.Reconciliation.Evaluate.Core;
+using LinkPara.Card.Infrastructure.Services.Reconciliation.Evaluate.Flows;
+using LinkPara.Card.Infrastructure.Services.Reconciliation.Execute.Core;
 using LinkPara.Card.Infrastructure.Services.WalletServices.Services;
 
 namespace LinkPara.Card.Infrastructure;
@@ -114,14 +115,6 @@ public static class DependencyInjection
     private static void ConfigureServices(IServiceCollection services)
     {
         services.AddScoped(typeof(IGenericRepository<>), typeof(Repository<>));
-        services.AddScoped<Func<LocalizerResource, IStringLocalizer>>(sp =>
-        {
-            var factory = sp.GetRequiredService<IStringLocalizerFactory>();
-            return resource => factory.Create(resource.ToString(), "LinkPara.Card.API");
-        });
-        services.AddScoped<IIngestionErrorMapper, IngestionErrorMapper>();
-        services.AddScoped<IReconciliationErrorMapper, ReconciliationErrorMapper>();
-        services.AddScoped<IArchiveErrorMapper, ArchiveErrorMapper>();
         services.AddScoped<DbContext, CardDbContext>();
         services.AddScoped<IContextProvider, CurrentContextProvider>();
         services.AddScoped<IDomainEventService, DomainEventService>();
@@ -137,6 +130,15 @@ public static class DependencyInjection
         services.AddScoped<IMigrationConfigurator, MigrationConfigurator>();
         services.AddScoped<IDbCommandInterceptor, LongQueryLogger>();
         services.AddScoped<ISecureRandomGenerator, SecureRandomGenerator>();
+        services.AddSingleton<ITimeProvider, SystemTimeProvider>();
+        services.AddScoped<Func<LocalizerResource, IStringLocalizer>>(sp =>
+        {
+            var factory = sp.GetRequiredService<IStringLocalizerFactory>();
+            return resource => factory.Create(resource.ToString(), "LinkPara.Card.API");
+        });
+        services.AddScoped<IIngestionErrorMapper, IngestionErrorMapper>();
+        services.AddScoped<IReconciliationErrorMapper, ReconciliationErrorMapper>();
+        services.AddScoped<IArchiveErrorMapper, ArchiveErrorMapper>();
         services.AddScoped<IAuditStampService, AuditStampService>();
         services.AddScoped<IFileIngestionService, FileIngestionOrchestrator>();
         services.AddScoped<IFileTransferClientResolver, FileTransferClientResolver>();

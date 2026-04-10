@@ -1,5 +1,6 @@
 using System.Security.Cryptography;
 using System.Text;
+using LinkPara.Card.Application.Commons.Interfaces;
 using LinkPara.ContextProvider;
 using LinkPara.SharedModels.Persistence;
 using Microsoft.EntityFrameworkCore.Query;
@@ -10,16 +11,18 @@ internal sealed class AuditStampService : IAuditStampService
 {
     private static readonly AsyncLocal<string?> AsyncLocalUserId = new();
     private readonly IContextProvider _contextProvider;
+    private readonly ITimeProvider _timeProvider;
 
-    public AuditStampService(IContextProvider contextProvider)
+    public AuditStampService(IContextProvider contextProvider, ITimeProvider timeProvider)
     {
         _contextProvider = contextProvider;
+        _timeProvider = timeProvider;
     }
     
     public AuditStamp CreateStamp()
     {
         var resolved = ResolveUser(AsyncLocalUserId.Value, _contextProvider.CurrentContext?.UserId);
-        return new AuditStamp(resolved.UserId, resolved.UserGuid, DateTime.Now);
+        return new AuditStamp(resolved.UserId, resolved.UserGuid, _timeProvider.Now);
     }
 
     
@@ -94,6 +97,8 @@ internal sealed class AuditStampService : IAuditStampService
     private const string SystemName = "System";
     private static readonly Guid SystemGuid = CreateDeterministicGuid(SystemName);
 
+    private static readonly string SystemGuidString = SystemGuid.ToString();
+
     private static (string UserId, Guid UserGuid) ResolveUser(string? accessorUserId, string? contextUserId)
     {
         var candidate = !string.IsNullOrWhiteSpace(accessorUserId)
@@ -101,13 +106,13 @@ internal sealed class AuditStampService : IAuditStampService
             : contextUserId?.Trim();
 
         if (string.IsNullOrWhiteSpace(candidate))
-            return (SystemName, SystemGuid);
+            return (SystemGuidString, SystemGuid);
 
         if (Guid.TryParse(candidate, out var parsedGuid))
             return (candidate, parsedGuid);
 
         if (string.Equals(candidate, SystemName, StringComparison.OrdinalIgnoreCase))
-            return (SystemName, SystemGuid);
+            return (SystemGuidString, SystemGuid);
 
         return (candidate, CreateDeterministicGuid(candidate));
     }

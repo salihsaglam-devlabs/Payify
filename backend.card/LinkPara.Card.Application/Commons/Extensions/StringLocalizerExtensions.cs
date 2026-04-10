@@ -1,6 +1,6 @@
-using System;
+using Microsoft.Extensions.Localization;
 
-namespace Microsoft.Extensions.Localization;
+namespace LinkPara.Card.Application.Commons.Extensions;
 
 public static class StringLocalizerExtensions
 {

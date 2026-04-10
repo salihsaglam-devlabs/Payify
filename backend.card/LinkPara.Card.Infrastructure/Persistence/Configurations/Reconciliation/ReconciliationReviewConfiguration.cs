@@ -1,4 +1,4 @@
-using LinkPara.Card.Domain.Entities.Reconciliation;
+using LinkPara.Card.Domain.Entities.Reconciliation.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 

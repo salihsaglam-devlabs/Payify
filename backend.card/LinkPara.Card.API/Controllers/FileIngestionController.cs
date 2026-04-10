@@ -1,4 +1,5 @@
-using LinkPara.Card.Application.Commons.Models.FileIngestion;
+using LinkPara.Card.Application.Commons.Models.FileIngestion.Contracts.Requests;
+using LinkPara.Card.Application.Commons.Models.FileIngestion.Contracts.Responses;
 using LinkPara.Card.Application.Commons.Models.FileIngestion.Shared;
 using LinkPara.Card.Application.Features.FileIngestion.Commands.IngestFile;
 using LinkPara.Card.Domain.Enums.FileIngestion;

@@ -1,7 +1,6 @@
-using System;
 using System.ComponentModel.DataAnnotations;
 
-namespace LinkPara.Card.Application.Commons.Models.Reconciliation;
+namespace LinkPara.Card.Application.Commons.Models.Reconciliation.Contracts.Requests;
 
 public class RejectRequest
 {

@@ -1,4 +1,4 @@
-namespace LinkPara.Card.Application.Commons.Models.Reconciliation;
+namespace LinkPara.Card.Application.Commons.Models.Reconciliation.Shared;
 public static class ReconciliationPolicies
 {
     public const string Read = "Reconciliation:Read";

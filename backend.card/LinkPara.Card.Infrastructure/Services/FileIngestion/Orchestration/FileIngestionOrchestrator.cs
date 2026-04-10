@@ -1,7 +1,5 @@
-#nullable enable
 using Microsoft.Extensions.Localization;
 using LinkPara.Card.Application.Commons.Interfaces.FileIngestion;
-using LinkPara.Card.Application.Commons.Models.FileIngestion;
 using LinkPara.Card.Application.Commons.Exceptions;
 using LinkPara.Card.Domain.Enums.FileIngestion;
 using LinkPara.Card.Infrastructure.Persistence;
@@ -24,11 +22,13 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
-using LinkPara.Card.Application.Commons.Helpers.FileIngestion;
+using LinkPara.Card.Application.Commons.Extensions;
+using LinkPara.Card.Application.Commons.Models.FileIngestion.Configuration;
+using LinkPara.Card.Application.Commons.Models.FileIngestion.Contracts.Requests;
 using LinkPara.Card.Application.Commons.Models.FileIngestion.Contracts.Responses;
 using LinkPara.SharedModels.Exceptions;
-using IngestionFileLineEntity = LinkPara.Card.Domain.Entities.FileIngestion.IngestionFileLine;
-using IngestionFileEntity = LinkPara.Card.Domain.Entities.FileIngestion.IngestionFile;
+using IngestionFileLineEntity = LinkPara.Card.Domain.Entities.FileIngestion.Persistence.IngestionFileLine;
+using IngestionFileEntity = LinkPara.Card.Domain.Entities.FileIngestion.Persistence.IngestionFile;
 
 namespace LinkPara.Card.Infrastructure.Services.FileIngestion.Orchestration;
 
@@ -1363,6 +1363,12 @@ public class FileIngestionOrchestrator : IFileIngestionService
             var connection = (NpgsqlConnection)_dbContext.Database.GetDbConnection();
             if (connection.State != ConnectionState.Open)
                 await connection.OpenAsync(cancellationToken);
+
+            var efTransaction = _dbContext.Database.CurrentTransaction
+                ?? throw new FileIngestionValidationException(
+                    ApiErrorCode.FileIngestionPostgreBulkInsertFailed,
+                    _localizer.Get("FileIngestion.PostgreBulkInsertFailed", "No active EF Core transaction for PostgreSQL COPY."));
+            var npgsqlTransaction = (NpgsqlTransaction)efTransaction.GetDbTransaction();
 
             var schema = string.IsNullOrWhiteSpace(entityType.GetSchema())
                 ? string.Empty

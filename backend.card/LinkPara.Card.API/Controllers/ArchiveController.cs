@@ -1,5 +1,6 @@
-using LinkPara.Card.Application.Commons.Models.Archive;
-using LinkPara.Card.Application.Commons.Models.Reconciliation;
+using LinkPara.Card.Application.Commons.Models.Archive.Contracts.Requests;
+using LinkPara.Card.Application.Commons.Models.Archive.Contracts.Responses;
+using LinkPara.Card.Application.Commons.Models.Reconciliation.Shared;
 using LinkPara.Card.Application.Features.Archive.Commands.RunArchive;
 using LinkPara.Card.Application.Features.Archive.Queries.PreviewArchive;
 using Microsoft.AspNetCore.Authorization;

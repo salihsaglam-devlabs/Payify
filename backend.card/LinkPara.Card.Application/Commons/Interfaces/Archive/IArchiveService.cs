@@ -1,4 +1,5 @@
-using LinkPara.Card.Application.Commons.Models.Archive;
+using LinkPara.Card.Application.Commons.Models.Archive.Contracts.Requests;
+using LinkPara.Card.Application.Commons.Models.Archive.Contracts.Responses;
 
 namespace LinkPara.Card.Application.Commons.Interfaces.Archive;
 

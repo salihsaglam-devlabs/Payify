@@ -1,4 +1,4 @@
-using LinkPara.Card.Domain.Entities.FileIngestion;
+using LinkPara.Card.Domain.Entities.FileIngestion.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 

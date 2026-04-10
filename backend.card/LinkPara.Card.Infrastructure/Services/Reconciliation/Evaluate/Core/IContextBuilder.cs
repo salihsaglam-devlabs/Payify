@@ -1,7 +1,7 @@
-using LinkPara.Card.Application.Commons.Models.Reconciliation;
-using LinkPara.Card.Domain.Entities.FileIngestion;
+using LinkPara.Card.Application.Commons.Models.Reconciliation.Shared;
+using LinkPara.Card.Domain.Entities.FileIngestion.Persistence;
 
-namespace LinkPara.Card.Infrastructure.Services.Reconciliation.Evaluate;
+namespace LinkPara.Card.Infrastructure.Services.Reconciliation.Evaluate.Core;
 
 internal interface IContextBuilder
 {

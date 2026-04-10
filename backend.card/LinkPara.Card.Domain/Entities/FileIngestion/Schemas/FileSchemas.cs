@@ -1,6 +1,6 @@
 using System.Runtime.Serialization;
 
-namespace LinkPara.Card.Domain.Entities.FileIngestion;
+namespace LinkPara.Card.Domain.Entities.FileIngestion.Schemas;
 
 #region CLEARING VISA
 

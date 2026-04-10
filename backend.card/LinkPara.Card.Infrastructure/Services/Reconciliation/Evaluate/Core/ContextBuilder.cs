@@ -1,16 +1,17 @@
-using LinkPara.Card.Application.Commons.Exceptions;
-using LinkPara.Card.Application.Commons.Helpers.Reconciliation;
-using LinkPara.Card.Application.Commons.Interfaces.Reconciliation;
-using LinkPara.Card.Application.Commons.Models.Reconciliation;
 using System.Text.Json;
-using LinkPara.Card.Domain.Entities.FileIngestion;
+using LinkPara.Card.Application.Commons.Exceptions;
+using LinkPara.Card.Application.Commons.Extensions;
+using LinkPara.Card.Application.Commons.Interfaces.Reconciliation;
+using LinkPara.Card.Application.Commons.Models.Reconciliation.Shared;
+using LinkPara.Card.Domain.Entities.FileIngestion.Persistence;
+using LinkPara.Card.Domain.Entities.FileIngestion.Schemas;
 using LinkPara.Card.Domain.Enums.FileIngestion;
 using LinkPara.Card.Infrastructure.Persistence;
 using LinkPara.Card.Infrastructure.Services.Reconciliation.Integrations.Emoney;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Localization;
 
-namespace LinkPara.Card.Infrastructure.Services.Reconciliation.Evaluate;
+namespace LinkPara.Card.Infrastructure.Services.Reconciliation.Evaluate.Core;
 
 internal sealed class ContextBuilder : IContextBuilder
 {

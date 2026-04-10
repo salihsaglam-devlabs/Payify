@@ -1,7 +1,6 @@
-using LinkPara.Card.Application.Commons.Models.FileIngestion.Contracts.Responses;
 using LinkPara.Card.Domain.Enums.FileIngestion;
 
-namespace LinkPara.Card.Application.Commons.Models.FileIngestion;
+namespace LinkPara.Card.Application.Commons.Models.FileIngestion.Contracts.Responses;
 
 public class FileIngestionResponse
 {

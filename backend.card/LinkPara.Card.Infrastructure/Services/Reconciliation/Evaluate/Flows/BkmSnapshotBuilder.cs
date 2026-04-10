@@ -1,10 +1,10 @@
 using System.Text.Json;
 using LinkPara.Card.Application.Commons.Exceptions;
-using LinkPara.Card.Domain.Entities.FileIngestion;
-using LinkPara.Card.Infrastructure.Services.Reconciliation.Execute;
-using LinkPara.Card.Infrastructure.Services.Reconciliation.Integrations.Emoney;
+using LinkPara.Card.Domain.Entities.FileIngestion.Persistence;
+using LinkPara.Card.Domain.Entities.FileIngestion.Schemas;
+using LinkPara.Card.Infrastructure.Services.Reconciliation.Evaluate.Core;
 
-namespace LinkPara.Card.Infrastructure.Services.Reconciliation.Evaluate;
+namespace LinkPara.Card.Infrastructure.Services.Reconciliation.Evaluate.Flows;
 
 internal static class BkmSnapshotBuilder
 {

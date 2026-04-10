@@ -1,7 +1,5 @@
 using LinkPara.Card.Domain.Entities;
 using LinkPara.Card.Domain.Entities.Archive;
-using LinkPara.Card.Domain.Entities.FileIngestion;
-using LinkPara.Card.Domain.Entities.Reconciliation;
 using LinkPara.ContextProvider;
 using LinkPara.HttpProviders.Vault;
 using LinkPara.SharedModels.DomainEvents.Interfaces;
@@ -10,6 +8,8 @@ using MassTransit;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using System.Reflection;
+using LinkPara.Card.Domain.Entities.FileIngestion.Persistence;
+using LinkPara.Card.Domain.Entities.Reconciliation.Persistence;
 
 namespace LinkPara.Card.Infrastructure.Persistence;
 

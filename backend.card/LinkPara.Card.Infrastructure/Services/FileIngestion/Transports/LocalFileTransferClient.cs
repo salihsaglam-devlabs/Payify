@@ -1,10 +1,12 @@
-using LinkPara.Card.Application.Commons.Models.FileIngestion;
+using LinkPara.Card.Application.Commons.Interfaces;
 using Microsoft.Extensions.Localization;
 using LinkPara.Card.Domain.Enums.FileIngestion;
 using Microsoft.Extensions.Options;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.RegularExpressions;
+using LinkPara.Card.Application.Commons.Extensions;
+using LinkPara.Card.Application.Commons.Models.FileIngestion.Configuration;
 
 namespace LinkPara.Card.Infrastructure.Services.FileIngestion.Transports;
 
@@ -12,10 +14,12 @@ public class LocalFileTransferClient : IFileTransferClient
 {
     private readonly FileIngestionOptions _options;
     private readonly IStringLocalizer _localizer;
+    private readonly ITimeProvider _timeProvider;
 
-    public LocalFileTransferClient(IOptions<FileIngestionOptions> options, Func<LinkPara.Card.Application.Commons.Localization.LocalizerResource, IStringLocalizer> localizerFactory)
+    public LocalFileTransferClient(IOptions<FileIngestionOptions> options, ITimeProvider timeProvider, Func<LinkPara.Card.Application.Commons.Localization.LocalizerResource, IStringLocalizer> localizerFactory)
     {
         _options = options.Value;
+        _timeProvider = timeProvider;
         _localizer = localizerFactory(LinkPara.Card.Application.Commons.Localization.LocalizerResource.Messages);
     }
 
@@ -141,7 +145,7 @@ public class LocalFileTransferClient : IFileTransferClient
         if (string.IsNullOrWhiteSpace(rootPath))
             throw new InvalidOperationException(_localizer.Get("FileIngestion.LocalRootPathEmpty", profileKey));
 
-        var now = DateTime.Now;
+        var now = _timeProvider.Now;
         var dateFolder = now.ToString("yyyy-MM-dd");
         var timeFolder = now.ToString("HH-mm-ss-fff");
         var timestampPath = Path.Combine(rootPath, dateFolder, timeFolder);

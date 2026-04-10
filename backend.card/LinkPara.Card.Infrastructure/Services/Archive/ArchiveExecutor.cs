@@ -1,5 +1,7 @@
+using System.Data;
 using System.Text.Json;
-using LinkPara.Card.Application.Commons.Models.Archive;
+using LinkPara.Card.Application.Commons.Extensions;
+using LinkPara.Card.Application.Commons.Models.Archive.Contracts.Responses;
 using LinkPara.Card.Domain.Entities.Archive;
 using LinkPara.Card.Infrastructure.Persistence;
 using LinkPara.Card.Infrastructure.Services.Audit;
@@ -46,7 +48,7 @@ internal sealed class ArchiveExecutor
 
         return await strategy.ExecuteAsync(async () =>
         {
-            await using var transaction = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
+            await using var transaction = await _dbContext.Database.BeginTransactionAsync(IsolationLevel.RepeatableRead, cancellationToken);
             try
             {
                 currentStep = "SNAPSHOT_LOAD";

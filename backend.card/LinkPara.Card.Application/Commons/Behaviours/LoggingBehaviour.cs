@@ -1,5 +1,6 @@
 ﻿using LinkPara.Audit;
 using LinkPara.Audit.Models;
+using LinkPara.Card.Application.Commons.Interfaces;
 using LinkPara.ContextProvider;
 using LinkPara.Card.Application.Commons.Attributes;
 using MediatR;
@@ -12,11 +13,13 @@ where TRequest : IRequest<TResponse>
 {
     private readonly IAuditLogService _auditLogService;
     private readonly IContextProvider _contextProvider;
+    private readonly ITimeProvider _timeProvider;
 
-    public LoggingBehaviour(IAuditLogService auditLogService, IContextProvider contextProvider)
+    public LoggingBehaviour(IAuditLogService auditLogService, IContextProvider contextProvider, ITimeProvider timeProvider)
     {
         _auditLogService = auditLogService;
         _contextProvider = contextProvider;
+        _timeProvider = timeProvider;
     }
 
     public async Task<TResponse> Handle(TRequest request, RequestHandlerDelegate<TResponse> next, CancellationToken cancellationToken)
@@ -80,7 +83,7 @@ where TRequest : IRequest<TResponse>
     {
         var auditLog = new AuditLog
         {
-            LogDate = DateTime.Now,
+            LogDate = _timeProvider.Now,
             CorrelationId = _contextProvider.CurrentContext.CorrelationId
         };
 

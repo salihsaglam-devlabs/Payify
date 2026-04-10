@@ -1,4 +1,5 @@
-using LinkPara.Card.Application.Commons.Models.Reconciliation;
+using LinkPara.Card.Application.Commons.Models.Reconciliation.Contracts.Requests;
+using LinkPara.Card.Application.Commons.Models.Reconciliation.Contracts.Responses;
 using MediatR;
 
 namespace LinkPara.Card.Application.Features.Reconciliation.Commands.Reject

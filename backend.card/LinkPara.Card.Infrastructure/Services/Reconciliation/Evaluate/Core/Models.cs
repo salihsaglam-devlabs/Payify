@@ -1,8 +1,9 @@
-using LinkPara.Card.Domain.Entities.FileIngestion;
+using LinkPara.Card.Domain.Entities.FileIngestion.Persistence;
+using LinkPara.Card.Domain.Entities.FileIngestion.Schemas;
 using LinkPara.Card.Domain.Enums.Reconciliation;
 using LinkPara.Card.Infrastructure.Services.Reconciliation.Integrations.Emoney;
 
-namespace LinkPara.Card.Infrastructure.Services.Reconciliation.Evaluate;
+namespace LinkPara.Card.Infrastructure.Services.Reconciliation.Evaluate.Core;
 
 internal abstract class EvaluationContext
 {

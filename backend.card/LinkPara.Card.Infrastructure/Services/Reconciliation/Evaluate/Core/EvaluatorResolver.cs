@@ -1,8 +1,9 @@
 using LinkPara.Card.Application.Commons.Exceptions;
-using Microsoft.Extensions.Localization;
+using LinkPara.Card.Application.Commons.Extensions;
 using LinkPara.Card.Domain.Enums.FileIngestion;
+using Microsoft.Extensions.Localization;
 
-namespace LinkPara.Card.Infrastructure.Services.Reconciliation.Evaluate;
+namespace LinkPara.Card.Infrastructure.Services.Reconciliation.Evaluate.Core;
 
 internal sealed class EvaluatorResolver
 {

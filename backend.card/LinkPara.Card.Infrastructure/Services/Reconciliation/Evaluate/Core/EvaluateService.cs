@@ -1,11 +1,15 @@
-using System.Text.Json;
 using System.Data;
+using System.Text.Json;
 using LinkPara.Card.Application.Commons.Exceptions;
-using LinkPara.Card.Application.Commons.Helpers.Reconciliation;
+using LinkPara.Card.Application.Commons.Extensions;
+using LinkPara.Card.Application.Commons.Interfaces;
 using LinkPara.Card.Application.Commons.Interfaces.Reconciliation;
-using LinkPara.Card.Application.Commons.Models.Reconciliation;
-using LinkPara.Card.Domain.Entities.FileIngestion;
-using LinkPara.Card.Domain.Entities.Reconciliation;
+using LinkPara.Card.Application.Commons.Models.Reconciliation.Configuration;
+using LinkPara.Card.Application.Commons.Models.Reconciliation.Contracts.Requests;
+using LinkPara.Card.Application.Commons.Models.Reconciliation.Contracts.Responses;
+using LinkPara.Card.Application.Commons.Models.Reconciliation.Shared;
+using LinkPara.Card.Domain.Entities.FileIngestion.Persistence;
+using LinkPara.Card.Domain.Entities.Reconciliation.Persistence;
 using LinkPara.Card.Domain.Enums.FileIngestion;
 using LinkPara.Card.Domain.Enums.Reconciliation;
 using LinkPara.Card.Infrastructure.Persistence;
@@ -15,7 +19,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 
-namespace LinkPara.Card.Infrastructure.Services.Reconciliation.Evaluate;
+namespace LinkPara.Card.Infrastructure.Services.Reconciliation.Evaluate.Core;
 
 internal sealed class EvaluateService : IEvaluateService
 {
@@ -26,6 +30,7 @@ internal sealed class EvaluateService : IEvaluateService
     private readonly IAuditStampService _auditStampService;
     private readonly IReconciliationErrorMapper _errorMapper;
     private readonly IStringLocalizer _localizer;
+    private readonly ITimeProvider _timeProvider;
     private readonly ReconciliationOptions _options = new();
 
     public EvaluateService(
@@ -33,6 +38,7 @@ internal sealed class EvaluateService : IEvaluateService
         IContextBuilder contextBuilder,
         EvaluatorResolver evaluatorResolver,
         IAuditStampService auditStampService,
+        ITimeProvider timeProvider,
         IOptions<ReconciliationOptions> options,
         IReconciliationErrorMapper errorMapper,
         Func<LinkPara.Card.Application.Commons.Localization.LocalizerResource, IStringLocalizer> localizerFactory)
@@ -41,6 +47,7 @@ internal sealed class EvaluateService : IEvaluateService
         _contextBuilder = contextBuilder;
         _evaluatorResolver = evaluatorResolver;
         _auditStampService = auditStampService;
+        _timeProvider = timeProvider;
         _options = options.Value;
         _errorMapper = errorMapper;
         _localizer = localizerFactory(LinkPara.Card.Application.Commons.Localization.LocalizerResource.Messages);
@@ -300,11 +307,22 @@ internal sealed class EvaluateService : IEvaluateService
         }
         catch
         {
+            _dbContext.ChangeTracker.Clear();
             var createdOperationCount = 0;
             foreach (var item in items)
             {
                 try
                 {
+                    var alreadyPersisted = await _dbContext.ReconciliationEvaluations
+                        .AsNoTracking()
+                        .AnyAsync(e => e.FileLineId == item.Row.Id && e.GroupId == groupId, cancellationToken);
+
+                    if (alreadyPersisted)
+                    {
+                        await MarkRowAsync(item.Row.Id, ReconciliationStatus.Success, item.Result.Note, cancellationToken);
+                        continue;
+                    }
+
                     createdOperationCount += await PersistEvaluationAsync(item.Row, item.Result, groupId, cancellationToken);
                     await MarkRowAsync(item.Row.Id, ReconciliationStatus.Success, item.Result.Note, cancellationToken);
                 }
@@ -347,7 +365,7 @@ internal sealed class EvaluateService : IEvaluateService
         return new PersistedEvaluation(evaluation, operations, reviews);
     }
 
-    private static List<ReconciliationReview> BuildReviews(
+    private List<ReconciliationReview> BuildReviews(
         IReadOnlyList<ReconciliationOperation> operations,
         IReadOnlyList<EvaluationOperation> orderedOperations,
         Guid fileLineId,
@@ -463,10 +481,10 @@ internal sealed class EvaluateService : IEvaluateService
         throw new ReconciliationBusinessRuleException(ApiErrorCode.ReconciliationBranchRequiresManualGate, _localizer.Get("Reconciliation.BranchRequiresManualGate"));
     }
 
-    private static DateTime? ResolveReviewExpirationAt(EvaluationOperation operation)
+    private DateTime? ResolveReviewExpirationAt(EvaluationOperation operation)
     {
         return operation.ReviewTimeout.HasValue
-            ? DateTime.Now.Add(operation.ReviewTimeout.Value)
+            ? _timeProvider.Now.Add(operation.ReviewTimeout.Value)
             : null;
     }
 

@@ -1,6 +1,6 @@
 using LinkPara.Card.Domain.Entities.Archive;
-using LinkPara.Card.Domain.Entities.FileIngestion;
-using LinkPara.Card.Domain.Entities.Reconciliation;
+using LinkPara.Card.Domain.Entities.FileIngestion.Persistence;
+using LinkPara.Card.Domain.Entities.Reconciliation.Persistence;
 using LinkPara.Card.Infrastructure.Persistence;
 using LinkPara.SharedModels.Persistence;
 using Microsoft.EntityFrameworkCore;

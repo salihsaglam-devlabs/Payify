@@ -1,4 +1,5 @@
-using LinkPara.Card.Application.Commons.Models.Archive;
+using LinkPara.Card.Application.Commons.Extensions;
+using LinkPara.Card.Application.Commons.Models.Archive.Contracts.Responses;
 using LinkPara.Card.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Localization;
@@ -20,33 +21,37 @@ internal sealed class ArchiveVerifier
 
     public async Task<ArchiveAggregateCounts> GetLiveCountsAsync(Guid ingestionFileId, CancellationToken cancellationToken)
     {
+        var fileLineIdQuery = _dbContext.IngestionFileLines
+            .AsNoTracking()
+            .Where(x => x.IngestionFileId == ingestionFileId)
+            .Select(x => x.Id);
+
         var counts = new ArchiveAggregateCounts
         {
             IngestionFileCount = await _dbContext.IngestionFiles.CountAsync(x => x.Id == ingestionFileId, cancellationToken),
             IngestionFileLineCount = await _dbContext.IngestionFileLines.CountAsync(x => x.IngestionFileId == ingestionFileId, cancellationToken)
         };
 
-        var fileLineIds = await _dbContext.IngestionFileLines
-            .AsNoTracking()
-            .Where(x => x.IngestionFileId == ingestionFileId)
-            .Select(x => x.Id)
-            .ToListAsync(cancellationToken);
-
-        if (fileLineIds.Count == 0)
+        if (counts.IngestionFileLineCount == 0)
         {
             return counts;
         }
 
-        counts.ReconciliationEvaluationCount = await _dbContext.ReconciliationEvaluations.CountAsync(x => fileLineIds.Contains(x.FileLineId), cancellationToken);
-        counts.ReconciliationOperationCount = await _dbContext.ReconciliationOperations.CountAsync(x => fileLineIds.Contains(x.FileLineId), cancellationToken);
-        counts.ReconciliationReviewCount = await _dbContext.ReconciliationReviews.CountAsync(x => fileLineIds.Contains(x.FileLineId), cancellationToken);
-        counts.ReconciliationOperationExecutionCount = await _dbContext.ReconciliationOperationExecutions.CountAsync(x => fileLineIds.Contains(x.FileLineId), cancellationToken);
-        counts.ReconciliationAlertCount = await _dbContext.ReconciliationAlerts.CountAsync(x => fileLineIds.Contains(x.FileLineId), cancellationToken);
+        counts.ReconciliationEvaluationCount = await _dbContext.ReconciliationEvaluations.CountAsync(x => fileLineIdQuery.Contains(x.FileLineId), cancellationToken);
+        counts.ReconciliationOperationCount = await _dbContext.ReconciliationOperations.CountAsync(x => fileLineIdQuery.Contains(x.FileLineId), cancellationToken);
+        counts.ReconciliationReviewCount = await _dbContext.ReconciliationReviews.CountAsync(x => fileLineIdQuery.Contains(x.FileLineId), cancellationToken);
+        counts.ReconciliationOperationExecutionCount = await _dbContext.ReconciliationOperationExecutions.CountAsync(x => fileLineIdQuery.Contains(x.FileLineId), cancellationToken);
+        counts.ReconciliationAlertCount = await _dbContext.ReconciliationAlerts.CountAsync(x => fileLineIdQuery.Contains(x.FileLineId), cancellationToken);
         return counts;
     }
     
     public async Task<ArchiveAggregateCounts> GetArchiveCountsAsync(Guid ingestionFileId, CancellationToken cancellationToken)
     {
+        var archiveFileLineIdQuery = _dbContext.ArchiveIngestionFileLines
+            .AsNoTracking()
+            .Where(x => x.IngestionFileId == ingestionFileId)
+            .Select(x => x.Id);
+
         var counts = new ArchiveAggregateCounts
         {
             IngestionFileCount = await _dbContext.ArchiveIngestionFiles
@@ -55,27 +60,21 @@ internal sealed class ArchiveVerifier
                 .CountAsync(x => x.IngestionFileId == ingestionFileId, cancellationToken)
         };
 
-        var archiveFileLineIds = await _dbContext.ArchiveIngestionFileLines
-            .AsNoTracking()
-            .Where(x => x.IngestionFileId == ingestionFileId)
-            .Select(x => x.Id)
-            .ToListAsync(cancellationToken);
-
-        if (archiveFileLineIds.Count == 0)
+        if (counts.IngestionFileLineCount == 0)
         {
             return counts;
         }
 
         counts.ReconciliationEvaluationCount = await _dbContext.ArchiveReconciliationEvaluations
-            .CountAsync(x => archiveFileLineIds.Contains(x.FileLineId), cancellationToken);
+            .CountAsync(x => archiveFileLineIdQuery.Contains(x.FileLineId), cancellationToken);
         counts.ReconciliationOperationCount = await _dbContext.ArchiveReconciliationOperations
-            .CountAsync(x => archiveFileLineIds.Contains(x.FileLineId), cancellationToken);
+            .CountAsync(x => archiveFileLineIdQuery.Contains(x.FileLineId), cancellationToken);
         counts.ReconciliationReviewCount = await _dbContext.ArchiveReconciliationReviews
-            .CountAsync(x => archiveFileLineIds.Contains(x.FileLineId), cancellationToken);
+            .CountAsync(x => archiveFileLineIdQuery.Contains(x.FileLineId), cancellationToken);
         counts.ReconciliationOperationExecutionCount = await _dbContext.ArchiveReconciliationOperationExecutions
-            .CountAsync(x => archiveFileLineIds.Contains(x.FileLineId), cancellationToken);
+            .CountAsync(x => archiveFileLineIdQuery.Contains(x.FileLineId), cancellationToken);
         counts.ReconciliationAlertCount = await _dbContext.ArchiveReconciliationAlerts
-            .CountAsync(x => archiveFileLineIds.Contains(x.FileLineId), cancellationToken);
+            .CountAsync(x => archiveFileLineIdQuery.Contains(x.FileLineId), cancellationToken);
 
         return counts;
     }

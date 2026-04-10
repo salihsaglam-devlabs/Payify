@@ -1,7 +1,9 @@
 using System.Globalization;
 using System.Text;
-using LinkPara.Card.Application.Commons.Models.Reconciliation;
-using LinkPara.Card.Domain.Entities.Reconciliation;
+using LinkPara.Card.Application.Commons.Extensions;
+using LinkPara.Card.Application.Commons.Interfaces;
+using LinkPara.Card.Application.Commons.Models.Reconciliation.Configuration;
+using LinkPara.Card.Domain.Entities.Reconciliation.Persistence;
 using LinkPara.Card.Domain.Enums.Reconciliation;
 using LinkPara.Card.Infrastructure.Persistence;
 using LinkPara.Card.Infrastructure.Services.Audit;
@@ -23,11 +25,13 @@ internal sealed class AlertService : IAlertService
     private readonly ReconciliationOptions _options;
     private readonly ILogger<AlertService> _logger;
     private readonly IStringLocalizer _localizer;
+    private readonly ITimeProvider _timeProvider;
 
     public AlertService(
         CardDbContext dbContext,
         INotificationEmailService notificationEmailService,
         IAuditStampService auditStampService,
+        ITimeProvider timeProvider,
         IOptions<ReconciliationOptions> options,
         ILogger<AlertService> logger,
         Func<LinkPara.Card.Application.Commons.Localization.LocalizerResource, IStringLocalizer> localizerFactory)
@@ -35,6 +39,7 @@ internal sealed class AlertService : IAlertService
         _dbContext = dbContext;
         _notificationEmailService = notificationEmailService;
         _auditStampService = auditStampService;
+        _timeProvider = timeProvider;
         _logger = logger;
         _options = options.Value;
         _localizer = localizerFactory(LinkPara.Card.Application.Commons.Localization.LocalizerResource.Messages);
@@ -144,7 +149,7 @@ internal sealed class AlertService : IAlertService
                     executions ??= [];
                 }
 
-                var templateData = BuildTemplateData(alert, evaluation, operation, executions, _localizer);
+                var templateData = BuildTemplateData(alert, evaluation, operation, executions, _localizer, _timeProvider.Now);
 
                 await _notificationEmailService.SendEmailAsync(
                     templateName,
@@ -229,7 +234,8 @@ internal sealed class AlertService : IAlertService
         ReconciliationEvaluation? evaluation,
         ReconciliationOperation? operation,
         IReadOnlyCollection<ReconciliationOperationExecution> executions,
-        IStringLocalizer localizer)
+        IStringLocalizer localizer,
+        DateTime now)
     {
         var culture = CultureInfo.InvariantCulture;
         var latestExecution = executions
@@ -255,7 +261,7 @@ internal sealed class AlertService : IAlertService
             
             ["alerttype"] = alert.AlertType ?? string.Empty,
             ["alertseverity"] = alert.Severity ?? string.Empty,
-            ["raisedat"] = DateTime.Now.ToString("G", CultureInfo.InvariantCulture),
+            ["raisedat"] = now.ToString("G", CultureInfo.InvariantCulture),
             ["summary"] = BuildSummary(alert, evaluation, operation, latestExecution, localizer),
 
             ["evaluationstatus"] = evaluation?.Status.ToString() ?? string.Empty,

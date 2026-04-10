@@ -1,4 +1,4 @@
-using LinkPara.Card.Application.Commons.Models.Archive;
+using LinkPara.Card.Application.Commons.Models.Archive.Contracts.Responses;
 using LinkPara.Card.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 

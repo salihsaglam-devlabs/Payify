@@ -1,9 +1,10 @@
-using LinkPara.Card.Domain.Entities.FileIngestion;
 using Microsoft.Extensions.Localization;
 using LinkPara.Card.Application.Commons.Exceptions;
 using System.Globalization;
 using System.Reflection;
 using System.Runtime.Serialization;
+using LinkPara.Card.Application.Commons.Extensions;
+using LinkPara.Card.Domain.Entities.FileIngestion.Schemas;
 
 namespace LinkPara.Card.Infrastructure.Services.FileIngestion.Parsing;
 

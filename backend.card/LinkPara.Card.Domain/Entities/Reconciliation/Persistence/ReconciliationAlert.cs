@@ -1,9 +1,8 @@
-using System;
-using LinkPara.SharedModels.Persistence;
-using LinkPara.Card.Domain.Entities.FileIngestion;
+using LinkPara.Card.Domain.Entities.FileIngestion.Persistence;
 using LinkPara.Card.Domain.Enums.Reconciliation;
+using LinkPara.SharedModels.Persistence;
 
-namespace LinkPara.Card.Domain.Entities.Reconciliation
+namespace LinkPara.Card.Domain.Entities.Reconciliation.Persistence
 {
     public class ReconciliationAlert : AuditEntity
     {

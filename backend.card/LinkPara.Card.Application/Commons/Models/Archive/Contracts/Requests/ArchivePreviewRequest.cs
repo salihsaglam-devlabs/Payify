@@ -1,4 +1,4 @@
-namespace LinkPara.Card.Application.Commons.Models.Archive;
+namespace LinkPara.Card.Application.Commons.Models.Archive.Contracts.Requests;
 
 public class ArchivePreviewRequest
 {

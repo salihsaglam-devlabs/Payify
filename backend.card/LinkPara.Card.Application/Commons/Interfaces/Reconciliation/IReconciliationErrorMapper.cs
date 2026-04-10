@@ -1,5 +1,5 @@
 #nullable enable
-using LinkPara.Card.Application.Commons.Models.Reconciliation;
+using LinkPara.Card.Application.Commons.Models.Reconciliation.Shared;
 
 namespace LinkPara.Card.Application.Commons.Interfaces.Reconciliation;
 

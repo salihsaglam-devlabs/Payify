@@ -1,6 +1,4 @@
-﻿using System.Numerics;
-
-namespace LinkPara.Card.Application.Commons.Models.PaycoreModels.DebitAuthorizationModels
+﻿namespace LinkPara.Card.Application.Commons.Models.PaycoreModels.DebitAuthorizationModels
 {
     public class BalanceInfo
     {

@@ -1,7 +1,7 @@
 using LinkPara.Card.Domain.Enums.FileIngestion;
 using LinkPara.SharedModels.Persistence;
 
-namespace LinkPara.Card.Domain.Entities.FileIngestion;
+namespace LinkPara.Card.Domain.Entities.FileIngestion.Persistence;
 
 public class IngestionFileLine : AuditEntity
 {

@@ -1,5 +1,6 @@
 using LinkPara.Card.Application.Commons.Interfaces.Archive;
-using LinkPara.Card.Application.Commons.Models.Archive;
+using LinkPara.Card.Application.Commons.Models.Archive.Contracts.Requests;
+using LinkPara.Card.Application.Commons.Models.Archive.Contracts.Responses;
 using MediatR;
 
 namespace LinkPara.Card.Application.Features.Archive.Commands.RunArchive;

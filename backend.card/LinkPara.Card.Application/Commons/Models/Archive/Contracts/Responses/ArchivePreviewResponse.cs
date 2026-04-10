@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace LinkPara.Card.Application.Commons.Models.Archive;
+namespace LinkPara.Card.Application.Commons.Models.Archive.Contracts.Responses;
 
 public class ArchivePreviewResponse
 {

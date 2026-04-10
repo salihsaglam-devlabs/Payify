@@ -1,4 +1,4 @@
-namespace LinkPara.Card.Application.Commons.Models.FileIngestion;
+namespace LinkPara.Card.Application.Commons.Models.FileIngestion.Configuration;
 
 public class ConnectionsOptions
 {

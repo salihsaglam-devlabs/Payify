@@ -1,7 +1,6 @@
-using System;
 using System.ComponentModel.DataAnnotations;
 
-namespace LinkPara.Card.Application.Commons.Models.Reconciliation;
+namespace LinkPara.Card.Application.Commons.Models.Reconciliation.Shared;
 
 public class OperationExecutionResult
 {

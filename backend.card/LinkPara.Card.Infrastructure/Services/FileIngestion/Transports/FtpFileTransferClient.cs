@@ -1,10 +1,12 @@
-using LinkPara.Card.Application.Commons.Models.FileIngestion;
+using LinkPara.Card.Application.Commons.Interfaces;
 using Microsoft.Extensions.Localization;
 using LinkPara.Card.Domain.Enums.FileIngestion;
 using Microsoft.Extensions.Options;
 using System.Net;
 using System.Text;
 using System.Text.RegularExpressions;
+using LinkPara.Card.Application.Commons.Extensions;
+using LinkPara.Card.Application.Commons.Models.FileIngestion.Configuration;
 
 namespace LinkPara.Card.Infrastructure.Services.FileIngestion.Transports;
 
@@ -12,10 +14,12 @@ public class FtpFileTransferClient : IFileTransferClient
 {
     private readonly FileIngestionOptions _options;
     private readonly IStringLocalizer _localizer;
+    private readonly ITimeProvider _timeProvider;
 
-    public FtpFileTransferClient(IOptions<FileIngestionOptions> options, Func<LinkPara.Card.Application.Commons.Localization.LocalizerResource, IStringLocalizer> localizerFactory)
+    public FtpFileTransferClient(IOptions<FileIngestionOptions> options, ITimeProvider timeProvider, Func<LinkPara.Card.Application.Commons.Localization.LocalizerResource, IStringLocalizer> localizerFactory)
     {
         _options = options.Value;
+        _timeProvider = timeProvider;
         _localizer = localizerFactory(LinkPara.Card.Application.Commons.Localization.LocalizerResource.Messages);
     }
 
@@ -170,16 +174,16 @@ public class FtpFileTransferClient : IFileTransferClient
 
     private static string NormalizeRemotePath(string remotePath) => remotePath.StartsWith('/') ? remotePath : $"/{remotePath}";
 
-    private static string ResolveTargetFileName(string fileName, FileTransferEndpointType endpointType)
+    private string ResolveTargetFileName(string fileName, FileTransferEndpointType endpointType)
         => endpointType == FileTransferEndpointType.Target
             ? AppendTimestampToFileName(fileName)
             : fileName;
 
-    private static string AppendTimestampToFileName(string fileName)
+    private string AppendTimestampToFileName(string fileName)
     {
         var extension = Path.GetExtension(fileName);
         var nameWithoutExtension = Path.GetFileNameWithoutExtension(fileName);
-        return $"{nameWithoutExtension}_{DateTime.Now:yyyyMMddHHmmssfff}{extension}";
+        return $"{nameWithoutExtension}_{_timeProvider.Now:yyyyMMddHHmmssfff}{extension}";
     }
 
     private static async Task SkipBytesAsync(Stream stream, long byteOffset, CancellationToken cancellationToken)

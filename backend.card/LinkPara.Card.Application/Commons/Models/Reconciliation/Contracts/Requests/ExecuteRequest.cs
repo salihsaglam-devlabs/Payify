@@ -1,5 +1,6 @@
-using System;
-namespace LinkPara.Card.Application.Commons.Models.Reconciliation;
+using LinkPara.Card.Application.Commons.Models.Reconciliation.Configuration;
+
+namespace LinkPara.Card.Application.Commons.Models.Reconciliation.Contracts.Requests;
 
 public class ExecuteRequest
 {

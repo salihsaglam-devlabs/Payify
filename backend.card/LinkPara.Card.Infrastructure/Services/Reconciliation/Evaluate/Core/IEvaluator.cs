@@ -1,6 +1,6 @@
 using LinkPara.Card.Domain.Enums.FileIngestion;
 
-namespace LinkPara.Card.Infrastructure.Services.Reconciliation.Evaluate;
+namespace LinkPara.Card.Infrastructure.Services.Reconciliation.Evaluate.Core;
 
 internal interface IEvaluator
 {

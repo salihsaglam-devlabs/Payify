@@ -2,7 +2,7 @@ using System.Text.Json.Serialization;
 using LinkPara.Card.Application.Commons.Helpers.Shared;
 using LinkPara.Card.Domain.Enums.FileIngestion;
 
-namespace LinkPara.Card.Application.Commons.Models.FileIngestion;
+namespace LinkPara.Card.Application.Commons.Models.FileIngestion.Contracts.Requests;
 
 public class FileIngestionRequest
 {

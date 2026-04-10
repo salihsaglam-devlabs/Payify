@@ -1,6 +1,4 @@
-﻿using static MassTransit.Logging.OperationName;
-
-namespace LinkPara.Card.Application.Commons.Models.PaycoreModels.CardModels;
+﻿namespace LinkPara.Card.Application.Commons.Models.PaycoreModels.CardModels;
 
 public class GetCardLastCourierActivityResponse :PaycoreResponse
 {
