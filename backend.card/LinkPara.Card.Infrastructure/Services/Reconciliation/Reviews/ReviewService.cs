@@ -303,7 +303,7 @@ internal sealed class ReviewService
 
                 var currentReviewerId = ResolveReviewerId(reviewerId);
                 var auditStamp = _auditStampService.CreateStamp();
-                var now = DateTime.UtcNow;
+                var now = DateTime.Now;
 
                 var updatedReviewRows = await _dbContext.ReconciliationReviews
                     .Where(x => x.OperationId == operationId && x.Decision == ReviewDecision.Pending)

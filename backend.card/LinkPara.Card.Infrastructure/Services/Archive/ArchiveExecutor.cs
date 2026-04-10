@@ -4,6 +4,7 @@ using LinkPara.Card.Domain.Entities.Archive;
 using LinkPara.Card.Infrastructure.Persistence;
 using LinkPara.Card.Infrastructure.Services.Audit;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Localization;
 
 namespace LinkPara.Card.Infrastructure.Services.Archive;
 
@@ -15,6 +16,7 @@ internal sealed class ArchiveExecutor
     private readonly ArchiveVerifier _verifier;
     private readonly IArchiveSqlDialect _sqlDialect;
     private readonly IAuditStampService _auditStampService;
+    private readonly IStringLocalizer _localizer;
 
     public ArchiveExecutor(
         CardDbContext dbContext,
@@ -22,7 +24,8 @@ internal sealed class ArchiveExecutor
         ArchiveEligibilityEvaluator evaluator,
         ArchiveVerifier verifier,
         IArchiveSqlDialect sqlDialect,
-        IAuditStampService auditStampService)
+        IAuditStampService auditStampService,
+        Func<LinkPara.Card.Application.Commons.Localization.LocalizerResource, IStringLocalizer> localizerFactory)
     {
         _dbContext = dbContext;
         _reader = reader;
@@ -30,11 +33,13 @@ internal sealed class ArchiveExecutor
         _verifier = verifier;
         _sqlDialect = sqlDialect;
         _auditStampService = auditStampService;
+        _localizer = localizerFactory(LinkPara.Card.Application.Commons.Localization.LocalizerResource.Messages);
     }
 
     public async Task<ArchiveRunItemResult> ExecuteAsync(Guid ingestionFileId, CancellationToken cancellationToken)
     {
         var stamp = _auditStampService.CreateStamp();
+        var now = stamp.Timestamp;
         var currentStep = "INITIALIZATION";
 
         var strategy = _dbContext.Database.CreateExecutionStrategy();
@@ -53,13 +58,13 @@ internal sealed class ArchiveExecutor
                     {
                         IngestionFileId = ingestionFileId,
                         Status = "Skipped",
-                        Message = "Snapshot not found for the given ingestion file.",
+                        Message = _localizer.Get("Archive.SnapshotNotFound"),
                         FailureReasons = new List<string> { "SNAPSHOT_NOT_FOUND" }
                     };
                 }
 
                 currentStep = "ELIGIBILITY_CHECK";
-                var eligibility = _evaluator.Evaluate(snapshot, DateTime.UtcNow);
+                var eligibility = _evaluator.Evaluate(snapshot, now);
                 if (!eligibility.IsEligible)
                 {
                     await transaction.RollbackAsync(cancellationToken);
@@ -67,7 +72,7 @@ internal sealed class ArchiveExecutor
                     {
                         IngestionFileId = ingestionFileId,
                         Status = "Skipped",
-                        Message = $"Eligibility check failed: {string.Join(", ", eligibility.FailureReasons)}",
+                        Message = _localizer.Get("Archive.EligibilityCheckFailed", string.Join(", ", eligibility.FailureReasons)),
                         FailureReasons = eligibility.FailureReasons
                     };
                 }

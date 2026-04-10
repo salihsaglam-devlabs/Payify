@@ -59,9 +59,9 @@ public class ArchiveAggregateSnapshot
 {
     public Guid IngestionFileId { get; set; }
 
-    public DateTime? FileCreateDateUtc { get; set; }
+    public DateTime? FileCreateDate { get; set; }
 
-    public DateTime? LastUpdateUtc { get; set; }
+    public DateTime? LastUpdate { get; set; }
 
     public string? IngestionFileStatus { get; set; }
 

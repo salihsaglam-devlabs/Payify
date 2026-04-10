@@ -5,6 +5,7 @@ using LinkPara.Card.Application.Features.Reconciliation.Commands.Evaluate;
 using LinkPara.Card.Application.Features.Reconciliation.Commands.Execute;
 using LinkPara.Card.Application.Commons.Models.FileIngestion;
 using Microsoft.Extensions.Localization;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using LinkPara.Card.Infrastructure.Services.Audit;
 using LinkPara.Card.Domain.Enums.FileIngestion;
@@ -18,17 +19,20 @@ public class FileIngestionAndReconciliationConsumer : IConsumer<FileIngestionAnd
     private readonly ISender _mediator;
     private readonly IAuditStampService _auditStampService;
     private readonly IStringLocalizer _localizer;
+    private readonly ILogger<FileIngestionAndReconciliationConsumer> _logger;
     private readonly bool _respondToContext;
 
     public FileIngestionAndReconciliationConsumer(
         ISender mediator,
         IAuditStampService auditStampService,
         IOptions<ReconciliationOptions> reconciliationOptions,
+        ILogger<FileIngestionAndReconciliationConsumer> logger,
         Func<LinkPara.Card.Application.Commons.Localization.LocalizerResource, IStringLocalizer> localizerFactory)
     {
         _mediator = mediator;
         _auditStampService = auditStampService;
         _localizer = localizerFactory(LinkPara.Card.Application.Commons.Localization.LocalizerResource.Messages);
+        _logger = logger;
         _respondToContext = reconciliationOptions.Value.Consumer.RespondToContext.Value;
     }
 
@@ -123,8 +127,9 @@ public class FileIngestionAndReconciliationConsumer : IConsumer<FileIngestionAnd
                 }
             }
         }
-        catch (Exception)
+        catch (Exception ex)
         {
+            _logger.LogError(ex, "Consumer job failed. Type={JobType}", message.Type);
             await RespondIfEnabled(context, new FileIngestionAndReconciliationJobResponse
             {
                 Type = message.Type,

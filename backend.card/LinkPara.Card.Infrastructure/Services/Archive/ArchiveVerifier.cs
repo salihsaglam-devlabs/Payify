@@ -1,16 +1,21 @@
 using LinkPara.Card.Application.Commons.Models.Archive;
 using LinkPara.Card.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Localization;
 
 namespace LinkPara.Card.Infrastructure.Services.Archive;
 
 internal sealed class ArchiveVerifier
 {
     private readonly CardDbContext _dbContext;
+    private readonly IStringLocalizer _localizer;
 
-    public ArchiveVerifier(CardDbContext dbContext)
+    public ArchiveVerifier(
+        CardDbContext dbContext,
+        Func<LinkPara.Card.Application.Commons.Localization.LocalizerResource, IStringLocalizer> localizerFactory)
     {
         _dbContext = dbContext;
+        _localizer = localizerFactory(LinkPara.Card.Application.Commons.Localization.LocalizerResource.Messages);
     }
 
     public async Task<ArchiveAggregateCounts> GetLiveCountsAsync(Guid ingestionFileId, CancellationToken cancellationToken)
@@ -96,15 +101,15 @@ internal sealed class ArchiveVerifier
             counts.ReconciliationOperationExecutionCount != 0 ||
             counts.ReconciliationAlertCount != 0)
         {
-            throw new InvalidOperationException("Live aggregate rows remain after archive delete.");
+            throw new InvalidOperationException(_localizer.Get("Archive.LiveCountsNotCleared"));
         }
     }
 
-    private static void EnsureEqual(int expected, int actual, string table)
+    private void EnsureEqual(int expected, int actual, string table)
     {
         if (expected != actual)
         {
-            throw new InvalidOperationException($"Archive verification failed for {table}. Expected={expected}, Actual={actual}.");
+            throw new InvalidOperationException(_localizer.Get("Archive.VerificationFailed", table, expected, actual));
         }
     }
 }

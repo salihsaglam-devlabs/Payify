@@ -209,7 +209,7 @@ public class SftpFileTransferClient : IFileTransferClient
     {
         var extension = Path.GetExtension(fileName);
         var nameWithoutExtension = Path.GetFileNameWithoutExtension(fileName);
-        return $"{nameWithoutExtension}_{DateTime.UtcNow:yyyyMMddHHmmssfff}{extension}";
+        return $"{nameWithoutExtension}_{DateTime.Now:yyyyMMddHHmmssfff}{extension}";
     }
 
     private static string ResolveTargetFileName(string fileName, FileTransferEndpointType endpointType)

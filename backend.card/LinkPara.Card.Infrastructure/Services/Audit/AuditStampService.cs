@@ -15,18 +15,14 @@ internal sealed class AuditStampService : IAuditStampService
     {
         _contextProvider = contextProvider;
     }
-
-    // ── Stamp factory ────────────────────────────────────────────────
-
+    
     public AuditStamp CreateStamp()
     {
         var resolved = ResolveUser(AsyncLocalUserId.Value, _contextProvider.CurrentContext?.UserId);
-        return new AuditStamp(resolved.UserId, resolved.UserGuid, DateTime.UtcNow);
+        return new AuditStamp(resolved.UserId, resolved.UserGuid, DateTime.Now);
     }
 
-
-    // ── Entity-level stamping ────────────────────────────────────────
-
+    
     public TEntity StampForCreate<TEntity>(TEntity entity) where TEntity : AuditEntity
     {
         ApplyCreate(entity, CreateStamp());
@@ -52,9 +48,7 @@ internal sealed class AuditStampService : IAuditStampService
         foreach (var entity in entities)
             ApplyUpdate(entity, stamp);
     }
-
-    // ── EF Core ExecuteUpdate desteği ────────────────────────────────
-
+    
     public SetPropertyCalls<TEntity> ApplyAuditUpdate<TEntity>(SetPropertyCalls<TEntity> setters)
         where TEntity : AuditEntity
     {
@@ -63,9 +57,7 @@ internal sealed class AuditStampService : IAuditStampService
             .SetProperty(e => e.UpdateDate, stamp.Timestamp)
             .SetProperty(e => e.LastModifiedBy, stamp.UserId);
     }
-
-    // ── Audit context ────────────────────────────────────────────────
-
+    
     public void EnsureAuditContext()
     {
         if (!string.IsNullOrWhiteSpace(AsyncLocalUserId.Value))
@@ -79,9 +71,7 @@ internal sealed class AuditStampService : IAuditStampService
     public void SetAuditUserId(string? userId) => AsyncLocalUserId.Value = userId;
 
     public string? GetCurrentAuditUserId() => AsyncLocalUserId.Value;
-
-    // ── Private helpers ──────────────────────────────────────────────
-
+    
     private static void ApplyCreate(AuditEntity entity, AuditStamp stamp)
     {
         if (entity.Id == Guid.Empty)
@@ -97,9 +87,7 @@ internal sealed class AuditStampService : IAuditStampService
         entity.UpdateDate = stamp.Timestamp;
         entity.LastModifiedBy = stamp.UserId;
     }
-
-    // ── User identity resolution ─────────────────────────────────────
-
+    
     private static readonly Guid UrlNamespace = new("6ba7b811-9dad-11d1-80b4-00c04fd430c8");
     private const string SystemName = "System";
     private static readonly Guid SystemGuid = CreateDeterministicGuid(SystemName);
@@ -148,10 +136,6 @@ internal sealed class AuditStampService : IAuditStampService
     }
 }
 
-/// <summary>
-/// EF Core ExecuteUpdate içinde kullanılmak üzere audit alanlarını SetProperty zincirinde ekler.
-/// Kullanım: setters.SetProperty(x => x.Status, ...).ApplyAuditUpdate(auditStamp)
-/// </summary>
 internal static class AuditSetPropertyCallsExtensions
 {
     public static SetPropertyCalls<TEntity> ApplyAuditUpdate<TEntity>(

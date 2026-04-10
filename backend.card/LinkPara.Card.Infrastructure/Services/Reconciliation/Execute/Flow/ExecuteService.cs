@@ -53,7 +53,7 @@ internal sealed class ExecuteService
         CancellationToken cancellationToken = default)
     {
         errors ??= new List<ReconciliationErrorDetail>();
-        var now = DateTime.UtcNow;
+        var now = DateTime.Now;
         var executeOptions = ResolveExecuteOptions(request);
         var selection = ExecutionSelection.Create(request);
 
@@ -65,7 +65,7 @@ internal sealed class ExecuteService
         var remaining = executeOptions.MaxEvaluations.Value;
 
         var evaluationIds = await ResolveTargetEvaluationIdsAsync(
-            request,
+            selection,
             now,
             executeOptions.MaxEvaluations.Value,
             cancellationToken);
@@ -112,12 +112,11 @@ internal sealed class ExecuteService
     }
 
     private async Task<Guid[]> ResolveTargetEvaluationIdsAsync(
-        ExecuteRequest request,
+        ExecutionSelection selection,
         DateTime now,
         int maxEvaluations,
         CancellationToken cancellationToken)
     {
-        var selection = ExecutionSelection.Create(request);
 
         var query = _dbContext.ReconciliationOperations
             .AsNoTracking()
@@ -403,6 +402,7 @@ internal sealed class ExecuteService
                     operation,
                     evaluationOperations,
                     execution,
+                    now,
                     errors,
                     cancellationToken);
             }
@@ -422,6 +422,7 @@ internal sealed class ExecuteService
                 return await CompleteExecutionAsync(
                     operation,
                     execution,
+                    now,
                     ExecutionStatus.Skipped,
                     "SKIPPED_ALREADY_APPLIED",
                     _localizer.Get("Reconciliation.OperationAlreadyApplied"),
@@ -460,7 +461,7 @@ internal sealed class ExecuteService
                     ? ExecutionStatus.Completed
                     : ExecutionStatus.Failed;
 
-            execution.FinishedAt = DateTime.UtcNow;
+            execution.FinishedAt = DateTime.Now;
             execution.RequestPayload = JsonSerializer.Serialize(handlerResult.RequestPayload);
             execution.ResponsePayload = JsonSerializer.Serialize(handlerResult.ResponsePayload);
             execution.ResultCode = handlerResult.ResultCode;
@@ -497,7 +498,7 @@ internal sealed class ExecuteService
             ScheduleRetry(operation, now, ex.Message);
 
             execution.Status = ExecutionStatus.Failed;
-            execution.FinishedAt = DateTime.UtcNow;
+            execution.FinishedAt = DateTime.Now;
             execution.ResultCode = "FAILED";
             execution.ResultMessage = _localizer.Get("Reconciliation.OperationExecutionFailed");
             execution.ErrorCode = "OPERATION_EXECUTION_FAILED";
@@ -519,6 +520,7 @@ internal sealed class ExecuteService
         ReconciliationOperation operation,
         IReadOnlyList<ReconciliationOperation> evaluationOperations,
         ReconciliationOperationExecution execution,
+        DateTime now,
         List<ReconciliationErrorDetail> errors,
         CancellationToken cancellationToken)
     {
@@ -541,7 +543,7 @@ internal sealed class ExecuteService
             operation.LastError = _localizer.Get("Reconciliation.ManualReviewNotResolved");
 
             execution.Status = ExecutionStatus.Failed;
-            execution.FinishedAt = DateTime.UtcNow;
+            execution.FinishedAt = now;
             execution.ResultCode = "MANUAL_REVIEW_NOT_FOUND";
             execution.ResultMessage = _localizer.Get("Reconciliation.ManualReviewNotResolved");
             execution.ErrorCode = "MANUAL_REVIEW_NOT_FOUND";
@@ -560,19 +562,19 @@ internal sealed class ExecuteService
 
         if (review.Decision == ReviewDecision.Pending &&
             review.ExpiresAt.HasValue &&
-            review.ExpiresAt.Value <= DateTime.UtcNow)
+            review.ExpiresAt.Value <= now)
         {
-            ApplyExpirationDecision(review, DateTime.UtcNow);
+            ApplyExpirationDecision(review, now);
         }
 
         if (review.Decision == ReviewDecision.Pending)
         {
             operation.Status = OperationStatus.Blocked;
             ReleaseLease(operation);
-            operation.NextAttemptAt = review.ExpiresAt ?? DateTime.UtcNow.AddSeconds(BaseRetrySeconds);
+            operation.NextAttemptAt = review.ExpiresAt ?? now.AddSeconds(BaseRetrySeconds);
 
             execution.Status = ExecutionStatus.Skipped;
-            execution.FinishedAt = DateTime.UtcNow;
+            execution.FinishedAt = now;
             execution.ResultCode = "WAITING_MANUAL_DECISION";
             execution.ResultMessage = _localizer.Get("Reconciliation.ManualReviewDecisionPending");
             execution.ResponsePayload = JsonSerializer.Serialize(new { review.Decision, review.ExpiresAt });
@@ -593,7 +595,7 @@ internal sealed class ExecuteService
         operation.LastError = null;
 
         execution.Status = ExecutionStatus.Completed;
-        execution.FinishedAt = DateTime.UtcNow;
+        execution.FinishedAt = now;
         execution.ResultCode = $"MANUAL_GATE_{review.Decision.ToString().ToUpperInvariant()}";
         execution.ResultMessage = _localizer.Get("Reconciliation.ManualGateResolved", review.Decision);
         execution.ResponsePayload = JsonSerializer.Serialize(new { review.Decision });
@@ -684,6 +686,7 @@ internal sealed class ExecuteService
     private async Task<OperationExecutionResult> CompleteExecutionAsync(
         ReconciliationOperation operation,
         ReconciliationOperationExecution execution,
+        DateTime now,
         ExecutionStatus executionStatus,
         string resultCode,
         string resultMessage,
@@ -697,7 +700,7 @@ internal sealed class ExecuteService
         operation.NextAttemptAt = null;
 
         execution.Status = executionStatus;
-        execution.FinishedAt = DateTime.UtcNow;
+        execution.FinishedAt = now;
         execution.ResultCode = resultCode;
         execution.ResultMessage = resultMessage;
         execution.ResponsePayload = JsonSerializer.Serialize(new { resultCode, resultMessage });

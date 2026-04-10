@@ -12,7 +12,7 @@ internal sealed class ArchiveEligibilityEvaluator
         _options = options.Value ?? throw new InvalidOperationException("ArchiveOptions is not configured.");
     }
 
-    public ArchiveEligibilityResult Evaluate(ArchiveAggregateSnapshot? snapshot, DateTime utcNow)
+    public ArchiveEligibilityResult Evaluate(ArchiveAggregateSnapshot? snapshot, DateTime now)
     {
         var result = new ArchiveEligibilityResult
         {
@@ -39,14 +39,14 @@ internal sealed class ArchiveEligibilityEvaluator
             result.FailureReasons.Add("ALREADY_ARCHIVED");
         }
 
-        if (snapshot.FileCreateDateUtc.HasValue &&
-            snapshot.FileCreateDateUtc.Value > utcNow.AddDays(-_options.Rules.RetentionDays.Value))
+        if (snapshot.FileCreateDate.HasValue &&
+            snapshot.FileCreateDate.Value > now.AddDays(-_options.Rules.RetentionDays.Value))
         {
             result.FailureReasons.Add("RETENTION_WINDOW_NOT_REACHED");
         }
 
-        if (snapshot.LastUpdateUtc.HasValue &&
-            snapshot.LastUpdateUtc.Value > utcNow.AddHours(-_options.Rules.MinLastUpdateAgeHours.Value))
+        if (snapshot.LastUpdate.HasValue &&
+            snapshot.LastUpdate.Value > now.AddHours(-_options.Rules.MinLastUpdateAgeHours.Value))
         {
             result.FailureReasons.Add("MIN_LAST_UPDATE_AGE_NOT_REACHED");
         }

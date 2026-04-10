@@ -58,13 +58,14 @@ internal sealed class ArchiveService : IArchiveService
                 effectiveLimit,
                 cancellationToken);
 
+            var now = DateTime.Now;
             var response = new ArchivePreviewResponse();
             foreach (var candidateId in candidateIds)
             {
                 try
                 {
                     var snapshot = await _reader.GetSnapshotAsync(candidateId, cancellationToken);
-                    var eligibility = _evaluator.Evaluate(snapshot, DateTime.UtcNow);
+                    var eligibility = _evaluator.Evaluate(snapshot, now);
                     response.Candidates.Add(new ArchiveCandidateResult
                     {
                         IngestionFileId = candidateId,
@@ -212,16 +213,16 @@ internal sealed class ArchiveService : IArchiveService
         {
             throw new ArchiveBusinessException(
                 "CONFIGURATION_ERROR",
-                $"Unsupported DefaultBeforeDateStrategy: '{strategy}'. Supported values: {string.Join(", ", SupportedBeforeDateStrategies)}.");
+                _localizer.Get("Archive.UnsupportedBeforeDateStrategy", strategy, string.Join(", ", SupportedBeforeDateStrategies)));
         }
 
         return strategy switch
         {
-            "RetentionDays" => DateTime.UtcNow.AddDays(-_options.Rules.RetentionDays.Value),
+            "RetentionDays" => DateTime.Now.AddDays(-_options.Rules.RetentionDays.Value),
             "None" => null,
             _ => throw new ArchiveBusinessException(
                 "CONFIGURATION_ERROR",
-                $"Unsupported DefaultBeforeDateStrategy: '{strategy}'.")
+                _localizer.Get("Archive.UnsupportedBeforeDateStrategy", strategy, string.Join(", ", SupportedBeforeDateStrategies)))
         };
     }
 

@@ -1,7 +1,3 @@
-using System;
-using System.Collections.Generic;
-using System.Threading;
-using System.Threading.Tasks;
 using LinkPara.Card.Application.Commons.Models.Reconciliation;
 using LinkPara.Card.Application.Features.Reconciliation.Commands.Evaluate;
 using LinkPara.Card.Application.Features.Reconciliation.Commands.Execute;
@@ -9,8 +5,6 @@ using LinkPara.Card.Application.Features.Reconciliation.Commands.Approve;
 using LinkPara.Card.Application.Features.Reconciliation.Commands.Reject;
 using LinkPara.Card.Application.Features.Reconciliation.Queries.PendingReviews;
 using LinkPara.Card.Application.Features.Reconciliation.Queries.GetAlerts;
-using LinkPara.Card.Application.Features.Reconciliation.Commands;
-using LinkPara.Card.Application.Features.Reconciliation.Queries;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -18,8 +12,7 @@ namespace LinkPara.Card.API.Controllers
 {
     public class ReconciliationController : ApiControllerBase
     {
-        //[Authorize(Policy = ReconciliationPolicies.Create)]
-        [AllowAnonymous]
+        [Authorize(Policy = ReconciliationPolicies.Create)]
         [HttpPost("Evaluate")]
         public async Task<EvaluateResponse> Evaluate([FromBody] EvaluateRequest req = null, CancellationToken ct = default)
         {
@@ -29,8 +22,7 @@ namespace LinkPara.Card.API.Controllers
             return res;
         }
         
-        //[Authorize(Policy = ReconciliationPolicies.Create)]
-        [AllowAnonymous]
+        [Authorize(Policy = ReconciliationPolicies.Create)]
         [HttpPost("Operations/Execute")]
         public async Task<ExecuteResponse> Execute([FromBody] ExecuteRequest req = null, CancellationToken ct = default)
         {
@@ -40,8 +32,7 @@ namespace LinkPara.Card.API.Controllers
             return res;
         }
 
-        //[Authorize(Policy = ReconciliationPolicies.Update)]
-        [AllowAnonymous]
+        [Authorize(Policy = ReconciliationPolicies.Update)]
         [HttpPost("Reviews/Approve")]
         public async Task<ApproveResponse> Approve([FromBody] ApproveRequest req, CancellationToken ct = default)
         {
@@ -51,8 +42,7 @@ namespace LinkPara.Card.API.Controllers
             return res;
         }
 
-        //[Authorize(Policy = ReconciliationPolicies.Update)]
-        [AllowAnonymous]
+        [Authorize(Policy = ReconciliationPolicies.Update)]
         [HttpPost("Reviews/Reject")]
         public async Task<RejectResponse> Reject([FromBody] RejectRequest req, CancellationToken ct = default)
         {
@@ -62,8 +52,7 @@ namespace LinkPara.Card.API.Controllers
             return res;
         }
 
-        //[Authorize(Policy = ReconciliationPolicies.ReadAll)]
-        [AllowAnonymous]
+        [Authorize(Policy = ReconciliationPolicies.ReadAll)]
         [HttpGet("Reviews/Pending")]
         public async Task<PendingReviewsResponse> GetPendingManualReviews([FromQuery] PendingReviewsRequest req, CancellationToken ct = default)
         {
@@ -72,8 +61,7 @@ namespace LinkPara.Card.API.Controllers
             return res;
         }
 
-        //[Authorize(Policy = ReconciliationPolicies.ReadAll)]
-        [AllowAnonymous]
+        [Authorize(Policy = ReconciliationPolicies.ReadAll)]
         [HttpGet("Alerts")]
         public async Task<GetAlertsResponse> GetAlerts([FromQuery] GetAlertsRequest req, CancellationToken ct = default)
         {

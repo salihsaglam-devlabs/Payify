@@ -223,7 +223,7 @@ internal sealed class AlertService : IAlertService
         IReadOnlyCollection<ReconciliationOperationExecution> executions,
         IStringLocalizer localizer)
     {
-        var culture = CultureInfo.CurrentCulture;
+        var culture = CultureInfo.InvariantCulture;
         var latestExecution = executions
             .OrderByDescending(x => x.AttemptNumber)
             .FirstOrDefault();
@@ -232,7 +232,6 @@ internal sealed class AlertService : IAlertService
 
         return new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
         {
-            // Template labels (localized for the HTML template)
             ["emailsubject"] = localizer.Get("Alert.Template.Title"),
             ["templatetitle"] = localizer.Get("Alert.Template.Title"),
             ["templatedescription"] = localizer.Get("Alert.Template.Description"),
@@ -245,11 +244,10 @@ internal sealed class AlertService : IAlertService
             ["labellatestexecution"] = localizer.Get("Alert.Template.LabelLatestExecution"),
             ["labelerror"] = localizer.Get("Alert.Template.LabelError"),
             ["labeltechnicaldetails"] = localizer.Get("Alert.Template.LabelTechnicalDetails"),
-
-            // Data values
+            
             ["alerttype"] = alert.AlertType ?? string.Empty,
             ["alertseverity"] = alert.Severity ?? string.Empty,
-            ["raisedat"] = DateTime.Now.ToString("G", culture),
+            ["raisedat"] = DateTime.Now.ToString("G", CultureInfo.InvariantCulture),
             ["summary"] = BuildSummary(alert, evaluation, operation, latestExecution, localizer),
 
             ["evaluationstatus"] = evaluation?.Status.ToString() ?? string.Empty,
