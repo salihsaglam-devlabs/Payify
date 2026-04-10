@@ -2,8 +2,8 @@
   "Connections": {
     "Source": {
       "Ftp": {
-        "Host": "",
-        "Password": "",
+        "Host": "185.188.39.62",
+        "Password": "PAYpwd1*",
         "Paths": {
           "CardBkm": "/turkonay/PROD/PTS2TURKONAY/PAYCORE_REPORTS",
           "CardMsc": "/turkonay/PROD/PTS2TURKONAY/PAYCORE_REPORTS",
@@ -15,7 +15,7 @@
         "Port": 21,
         "TimeoutSeconds": 60,
         "UsePassive": true,
-        "Username": ""
+        "Username": "payify"
       },
       "Local": {
         "Paths": {
@@ -69,11 +69,11 @@
           }
         }
       },
-      "Protocol": "Local",
+      "Protocol": "Sftp",
       "Sftp": {
-        "Host": "",
+        "Host": "185.188.39.62",
         "KnownHostFingerprint": "",
-        "Password": "",
+        "Password": "PAYpwd1*",
         "Paths": {
           "CardBkm": "/turkonay/PROD/PTS2TURKONAY/PAYCORE_REPORTS",
           "CardMsc": "/turkonay/PROD/PTS2TURKONAY/PAYCORE_REPORTS",
@@ -85,13 +85,13 @@
         "Port": 22,
         "PrivateKeyPassphrase": "",
         "PrivateKeyPath": "",
-        "Username": ""
+        "Username": "payify"
       }
     },
     "Target": {
       "Ftp": {
-        "Host": "",
-        "Password": "",
+        "Host": "10.222.21.101",
+        "Password": "PAYpwd1*",
         "Paths": {
           "CardBkm": "/turkonay/PROD/PTS2TURKONAY/ARCHIVE/CARD/BKM",
           "CardMsc": "/turkonay/PROD/PTS2TURKONAY/ARCHIVE/CARD/MSC",
@@ -103,7 +103,7 @@
         "Port": 21,
         "TimeoutSeconds": 60,
         "UsePassive": true,
-        "Username": ""
+        "Username": "payify"
       },
       "Local": {
         "Paths": {
@@ -157,11 +157,11 @@
           }
         }
       },
-      "Protocol": "Local",
+      "Protocol": "Sftp",
       "Sftp": {
-        "Host": "",
+        "Host": "10.222.21.101",
         "KnownHostFingerprint": "",
-        "Password": "",
+        "Password": "PAYpwd1*",
         "Paths": {
           "CardBkm": "/turkonay/PROD/PTS2TURKONAY/ARCHIVE/CARD/BKM",
           "CardMsc": "/turkonay/PROD/PTS2TURKONAY/ARCHIVE/CARD/MSC",
@@ -173,7 +173,7 @@
         "Port": 22,
         "PrivateKeyPassphrase": "",
         "PrivateKeyPath": "",
-        "Username": ""
+        "Username": "payify"
       }
     }
   },

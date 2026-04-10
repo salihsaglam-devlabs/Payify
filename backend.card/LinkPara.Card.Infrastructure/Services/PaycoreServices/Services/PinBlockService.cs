@@ -1,5 +1,6 @@
 ﻿using LinkPara.Card.Application.Commons.Helpers;
 using LinkPara.Card.Application.Commons.Interfaces;
+using LinkPara.Card.Application.Commons.Models.PaycoreModels;
 using LinkPara.Card.Application.Commons.Models.PaycoreModels.SecurityModels;
 using LinkPara.Card.Infrastructure.Services.PaycoreServices.Models;
 using LinkPara.HttpProviders.Vault;

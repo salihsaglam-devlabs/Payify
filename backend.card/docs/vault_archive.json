@@ -1,5 +1,6 @@
 {
   "Enabled": true,
+  "AutoArchiveAfterExecute": false,
   "Defaults": {
     "PreviewLimit": 1000,
     "MaxRunCount": 5000,

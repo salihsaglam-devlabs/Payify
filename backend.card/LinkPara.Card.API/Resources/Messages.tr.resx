@@ -889,6 +889,12 @@
   <data name="Archive.UnsupportedBeforeDateStrategy" xml:space="preserve">
     <value>Desteklenmeyen DefaultBeforeDateStrategy: '{0}'. Desteklenen değerler: {1}.</value>
   </data>
+  <data name="Reconciliation.AutoArchiveCompleted" xml:space="preserve">
+    <value>Mutabakat işlemi sonrası otomatik arşivleme başarıyla tamamlandı.</value>
+  </data>
+  <data name="Reconciliation.AutoArchiveFailed" xml:space="preserve">
+    <value>Başarılı mutabakat işlemi sonrası otomatik arşivleme başarısız oldu.</value>
+  </data>
 
   <!-- ════════════════════════════════════════════ -->
   <!-- Alert – Service                              -->

@@ -5,8 +5,11 @@ public class ArchiveOptions
     public const string SectionName = "Archive";
 
     public const bool DefaultEnabled = true;
+    public const bool DefaultAutoArchiveAfterExecute = false;
 
     public bool? Enabled { get; set; }
+
+    public bool? AutoArchiveAfterExecute { get; set; }
 
     public ArchiveDefaultOptions Defaults { get; set; }
 
@@ -17,6 +20,7 @@ public class ArchiveOptions
     public void ValidateAndApplyDefaults()
     {
         Enabled ??= DefaultEnabled;
+        AutoArchiveAfterExecute ??= DefaultAutoArchiveAfterExecute;
         Defaults ??= new ArchiveDefaultOptions();
         Rules ??= new ArchiveRuleOptions();
         TerminalStatuses ??= new ArchiveTerminalStatusOptions();

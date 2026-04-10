@@ -893,6 +893,12 @@
   <data name="Archive.UnsupportedBeforeDateStrategy" xml:space="preserve">
     <value>Unsupported DefaultBeforeDateStrategy: '{0}'. Supported values: {1}.</value>
   </data>
+  <data name="Reconciliation.AutoArchiveCompleted" xml:space="preserve">
+    <value>Archive auto-run completed successfully after reconciliation execute.</value>
+  </data>
+  <data name="Reconciliation.AutoArchiveFailed" xml:space="preserve">
+    <value>Archive auto-run failed after successful reconciliation execute.</value>
+  </data>
 
   <!-- ════════════════════════════════════════════ -->
   <!-- Alert – Service                              -->

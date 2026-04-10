@@ -1,4 +1,5 @@
 ﻿using LinkPara.Card.Application.Commons.Interfaces;
+using LinkPara.Card.Application.Commons.Models.PaycoreModels;
 using LinkPara.Card.Application.Commons.Models.PaycoreModels.SecurityModels;
 using LinkPara.Card.Application.Features.PaycoreServices.CardPinServices.Commands.SetCardPin;
 using LinkPara.Card.Application.Features.PaycoreServices.CardServices.Queries.GetClearCardNo;

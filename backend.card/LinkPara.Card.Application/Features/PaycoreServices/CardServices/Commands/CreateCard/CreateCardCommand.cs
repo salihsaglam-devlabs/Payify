@@ -1,4 +1,5 @@
 ﻿using LinkPara.Card.Application.Commons.Interfaces;
+using LinkPara.Card.Application.Commons.Models.PaycoreModels;
 using LinkPara.Card.Application.Commons.Models.PaycoreModels.CardModels;
 using MediatR;
 

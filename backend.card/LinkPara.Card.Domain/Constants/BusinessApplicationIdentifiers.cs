@@ -1,4 +1,6 @@
-﻿namespace LinkPara.Card.Domain.Constants
+﻿using System.Runtime.Serialization;
+
+namespace LinkPara.Card.Domain.Constants
 {
     public static class BusinessApplicationIdentifiers
     {
