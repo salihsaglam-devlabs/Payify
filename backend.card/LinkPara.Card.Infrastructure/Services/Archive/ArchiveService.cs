@@ -1,8 +1,8 @@
+using System.Text.Json;
 using LinkPara.Card.Application.Commons.Exceptions;
 using LinkPara.Card.Application.Commons.Interfaces.Archive;
 using LinkPara.Card.Application.Commons.Models.Archive;
 using LinkPara.Card.Infrastructure.Services.Audit;
-using LinkPara.ContextProvider;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
@@ -11,8 +11,6 @@ namespace LinkPara.Card.Infrastructure.Services.Archive;
 
 internal sealed class ArchiveService : IArchiveService
 {
-    private const string SystemUserId = "SYSTEM_ARCHIVE";
-
     private static readonly HashSet<string> SupportedBeforeDateStrategies =
         new(StringComparer.OrdinalIgnoreCase) { "None", "RetentionDays" };
 
@@ -22,8 +20,7 @@ internal sealed class ArchiveService : IArchiveService
     private readonly IArchiveErrorMapper _errorMapper;
     private readonly IStringLocalizer _localizer;
     private readonly IServiceProvider _serviceProvider;
-    private readonly IAuditUserContextAccessor _auditUserContextAccessor;
-    private readonly IContextProvider _contextProvider;
+    private readonly IAuditStampService _auditStampService;
 
     public ArchiveService(
         ArchiveAggregateReader reader,
@@ -32,8 +29,7 @@ internal sealed class ArchiveService : IArchiveService
         IArchiveErrorMapper errorMapper,
         Func<LinkPara.Card.Application.Commons.Localization.LocalizerResource, IStringLocalizer> localizerFactory,
         IServiceProvider serviceProvider,
-        IAuditUserContextAccessor auditUserContextAccessor,
-        IContextProvider contextProvider)
+        IAuditStampService auditStampService)
     {
         _reader = reader;
         _evaluator = evaluator;
@@ -41,8 +37,7 @@ internal sealed class ArchiveService : IArchiveService
         _errorMapper = errorMapper;
         _localizer = localizerFactory(LinkPara.Card.Application.Commons.Localization.LocalizerResource.Messages);
         _serviceProvider = serviceProvider;
-        _auditUserContextAccessor = auditUserContextAccessor;
-        _contextProvider = contextProvider;
+        _auditStampService = auditStampService;
     }
 
     public async Task<ArchivePreviewResponse> PreviewAsync(
@@ -110,7 +105,7 @@ internal sealed class ArchiveService : IArchiveService
         ArchiveRunRequest request,
         CancellationToken cancellationToken = default)
     {
-        EnsureAuditContext();
+        _auditStampService.EnsureAuditContext();
         var executor = _serviceProvider.GetRequiredService<ArchiveExecutor>();
         var errors = new List<ArchiveErrorDetail>();
         try
@@ -127,23 +122,8 @@ internal sealed class ArchiveService : IArchiveService
                 effectiveMaxFiles,
                 cancellationToken);
 
+            var filterJson = JsonSerializer.Serialize(effectiveRequest);
             var response = new ArchiveRunResponse();
-            Guid? batchId = null;
-
-            try
-            {
-                batchId = await executor.CreateBatchAsync(effectiveRequest, cancellationToken);
-            }
-            catch (Exception ex)
-            {
-                errors.Add(_errorMapper.MapException(ex, "ARCHIVE_BATCH_CREATE"));
-                return new ArchiveRunResponse
-                {
-                    Message = BuildFailureMessage(_localizer.Get("Archive.BatchCreationFailed"), errors),
-                    Errors = errors,
-                    ErrorCount = errors.Count
-                };
-            }
 
             foreach (var candidateId in candidateIds)
             {
@@ -184,11 +164,11 @@ internal sealed class ArchiveService : IArchiveService
 
                 try
                 {
-                    await executor.InsertBatchItemAsync(batchId.Value, item, cancellationToken);
+                    await executor.InsertArchiveLogAsync(item, filterJson, cancellationToken);
                 }
                 catch (Exception ex)
                 {
-                    errors.Add(_errorMapper.MapException(ex, "ARCHIVE_BATCH_ITEM_INSERT", ingestionFileId: candidateId));
+                    errors.Add(_errorMapper.MapException(ex, "ARCHIVE_LOG_INSERT", ingestionFileId: candidateId));
                 }
 
                 if (item.Status == "Failed" && !continueOnError)
@@ -197,14 +177,6 @@ internal sealed class ArchiveService : IArchiveService
                 }
             }
 
-            try
-            {
-                await executor.CompleteBatchAsync(batchId.Value, response, cancellationToken);
-            }
-            catch (Exception ex)
-            {
-                errors.Add(_errorMapper.MapException(ex, "ARCHIVE_BATCH_COMPLETE"));
-            }
 
             response.Errors = errors;
             response.ErrorCount = errors.Count;
@@ -265,14 +237,4 @@ internal sealed class ArchiveService : IArchiveService
         return $"{fallbackMessage} {firstMessage}";
     }
 
-    private void EnsureAuditContext()
-    {
-        if (!string.IsNullOrWhiteSpace(_auditUserContextAccessor.CurrentUserId))
-            return;
-
-        var contextUserId = _contextProvider.CurrentContext?.UserId;
-        _auditUserContextAccessor.CurrentUserId = !string.IsNullOrWhiteSpace(contextUserId)
-            ? contextUserId
-            : SystemUserId;
-    }
 }

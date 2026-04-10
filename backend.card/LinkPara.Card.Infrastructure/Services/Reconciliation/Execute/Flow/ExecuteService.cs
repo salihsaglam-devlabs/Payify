@@ -344,8 +344,7 @@ internal sealed class ExecuteService
                     .SetProperty(x => x.Status, OperationStatus.Executing)
                     .SetProperty(x => x.LeaseOwner, WorkerLeaseOwner)
                     .SetProperty(x => x.LeaseExpiresAt, leaseExpiresAt)
-                    .SetProperty(x => x.UpdateDate, auditStamp.Timestamp)
-                    .SetProperty(x => x.LastModifiedBy, auditStamp.UserId),
+                    .ApplyAuditUpdate(auditStamp),
                 cancellationToken);
 
         if (updatedRows == 0)

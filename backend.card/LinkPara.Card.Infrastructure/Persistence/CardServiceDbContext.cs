@@ -31,8 +31,7 @@ public class CardDbContext : BaseDbContext
     public DbSet<ReconciliationOperationExecution> ReconciliationOperationExecutions { get; set; }
     public DbSet<ReconciliationAlert> ReconciliationAlerts { get; set; }
 
-    public DbSet<ArchiveBatch> ArchiveBatches { get; set; }
-    public DbSet<ArchiveBatchItem> ArchiveBatchItems { get; set; }
+    public DbSet<ArchiveLog> ArchiveLogs { get; set; }
 
     public DbSet<ArchiveIngestionFile> ArchiveIngestionFiles { get; set; }
     public DbSet<ArchiveIngestionFileLine> ArchiveIngestionFileLines { get; set; }
@@ -89,8 +88,7 @@ public class CardDbContext : BaseDbContext
         builder.Entity<ReconciliationOperationExecution>().ToTable("operation_execution", reconSchema);
         builder.Entity<ReconciliationAlert>().ToTable("alert", reconSchema);
 
-        builder.Entity<ArchiveBatch>().ToTable("archive_batch", archiveSchema);
-        builder.Entity<ArchiveBatchItem>().ToTable("archive_batch_item", archiveSchema);
+        builder.Entity<ArchiveLog>().ToTable("archive_log", archiveSchema);
 
         builder.Entity<ArchiveIngestionFile>().ToTable("ingestion_file", archiveSchema);
         builder.Entity<ArchiveIngestionFileLine>().ToTable("ingestion_file_line", archiveSchema);
@@ -121,8 +119,7 @@ public class CardDbContext : BaseDbContext
         builder.Entity<ReconciliationOperationExecution>().ToTable("OperationExecution", reconSchema);
         builder.Entity<ReconciliationAlert>().ToTable("Alert", reconSchema);
 
-        builder.Entity<ArchiveBatch>().ToTable("archive_batch", archiveSchema);
-        builder.Entity<ArchiveBatchItem>().ToTable("archive_batch_item", archiveSchema);
+        builder.Entity<ArchiveLog>().ToTable("ArchiveLog", archiveSchema);
 
         builder.Entity<ArchiveIngestionFile>().ToTable("IngestionFile", archiveSchema);
         builder.Entity<ArchiveIngestionFileLine>().ToTable("IngestionFileLine", archiveSchema);

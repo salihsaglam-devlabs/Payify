@@ -34,8 +34,7 @@ internal sealed class ArchiveExecutor
 
     public async Task<ArchiveRunItemResult> ExecuteAsync(Guid ingestionFileId, CancellationToken cancellationToken)
     {
-        var auditStamp = _auditStampService.CreateStamp();
-        var archiveRunId = Guid.NewGuid();
+        var stamp = _auditStampService.CreateStamp();
         var currentStep = "INITIALIZATION";
 
         var strategy = _dbContext.Database.CreateExecutionStrategy();
@@ -77,7 +76,7 @@ internal sealed class ArchiveExecutor
                 var liveCounts = await _verifier.GetLiveCountsAsync(ingestionFileId, cancellationToken);
 
                 currentStep = "ARCHIVE_COPY";
-                await CopyAggregateAsync(ingestionFileId, auditStamp.Timestamp, auditStamp.UserId, archiveRunId, cancellationToken);
+                await CopyAggregateAsync(ingestionFileId, stamp, cancellationToken);
 
                 currentStep = "ARCHIVE_COPY_VERIFICATION";
                 var archiveCounts = await _verifier.GetArchiveCountsAsync(ingestionFileId, cancellationToken);
@@ -95,8 +94,7 @@ internal sealed class ArchiveExecutor
                 return new ArchiveRunItemResult
                 {
                     IngestionFileId = ingestionFileId,
-                    Status = "Archived",
-                    ArchiveRunId = archiveRunId
+                    Status = "Archived"
                 };
             }
             catch (Exception ex)
@@ -117,85 +115,26 @@ internal sealed class ArchiveExecutor
         });
     }
 
-    public async Task<Guid> CreateBatchAsync(ArchiveRunRequest? request, CancellationToken cancellationToken)
+    public async Task InsertArchiveLogAsync(ArchiveRunItemResult item, string? filterJson, CancellationToken cancellationToken)
     {
-        var stamp = _auditStampService.CreateStamp();
-        var batch = new ArchiveBatch
+        var log = new ArchiveLog
         {
             Id = Guid.NewGuid(),
-            RequestedAt = stamp.Timestamp,
-            StartedAt = stamp.Timestamp,
-            RequestedBy = stamp.UserId,
-            FilterJson = JsonSerializer.Serialize(request ?? new ArchiveRunRequest()),
-            Status = "Running",
-            ProcessedCount = 0,
-            ArchivedCount = 0,
-            SkippedCount = 0,
-            FailedCount = 0
-        };
-
-        _auditStampService.StampForCreate(batch);
-        await _dbContext.ArchiveBatches.AddAsync(batch, cancellationToken);
-        await _dbContext.SaveChangesAsync(cancellationToken);
-        return batch.Id;
-    }
-
-    public async Task InsertBatchItemAsync(Guid batchId, ArchiveRunItemResult item, CancellationToken cancellationToken)
-    {
-        var stamp = _auditStampService.CreateStamp();
-        var batchItem = new ArchiveBatchItem
-        {
-            Id = Guid.NewGuid(),
-            BatchId = batchId,
             IngestionFileId = item.IngestionFileId,
-            ArchiveRunId = item.ArchiveRunId,
             Status = item.Status,
             Message = item.Message,
             FailureReasonsJson = JsonSerializer.Serialize(item.FailureReasons ?? new List<string>()),
-            ProcessedAt = stamp.Timestamp
+            FilterJson = filterJson
         };
 
-        _auditStampService.StampForCreate(batchItem);
-        await _dbContext.ArchiveBatchItems.AddAsync(batchItem, cancellationToken);
+        _auditStampService.StampForCreate(log);
+        await _dbContext.ArchiveLogs.AddAsync(log, cancellationToken);
         await _dbContext.SaveChangesAsync(cancellationToken);
     }
 
-    public async Task CompleteBatchAsync(Guid batchId, ArchiveRunResponse response, CancellationToken cancellationToken)
-    {
-        var batch = await _dbContext.ArchiveBatches.AsTracking().SingleAsync(x => x.Id == batchId, cancellationToken);
-        var stamp = _auditStampService.CreateStamp();
-        batch.CompletedAt = stamp.Timestamp;
-        batch.Status = DeriveBatchStatus(response);
-        batch.ProcessedCount = response.ProcessedCount;
-        batch.ArchivedCount = response.ArchivedCount;
-        batch.SkippedCount = response.SkippedCount;
-        batch.FailedCount = response.FailedCount;
-        _auditStampService.StampForUpdate(batch);
-        await _dbContext.SaveChangesAsync(cancellationToken);
-    }
-    
-    private static string DeriveBatchStatus(ArchiveRunResponse response)
-    {
-        if (response.ProcessedCount == 0)
-            return "Completed";
-
-        if (response.FailedCount == response.ProcessedCount)
-            return "Failed";
-
-        if (response.SkippedCount == response.ProcessedCount)
-            return "Skipped";
-
-        if (response.ArchivedCount == response.ProcessedCount)
-            return "Completed";
-
-        return "PartiallyCompleted";
-    }
-    
     private async Task CopyAggregateAsync(
         Guid ingestionFileId,
-        DateTime archivedAt,
-        string archivedBy,
-        Guid archiveRunId,
+        AuditStamp stamp,
         CancellationToken cancellationToken)
     {
         var copySqls = new[]
@@ -213,7 +152,7 @@ internal sealed class ArchiveExecutor
         {
             await _dbContext.Database.ExecuteSqlRawAsync(
                 sql,
-                new object[] { archivedAt, archivedBy, archiveRunId, ingestionFileId },
+                new object[] { stamp.Timestamp, stamp.UserId, ingestionFileId },
                 cancellationToken);
         }
     }

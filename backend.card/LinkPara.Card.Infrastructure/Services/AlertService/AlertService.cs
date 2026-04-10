@@ -180,13 +180,10 @@ internal sealed class AlertService : IAlertService
         IReadOnlyCollection<AlertStatus> allowedStatuses,
         CancellationToken cancellationToken)
     {
-        var auditStamp = _auditStampService.CreateStamp();
         var rows = await _dbContext.ReconciliationAlerts
             .Where(x => x.Id == alertId && allowedStatuses.Contains(x.AlertStatus))
-            .ExecuteUpdateAsync(update => update
-                .SetProperty(x => x.AlertStatus, AlertStatus.Processing)
-                .SetProperty(x => x.UpdateDate, auditStamp.Timestamp)
-                .SetProperty(x => x.LastModifiedBy, auditStamp.UserId),
+            .ExecuteUpdateAsync(update => _auditStampService.ApplyAuditUpdate(update
+                .SetProperty(x => x.AlertStatus, AlertStatus.Processing)),
                 cancellationToken);
 
         return rows > 0;
@@ -194,13 +191,10 @@ internal sealed class AlertService : IAlertService
 
     private async Task MarkAsConsumedAsync(Guid alertId, CancellationToken cancellationToken)
     {
-        var auditStamp = _auditStampService.CreateStamp();
         await _dbContext.ReconciliationAlerts
             .Where(x => x.Id == alertId)
-            .ExecuteUpdateAsync(update => update
-                .SetProperty(x => x.AlertStatus, AlertStatus.Consumed)
-                .SetProperty(x => x.UpdateDate, auditStamp.Timestamp)
-                .SetProperty(x => x.LastModifiedBy, auditStamp.UserId),
+            .ExecuteUpdateAsync(update => _auditStampService.ApplyAuditUpdate(update
+                .SetProperty(x => x.AlertStatus, AlertStatus.Consumed)),
                 cancellationToken);
     }
 
@@ -213,15 +207,12 @@ internal sealed class AlertService : IAlertService
             .FirstOrDefaultAsync(cancellationToken);
 
         var mergedMessage = AppendError(currentMessage, errorMessage);
-        var auditStamp = _auditStampService.CreateStamp();
 
         await _dbContext.ReconciliationAlerts
             .Where(x => x.Id == alertId)
-            .ExecuteUpdateAsync(update => update
+            .ExecuteUpdateAsync(update => _auditStampService.ApplyAuditUpdate(update
                 .SetProperty(x => x.AlertStatus, AlertStatus.Failed)
-                .SetProperty(x => x.Message, mergedMessage)
-                .SetProperty(x => x.UpdateDate, auditStamp.Timestamp)
-                .SetProperty(x => x.LastModifiedBy, auditStamp.UserId),
+                .SetProperty(x => x.Message, mergedMessage)),
                 cancellationToken);
     }
 

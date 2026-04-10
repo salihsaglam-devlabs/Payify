@@ -13,9 +13,6 @@ public class ArchiveIngestionFileLineConfiguration : IEntityTypeConfiguration<Ar
 
         IngestionFileLineConfiguration.ConfigureColumns(builder);
 
-        builder.Property(x => x.ArchivedAt).HasColumnName("archived_at");
-        builder.Property(x => x.ArchivedBy).HasColumnName("archived_by").HasMaxLength(100);
-        builder.Property(x => x.ArchiveRunId).HasColumnName("archive_run_id");
 
         builder.Ignore(x => x.IngestionFile);
     }

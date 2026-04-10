@@ -136,7 +136,6 @@ public static class DependencyInjection
         services.AddScoped<IDbCommandInterceptor, LongQueryLogger>();
         services.AddScoped<ISecureRandomGenerator, SecureRandomGenerator>();
         services.AddScoped<IAuditStampService, AuditStampService>();
-        services.AddSingleton<IAuditUserContextAccessor, AuditUserContextAccessor>();
         services.AddScoped<IFileIngestionService, FileIngestionOrchestrator>();
         services.AddScoped<IFileTransferClientResolver, FileTransferClientResolver>();
         services.AddScoped<IFixedWidthRecordParser, FixedWidthRecordParser>();

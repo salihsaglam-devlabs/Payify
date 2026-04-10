@@ -2,6 +2,7 @@ using LinkPara.Card.Domain.Entities.Archive;
 using LinkPara.Card.Domain.Entities.FileIngestion;
 using LinkPara.Card.Domain.Entities.Reconciliation;
 using LinkPara.Card.Infrastructure.Persistence;
+using LinkPara.SharedModels.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata;
 
@@ -32,15 +33,18 @@ internal sealed class ArchiveSqlDialect : IArchiveSqlDialect
     
     private const string FileLineIdProperty = nameof(ReconciliationEvaluation.FileLineId);
     private const string IngestionFileIdProperty = nameof(IngestionFileLine.IngestionFileId);
-    
-    private static readonly (string PropertyName, string ParamPlaceholder)[] ArchiveOnlyColumns =
+
+    /// <summary>
+    /// Archive copy sırasında kaynak satırdan kopyalanmak yerine parametre ile override edilecek kolonlar.
+    /// UpdateDate → {0} (archivedAt), LastModifiedBy → {1} (archivedBy)
+    /// </summary>
+    private static readonly (string PropertyName, string ParamPlaceholder)[] OverrideColumns =
     [
-        (nameof(ArchiveIngestionFile.ArchivedAt), "{0}"),
-        (nameof(ArchiveIngestionFile.ArchivedBy), "{1}"),
-        (nameof(ArchiveIngestionFile.ArchiveRunId), "{2}")
+        (nameof(AuditEntity.UpdateDate), "{0}"),
+        (nameof(AuditEntity.LastModifiedBy), "{1}")
     ];
 
-    private const string FilterParamPlaceholder = "{3}";
+    private const string FilterParamPlaceholder = "{2}";
 
     public ArchiveSqlDialect(CardDbContext dbContext)
     {
@@ -139,39 +143,31 @@ internal sealed class ArchiveSqlDialect : IArchiveSqlDialect
         where TArchive : class
     {
         var sourceEntity = FindEntityType<TSource>();
-        var archiveEntity = FindEntityType<TArchive>();
-
-        var sourceColumns = GetStoreColumnNames(sourceEntity);
-        var sourceColumnSet = new HashSet<string>(sourceColumns, StringComparer.OrdinalIgnoreCase);
+        var sourceStoreObject = GetStoreObject(sourceEntity);
 
         var archiveTable = Tbl<TArchive>();
-        var archiveStoreObject = GetStoreObject(archiveEntity);
-        
-        var archiveOnlyInsertCols = new List<string>();
-        var archiveOnlySelectExprs = new List<string>();
 
-        foreach (var (propertyName, paramPlaceholder) in ArchiveOnlyColumns)
+        // Override map: source column name → parameter placeholder
+        var overrideMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var (propertyName, paramPlaceholder) in OverrideColumns)
         {
-            var prop = archiveEntity.FindProperty(propertyName);
+            var prop = sourceEntity.FindProperty(propertyName);
             if (prop is null) continue;
-
-            var colName = QuoteIdentifier(prop.GetColumnName(archiveStoreObject)!);
-            if (sourceColumnSet.Contains(colName)) continue;
-
-            archiveOnlyInsertCols.Add(colName);
-            archiveOnlySelectExprs.Add(paramPlaceholder);
+            var colName = QuoteIdentifier(prop.GetColumnName(sourceStoreObject)!);
+            overrideMap[colName] = paramPlaceholder;
         }
 
-        var insertColumns = sourceColumns.Concat(archiveOnlyInsertCols);
-        var selectColumns = sourceColumns.Select(col => $"{sourceAlias}.{col}").Concat(archiveOnlySelectExprs);
+        var sourceColumns = GetStoreColumnNames(sourceEntity);
+        var selectExprs = sourceColumns.Select(col =>
+            overrideMap.TryGetValue(col, out var placeholder) ? placeholder : $"{sourceAlias}.{col}");
 
         return $"""
             INSERT INTO {archiveTable}
             (
-                {string.Join(", ", insertColumns)}
+                {string.Join(", ", sourceColumns)}
             )
             SELECT
-                {string.Join(", ", selectColumns)}
+                {string.Join(", ", selectExprs)}
             {fromClause}
             {whereClause}
             """;

@@ -66,6 +66,5 @@ public static class ApiErrorCode
     public const string ArchiveExecutionFailed = _prefix + "082";
     public const string ArchiveVerificationFailed = _prefix + "083";
     public const string ArchiveEligibilityCheckFailed = _prefix + "084";
-    public const string ArchiveBatchCreationFailed = _prefix + "085";
-    public const string ArchiveBatchCompletionFailed = _prefix + "086";
+    public const string ArchiveLogInsertFailed = _prefix + "085";
 }

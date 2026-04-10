@@ -27,8 +27,6 @@ public class ArchiveRunItemResult
 
     [Required]
     public List<string> FailureReasons { get; set; } = new();
-
-    public Guid? ArchiveRunId { get; set; }
 }
 
 public class ArchiveEligibilityResult

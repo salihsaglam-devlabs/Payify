@@ -312,8 +312,7 @@ internal sealed class ReviewService
                         .SetProperty(x => x.Decision, decision)
                         .SetProperty(x => x.Comment, comment)
                         .SetProperty(x => x.DecisionAt, now)
-                        .SetProperty(x => x.UpdateDate, auditStamp.Timestamp)
-                        .SetProperty(x => x.LastModifiedBy, auditStamp.UserId),
+                        .ApplyAuditUpdate(auditStamp),
                         cancellationToken);
 
                 if (updatedReviewRows == 0)
@@ -332,8 +331,7 @@ internal sealed class ReviewService
                         .SetProperty(x => x.NextAttemptAt, now)
                         .SetProperty(x => x.LeaseExpiresAt, (DateTime?)null)
                         .SetProperty(x => x.LeaseOwner, (string?)null)
-                        .SetProperty(x => x.UpdateDate, auditStamp.Timestamp)
-                        .SetProperty(x => x.LastModifiedBy, auditStamp.UserId),
+                        .ApplyAuditUpdate(auditStamp),
                         cancellationToken);
 
                 if (updatedOperationRows == 0)
@@ -426,12 +424,7 @@ internal sealed class ReviewService
         }
 
         var auditStamp = _auditStampService.CreateStamp();
-        if (Guid.TryParse(auditStamp.UserId, out var currentReviewerId))
-        {
-            return currentReviewerId;
-        }
-
-        throw new ReconciliationConfigurationException(ApiErrorCode.ReconciliationReviewerNotResolved, _localizer.Get("Reconciliation.ReviewerNotResolved"));
+        return auditStamp.UserGuid;
     }
 
     private static string BuildManualReviewPayload(ManualReview manualReview)

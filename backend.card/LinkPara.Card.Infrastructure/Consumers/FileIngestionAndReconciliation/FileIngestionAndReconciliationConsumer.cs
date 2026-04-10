@@ -16,18 +16,18 @@ namespace LinkPara.Card.Infrastructure.Consumers.FileIngestionAndReconciliation;
 public class FileIngestionAndReconciliationConsumer : IConsumer<FileIngestionAndReconciliationJobRequest>
 {
     private readonly ISender _mediator;
-    private readonly IAuditUserContextAccessor _auditUserContextAccessor;
+    private readonly IAuditStampService _auditStampService;
     private readonly IStringLocalizer _localizer;
     private readonly bool _respondToContext;
 
     public FileIngestionAndReconciliationConsumer(
         ISender mediator,
-        IAuditUserContextAccessor auditUserContextAccessor,
+        IAuditStampService auditStampService,
         IOptions<ReconciliationOptions> reconciliationOptions,
         Func<LinkPara.Card.Application.Commons.Localization.LocalizerResource, IStringLocalizer> localizerFactory)
     {
         _mediator = mediator;
-        _auditUserContextAccessor = auditUserContextAccessor;
+        _auditStampService = auditStampService;
         _localizer = localizerFactory(LinkPara.Card.Application.Commons.Localization.LocalizerResource.Messages);
         _respondToContext = reconciliationOptions.Value.Consumer.RespondToContext.Value;
     }
@@ -35,8 +35,8 @@ public class FileIngestionAndReconciliationConsumer : IConsumer<FileIngestionAnd
     public async Task Consume(ConsumeContext<FileIngestionAndReconciliationJobRequest> context)
     {
         var message = context.Message;
-        var previousUserId = _auditUserContextAccessor.CurrentUserId;
-        _auditUserContextAccessor.CurrentUserId = ResolveInitiatedByUserId(context);
+        var previousUserId = _auditStampService.GetCurrentAuditUserId();
+        _auditStampService.SetAuditUserId(ResolveInitiatedByUserId(context));
 
         try
         {
@@ -134,7 +134,7 @@ public class FileIngestionAndReconciliationConsumer : IConsumer<FileIngestionAnd
         }
         finally
         {
-            _auditUserContextAccessor.CurrentUserId = previousUserId;
+            _auditStampService.SetAuditUserId(previousUserId);
         }
     }
 
