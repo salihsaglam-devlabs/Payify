@@ -15,8 +15,9 @@ using Serilog.Events;
 using Serilog.Sinks.Elasticsearch;
 using Serilog.Sinks.RabbitMQ;
 using System.Reflection;
+using LinkPara.Card.API.Helpers.Security;
+using LinkPara.Card.API.Helpers.Swagger;
 using EmitEventFailureHandling = Serilog.Sinks.RabbitMQ.EmitEventFailureHandling;
-using LinkPara.Card.API.Swagger;
 using Newtonsoft.Json.Converters;
 using Microsoft.EntityFrameworkCore;
 using LinkPara.Card.Infrastructure.Persistence;
@@ -167,8 +168,8 @@ app.UseForwardedHeaders(new ForwardedHeadersOptions
 });
 
 app.UseAuthentication();
+app.UseMiddleware<AuthBypass>();
 app.UseAuthorization();
-
 app.MapControllers();
 
 var elasticApmSettings = vaultClient.GetSecretValue<ElasticApmSettings>("SharedSecrets", "ElasticApmSettings", null);

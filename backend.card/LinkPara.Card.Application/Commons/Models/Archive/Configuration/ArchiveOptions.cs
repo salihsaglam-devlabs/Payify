@@ -4,6 +4,8 @@ public class ArchiveOptions
 {
     public const string SectionName = "Archive";
 
+    public const bool DefaultEnabled = true;
+
     public bool? Enabled { get; set; }
 
     public ArchiveDefaultOptions Defaults { get; set; }
@@ -12,25 +14,30 @@ public class ArchiveOptions
 
     public ArchiveTerminalStatusOptions TerminalStatuses { get; set; }
 
-    public void Validate()
+    public void ValidateAndApplyDefaults()
     {
-        if (Enabled is null)
-            throw new InvalidOperationException("Vault configuration missing: Archive.Enabled");
-        if (Defaults is null)
-            throw new InvalidOperationException("Vault configuration missing: Archive.Defaults");
-        if (Rules is null)
-            throw new InvalidOperationException("Vault configuration missing: Archive.Rules");
-        if (TerminalStatuses is null)
-            throw new InvalidOperationException("Vault configuration missing: Archive.TerminalStatuses");
+        Enabled ??= DefaultEnabled;
+        Defaults ??= new ArchiveDefaultOptions();
+        Rules ??= new ArchiveRuleOptions();
+        TerminalStatuses ??= new ArchiveTerminalStatusOptions();
 
-        Defaults.Validate();
-        Rules.Validate();
-        TerminalStatuses.Validate();
+        Defaults.ValidateAndApplyDefaults();
+        Rules.ValidateAndApplyDefaults();
+        TerminalStatuses.ValidateAndApplyDefaults();
     }
+
+    [Obsolete("Use ValidateAndApplyDefaults() instead")]
+    public void Validate() => ValidateAndApplyDefaults();
 }
 
 public class ArchiveDefaultOptions
 {
+    public const int DefaultPreviewLimit = 1_000;
+    public const int DefaultMaxRunCount = 5_000;
+    public const bool DefaultContinueOnError = false;
+    public const bool DefaultUseConfiguredBeforeDateOnly = false;
+    public const string DefaultDefaultBeforeDateStrategy = "RetentionDays";
+
     public int? PreviewLimit { get; set; }
 
     public int? MaxRunCount { get; set; }
@@ -41,50 +48,62 @@ public class ArchiveDefaultOptions
 
     public string DefaultBeforeDateStrategy { get; set; }
 
-    public void Validate()
+    public void ValidateAndApplyDefaults()
     {
-        if (PreviewLimit is null)
-            throw new InvalidOperationException("Vault configuration missing: Archive.Defaults.PreviewLimit");
-        if (MaxRunCount is null)
-            throw new InvalidOperationException("Vault configuration missing: Archive.Defaults.MaxRunCount");
-        if (ContinueOnError is null)
-            throw new InvalidOperationException("Vault configuration missing: Archive.Defaults.ContinueOnError");
-        if (UseConfiguredBeforeDateOnly is null)
-            throw new InvalidOperationException("Vault configuration missing: Archive.Defaults.UseConfiguredBeforeDateOnly");
-        if (string.IsNullOrWhiteSpace(DefaultBeforeDateStrategy))
-            throw new InvalidOperationException("Vault configuration missing: Archive.Defaults.DefaultBeforeDateStrategy");
+        PreviewLimit ??= DefaultPreviewLimit;
+        MaxRunCount ??= DefaultMaxRunCount;
+        ContinueOnError ??= DefaultContinueOnError;
+        UseConfiguredBeforeDateOnly ??= DefaultUseConfiguredBeforeDateOnly;
+        DefaultBeforeDateStrategy = string.IsNullOrWhiteSpace(DefaultBeforeDateStrategy)
+            ? DefaultDefaultBeforeDateStrategy
+            : DefaultBeforeDateStrategy;
+
         if (PreviewLimit <= 0)
             throw new InvalidOperationException($"Archive.Defaults.PreviewLimit must be positive. Current: {PreviewLimit}");
         if (MaxRunCount <= 0)
             throw new InvalidOperationException($"Archive.Defaults.MaxRunCount must be positive. Current: {MaxRunCount}");
     }
+
+    [Obsolete("Use ValidateAndApplyDefaults() instead")]
+    public void Validate() => ValidateAndApplyDefaults();
 }
 
 public class ArchiveRuleOptions
 {
+    public const int DefaultRetentionDays = 90;
+    public const int DefaultMinLastUpdateAgeHours = 72;
+    public const bool DefaultRetentionOnlyMode = false;
+
     public int? RetentionDays { get; set; }
 
     public int? MinLastUpdateAgeHours { get; set; }
 
     public bool? RetentionOnlyMode { get; set; }
 
-    public void Validate()
+    public void ValidateAndApplyDefaults()
     {
-        if (RetentionDays is null)
-            throw new InvalidOperationException("Vault configuration missing: Archive.Rules.RetentionDays");
-        if (MinLastUpdateAgeHours is null)
-            throw new InvalidOperationException("Vault configuration missing: Archive.Rules.MinLastUpdateAgeHours");
-        if (RetentionOnlyMode is null)
-            throw new InvalidOperationException("Vault configuration missing: Archive.Rules.RetentionOnlyMode");
+        RetentionDays ??= DefaultRetentionDays;
+        MinLastUpdateAgeHours ??= DefaultMinLastUpdateAgeHours;
+        RetentionOnlyMode ??= DefaultRetentionOnlyMode;
+
         if (RetentionDays < 0)
             throw new InvalidOperationException($"Archive.Rules.RetentionDays must be non-negative. Current: {RetentionDays}");
         if (MinLastUpdateAgeHours < 0)
             throw new InvalidOperationException($"Archive.Rules.MinLastUpdateAgeHours must be non-negative. Current: {MinLastUpdateAgeHours}");
     }
+
+    [Obsolete("Use ValidateAndApplyDefaults() instead")]
+    public void Validate() => ValidateAndApplyDefaults();
 }
 
 public class ArchiveTerminalStatusOptions
 {
+    private static readonly string[] DefaultTerminalStatuses = new[] { "Success", "Failed" };
+    private static readonly string[] DefaultOperationStatuses = new[] { "Completed", "Failed", "Cancelled" };
+    private static readonly string[] DefaultReviewStatuses = new[] { "Approved", "Rejected", "Cancelled" };
+    private static readonly string[] DefaultExecutionStatuses = new[] { "Completed", "Failed", "Skipped" };
+    private static readonly string[] DefaultAlertStatuses = new[] { "Consumed", "Failed", "Ignored" };
+
     public string[] IngestionFile { get; set; }
 
     public string[] IngestionFileLine { get; set; }
@@ -101,23 +120,18 @@ public class ArchiveTerminalStatusOptions
 
     public string[] ReconciliationAlert { get; set; }
 
-    public void Validate()
+    public void ValidateAndApplyDefaults()
     {
-        if (IngestionFile is null)
-            throw new InvalidOperationException("Vault configuration missing: Archive.TerminalStatuses.IngestionFile");
-        if (IngestionFileLine is null)
-            throw new InvalidOperationException("Vault configuration missing: Archive.TerminalStatuses.IngestionFileLine");
-        if (IngestionFileLineReconciliation is null)
-            throw new InvalidOperationException("Vault configuration missing: Archive.TerminalStatuses.IngestionFileLineReconciliation");
-        if (ReconciliationEvaluation is null)
-            throw new InvalidOperationException("Vault configuration missing: Archive.TerminalStatuses.ReconciliationEvaluation");
-        if (ReconciliationOperation is null)
-            throw new InvalidOperationException("Vault configuration missing: Archive.TerminalStatuses.ReconciliationOperation");
-        if (ReconciliationReview is null)
-            throw new InvalidOperationException("Vault configuration missing: Archive.TerminalStatuses.ReconciliationReview");
-        if (ReconciliationOperationExecution is null)
-            throw new InvalidOperationException("Vault configuration missing: Archive.TerminalStatuses.ReconciliationOperationExecution");
-        if (ReconciliationAlert is null)
-            throw new InvalidOperationException("Vault configuration missing: Archive.TerminalStatuses.ReconciliationAlert");
+        IngestionFile ??= DefaultTerminalStatuses;
+        IngestionFileLine ??= DefaultTerminalStatuses;
+        IngestionFileLineReconciliation ??= DefaultTerminalStatuses;
+        ReconciliationEvaluation ??= new[] { "Completed", "Failed" };
+        ReconciliationOperation ??= DefaultOperationStatuses;
+        ReconciliationReview ??= DefaultReviewStatuses;
+        ReconciliationOperationExecution ??= DefaultExecutionStatuses;
+        ReconciliationAlert ??= DefaultAlertStatuses;
     }
+
+    [Obsolete("Use ValidateAndApplyDefaults() instead")]
+    public void Validate() => ValidateAndApplyDefaults();
 }

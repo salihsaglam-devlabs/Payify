@@ -12,31 +12,34 @@ public class ReconciliationOptions
 
     public ExecuteOptions Execute { get; set; }
 
-    public void Validate()
+    public void ValidateAndApplyDefaults()
     {
-        if (Consumer is null)
-            throw new InvalidOperationException("Vault configuration missing: Reconciliation.Consumer");
-        if (Alert is null)
-            throw new InvalidOperationException("Vault configuration missing: Reconciliation.Alert");
-        if (Evaluate is null)
-            throw new InvalidOperationException("Vault configuration missing: Reconciliation.Evaluate");
-        if (Execute is null)
-            throw new InvalidOperationException("Vault configuration missing: Reconciliation.Execute");
+        Consumer ??= new ConsumerOptions();
+        Alert ??= new AlertOptions();
+        Evaluate ??= new EvaluateOptions();
+        Execute ??= new ExecuteOptions();
 
-        Consumer.Validate();
-        Alert.Validate();
-        Evaluate.Validate();
-        Execute.Validate();
+        Consumer.ValidateAndApplyDefaults();
+        Alert.ValidateAndApplyDefaults();
+        Evaluate.ValidateAndApplyDefaults();
+        Execute.ValidateAndApplyDefaults();
     }
+
+    [Obsolete("Use ValidateAndApplyDefaults() instead")]
+    public void Validate() => ValidateAndApplyDefaults();
 }
 
 public class ConsumerOptions
 {
+    public const bool DefaultRespondToContext = false;
+
     public bool? RespondToContext { get; set; }
 
-    public void Validate()
+    public void ValidateAndApplyDefaults()
     {
-        if (RespondToContext is null)
-            throw new InvalidOperationException("Vault configuration missing: Reconciliation.Consumer.RespondToContext");
+        RespondToContext ??= DefaultRespondToContext;
     }
+
+    [Obsolete("Use ValidateAndApplyDefaults() instead")]
+    public void Validate() => ValidateAndApplyDefaults();
 }

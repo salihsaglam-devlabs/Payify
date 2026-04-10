@@ -24,7 +24,7 @@ public class PreviewArchiveQueryValidator : AbstractValidator<PreviewArchiveQuer
                 .WithMessage(localizer.GetString("Validation.ArchiveIngestionFileIdsDistinct").Value);
 
             RuleFor(x => x.Request.Limit)
-                .InclusiveBetween(0, 1000)
+                .InclusiveBetween(0, 10_000)
                 .When(x => x.Request.Limit.HasValue)
                 .WithMessage(localizer.GetString("Validation.ArchivePreviewLimitRange").Value);
         });

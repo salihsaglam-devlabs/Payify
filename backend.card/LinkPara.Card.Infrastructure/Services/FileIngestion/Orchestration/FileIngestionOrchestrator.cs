@@ -648,7 +648,8 @@ public class FileIngestionOrchestrator : IFileIngestionService
                 .ExecuteUpdateAsync(
                     setters => setters
                         .SetProperty(x => x.IsArchived, isArchived)
-                        .ApplyAuditUpdate(auditStamp),
+                        .SetProperty(x => x.UpdateDate, auditStamp.Timestamp)
+                        .SetProperty(x => x.LastModifiedBy, auditStamp.UserId),
                     cancellationToken);
 
             if (affectedRows != 1)
@@ -1102,7 +1103,8 @@ public class FileIngestionOrchestrator : IFileIngestionService
                     .ExecuteUpdateAsync(
                         setters => setters
                             .SetProperty(x => x.IsArchived, true)
-                            .ApplyAuditUpdate(auditStamp),
+                            .SetProperty(x => x.UpdateDate, auditStamp.Timestamp)
+                            .SetProperty(x => x.LastModifiedBy, auditStamp.UserId),
                         cancellationToken);
 
                 if (affectedRows != 1)
@@ -1134,7 +1136,8 @@ public class FileIngestionOrchestrator : IFileIngestionService
                     .ExecuteUpdateAsync(
                         setters => setters
                             .SetProperty(x => x.IsArchived, false)
-                            .ApplyAuditUpdate(auditStamp),
+                            .SetProperty(x => x.UpdateDate, auditStamp.Timestamp)
+                            .SetProperty(x => x.LastModifiedBy, auditStamp.UserId),
                         cancellationToken);
 
                 _dbContext.ChangeTracker.Clear();
@@ -1230,7 +1233,8 @@ public class FileIngestionOrchestrator : IFileIngestionService
                     setters => setters
                         .SetProperty(x => x.LastProcessedLineNumber, progress.LastProcessedLineNumber)
                         .SetProperty(x => x.LastProcessedByteOffset, progress.LastProcessedByteOffset)
-                        .ApplyAuditUpdate(auditStamp),
+                        .SetProperty(x => x.UpdateDate, auditStamp.Timestamp)
+                        .SetProperty(x => x.LastModifiedBy, auditStamp.UserId),
                     cancellationToken);
 
             await transaction.CommitAsync(cancellationToken);
@@ -1716,7 +1720,8 @@ public class FileIngestionOrchestrator : IFileIngestionService
                     .SetProperty(x => x.ErrorCount, errorCount)
                     .SetProperty(x => x.Status, status)
                     .SetProperty(x => x.Message, message)
-                    .ApplyAuditUpdate(auditStamp),
+                    .SetProperty(x => x.UpdateDate, auditStamp.Timestamp)
+                    .SetProperty(x => x.LastModifiedBy, auditStamp.UserId),
                 cancellationToken);
 
         _dbContext.ChangeTracker.Clear();
@@ -1741,7 +1746,8 @@ public class FileIngestionOrchestrator : IFileIngestionService
             .ExecuteUpdateAsync(update => update
                     .SetProperty(x => x.DuplicateStatus, (string?)null)
                     .SetProperty(x => x.DuplicateGroupId, (Guid?)null)
-                    .ApplyAuditUpdate(auditStamp),
+                    .SetProperty(x => x.UpdateDate, auditStamp.Timestamp)
+                    .SetProperty(x => x.LastModifiedBy, auditStamp.UserId),
                 cancellationToken);
 
         List<IngestionFileLineEntity> rowsToUpdate;
@@ -1771,7 +1777,8 @@ public class FileIngestionOrchestrator : IFileIngestionService
             .ExecuteUpdateAsync(update => update
                     .SetProperty(x => x.DuplicateStatus, uniqueStatus)
                     .SetProperty(x => x.DuplicateGroupId, (Guid?)null)
-                    .ApplyAuditUpdate(auditStamp),
+                    .SetProperty(x => x.UpdateDate, auditStamp.Timestamp)
+                    .SetProperty(x => x.LastModifiedBy, auditStamp.UserId),
                 cancellationToken);
     }
 
@@ -1967,7 +1974,8 @@ public class FileIngestionOrchestrator : IFileIngestionService
             .ExecuteUpdateAsync(
                 setters => setters
                     .SetProperty(x => x.Message, message)
-                    .ApplyAuditUpdate(auditStamp),
+                    .SetProperty(x => x.UpdateDate, auditStamp.Timestamp)
+                    .SetProperty(x => x.LastModifiedBy, auditStamp.UserId),
                 cancellationToken);
     }
 

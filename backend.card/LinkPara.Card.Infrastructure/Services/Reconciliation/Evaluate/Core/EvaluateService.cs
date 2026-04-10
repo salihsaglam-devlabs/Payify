@@ -200,7 +200,8 @@ internal sealed class EvaluateService : IEvaluateService
                 .ExecuteUpdateAsync(update => update
                     .SetProperty(x => x.ReconciliationStatus, ReconciliationStatus.Processing)
                     .SetProperty(x => x.Message, claimMarker)
-                    .ApplyAuditUpdate(auditStamp),
+                    .SetProperty(x => x.UpdateDate, auditStamp.Timestamp)
+                    .SetProperty(x => x.LastModifiedBy, auditStamp.UserId),
                     cancellationToken);
 
             if (claimedCount == 0)
@@ -590,7 +591,8 @@ internal sealed class EvaluateService : IEvaluateService
             .ExecuteUpdateAsync(update => update
                 .SetProperty(x => x.ReconciliationStatus, status)
                 .SetProperty(x => x.Message, message)
-                .ApplyAuditUpdate(auditStamp),
+                .SetProperty(x => x.UpdateDate, auditStamp.Timestamp)
+                .SetProperty(x => x.LastModifiedBy, auditStamp.UserId),
                 cancellationToken);
     }
 
@@ -609,7 +611,8 @@ internal sealed class EvaluateService : IEvaluateService
             .ExecuteUpdateAsync(update => update
                 .SetProperty(x => x.ReconciliationStatus, status)
                 .SetProperty(x => x.Message, message)
-                .ApplyAuditUpdate(auditStamp),
+                .SetProperty(x => x.UpdateDate, auditStamp.Timestamp)
+                .SetProperty(x => x.LastModifiedBy, auditStamp.UserId),
                 cancellationToken);
     }
 
@@ -626,7 +629,8 @@ internal sealed class EvaluateService : IEvaluateService
             .Where(x => x.ReconciliationStatus == ReconciliationStatus.Processing)
             .Where(x => x.Message != null && x.Message.StartsWith(ClaimMarkerPrefix))
             .ExecuteUpdateAsync(update => update
-                .ApplyAuditUpdate(auditStamp),
+                .SetProperty(x => x.UpdateDate, auditStamp.Timestamp)
+                .SetProperty(x => x.LastModifiedBy, auditStamp.UserId),
                 cancellationToken);
     }
 

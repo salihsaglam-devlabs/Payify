@@ -1,8 +1,8 @@
 {
   "Enabled": true,
   "Defaults": {
-    "PreviewLimit": 100,
-    "MaxRunCount": 100,
+    "PreviewLimit": 1000,
+    "MaxRunCount": 5000,
     "ContinueOnError": false,
     "UseConfiguredBeforeDateOnly": false,
     "DefaultBeforeDateStrategy": "RetentionDays"

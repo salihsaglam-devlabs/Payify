@@ -2,6 +2,13 @@ namespace LinkPara.Card.Application.Commons.Models.FileIngestion;
 
 public class ProcessingOptions
 {
+    public const int DefaultBatchSize = 10_000;
+    public const int DefaultRetryBatchSize = 2_000;
+    public const int DefaultFailedRowMaxRetryCount = 3;
+    public const bool DefaultUseBulkInsert = true;
+    public const bool DefaultEnableParallelProcessing = true;
+    public const int DefaultMaxDegreeOfParallelism = 10;
+
     public int? BatchSize { get; set; }
     public int? RetryBatchSize { get; set; }
     public int? FailedRowMaxRetryCount { get; set; }
@@ -9,20 +16,15 @@ public class ProcessingOptions
     public bool? EnableParallelProcessing { get; set; }
     public int? MaxDegreeOfParallelism { get; set; }
 
-    public void Validate()
+    public void ValidateAndApplyDefaults()
     {
-        if (BatchSize is null)
-            throw new InvalidOperationException("Vault configuration missing: FileIngestion.Processing.BatchSize");
-        if (RetryBatchSize is null)
-            throw new InvalidOperationException("Vault configuration missing: FileIngestion.Processing.RetryBatchSize");
-        if (FailedRowMaxRetryCount is null)
-            throw new InvalidOperationException("Vault configuration missing: FileIngestion.Processing.FailedRowMaxRetryCount");
-        if (UseBulkInsert is null)
-            throw new InvalidOperationException("Vault configuration missing: FileIngestion.Processing.UseBulkInsert");
-        if (EnableParallelProcessing is null)
-            throw new InvalidOperationException("Vault configuration missing: FileIngestion.Processing.EnableParallelProcessing");
-        if (MaxDegreeOfParallelism is null)
-            throw new InvalidOperationException("Vault configuration missing: FileIngestion.Processing.MaxDegreeOfParallelism");
+        BatchSize ??= DefaultBatchSize;
+        RetryBatchSize ??= DefaultRetryBatchSize;
+        FailedRowMaxRetryCount ??= DefaultFailedRowMaxRetryCount;
+        UseBulkInsert ??= DefaultUseBulkInsert;
+        EnableParallelProcessing ??= DefaultEnableParallelProcessing;
+        MaxDegreeOfParallelism ??= DefaultMaxDegreeOfParallelism;
+
         if (BatchSize <= 0)
             throw new InvalidOperationException($"FileIngestion.Processing.BatchSize must be positive. Current: {BatchSize}");
         if (RetryBatchSize <= 0)
@@ -30,4 +32,7 @@ public class ProcessingOptions
         if (MaxDegreeOfParallelism <= 0)
             throw new InvalidOperationException($"FileIngestion.Processing.MaxDegreeOfParallelism must be positive. Current: {MaxDegreeOfParallelism}");
     }
+
+    [Obsolete("Use ValidateAndApplyDefaults() instead")]
+    public void Validate() => ValidateAndApplyDefaults();
 }

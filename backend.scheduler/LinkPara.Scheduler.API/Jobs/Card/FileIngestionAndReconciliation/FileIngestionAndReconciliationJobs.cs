@@ -86,7 +86,7 @@ public enum FileIngestionAndReconciliationTemplate
 public class FileIngestionAndReconciliationJobRequest
 {
     [JsonConverter(typeof(FlexibleEnumJsonConverter<JobRequestType>))]
-    public JobRequestType RequestType { get; set; }
+    public JobRequestType Type { get; set; }
     public string InitiatedByUserId { get; init; }
     public FileIngestionRequest IngestionRequest { get; init; }
     public EvaluateRequest EvaluateRequest { get; init; }
@@ -95,9 +95,15 @@ public class FileIngestionAndReconciliationJobRequest
 
 public class FileIngestionRequest
 {
-    public object FileSourceType { get; set; } = default!;
-    public object FileType { get; set; } = default!;
-    public object FileContentType { get; set; } = default!;
+    [JsonConverter(typeof(FlexibleEnumJsonConverter<FileSourceType>))]
+    public FileSourceType FileSourceType { get; set; }
+
+    [JsonConverter(typeof(FlexibleEnumJsonConverter<FileType>))]
+    public FileType FileType { get; set; }
+
+    [JsonConverter(typeof(FlexibleEnumJsonConverter<FileContentType>))]
+    public FileContentType FileContentType { get; set; }
+
     public string FilePath { get; set; }
 }
 
@@ -109,22 +115,23 @@ public class EvaluateRequest
 
 public class EvaluateOptions
 {
-    public int ChunkSize { get; set; }
-    public int ClaimTimeoutSeconds { get; set; }
-    public int ClaimRetryCount { get; set; }
+    public int? ChunkSize { get; set; }
+    public int? ClaimTimeoutSeconds { get; set; }
+    public int? ClaimRetryCount { get; set; }
 }
 
 public class ExecuteRequest
 {
     public Guid[] GroupIds { get; set; } = Array.Empty<Guid>();
+    public Guid[] EvaluationIds { get; set; } = Array.Empty<Guid>();
     public Guid[] OperationIds { get; set; } = Array.Empty<Guid>();
     public ExecuteOptions Options { get; set; }
 }
 
 public class ExecuteOptions
 {
-    public int MaxEvaluations { get; set; }
-    public int LeaseSeconds { get; set; }
+    public int? MaxEvaluations { get; set; }
+    public int? LeaseSeconds { get; set; }
 }
 
 public sealed class FlexibleEnumJsonConverter<TEnum> : JsonConverter<TEnum>
@@ -167,6 +174,12 @@ public sealed class FlexibleEnumJsonConverter<TEnum> : JsonConverter<TEnum>
 
     public override void Write(Utf8JsonWriter writer, TEnum value, JsonSerializerOptions options)
     {
+        if (FileIngestionAndReconciliationPayloadFactory.UseStringEnums)
+        {
+            writer.WriteStringValue(value.ToString());
+            return;
+        }
+
         writer.WriteNumberValue(Convert.ToInt32(value));
     }
 }
@@ -184,7 +197,7 @@ public static class FileIngestionAndReconciliationPayloadFactory
     /// true  => enum values string gönderilir
     /// default kapalıdır
     /// </summary>
-    public static bool UseStringEnums { get; private set; } = false;
+    public static bool UseStringEnums { get; private set; }
 
     public static void SetUseStringEnums(bool useStringEnums)
     {
@@ -273,32 +286,33 @@ public static class FileIngestionAndReconciliationPayloadFactory
 
         [FileIngestionAndReconciliationTemplate.EvaluateDefault] = initiatedByUserId => new FileIngestionAndReconciliationJobRequest
         {
-            RequestType = JobRequestType.Evaluate,
+            Type = JobRequestType.Evaluate,
             InitiatedByUserId = initiatedByUserId,
             EvaluateRequest = new EvaluateRequest
             {
                 IngestionFileIds = Array.Empty<Guid>(),
                 Options = new EvaluateOptions
                 {
-                    ChunkSize = 10000,
-                    ClaimTimeoutSeconds = 300,
-                    ClaimRetryCount = 3
+                    ChunkSize = 5000,
+                    ClaimTimeoutSeconds = 600,
+                    ClaimRetryCount = 5
                 }
             }
         },
 
         [FileIngestionAndReconciliationTemplate.ExecuteDefault] = initiatedByUserId => new FileIngestionAndReconciliationJobRequest
         {
-            RequestType = JobRequestType.Execute,
+            Type = JobRequestType.Execute,
             InitiatedByUserId = initiatedByUserId,
             ExecuteRequest = new ExecuteRequest
             {
                 GroupIds = Array.Empty<Guid>(),
+                EvaluationIds = Array.Empty<Guid>(),
                 OperationIds = Array.Empty<Guid>(),
                 Options = new ExecuteOptions
                 {
-                    MaxEvaluations = 5000,
-                    LeaseSeconds = 30
+                    MaxEvaluations = 50000,
+                    LeaseSeconds = 120
                 }
             }
         }
@@ -341,24 +355,16 @@ public static class FileIngestionAndReconciliationPayloadFactory
     {
         return new FileIngestionAndReconciliationJobRequest
         {
-            RequestType = JobRequestType.IngestFile,
+            Type = JobRequestType.IngestFile,
             InitiatedByUserId = initiatedByUserId,
             IngestionRequest = new FileIngestionRequest
             {
-                FileSourceType = EnumValue(fileSourceType),
-                FileType = EnumValue(fileType),
-                FileContentType = EnumValue(fileContentType),
+                FileSourceType = fileSourceType,
+                FileType = fileType,
+                FileContentType = fileContentType,
                 FilePath = filePath
             }
         };
-    }
-
-    private static object EnumValue<TEnum>(TEnum value)
-        where TEnum : struct, Enum
-    {
-        return UseStringEnums
-            ? value.ToString()
-            : Convert.ToInt32(value);
     }
 }
 

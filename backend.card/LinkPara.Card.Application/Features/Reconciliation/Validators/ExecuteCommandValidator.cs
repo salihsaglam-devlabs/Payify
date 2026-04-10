@@ -43,7 +43,7 @@ public class ExecuteCommandValidator : AbstractValidator<ExecuteCommand>
             {
                 RuleFor(x => x.Request.Options!.MaxEvaluations)
                     .NotNull()
-                    .InclusiveBetween(1, 5000);
+                    .InclusiveBetween(1, 100_000);
 
                 RuleFor(x => x.Request.Options!.LeaseSeconds)
                     .NotNull()

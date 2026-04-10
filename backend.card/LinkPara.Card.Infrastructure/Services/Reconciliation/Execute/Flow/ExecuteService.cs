@@ -6,8 +6,8 @@ using LinkPara.Card.Application.Commons.Models.Reconciliation;
 using LinkPara.Card.Domain.Entities.Reconciliation;
 using LinkPara.Card.Domain.Enums.Reconciliation;
 using LinkPara.Card.Infrastructure.Persistence;
+using LinkPara.Card.Infrastructure.Services.Alert;
 using LinkPara.Card.Infrastructure.Services.Audit;
-using LinkPara.Card.Infrastructure.Services.AlertService;
 using LinkPara.Card.Infrastructure.Services.Reconciliation.Execute;
 using LinkPara.Card.Infrastructure.Services.Reconciliation.Evaluate;
 using LinkPara.SharedModels.Persistence;
@@ -343,17 +343,16 @@ internal sealed class ExecuteService
                     .SetProperty(x => x.Status, OperationStatus.Executing)
                     .SetProperty(x => x.LeaseOwner, WorkerLeaseOwner)
                     .SetProperty(x => x.LeaseExpiresAt, leaseExpiresAt)
-                    .ApplyAuditUpdate(auditStamp),
+                    .SetProperty(x => x.UpdateDate, auditStamp.Timestamp)
+                    .SetProperty(x => x.LastModifiedBy, auditStamp.UserId),
                 cancellationToken);
 
         if (updatedRows == 0)
         {
             return false;
         }
-
-        operation.Status = OperationStatus.Executing;
-        operation.LeaseOwner = WorkerLeaseOwner;
-        operation.LeaseExpiresAt = leaseExpiresAt;
+        
+        await _dbContext.Entry(operation).ReloadAsync(cancellationToken);
         return true;
     }
 

@@ -8,16 +8,19 @@ public class FileIngestionOptions
     public ConnectionsOptions Connections { get; set; }
     public Dictionary<string, ProfileOptions> Profiles { get; set; }
 
-    public void Validate()
+    public void ValidateAndApplyDefaults()
     {
-        if (Processing is null)
-            throw new InvalidOperationException("Vault configuration missing: FileIngestion.Processing");
+        Processing ??= new ProcessingOptions();
+        Processing.ValidateAndApplyDefaults();
+
         if (Connections is null)
             throw new InvalidOperationException("Vault configuration missing: FileIngestion.Connections");
         if (Profiles is null)
             throw new InvalidOperationException("Vault configuration missing: FileIngestion.Profiles");
 
-        Processing.Validate();
         Connections.Validate();
     }
+
+    [Obsolete("Use ValidateAndApplyDefaults() instead")]
+    public void Validate() => ValidateAndApplyDefaults();
 }

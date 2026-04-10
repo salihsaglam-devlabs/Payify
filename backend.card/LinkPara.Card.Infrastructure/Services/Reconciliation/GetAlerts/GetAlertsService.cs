@@ -1,7 +1,6 @@
 using Microsoft.Extensions.Localization;
 using LinkPara.Card.Application.Commons.Interfaces.Reconciliation;
 using LinkPara.Card.Application.Commons.Models.Reconciliation;
-using LinkPara.Card.Domain.Enums.Reconciliation;
 using LinkPara.Card.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
@@ -59,7 +58,7 @@ internal sealed class GetAlertsService
             var alerts = await query
                 .Skip(skip)
                 .Take(pageSize)
-                .Select(x => new Alert
+                .Select(x => new Application.Commons.Models.Reconciliation.Alert
                 {
                     Id = x.Id,
                     FileLineId = x.FileLineId,
@@ -75,7 +74,7 @@ internal sealed class GetAlertsService
 
             return new GetAlertsResponse
             {
-                Page = new PagedResult<Alert>
+                Page = new PagedResult<Application.Commons.Models.Reconciliation.Alert>
                 {
                     Page = page,
                     PageSize = pageSize,

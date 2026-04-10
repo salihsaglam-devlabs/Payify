@@ -312,7 +312,8 @@ internal sealed class ReviewService
                         .SetProperty(x => x.Decision, decision)
                         .SetProperty(x => x.Comment, comment)
                         .SetProperty(x => x.DecisionAt, now)
-                        .ApplyAuditUpdate(auditStamp),
+                        .SetProperty(x => x.UpdateDate, auditStamp.Timestamp)
+                        .SetProperty(x => x.LastModifiedBy, auditStamp.UserId),
                         cancellationToken);
 
                 if (updatedReviewRows == 0)
@@ -331,7 +332,8 @@ internal sealed class ReviewService
                         .SetProperty(x => x.NextAttemptAt, now)
                         .SetProperty(x => x.LeaseExpiresAt, (DateTime?)null)
                         .SetProperty(x => x.LeaseOwner, (string?)null)
-                        .ApplyAuditUpdate(auditStamp),
+                        .SetProperty(x => x.UpdateDate, auditStamp.Timestamp)
+                        .SetProperty(x => x.LastModifiedBy, auditStamp.UserId),
                         cancellationToken);
 
                 if (updatedOperationRows == 0)

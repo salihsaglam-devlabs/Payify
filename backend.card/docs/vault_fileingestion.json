@@ -178,11 +178,11 @@
     }
   },
   "Processing": {
-    "BatchSize": 5000,
+    "BatchSize": 10000,
     "EnableParallelProcessing": true,
     "FailedRowMaxRetryCount": 3,
-    "MaxDegreeOfParallelism": 5,
-    "RetryBatchSize": 1000,
+    "MaxDegreeOfParallelism": 10,
+    "RetryBatchSize": 2000,
     "UseBulkInsert": true
   },
   "Profiles": {

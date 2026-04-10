@@ -79,6 +79,8 @@ internal sealed class AuditStampService : IAuditStampService
 
         entity.CreateDate = stamp.Timestamp;
         entity.CreatedBy = stamp.UserId;
+        entity.UpdateDate = stamp.Timestamp;
+        entity.LastModifiedBy = stamp.UserId;
         entity.RecordStatus = RecordStatus.Active;
     }
 

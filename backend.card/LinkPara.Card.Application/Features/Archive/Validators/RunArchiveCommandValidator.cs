@@ -24,7 +24,7 @@ public class RunArchiveCommandValidator : AbstractValidator<RunArchiveCommand>
                 .WithMessage(localizer.GetString("Validation.ArchiveIngestionFileIdsDistinct").Value);
 
             RuleFor(x => x.Request.MaxFiles)
-                .InclusiveBetween(0, 1000)
+                .InclusiveBetween(0, 10_000)
                 .When(x => x.Request.MaxFiles.HasValue)
                 .WithMessage(localizer.GetString("Validation.ArchiveMaxFilesRange").Value);
         });

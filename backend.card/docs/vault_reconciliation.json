@@ -12,12 +12,12 @@
     ]
   },
   "Evaluate": {
-    "ChunkSize": 500,
-    "ClaimRetryCount": 3,
-    "ClaimTimeoutSeconds": 300
+    "ChunkSize": 5000,
+    "ClaimRetryCount": 5,
+    "ClaimTimeoutSeconds": 600
   },
   "Execute": {
-    "LeaseSeconds": 30,
-    "MaxEvaluations": 5000
+    "LeaseSeconds": 120,
+    "MaxEvaluations": 50000
   }
 }
