@@ -9,14 +9,16 @@ namespace LinkPara.Card.API.Controllers;
 
 public class FileIngestionController : ApiControllerBase
 {
-    [Authorize(Policy = FileIngestionPolicies.Create)]
+    //[Authorize(Policy = FileIngestionPolicies.Create)]
+    [AllowAnonymous]
     [HttpPost("")]
     public Task<List<FileIngestionResponse>> IngestAsync([FromBody] FileIngestionRequest request)
     {
         return Mediator.Send(MapToCommand(request ?? new FileIngestionRequest()));
     }
 
-    [Authorize(Policy = FileIngestionPolicies.Create)]
+    //[Authorize(Policy = FileIngestionPolicies.Create)]
+    [AllowAnonymous]
     [HttpPost("{fileSourceType}/{fileType}/{fileContentType}")]
     public Task<List<FileIngestionResponse>> IngestByRouteAsync(
         FileSourceType fileSourceType,

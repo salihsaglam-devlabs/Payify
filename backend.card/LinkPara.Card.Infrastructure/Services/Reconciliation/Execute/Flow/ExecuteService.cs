@@ -53,7 +53,7 @@ internal sealed class ExecuteService
         CancellationToken cancellationToken = default)
     {
         errors ??= new List<ReconciliationErrorDetail>();
-        var now = DateTime.Now;
+        var now = DateTime.UtcNow;
         var executeOptions = ResolveExecuteOptions(request);
         var selection = ExecutionSelection.Create(request);
 
@@ -461,7 +461,7 @@ internal sealed class ExecuteService
                     ? ExecutionStatus.Completed
                     : ExecutionStatus.Failed;
 
-            execution.FinishedAt = DateTime.Now;
+            execution.FinishedAt = DateTime.UtcNow;
             execution.RequestPayload = JsonSerializer.Serialize(handlerResult.RequestPayload);
             execution.ResponsePayload = JsonSerializer.Serialize(handlerResult.ResponsePayload);
             execution.ResultCode = handlerResult.ResultCode;
@@ -498,7 +498,7 @@ internal sealed class ExecuteService
             ScheduleRetry(operation, now, ex.Message);
 
             execution.Status = ExecutionStatus.Failed;
-            execution.FinishedAt = DateTime.Now;
+            execution.FinishedAt = DateTime.UtcNow;
             execution.ResultCode = "FAILED";
             execution.ResultMessage = _localizer.Get("Reconciliation.OperationExecutionFailed");
             execution.ErrorCode = "OPERATION_EXECUTION_FAILED";
@@ -542,7 +542,7 @@ internal sealed class ExecuteService
             operation.LastError = _localizer.Get("Reconciliation.ManualReviewNotResolved");
 
             execution.Status = ExecutionStatus.Failed;
-            execution.FinishedAt = DateTime.Now;
+            execution.FinishedAt = DateTime.UtcNow;
             execution.ResultCode = "MANUAL_REVIEW_NOT_FOUND";
             execution.ResultMessage = _localizer.Get("Reconciliation.ManualReviewNotResolved");
             execution.ErrorCode = "MANUAL_REVIEW_NOT_FOUND";
@@ -561,19 +561,19 @@ internal sealed class ExecuteService
 
         if (review.Decision == ReviewDecision.Pending &&
             review.ExpiresAt.HasValue &&
-            review.ExpiresAt.Value <= DateTime.Now)
+            review.ExpiresAt.Value <= DateTime.UtcNow)
         {
-            ApplyExpirationDecision(review);
+            ApplyExpirationDecision(review, DateTime.UtcNow);
         }
 
         if (review.Decision == ReviewDecision.Pending)
         {
             operation.Status = OperationStatus.Blocked;
             ReleaseLease(operation);
-            operation.NextAttemptAt = review.ExpiresAt ?? DateTime.Now.AddSeconds(BaseRetrySeconds);
+            operation.NextAttemptAt = review.ExpiresAt ?? DateTime.UtcNow.AddSeconds(BaseRetrySeconds);
 
             execution.Status = ExecutionStatus.Skipped;
-            execution.FinishedAt = DateTime.Now;
+            execution.FinishedAt = DateTime.UtcNow;
             execution.ResultCode = "WAITING_MANUAL_DECISION";
             execution.ResultMessage = _localizer.Get("Reconciliation.ManualReviewDecisionPending");
             execution.ResponsePayload = JsonSerializer.Serialize(new { review.Decision, review.ExpiresAt });
@@ -594,7 +594,7 @@ internal sealed class ExecuteService
         operation.LastError = null;
 
         execution.Status = ExecutionStatus.Completed;
-        execution.FinishedAt = DateTime.Now;
+        execution.FinishedAt = DateTime.UtcNow;
         execution.ResultCode = $"MANUAL_GATE_{review.Decision.ToString().ToUpperInvariant()}";
         execution.ResultMessage = _localizer.Get("Reconciliation.ManualGateResolved", review.Decision);
         execution.ResponsePayload = JsonSerializer.Serialize(new { review.Decision });
@@ -670,7 +670,7 @@ internal sealed class ExecuteService
         }
     }
 
-    private static void ApplyExpirationDecision(ReconciliationReview review)
+    private static void ApplyExpirationDecision(ReconciliationReview review, DateTime decisionAtUtc)
     {
         review.Decision = review.ExpirationAction switch
         {
@@ -679,7 +679,7 @@ internal sealed class ExecuteService
             _ => ReviewDecision.Cancelled
         };
 
-        review.DecisionAt = DateTime.Now;
+        review.DecisionAt ??= decisionAtUtc;
     }
 
     private async Task<OperationExecutionResult> CompleteExecutionAsync(
@@ -698,7 +698,7 @@ internal sealed class ExecuteService
         operation.NextAttemptAt = null;
 
         execution.Status = executionStatus;
-        execution.FinishedAt = DateTime.Now;
+        execution.FinishedAt = DateTime.UtcNow;
         execution.ResultCode = resultCode;
         execution.ResultMessage = resultMessage;
         execution.ResponsePayload = JsonSerializer.Serialize(new { resultCode, resultMessage });

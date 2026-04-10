@@ -466,7 +466,7 @@ internal sealed class EvaluateService : IEvaluateService
     private static DateTime? ResolveReviewExpirationAt(EvaluationOperation operation)
     {
         return operation.ReviewTimeout.HasValue
-            ? DateTime.Now.Add(operation.ReviewTimeout.Value)
+            ? DateTime.UtcNow.Add(operation.ReviewTimeout.Value)
             : null;
     }
 

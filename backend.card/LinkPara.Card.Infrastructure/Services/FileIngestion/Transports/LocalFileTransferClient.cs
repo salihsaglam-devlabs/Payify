@@ -141,7 +141,7 @@ public class LocalFileTransferClient : IFileTransferClient
         if (string.IsNullOrWhiteSpace(rootPath))
             throw new InvalidOperationException(_localizer.Get("FileIngestion.LocalRootPathEmpty", profileKey));
 
-        var now = DateTime.Now;
+        var now = DateTime.UtcNow;
         var dateFolder = now.ToString("yyyy-MM-dd");
         var timeFolder = now.ToString("HH-mm-ss-fff");
         var timestampPath = Path.Combine(rootPath, dateFolder, timeFolder);

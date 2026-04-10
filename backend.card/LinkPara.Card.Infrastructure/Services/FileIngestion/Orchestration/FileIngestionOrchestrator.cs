@@ -142,7 +142,7 @@ public class FileIngestionOrchestrator : IFileIngestionService
 
             if (_options.Processing.EnableParallelProcessing == true && fileList.Count > 1)
             {
-                var maxDop = Math.Max(1, _options.Processing.MaxDegreeOfParallelism.Value);
+                var maxDop = GetMaxDegreeOfParallelism();
                 var semaphore = new SemaphoreSlim(maxDop);
 
                 for (int i = 0; i < fileList.Count; i++)
@@ -2202,11 +2202,13 @@ public class FileIngestionOrchestrator : IFileIngestionService
             ?? throw new FileIngestionConfigurationException(ApiErrorCode.FileIngestionParsingNotDefined, _localizer.Get("FileIngestion.ParsingNotDefined"));
     }
 
-    private int GetBatchSize() => Math.Max(1, _options.Processing.BatchSize.Value);
+    private int GetBatchSize() => Math.Max(1, _options.Processing.BatchSize ?? 1);
 
-    private int GetRetryBatchSize() => Math.Max(1, _options.Processing.RetryBatchSize.Value);
+    private int GetRetryBatchSize() => Math.Max(1, _options.Processing.RetryBatchSize ?? 1);
 
-    private int GetFailedRowMaxRetryCount() => Math.Max(1, _options.Processing.FailedRowMaxRetryCount.Value);
+    private int GetFailedRowMaxRetryCount() => Math.Max(1, _options.Processing.FailedRowMaxRetryCount ?? 1);
+
+    private int GetMaxDegreeOfParallelism() => Math.Max(1, _options.Processing.MaxDegreeOfParallelism ?? 1);
 
     private static string BuildProfileKey(FileType fileType, FileContentType contentType) => $"{fileType}{contentType}";
 

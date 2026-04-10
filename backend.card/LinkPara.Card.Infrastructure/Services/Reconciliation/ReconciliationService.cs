@@ -37,6 +37,17 @@ internal sealed class ReconciliationService : IReconciliationService
     public async Task<EvaluateResponse> EvaluateAsync(EvaluateRequest request, CancellationToken cancellationToken = default)
     {
         var errors = new List<ReconciliationErrorDetail>();
+        if (request is null)
+        {
+            errors.Add(_errorMapper.Create("INVALID_REQUEST", _localizer.Get("Reconciliation.RequestIsNull"), "RECONCILIATION_SERVICE_EVALUATE"));
+            return new EvaluateResponse
+            {
+                Message = BuildFailureMessage(_localizer.Get("Reconciliation.RequestFailed"), errors),
+                Errors = errors,
+                ErrorCount = errors.Count
+            };
+        }
+
         try
         {
             var response = await _evaluateService.EvaluateAsync(request, errors, cancellationToken);
@@ -59,6 +70,17 @@ internal sealed class ReconciliationService : IReconciliationService
     public async Task<ExecuteResponse> ExecuteAsync(ExecuteRequest request, CancellationToken cancellationToken = default)
     {
         var errors = new List<ReconciliationErrorDetail>();
+        if (request is null)
+        {
+            errors.Add(_errorMapper.Create("INVALID_REQUEST", _localizer.Get("Reconciliation.RequestIsNull"), "RECONCILIATION_SERVICE_EXECUTE"));
+            return new ExecuteResponse
+            {
+                Message = BuildFailureMessage(_localizer.Get("Reconciliation.RequestFailed"), errors),
+                Errors = errors,
+                ErrorCount = errors.Count
+            };
+        }
+
         try
         {
             var response = await _executeService.ExecuteAsync(request, errors, cancellationToken);
@@ -81,6 +103,18 @@ internal sealed class ReconciliationService : IReconciliationService
     public async Task<ApproveResponse> ApproveAsync(ApproveRequest request, CancellationToken cancellationToken = default)
     {
         var errors = new List<ReconciliationErrorDetail>();
+        if (request is null)
+        {
+            errors.Add(_errorMapper.Create("INVALID_REQUEST", _localizer.Get("Reconciliation.RequestIsNull"), "RECONCILIATION_SERVICE_APPROVE"));
+            return new ApproveResponse
+            {
+                Result = "Failed",
+                Message = BuildFailureMessage(_localizer.Get("Reconciliation.RequestFailed"), errors),
+                Errors = errors,
+                ErrorCount = errors.Count
+            };
+        }
+
         try
         {
             var response = await _reviewService.ApproveAsync(request, errors, cancellationToken);
@@ -108,6 +142,18 @@ internal sealed class ReconciliationService : IReconciliationService
     public async Task<RejectResponse> RejectAsync(RejectRequest request, CancellationToken cancellationToken = default)
     {
         var errors = new List<ReconciliationErrorDetail>();
+        if (request is null)
+        {
+            errors.Add(_errorMapper.Create("INVALID_REQUEST", _localizer.Get("Reconciliation.RequestIsNull"), "RECONCILIATION_SERVICE_REJECT"));
+            return new RejectResponse
+            {
+                Result = "Failed",
+                Message = BuildFailureMessage(_localizer.Get("Reconciliation.RequestFailed"), errors),
+                Errors = errors,
+                ErrorCount = errors.Count
+            };
+        }
+
         try
         {
             var response = await _reviewService.RejectAsync(request, errors, cancellationToken);
@@ -135,6 +181,17 @@ internal sealed class ReconciliationService : IReconciliationService
     public async Task<PendingReviewsResponse> GetPendingReviewsAsync(PendingReviewsRequest request, CancellationToken cancellationToken = default)
     {
         var errors = new List<ReconciliationErrorDetail>();
+        if (request is null)
+        {
+            errors.Add(_errorMapper.Create("INVALID_REQUEST", _localizer.Get("Reconciliation.RequestIsNull"), "RECONCILIATION_SERVICE_GET_PENDING_REVIEWS"));
+            return new PendingReviewsResponse
+            {
+                Message = BuildFailureMessage(_localizer.Get("Reconciliation.RequestFailed"), errors),
+                Errors = errors,
+                ErrorCount = errors.Count
+            };
+        }
+
         try
         {
             var response = await _reviewService.GetPendingAsync(request, errors, cancellationToken);
@@ -157,6 +214,17 @@ internal sealed class ReconciliationService : IReconciliationService
     public async Task<GetAlertsResponse> GetAlertsAsync(GetAlertsRequest request, CancellationToken cancellationToken = default)
     {
         var errors = new List<ReconciliationErrorDetail>();
+        if (request is null)
+        {
+            errors.Add(_errorMapper.Create("INVALID_REQUEST", _localizer.Get("Reconciliation.RequestIsNull"), "RECONCILIATION_SERVICE_GET_ALERTS"));
+            return new GetAlertsResponse
+            {
+                Message = BuildFailureMessage(_localizer.Get("Reconciliation.RequestFailed"), errors),
+                Errors = errors,
+                ErrorCount = errors.Count
+            };
+        }
+
         try
         {
             var response = await _alertsService.GetAsync(request, errors, cancellationToken);

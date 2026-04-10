@@ -18,7 +18,8 @@ namespace LinkPara.Card.API.Controllers
 {
     public class ReconciliationController : ApiControllerBase
     {
-        [Authorize(Policy = ReconciliationPolicies.Create)]
+        //[Authorize(Policy = ReconciliationPolicies.Create)]
+        [AllowAnonymous]
         [HttpPost("Evaluate")]
         public async Task<EvaluateResponse> Evaluate([FromBody] EvaluateRequest req = null, CancellationToken ct = default)
         {
@@ -28,7 +29,8 @@ namespace LinkPara.Card.API.Controllers
             return res;
         }
         
-        [Authorize(Policy = ReconciliationPolicies.Create)]
+        //[Authorize(Policy = ReconciliationPolicies.Create)]
+        [AllowAnonymous]
         [HttpPost("Operations/Execute")]
         public async Task<ExecuteResponse> Execute([FromBody] ExecuteRequest req = null, CancellationToken ct = default)
         {
@@ -38,7 +40,8 @@ namespace LinkPara.Card.API.Controllers
             return res;
         }
 
-        [Authorize(Policy = ReconciliationPolicies.Update)]
+        //[Authorize(Policy = ReconciliationPolicies.Update)]
+        [AllowAnonymous]
         [HttpPost("Reviews/Approve")]
         public async Task<ApproveResponse> Approve([FromBody] ApproveRequest req, CancellationToken ct = default)
         {
@@ -48,7 +51,8 @@ namespace LinkPara.Card.API.Controllers
             return res;
         }
 
-        [Authorize(Policy = ReconciliationPolicies.Update)]
+        //[Authorize(Policy = ReconciliationPolicies.Update)]
+        [AllowAnonymous]
         [HttpPost("Reviews/Reject")]
         public async Task<RejectResponse> Reject([FromBody] RejectRequest req, CancellationToken ct = default)
         {
@@ -58,7 +62,8 @@ namespace LinkPara.Card.API.Controllers
             return res;
         }
 
-        [Authorize(Policy = ReconciliationPolicies.ReadAll)]
+        //[Authorize(Policy = ReconciliationPolicies.ReadAll)]
+        [AllowAnonymous]
         [HttpGet("Reviews/Pending")]
         public async Task<PendingReviewsResponse> GetPendingManualReviews([FromQuery] PendingReviewsRequest req, CancellationToken ct = default)
         {
@@ -67,7 +72,8 @@ namespace LinkPara.Card.API.Controllers
             return res;
         }
 
-        [Authorize(Policy = ReconciliationPolicies.ReadAll)]
+        //[Authorize(Policy = ReconciliationPolicies.ReadAll)]
+        [AllowAnonymous]
         [HttpGet("Alerts")]
         public async Task<GetAlertsResponse> GetAlerts([FromQuery] GetAlertsRequest req, CancellationToken ct = default)
         {

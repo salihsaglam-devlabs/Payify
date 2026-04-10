@@ -146,6 +146,18 @@
   <data name="Validation.OperationIdsDistinct" xml:space="preserve">
     <value>İşlem kimlikleri benzersiz olmalıdır.</value>
   </data>
+  <data name="Validation.ArchiveIngestionFileIdsNoEmpty" xml:space="preserve">
+    <value>Dosya alım kimlikleri boş guid değerleri içeremez.</value>
+  </data>
+  <data name="Validation.ArchiveIngestionFileIdsDistinct" xml:space="preserve">
+    <value>Dosya alım kimlikleri benzersiz olmalıdır.</value>
+  </data>
+  <data name="Validation.ArchivePreviewLimitRange" xml:space="preserve">
+    <value>Önizleme limiti 0 ile 1000 arasında olmalıdır.</value>
+  </data>
+  <data name="Validation.ArchiveMaxFilesRange" xml:space="preserve">
+    <value>Maksimum dosya sayısı 0 ile 1000 arasında olmalıdır.</value>
+  </data>
 
   <!-- ════════════════════════════════════════════ -->
   <!-- FileIngestion – Error Mapper                 -->
@@ -578,6 +590,9 @@
   </data>
   <data name="Reconciliation.RequestFailed" xml:space="preserve">
     <value>İstek başarısız oldu.</value>
+  </data>
+  <data name="Reconciliation.RequestIsNull" xml:space="preserve">
+    <value>Mutabakat isteği boş olamaz.</value>
   </data>
   <data name="Reconciliation.UnsupportedOperationCode" xml:space="preserve">
     <value>Desteklenmeyen mutabakat işlem kodu: '{0}'.</value>

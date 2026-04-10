@@ -24,7 +24,7 @@ internal sealed class AuditStampService : IAuditStampService
             throw new InvalidOperationException("Audit user context is required for persistence operations.");
         }
 
-        return new AuditStamp(userId, DateTime.Now);
+        return new AuditStamp(userId, DateTime.UtcNow);
     }
 
     public void StampForCreate(AuditEntity entity)

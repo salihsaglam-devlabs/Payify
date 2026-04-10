@@ -56,7 +56,7 @@ internal sealed class ArchiveService : IArchiveService
             var effectiveBeforeDate = ResolveBeforeDate(effectiveRequest.BeforeDate);
             var effectiveLimit = effectiveRequest.Limit is null or 0
                 ? _options.Defaults.PreviewLimit.Value
-                : effectiveRequest.Limit.Value;
+                : Math.Clamp(effectiveRequest.Limit.Value, 1, 1000);
             var candidateIds = await _reader.ResolveCandidateFileIdsAsync(
                 effectiveRequest.IngestionFileIds ?? Array.Empty<Guid>(),
                 effectiveBeforeDate,
@@ -119,7 +119,7 @@ internal sealed class ArchiveService : IArchiveService
             var effectiveBeforeDate = ResolveBeforeDate(effectiveRequest.BeforeDate);
             var effectiveMaxFiles = effectiveRequest.MaxFiles is null or 0
                 ? _options.Defaults.MaxRunCount.Value
-                : effectiveRequest.MaxFiles.Value;
+                : Math.Clamp(effectiveRequest.MaxFiles.Value, 1, 1000);
             var continueOnError = effectiveRequest.ContinueOnError ?? _options.Defaults.ContinueOnError.Value;
             var candidateIds = await _reader.ResolveCandidateFileIdsAsync(
                 effectiveRequest.IngestionFileIds ?? Array.Empty<Guid>(),

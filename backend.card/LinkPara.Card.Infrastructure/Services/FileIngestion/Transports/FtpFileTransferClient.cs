@@ -179,7 +179,7 @@ public class FtpFileTransferClient : IFileTransferClient
     {
         var extension = Path.GetExtension(fileName);
         var nameWithoutExtension = Path.GetFileNameWithoutExtension(fileName);
-        return $"{nameWithoutExtension}_{DateTime.Now:yyyyMMddHHmmssfff}{extension}";
+        return $"{nameWithoutExtension}_{DateTime.UtcNow:yyyyMMddHHmmssfff}{extension}";
     }
 
     private static async Task SkipBytesAsync(Stream stream, long byteOffset, CancellationToken cancellationToken)

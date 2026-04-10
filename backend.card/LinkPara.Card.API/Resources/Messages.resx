@@ -146,6 +146,18 @@
   <data name="Validation.OperationIdsDistinct" xml:space="preserve">
     <value>Operation IDs must be unique.</value>
   </data>
+  <data name="Validation.ArchiveIngestionFileIdsNoEmpty" xml:space="preserve">
+    <value>Ingestion file IDs cannot contain empty guid values.</value>
+  </data>
+  <data name="Validation.ArchiveIngestionFileIdsDistinct" xml:space="preserve">
+    <value>Ingestion file IDs must be unique.</value>
+  </data>
+  <data name="Validation.ArchivePreviewLimitRange" xml:space="preserve">
+    <value>Preview limit must be between 0 and 1000.</value>
+  </data>
+  <data name="Validation.ArchiveMaxFilesRange" xml:space="preserve">
+    <value>Max files must be between 0 and 1000.</value>
+  </data>
 
   <!-- ════════════════════════════════════════════ -->
   <!-- FileIngestion – Error Mapper                 -->
@@ -582,6 +594,9 @@
   </data>
   <data name="Reconciliation.RequestFailed" xml:space="preserve">
     <value>Request failed.</value>
+  </data>
+  <data name="Reconciliation.RequestIsNull" xml:space="preserve">
+    <value>Reconciliation request is null.</value>
   </data>
   <data name="Reconciliation.UnsupportedOperationCode" xml:space="preserve">
     <value>Unsupported reconciliation operation code '{0}'.</value>

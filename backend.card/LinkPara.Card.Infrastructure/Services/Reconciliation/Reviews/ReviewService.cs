@@ -37,6 +37,18 @@ internal sealed class ReviewService
         CancellationToken cancellationToken = default)
     {
         errors ??= new List<ReconciliationErrorDetail>();
+        if (request is null)
+        {
+            errors.Add(_errorMapper.Create("INVALID_REQUEST", _localizer.Get("Reconciliation.RequestIsNull"), "REVIEW_APPROVE"));
+            return new ApproveResponse
+            {
+                Result = "Failed",
+                Message = _localizer.Get("Reconciliation.RequestFailed"),
+                Errors = errors,
+                ErrorCount = errors.Count
+            };
+        }
+
         try
         {
             var (result, message) = await SetDecisionAsync(
@@ -81,6 +93,18 @@ internal sealed class ReviewService
         CancellationToken cancellationToken = default)
     {
         errors ??= new List<ReconciliationErrorDetail>();
+        if (request is null)
+        {
+            errors.Add(_errorMapper.Create("INVALID_REQUEST", _localizer.Get("Reconciliation.RequestIsNull"), "REVIEW_REJECT"));
+            return new RejectResponse
+            {
+                Result = "Failed",
+                Message = _localizer.Get("Reconciliation.RequestFailed"),
+                Errors = errors,
+                ErrorCount = errors.Count
+            };
+        }
+
         try
         {
             var (result, message) = await SetDecisionAsync(
@@ -125,6 +149,17 @@ internal sealed class ReviewService
         CancellationToken cancellationToken = default)
     {
         errors ??= new List<ReconciliationErrorDetail>();
+        if (request is null)
+        {
+            errors.Add(_errorMapper.Create("INVALID_REQUEST", _localizer.Get("Reconciliation.RequestIsNull"), "GET_PENDING_REVIEWS_QUERY"));
+            return new PendingReviewsResponse
+            {
+                Message = _localizer.Get("Reconciliation.RequestFailed"),
+                Errors = errors,
+                ErrorCount = errors.Count
+            };
+        }
+
         try
         {
             var page = Math.Max(request.Page, 1);
@@ -268,7 +303,7 @@ internal sealed class ReviewService
 
                 var currentReviewerId = ResolveReviewerId(reviewerId);
                 var auditStamp = _auditStampService.CreateStamp();
-                var now = DateTime.Now;
+                var now = DateTime.UtcNow;
 
                 var updatedReviewRows = await _dbContext.ReconciliationReviews
                     .Where(x => x.OperationId == operationId && x.Decision == ReviewDecision.Pending)
