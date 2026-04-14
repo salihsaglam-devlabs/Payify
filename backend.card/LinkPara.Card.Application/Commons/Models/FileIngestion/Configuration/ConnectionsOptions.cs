@@ -1,3 +1,5 @@
+using LinkPara.Card.Application.Commons.Exceptions;
+
 namespace LinkPara.Card.Application.Commons.Models.FileIngestion.Configuration;
 
 public class ConnectionsOptions
@@ -8,9 +10,9 @@ public class ConnectionsOptions
     public void Validate()
     {
         if (Source is null)
-            throw new InvalidOperationException("Vault configuration missing: FileIngestion.Connections.Source");
+            throw new FileIngestionConfigSourceMissingException("Vault configuration missing: FileIngestion.Connections.Source");
         if (Target is null)
-            throw new InvalidOperationException("Vault configuration missing: FileIngestion.Connections.Target");
+            throw new FileIngestionConfigTargetMissingException("Vault configuration missing: FileIngestion.Connections.Target");
 
         Source.Validate();
         Target.Validate();

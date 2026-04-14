@@ -1,5 +1,6 @@
 using LinkPara.Audit;
 using LinkPara.Cache;
+using LinkPara.Card.Application.Commons.Exceptions;
 using LinkPara.Card.Application.Commons.Interfaces;
 using LinkPara.Card.Application.Commons.Interfaces.Archive;
 using LinkPara.Card.Application.Commons.Interfaces.FileIngestion;
@@ -40,7 +41,10 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using System.Reflection;
+using LinkPara.Card.Application.Commons.Models.AppConfiguration;
 using LinkPara.Card.Application.Commons.Models.Archive.Configuration;
+using LinkPara.Card.Application.Commons.Models.AuthBypass;
+using LinkPara.Card.Application.Commons.Models.DatabaseConfiguration;
 using LinkPara.Card.Application.Commons.Models.FileIngestion.Configuration;
 using LinkPara.Card.Application.Commons.Models.Reconciliation.Configuration;
 using LinkPara.Card.Application.Features.PaycoreServices.CardPinServices.Services;
@@ -99,16 +103,33 @@ public static class DependencyInjection
         reconciliation.ValidateAndApplyDefaults();
 
         var fileIngestion = vaultClient.GetSecretValue<FileIngestionOptions>("CardSecrets", FileIngestionOptions.SectionName, null)
-            ?? throw new InvalidOperationException("Vault key missing: CardSecrets/FileIngestion (Connections and Profiles are required)");
+            ?? throw new FileIngestionVaultConfigMissingException("Vault key missing: CardSecrets/FileIngestion (Connections and Profiles are required)");
         fileIngestion.ValidateAndApplyDefaults();
 
         var archive = vaultClient.GetSecretValue<ArchiveOptions>("CardSecrets", ArchiveOptions.SectionName, null)
             ?? new ArchiveOptions();
         archive.ValidateAndApplyDefaults();
 
+        var appConfig = vaultClient.GetSecretValue<AppConfigOptions>("CardSecrets", AppConfigOptions.SectionName, null);
+        if (appConfig != null)
+        {
+            appConfig.ValidateAndApplyDefaults();
+        }
+        else
+        {
+            appConfig = new AppConfigOptions
+            {
+                AuthBypass = configuration.GetSection(AuthBypassOptions.SectionName).Get<AuthBypassOptions>(),
+                Database = configuration.GetSection(DatabaseOptions.SectionName).Get<DatabaseOptions>()
+            };
+            appConfig.ValidateAndApplyDefaults();
+        }
+
         services.AddSingleton<IOptions<ReconciliationOptions>>(Options.Create(reconciliation));
         services.AddSingleton<IOptions<FileIngestionOptions>>(Options.Create(fileIngestion));
         services.AddSingleton<IOptions<ArchiveOptions>>(Options.Create(archive));
+        services.AddSingleton<IOptions<AuthBypassOptions>>(Options.Create(appConfig.AuthBypass));
+        services.AddSingleton<IOptions<DatabaseOptions>>(Options.Create(appConfig.Database));
     }
 
 

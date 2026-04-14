@@ -57,7 +57,7 @@ namespace LinkPara.Card.API.Controllers
         /// <returns></returns>
         [Authorize(Policy = "PaycoreCard:Read")]
         [HttpGet("card-info")]
-        public async Task<List<GetCardInformationsResponse>> GetCardInformationsAsync([FromQuery]GetCardInformationsQuery query)
+        public async Task<GetCardInformationsResponse> GetCardInformationsAsync([FromQuery]GetCardInformationsQuery query)
         {
             return await Mediator.Send(query);
         }
@@ -105,7 +105,7 @@ namespace LinkPara.Card.API.Controllers
         /// <returns></returns>
         [Authorize(Policy = "PaycoreCard:Create")]
         [HttpPut("additional-limit-restriction")]
-        public async Task<AddAdditionalLimitRestrictionResponse> AddAdditionalLimitRestriction(AddAdditionalLimitRestrictionCommand command)
+        public async Task<PaycoreResponse> AddAdditionalLimitRestriction(AddAdditionalLimitRestrictionCommand command)
         {
             return await Mediator.Send(command);
         }
@@ -122,5 +122,28 @@ namespace LinkPara.Card.API.Controllers
             return await Mediator.Send(query);
         }
 
-     }
+        /// <summary>
+        /// Renews Card
+        /// </summary>
+        /// <param name="command"></param>
+        /// <returns></returns>
+        [Authorize(Policy = "PaycoreCard:Create")]
+        [HttpPost("card-renewal")]
+        public async Task<PaycoreResponse> CardRenewal(CardRenewalCommand command)
+        {
+            return await Mediator.Send(command);
+        }
+
+        /// <summary>
+        /// Gets Card Status
+        /// </summary>
+        /// <param name="query"></param>
+        /// <returns></returns>
+        [Authorize(Policy = "PaycoreCard:Read")]
+        [HttpGet("card-status")]
+        public async Task<GetCardStatusResponse> GetCardStatusAsync([FromQuery] GetCardStatusQuery query)
+        {
+            return await Mediator.Send(query);
+        }
+    }
 }

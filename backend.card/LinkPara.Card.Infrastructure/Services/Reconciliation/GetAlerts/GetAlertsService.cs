@@ -1,105 +1,66 @@
-using LinkPara.Card.Application.Commons.Extensions;
-using Microsoft.Extensions.Localization;
-using LinkPara.Card.Application.Commons.Interfaces.Reconciliation;
-using LinkPara.Card.Application.Commons.Models.Reconciliation.Contracts.Requests;
-using LinkPara.Card.Application.Commons.Models.Reconciliation.Contracts.Responses;
-using LinkPara.Card.Application.Commons.Models.Reconciliation.Shared;
+using LinkPara.Card.Application.Features.Reconciliation.Queries.GetAlerts;
 using LinkPara.Card.Infrastructure.Persistence;
+using LinkPara.SharedModels.Pagination;
 using Microsoft.EntityFrameworkCore;
+using AlertModel = LinkPara.Card.Application.Commons.Models.Reconciliation.Shared.Alert;
 
 namespace LinkPara.Card.Infrastructure.Services.Reconciliation.GetAlerts;
 
 internal sealed class GetAlertsService
 {
     private readonly CardDbContext _dbContext;
-    private readonly IReconciliationErrorMapper _errorMapper;
-    private readonly IStringLocalizer _localizer;
 
-    public GetAlertsService(
-        CardDbContext dbContext,
-        IReconciliationErrorMapper errorMapper,
-        Func<LinkPara.Card.Application.Commons.Localization.LocalizerResource, IStringLocalizer> localizerFactory)
+    public GetAlertsService(CardDbContext dbContext)
     {
         _dbContext = dbContext;
-        _errorMapper = errorMapper;
-        _localizer = localizerFactory(LinkPara.Card.Application.Commons.Localization.LocalizerResource.Messages);
     }
 
-    public async Task<GetAlertsResponse> GetAsync(
-        GetAlertsRequest request,
-        List<ReconciliationErrorDetail>? errors = null,
+    public async Task<PaginatedList<AlertModel>> GetAsync(
+        GetAlertsQuery query,
         CancellationToken cancellationToken = default)
     {
-        errors ??= new List<ReconciliationErrorDetail>();
-        try
+        var page = Math.Max(query.Page, 1);
+        var pageSize = Math.Clamp(query.Size, 1, 1000);
+        var skip = (page - 1) * pageSize;
+
+        var baseQuery = _dbContext.ReconciliationAlerts
+            .AsNoTracking()
+            .AsQueryable();
+
+        if (query.Date.HasValue)
         {
-            var page = Math.Max(request.Page, 1);
-            var pageSize = Math.Clamp(request.PageSize, 1, 1000);
-            var skip = (page - 1) * pageSize;
+            var start = query.Date.Value.ToDateTime(TimeOnly.MinValue);
+            var end = start.AddDays(1);
 
-            var query = _dbContext.ReconciliationAlerts
-                .AsNoTracking()
-                .AsQueryable();
-
-            if (request.Date.HasValue)
-            {
-                var start = request.Date.Value.ToDateTime(TimeOnly.MinValue);
-                var end = start.AddDays(1);
-
-                query = query.Where(x => x.CreateDate >= start && x.CreateDate < end);
-            }
-
-            if (request.AlertStatus.HasValue)
-            {
-                query = query.Where(x => x.AlertStatus == request.AlertStatus.Value);
-            }
-
-            query = query.OrderByDescending(x => x.CreateDate);
-
-            var total = await query.CountAsync(cancellationToken);
-
-            var alerts = await query
-                .Skip(skip)
-                .Take(pageSize)
-                .Select(x => new Application.Commons.Models.Reconciliation.Shared.Alert
-                {
-                    Id = x.Id,
-                    FileLineId = x.FileLineId,
-                    GroupId = x.GroupId,
-                    EvaluationId = x.EvaluationId,
-                    OperationId = x.OperationId,
-                    Severity = x.Severity,
-                    AlertType = x.AlertType,
-                    Message = x.Message,
-                    CreatedAt = x.CreateDate
-                })
-                .ToListAsync(cancellationToken);
-
-            return new GetAlertsResponse
-            {
-                Page = new PagedResult<Application.Commons.Models.Reconciliation.Shared.Alert>
-                {
-                    Page = page,
-                    PageSize = pageSize,
-                    Total = total,
-                    Items = alerts
-                },
-                Errors = errors,
-                ErrorCount = errors.Count
-            };
+            baseQuery = baseQuery.Where(x => x.CreateDate >= start && x.CreateDate < end);
         }
-        catch (Exception ex)
+
+        if (query.AlertStatus.HasValue)
         {
-            errors.Add(_errorMapper.MapException(
-                ex,
-                "GET_ALERTS_QUERY",
-                message: _localizer.Get("Reconciliation.AlertsLoadFailed")));
-
-            return new GetAlertsResponse
-            {
-                Errors = errors,
-                ErrorCount = errors.Count
-            };
+            baseQuery = baseQuery.Where(x => x.AlertStatus == query.AlertStatus.Value);
         }
+
+        baseQuery = baseQuery.OrderByDescending(x => x.CreateDate);
+
+        var total = await baseQuery.CountAsync(cancellationToken);
+
+        var alerts = await baseQuery
+            .Skip(skip)
+            .Take(pageSize)
+            .Select(x => new AlertModel
+            {
+                Id = x.Id,
+                FileLineId = x.FileLineId,
+                GroupId = x.GroupId,
+                EvaluationId = x.EvaluationId,
+                OperationId = x.OperationId,
+                Severity = x.Severity,
+                AlertType = x.AlertType,
+                Message = x.Message,
+                CreatedAt = x.CreateDate
+            })
+            .ToListAsync(cancellationToken);
+
+        return new PaginatedList<AlertModel>(alerts, total, page, pageSize, OrderByStatus.Desc, query.SortBy);
     }
 }

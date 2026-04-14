@@ -1,3 +1,5 @@
+using LinkPara.Card.Application.Commons.Exceptions;
+
 namespace LinkPara.Card.Application.Commons.Models.Archive.Configuration;
 
 public class ArchiveOptions
@@ -36,8 +38,8 @@ public class ArchiveOptions
 
 public class ArchiveDefaultOptions
 {
-    public const int DefaultPreviewLimit = 1_000;
-    public const int DefaultMaxRunCount = 5_000;
+    public const int DefaultPreviewLimit = 5_000;
+    public const int DefaultMaxRunCount = 50_000;
     public const bool DefaultContinueOnError = false;
     public const bool DefaultUseConfiguredBeforeDateOnly = false;
     public const string DefaultDefaultBeforeDateStrategy = "RetentionDays";
@@ -63,9 +65,9 @@ public class ArchiveDefaultOptions
             : DefaultBeforeDateStrategy;
 
         if (PreviewLimit <= 0)
-            throw new InvalidOperationException($"Archive.Defaults.PreviewLimit must be positive. Current: {PreviewLimit}");
+            throw new ArchivePreviewLimitInvalidException( $"Archive.Defaults.PreviewLimit must be positive. Current: {PreviewLimit}");
         if (MaxRunCount <= 0)
-            throw new InvalidOperationException($"Archive.Defaults.MaxRunCount must be positive. Current: {MaxRunCount}");
+            throw new ArchiveMaxRunCountInvalidException( $"Archive.Defaults.MaxRunCount must be positive. Current: {MaxRunCount}");
     }
 
     [Obsolete("Use ValidateAndApplyDefaults() instead")]
@@ -91,9 +93,9 @@ public class ArchiveRuleOptions
         RetentionOnlyMode ??= DefaultRetentionOnlyMode;
 
         if (RetentionDays < 0)
-            throw new InvalidOperationException($"Archive.Rules.RetentionDays must be non-negative. Current: {RetentionDays}");
+            throw new ArchiveRetentionDaysInvalidException($"Archive.Rules.RetentionDays must be non-negative. Current: {RetentionDays}");
         if (MinLastUpdateAgeHours < 0)
-            throw new InvalidOperationException($"Archive.Rules.MinLastUpdateAgeHours must be non-negative. Current: {MinLastUpdateAgeHours}");
+            throw new ArchiveMinUpdateAgeInvalidException($"Archive.Rules.MinLastUpdateAgeHours must be non-negative. Current: {MinLastUpdateAgeHours}");
     }
 
     [Obsolete("Use ValidateAndApplyDefaults() instead")]

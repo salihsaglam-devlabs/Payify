@@ -1,6 +1,8 @@
+using LinkPara.Card.Application.Commons.Exceptions;
 using LinkPara.Card.Application.Commons.Interfaces;
 using Microsoft.Extensions.Localization;
 using LinkPara.Card.Domain.Enums.FileIngestion;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using System.Net;
 using System.Text;
@@ -15,11 +17,17 @@ public class FtpFileTransferClient : IFileTransferClient
     private readonly FileIngestionOptions _options;
     private readonly IStringLocalizer _localizer;
     private readonly ITimeProvider _timeProvider;
+    private readonly ILogger<FtpFileTransferClient> _logger;
 
-    public FtpFileTransferClient(IOptions<FileIngestionOptions> options, ITimeProvider timeProvider, Func<LinkPara.Card.Application.Commons.Localization.LocalizerResource, IStringLocalizer> localizerFactory)
+    public FtpFileTransferClient(
+        IOptions<FileIngestionOptions> options,
+        ITimeProvider timeProvider,
+        ILogger<FtpFileTransferClient> logger,
+        Func<LinkPara.Card.Application.Commons.Localization.LocalizerResource, IStringLocalizer> localizerFactory)
     {
         _options = options.Value;
         _timeProvider = timeProvider;
+        _logger = logger;
         _localizer = localizerFactory(LinkPara.Card.Application.Commons.Localization.LocalizerResource.Messages);
     }
 
@@ -37,7 +45,7 @@ public class FtpFileTransferClient : IFileTransferClient
 
         var regex = new Regex(profile.Pattern, RegexOptions.Compiled | RegexOptions.IgnoreCase);
         var request = CreateRequest(remotePath, WebRequestMethods.Ftp.ListDirectory, endpointType);
-        using var response = (FtpWebResponse)await request.GetResponseAsync();
+        using var response = await GetResponseWithRetryAsync(request, endpointType, cancellationToken);
         await using var stream = response.GetResponseStream();
         using var reader = new StreamReader(stream ?? Stream.Null);
 
@@ -71,7 +79,7 @@ public class FtpFileTransferClient : IFileTransferClient
     {
         cancellationToken.ThrowIfCancellationRequested();
         var request = CreateRequest(file.FullPath, WebRequestMethods.Ftp.DownloadFile, FileTransferEndpointType.Source);
-        var response = (FtpWebResponse)await request.GetResponseAsync();
+        var response = await GetResponseWithRetryAsync(request, FileTransferEndpointType.Source, cancellationToken);
         var stream = response.GetResponseStream() ?? Stream.Null;
         return new FtpResponseStream(stream, response);
     }
@@ -118,8 +126,9 @@ public class FtpFileTransferClient : IFileTransferClient
         cancellationToken.ThrowIfCancellationRequested();
         var resolvedFileName = ResolveTargetFileName(fileName, endpointType);
         var remotePath = BuildRemoteFilePath(profileKey, resolvedFileName, endpointType);
+        await EnsureDirectoryExistsAsync(remotePath, endpointType);
         var request = CreateRequest(remotePath, WebRequestMethods.Ftp.UploadFile, endpointType);
-        var requestStream = await request.GetRequestStreamAsync();
+        var requestStream = await GetRequestStreamWithRetryAsync(request, endpointType, cancellationToken);
         return new FtpRequestStream(requestStream, request);
     }
 
@@ -132,8 +141,9 @@ public class FtpFileTransferClient : IFileTransferClient
     {
         var resolvedFileName = ResolveTargetFileName(fileName, endpointType);
         var remotePath = BuildRemoteFilePath(profileKey, resolvedFileName, endpointType);
+        await EnsureDirectoryExistsAsync(remotePath, endpointType);
         var request = CreateRequest(remotePath, WebRequestMethods.Ftp.UploadFile, endpointType);
-        await using var stream = new FtpRequestStream(await request.GetRequestStreamAsync(), request);
+        await using var stream = new FtpRequestStream(await GetRequestStreamWithRetryAsync(request, endpointType, cancellationToken), request);
         await stream.WriteAsync(content, cancellationToken);
         await stream.FlushAsync(cancellationToken);
         return new FileReference
@@ -141,6 +151,115 @@ public class FtpFileTransferClient : IFileTransferClient
             Name = resolvedFileName,
             FullPath = remotePath
         };
+    }
+
+    private async Task<FtpWebResponse> GetResponseWithRetryAsync(
+        FtpWebRequest initialRequest,
+        FileTransferEndpointType endpointType,
+        CancellationToken cancellationToken)
+    {
+        var ftpOptions = GetFtpOptions(endpointType);
+        var maxRetries = ftpOptions.RetryCount ?? FtpOptions.DefaultRetryCount;
+        var retryDelay = ftpOptions.RetryDelaySeconds ?? FtpOptions.DefaultRetryDelaySeconds;
+        var host = ftpOptions.Host;
+        var port = ftpOptions.Port ?? FtpOptions.DefaultPort;
+
+        FtpWebRequest request = initialRequest;
+        for (var attempt = 1; attempt <= maxRetries + 1; attempt++)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            try
+            {
+                _logger.LogInformation(
+                    _localizer.Get("FileIngestion.FtpConnecting"),
+                    host, port, attempt, maxRetries + 1, endpointType, request.Method);
+
+                var response = (FtpWebResponse)await request.GetResponseAsync();
+
+                _logger.LogInformation(_localizer.Get("FileIngestion.FtpConnected"), host, port, attempt);
+                return response;
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (WebException ex) when (ex.Status is WebExceptionStatus.ConnectFailure or WebExceptionStatus.Timeout or WebExceptionStatus.NameResolutionFailure)
+            {
+                if (attempt > maxRetries)
+                {
+                    _logger.LogError(ex,
+                        _localizer.Get("FileIngestion.FtpConnectionFailed"),
+                        host, port, maxRetries + 1, ex.Message, ex.Status);
+                    throw;
+                }
+
+                var delay = retryDelay * (int)Math.Pow(2, attempt - 1);
+                _logger.LogWarning(ex,
+                    _localizer.Get("FileIngestion.FtpConnectionRetry"),
+                    attempt, maxRetries + 1, host, port, ex.Message, ex.Status, delay);
+
+                await Task.Delay(TimeSpan.FromSeconds(delay), cancellationToken);
+
+                // Recreate request for retry (FtpWebRequest can't be reused after failure)
+                request = CreateRequest(initialRequest.RequestUri.AbsolutePath, initialRequest.Method, endpointType);
+            }
+        }
+
+        throw new FileIngestionFtpRetryExhaustedException( _localizer.Get("FileIngestion.FtpRetryExhausted"));
+    }
+
+    private async Task<Stream> GetRequestStreamWithRetryAsync(
+        FtpWebRequest initialRequest,
+        FileTransferEndpointType endpointType,
+        CancellationToken cancellationToken)
+    {
+        var ftpOptions = GetFtpOptions(endpointType);
+        var maxRetries = ftpOptions.RetryCount ?? FtpOptions.DefaultRetryCount;
+        var retryDelay = ftpOptions.RetryDelaySeconds ?? FtpOptions.DefaultRetryDelaySeconds;
+        var host = ftpOptions.Host;
+        var port = ftpOptions.Port ?? FtpOptions.DefaultPort;
+
+        FtpWebRequest request = initialRequest;
+        for (var attempt = 1; attempt <= maxRetries + 1; attempt++)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            try
+            {
+                _logger.LogInformation(
+                    _localizer.Get("FileIngestion.FtpUploadConnecting"),
+                    host, port, attempt, maxRetries + 1, endpointType);
+
+                var stream = await request.GetRequestStreamAsync();
+
+                _logger.LogInformation(_localizer.Get("FileIngestion.FtpUploadConnected"), host, port, attempt);
+                return stream;
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (WebException ex) when (ex.Status is WebExceptionStatus.ConnectFailure or WebExceptionStatus.Timeout or WebExceptionStatus.NameResolutionFailure)
+            {
+                if (attempt > maxRetries)
+                {
+                    _logger.LogError(ex,
+                        _localizer.Get("FileIngestion.FtpUploadConnectionFailed"),
+                        host, port, maxRetries + 1, ex.Message, ex.Status);
+                    throw;
+                }
+
+                var delay = retryDelay * (int)Math.Pow(2, attempt - 1);
+                _logger.LogWarning(ex,
+                    _localizer.Get("FileIngestion.FtpUploadConnectionRetry"),
+                    attempt, maxRetries + 1, host, port, ex.Message, ex.Status, delay);
+
+                await Task.Delay(TimeSpan.FromSeconds(delay), cancellationToken);
+
+                request = CreateRequest(initialRequest.RequestUri.AbsolutePath, initialRequest.Method, endpointType);
+            }
+        }
+
+        throw new FileIngestionFtpUploadRetryExhaustedException( _localizer.Get("FileIngestion.FtpUploadRetryExhausted"));
     }
 
     private FtpWebRequest CreateRequest(string remotePath, string method, FileTransferEndpointType endpointType)
@@ -167,12 +286,46 @@ public class FtpFileTransferClient : IFileTransferClient
     {
         var ftpOptions = GetFtpOptions(endpointType);
         if (!ftpOptions.Paths.TryGetValue(profileKey, out var remotePath))
-            throw new InvalidOperationException(_localizer.Get("FileIngestion.FtpPathNotConfigured", profileKey));
+            throw new FileIngestionFtpPathNotConfiguredException(_localizer.Get("FileIngestion.FtpPathNotConfigured", profileKey));
 
-        return $"{remotePath.TrimEnd('/')}/{fileName}";
+        var basePath = remotePath.TrimEnd('/');
+
+        if (endpointType == FileTransferEndpointType.Target)
+        {
+            var now = _timeProvider.Now;
+            var dateFolder = now.ToString("yyyy-MM-dd");
+            var timeFolder = now.ToString("HH-mm-ss-fff");
+            return $"{basePath}/{dateFolder}/{timeFolder}/{fileName}";
+        }
+
+        return $"{basePath}/{fileName}";
     }
 
     private static string NormalizeRemotePath(string remotePath) => remotePath.StartsWith('/') ? remotePath : $"/{remotePath}";
+
+    private async Task EnsureDirectoryExistsAsync(string remoteFilePath, FileTransferEndpointType endpointType)
+    {
+        var directory = Path.GetDirectoryName(remoteFilePath)?.Replace('\\', '/');
+        if (string.IsNullOrWhiteSpace(directory) || directory == "/")
+            return;
+
+        var parts = directory.Split('/', StringSplitOptions.RemoveEmptyEntries);
+        var current = string.Empty;
+        foreach (var part in parts)
+        {
+            current += "/" + part;
+            try
+            {
+                var mkdRequest = CreateRequest(current, WebRequestMethods.Ftp.MakeDirectory, endpointType);
+                using var response = (FtpWebResponse)await mkdRequest.GetResponseAsync();
+            }
+            catch (WebException ex) when (ex.Response is FtpWebResponse ftpResponse &&
+                                          ftpResponse.StatusCode == FtpStatusCode.ActionNotTakenFileUnavailable)
+            {
+                // Directory already exists — ignore
+            }
+        }
+    }
 
     private string ResolveTargetFileName(string fileName, FileTransferEndpointType endpointType)
         => endpointType == FileTransferEndpointType.Target
@@ -202,6 +355,8 @@ public class FtpFileTransferClient : IFileTransferClient
 
     private sealed class FtpResponseStream(Stream innerStream, FtpWebResponse response) : Stream
     {
+        private volatile bool _disposed;
+
         public override bool CanRead => innerStream.CanRead;
         public override bool CanSeek => innerStream.CanSeek;
         public override bool CanWrite => innerStream.CanWrite;
@@ -216,9 +371,10 @@ public class FtpFileTransferClient : IFileTransferClient
 
         protected override void Dispose(bool disposing)
         {
-            if (!disposing)
+            if (!disposing || _disposed)
                 return;
 
+            _disposed = true;
             innerStream.Dispose();
             response.Dispose();
             base.Dispose(disposing);
@@ -226,14 +382,19 @@ public class FtpFileTransferClient : IFileTransferClient
 
         private async ValueTask DisposeAsyncCore()
         {
+            if (_disposed)
+                return;
+
+            _disposed = true;
             await innerStream.DisposeAsync();
             response.Dispose();
-            await base.DisposeAsync();
         }
     }
 
     private sealed class FtpRequestStream(Stream innerStream, FtpWebRequest request) : Stream
     {
+        private volatile bool _disposed;
+
         public override bool CanRead => innerStream.CanRead;
         public override bool CanSeek => innerStream.CanSeek;
         public override bool CanWrite => innerStream.CanWrite;
@@ -248,9 +409,10 @@ public class FtpFileTransferClient : IFileTransferClient
 
         protected override void Dispose(bool disposing)
         {
-            if (!disposing)
+            if (!disposing || _disposed)
                 return;
 
+            _disposed = true;
             innerStream.Dispose();
             using var response = (FtpWebResponse)request.GetResponse();
             base.Dispose(disposing);
@@ -258,9 +420,12 @@ public class FtpFileTransferClient : IFileTransferClient
 
         private async ValueTask DisposeAsyncCore()
         {
+            if (_disposed)
+                return;
+
+            _disposed = true;
             await innerStream.DisposeAsync();
             using var response = (FtpWebResponse)await request.GetResponseAsync();
-            await base.DisposeAsync();
         }
     }
 }

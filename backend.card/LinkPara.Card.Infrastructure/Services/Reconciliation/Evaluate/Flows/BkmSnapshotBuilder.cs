@@ -18,7 +18,7 @@ internal static class BkmSnapshotBuilder
         params (string Key, object? Value)[] extra)
     {
         var detail = context.CachedRootDetail ?? DeserializeRootCardDetail(context.RootRow)
-            ?? throw new ReconciliationContextException(ApiErrorCode.ReconciliationCurrentCardRowMissing, CurrentCardRowMissingMessage);
+            ?? throw new ReconciliationCurrentCardRowMissingException(CurrentCardRowMissingMessage);
         var latestEmoney = context.EmoneyTransactions
             .OrderByDescending(x => x.TransactionDate)
             .ThenByDescending(x => x.Id)

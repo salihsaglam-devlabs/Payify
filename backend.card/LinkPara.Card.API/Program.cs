@@ -17,7 +17,9 @@ using Serilog.Sinks.RabbitMQ;
 using System.Reflection;
 using LinkPara.Card.API.Helpers.Security;
 using LinkPara.Card.API.Helpers.Swagger;
+using LinkPara.Card.Application.Commons.Models.DatabaseConfiguration;
 using EmitEventFailureHandling = Serilog.Sinks.RabbitMQ.EmitEventFailureHandling;
+using Microsoft.Extensions.Options;
 using Newtonsoft.Json.Converters;
 using Microsoft.EntityFrameworkCore;
 using LinkPara.Card.Infrastructure.Persistence;
@@ -127,7 +129,8 @@ using (var scope = app.Services.CreateScope())
 {
     try
     {
-        var enableAutoMigrate = configuration.GetValue<bool>("Database:EnableAutoMigrate", false);
+        var databaseOptions = scope.ServiceProvider.GetRequiredService<IOptions<DatabaseOptions>>().Value;
+        var enableAutoMigrate = databaseOptions.EnableAutoMigrate ?? false;
         if (enableAutoMigrate)
         {
             var db = scope.ServiceProvider.GetRequiredService<CardDbContext>();

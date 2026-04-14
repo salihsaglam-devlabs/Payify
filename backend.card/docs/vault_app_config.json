@@ -1,0 +1,10 @@
+{
+  "AuthBypass": {
+    "Enabled": false,
+    "Controllers": [ "FileIngestion", "Reconciliation", "Archive" ]
+  },
+  "Database": {
+    "EnableAutoMigrate": true
+  }
+}
+

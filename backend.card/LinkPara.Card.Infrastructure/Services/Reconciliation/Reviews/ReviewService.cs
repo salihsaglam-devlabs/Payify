@@ -6,11 +6,13 @@ using LinkPara.Card.Application.Commons.Extensions;
 using LinkPara.Card.Application.Commons.Models.Reconciliation.Contracts.Requests;
 using LinkPara.Card.Application.Commons.Models.Reconciliation.Contracts.Responses;
 using LinkPara.Card.Application.Commons.Models.Reconciliation.Shared;
+using LinkPara.Card.Application.Features.Reconciliation.Queries.PendingReviews;
 using LinkPara.Card.Domain.Enums.Reconciliation;
 using LinkPara.Card.Infrastructure.Persistence;
 using LinkPara.Card.Infrastructure.Services.Audit;
 using LinkPara.Card.Infrastructure.Services.Reconciliation.Evaluate.Core;
 using LinkPara.Card.Infrastructure.Services.Reconciliation.Execute.Core;
+using LinkPara.SharedModels.Pagination;
 using Microsoft.EntityFrameworkCore;
 
 namespace LinkPara.Card.Infrastructure.Services.Reconciliation.Reviews;
@@ -149,147 +151,107 @@ internal sealed class ReviewService
         }
     }
 
-    public async Task<PendingReviewsResponse> GetPendingAsync(
-        PendingReviewsRequest request,
-        List<ReconciliationErrorDetail>? errors = null,
+    public async Task<PaginatedList<ManualReview>> GetPendingAsync(
+        GetPendingReviewsQuery query,
         CancellationToken cancellationToken = default)
     {
-        errors ??= new List<ReconciliationErrorDetail>();
-        if (request is null)
+        var page = Math.Max(query.Page, 1);
+        var pageSize = Math.Clamp(query.Size, 1, 1000);
+        var skip = (page - 1) * pageSize;
+
+        var baseQuery = _dbContext.ReconciliationReviews
+            .AsNoTracking()
+            .Where(x => x.Decision == ReviewDecision.Pending)
+            .AsQueryable();
+
+        if (query.Date.HasValue)
         {
-            errors.Add(_errorMapper.Create("INVALID_REQUEST", _localizer.Get("Reconciliation.RequestIsNull"), "GET_PENDING_REVIEWS_QUERY"));
-            return new PendingReviewsResponse
-            {
-                Message = _localizer.Get("Reconciliation.RequestFailed"),
-                Errors = errors,
-                ErrorCount = errors.Count
-            };
+            var start = query.Date.Value.ToDateTime(TimeOnly.MinValue);
+            var end = start.AddDays(1);
+
+            baseQuery = baseQuery.Where(x => x.CreateDate >= start && x.CreateDate < end);
         }
 
-        try
+        var joinedQuery = baseQuery
+            .Join(
+                _dbContext.ReconciliationOperations.AsNoTracking(),
+                review => review.OperationId,
+                operation => operation.Id,
+                (review, operation) => new { review, operation })
+            .OrderBy(x => x.review.CreateDate);
+
+        var total = await joinedQuery.CountAsync(cancellationToken);
+
+        var reviewWithOps = await joinedQuery
+            .Skip(skip)
+            .Take(pageSize)
+            .Select(x => new
+            {
+                Review = x.review,
+                Operation = x.operation
+            })
+            .ToListAsync(cancellationToken);
+
+        var evaluationIds = reviewWithOps
+            .Select(x => x.Operation.EvaluationId)
+            .Distinct()
+            .ToArray();
+
+        var branchOpsRaw = await _dbContext.ReconciliationOperations
+            .AsNoTracking()
+            .Where(o => evaluationIds.Contains(o.EvaluationId) && o.ParentSequenceIndex != null)
+            .Select(o => new { o.EvaluationId, o.ParentSequenceIndex, o.Code, o.Payload, o.Branch })
+            .ToListAsync(cancellationToken);
+
+        var branchOpsLookup = branchOpsRaw
+            .GroupBy(o => (o.EvaluationId, o.ParentSequenceIndex))
+            .ToDictionary(g => g.Key, g => g.ToList());
+
+        var items = new List<ManualReview>();
+
+        foreach (var entry in reviewWithOps)
         {
-            var page = Math.Max(request.Page, 1);
-            var pageSize = Math.Clamp(request.PageSize, 1, 1000);
-            var skip = (page - 1) * pageSize;
+            var review = entry.Review;
+            var op = entry.Operation;
 
-            var query = _dbContext.ReconciliationReviews
-                .AsNoTracking()
-                .Where(x => x.Decision == ReviewDecision.Pending)
-                .AsQueryable();
-
-            if (request.Date.HasValue)
+            var manualReview = new ManualReview
             {
-                var start = request.Date.Value.ToDateTime(TimeOnly.MinValue);
-                var end = start.AddDays(1);
+                OperationId = op.Id,
+                FileLineId = op.FileLineId,
+                OperationCode = op.Code,
+                OperationPayload = op.Payload,
+                CreatedAt = review.CreateDate,
+                ExpiresAt = review.ExpiresAt,
+                ExpirationAction = review.ExpirationAction.ToString(),
+                ExpirationFlowAction = review.ExpirationFlowAction.ToString(),
+                ApprovalMessage = _localizer.Get("Reconciliation.ApprovalMessage"),
+                RejectionMessage = _localizer.Get("Reconciliation.RejectionMessage")
+            };
 
-                query = query.Where(x => x.CreateDate >= start && x.CreateDate < end);
-            }
+            var key = (op.EvaluationId, ParentSequenceIndex: (int?)op.SequenceIndex);
+            var branchOps = branchOpsLookup.TryGetValue(key, out var matched) ? matched : [];
 
-            var joinedQuery = query
-                .Join(
-                    _dbContext.ReconciliationOperations.AsNoTracking(),
-                    review => review.OperationId,
-                    operation => operation.Id,
-                    (review, operation) => new { review, operation })
-                .OrderBy(x => x.review.CreateDate);
-
-            var total = await joinedQuery.CountAsync(cancellationToken);
-
-            var reviewWithOps = await joinedQuery
-                .Skip(skip)
-                .Take(pageSize)
-                .Select(x => new
-                {
-                    Review = x.review,
-                    Operation = x.operation
-                })
-                .ToListAsync(cancellationToken);
-
-            var evaluationIds = reviewWithOps
-                .Select(x => x.Operation.EvaluationId)
-                .Distinct()
-                .ToArray();
-
-            var branchOpsRaw = await _dbContext.ReconciliationOperations
-                .AsNoTracking()
-                .Where(o => evaluationIds.Contains(o.EvaluationId) && o.ParentSequenceIndex != null)
-                .Select(o => new { o.EvaluationId, o.ParentSequenceIndex, o.Code, o.Payload, o.Branch })
-                .ToListAsync(cancellationToken);
-
-            var branchOpsLookup = branchOpsRaw
-                .GroupBy(o => (o.EvaluationId, o.ParentSequenceIndex))
-                .ToDictionary(g => g.Key, g => g.ToList());
-
-            var items = new List<ManualReview>();
-
-            foreach (var entry in reviewWithOps)
+            foreach (var b in branchOps)
             {
-                var review = entry.Review;
-                var op = entry.Operation;
-
-                var manualReview = new ManualReview
+                var branchOperation = new BranchOperation
                 {
-                    OperationId = op.Id,
-                    FileLineId = op.FileLineId,
-                    OperationCode = op.Code,
-                    OperationPayload = op.Payload,
-                    CreatedAt = review.CreateDate,
-                    ExpiresAt = review.ExpiresAt,
-                    ExpirationAction = review.ExpirationAction.ToString(),
-                    ExpirationFlowAction = review.ExpirationFlowAction.ToString(),
-                    ApprovalMessage = _localizer.Get("Reconciliation.ApprovalMessage"),
-                    RejectionMessage = _localizer.Get("Reconciliation.RejectionMessage")
+                    Code = b.Code,
+                    Payload = b.Payload
                 };
 
-                var key = (op.EvaluationId, ParentSequenceIndex: (int?)op.SequenceIndex);
-                var branchOps = branchOpsLookup.TryGetValue(key, out var matched) ? matched : [];
-
-                foreach (var b in branchOps)
-                {
-                    var branchOperation = new BranchOperation
-                    {
-                        Code = b.Code,
-                        Payload = b.Payload
-                    };
-
-                    if (string.Equals(b.Branch, Branches.Approve, StringComparison.OrdinalIgnoreCase))
-                        manualReview.ApproveBranchOperations.Add(branchOperation);
-                    else if (string.Equals(b.Branch, Branches.Reject, StringComparison.OrdinalIgnoreCase))
-                        manualReview.RejectBranchOperations.Add(branchOperation);
-                }
-
-                if (string.Equals(op.Code, OperationCodes.CreateManualReview, StringComparison.Ordinal))
-                    manualReview.OperationPayload = BuildManualReviewPayload(manualReview);
-
-                items.Add(manualReview);
+                if (string.Equals(b.Branch, Branches.Approve, StringComparison.OrdinalIgnoreCase))
+                    manualReview.ApproveBranchOperations.Add(branchOperation);
+                else if (string.Equals(b.Branch, Branches.Reject, StringComparison.OrdinalIgnoreCase))
+                    manualReview.RejectBranchOperations.Add(branchOperation);
             }
 
-            return new PendingReviewsResponse
-            {
-                Page = new PagedResult<ManualReview>
-                {
-                    Page = page,
-                    PageSize = pageSize,
-                    Total = total,
-                    Items = items
-                },
-                Errors = errors,
-                ErrorCount = errors.Count
-            };
-        }
-        catch (Exception ex)
-        {
-            errors.Add(_errorMapper.MapException(
-                ex,
-                "GET_PENDING_REVIEWS_QUERY",
-                message: _localizer.Get("Reconciliation.PendingReviewsLoadFailed")));
+            if (string.Equals(op.Code, OperationCodes.CreateManualReview, StringComparison.Ordinal))
+                manualReview.OperationPayload = BuildManualReviewPayload(manualReview);
 
-            return new PendingReviewsResponse
-            {
-                Errors = errors,
-                ErrorCount = errors.Count
-            };
+            items.Add(manualReview);
         }
+
+        return new PaginatedList<ManualReview>(items, total, page, pageSize, OrderByStatus.Asc, query.SortBy);
     }
 
     private async Task<(string Result, string Message)> SetDecisionAsync(

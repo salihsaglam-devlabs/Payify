@@ -3,11 +3,11 @@ using LinkPara.Card.Application.Commons.Models.PaycoreModels.CardModels;
 using MediatR;
 
 namespace LinkPara.Card.Application.Features.PaycoreServices.CardServices.Queries.GetCardInformation;
-public class GetCardInformationsQuery : IRequest<List<GetCardInformationsResponse>>
+public class GetCardInformationsQuery : IRequest<GetCardInformationsResponse>
 {
-    public string TokenPan { get; set; } 
+    public string CardNumber { get; set; } 
 }
-public class GetCardInformationsQueryHandler : IRequestHandler<GetCardInformationsQuery, List<GetCardInformationsResponse>>
+public class GetCardInformationsQueryHandler : IRequestHandler<GetCardInformationsQuery, GetCardInformationsResponse>
 {
     private readonly IPaycoreCardService _paycoreService;
     public GetCardInformationsQueryHandler(IPaycoreCardService paycoreService)
@@ -15,7 +15,7 @@ public class GetCardInformationsQueryHandler : IRequestHandler<GetCardInformatio
         _paycoreService = paycoreService;
     }
 
-    public async Task<List<GetCardInformationsResponse>> Handle(GetCardInformationsQuery request, CancellationToken cancellationToken)
+    public async Task<GetCardInformationsResponse> Handle(GetCardInformationsQuery request, CancellationToken cancellationToken)
     {
         return await _paycoreService.GetCardInformationsAsync(request);
     }

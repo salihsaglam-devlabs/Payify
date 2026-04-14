@@ -15,6 +15,8 @@ public class CrdAccount
 
 public class CrdAccountCommunication
 {
+    public int MobilePhoneIdx { get; set; }
     public string MobilePhone { get; set; }
     public string Email { get; set; }
+    public int EmailIdx { get; set; }
 }

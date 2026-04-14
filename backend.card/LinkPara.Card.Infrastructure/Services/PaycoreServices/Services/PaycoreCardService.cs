@@ -77,29 +77,6 @@ public class PaycoreCardService : IPaycoreCardService
 
         var createCardRequest = CreateCardRequest(request, customerWalletCard.BankingCustomerNo);
 
-        var cardDelivery = new CrdCardDelivery();
-        cardDelivery.CardPostAddress = new PaycoreAddress()
-        {
-            AddressType = request.CardDelivery.CardPostAddress.AddressType,
-            CityCode = request.CardDelivery.CardPostAddress.CityCode,
-            CountryCode = request.CardDelivery.CardPostAddress.CountryCode,
-            TownCode = request.CardDelivery.CardPostAddress.TownCode
-        };
-
-        if (request.ProductCode == ProductCodes.FIZIKI)
-        {
-            cardDelivery.CardPostAddress.AddressType = AddressTypes.GECERLI;
-            createCardRequest.CrdCardDelivery = cardDelivery;
-            createCardRequest.CourierCompanyCode = CourierCompanies.KURYE_NET;
-        }
-        else if (request.ProductCode == ProductCodes.TICARI)
-        {
-            cardDelivery.CardPostAddress.AddressType = AddressTypes.EV;
-            cardDelivery.CardPostType = AddressTypes.OZEL;
-            createCardRequest.CrdCardDelivery = cardDelivery;
-            createCardRequest.CourierCompanyCode = CourierCompanies.KURYE_NET;
-        }
-
         var cardResponse = await _clientService.ExecuteAsync<PaycoreCreateCardResponse>(
            $"{_paycoreSettings.VaultSettings.BaseUrl}{_paycoreSettings.CreateCard}",
             PaycoreRequestType.Post,
@@ -138,7 +115,7 @@ public class PaycoreCardService : IPaycoreCardService
             CrdAccount = cardAccount
         };
 
-        return new PaycoreCreateCardRequest
+        var cardRequest = new PaycoreCardModel
         {
             BankingCustomerNo = bankingCustomerNo,
             BranchCode = _paycoreSettings.VaultSettings.BranchCode,
@@ -148,7 +125,6 @@ public class PaycoreCardService : IPaycoreCardService
             EmbossMethod = EmbossMethods.MASS,
             EmbossName1 = request.EmbossName1,
             NoMoreRenewal = false,
-            PersoCenterCode = PersoCenters.PLASTCARD,
             CrdCardAuth = new CrdCardAuth
             {
                 AuthDomEcom = true,
@@ -170,12 +146,42 @@ public class PaycoreCardService : IPaycoreCardService
                 VisaAccountUpdaterOpt = false
             }
         };
+        if (request.ProductCode != ProductCodes.SANAL)
+        {
+            var cardDelivery = new CrdCardDelivery();
+            cardDelivery.CardPostAddress = new PaycoreAddress()
+            {
+                AddressType = request.CardDelivery.CardPostAddress.AddressType,
+                CityCode = request.CardDelivery.CardPostAddress.CityCode,
+                CountryCode = request.CardDelivery.CardPostAddress.CountryCode,
+                TownCode = request.CardDelivery.CardPostAddress.TownCode
+            };
+
+            if (request.ProductCode == ProductCodes.FIZIKI)
+            {
+                cardDelivery.CardPostAddress.AddressType = AddressTypes.GECERLI;
+                cardRequest.CrdCardDelivery = cardDelivery;
+                cardRequest.CourierCompanyCode = CourierCompanies.KURYE_NET;
+            }
+            else if (request.ProductCode == ProductCodes.TICARI)
+            {
+                cardDelivery.CardPostAddress.AddressType = AddressTypes.EV;
+                cardDelivery.CardPostType = AddressTypes.OZEL;
+                cardRequest.CrdCardDelivery = cardDelivery;
+                cardRequest.CourierCompanyCode = CourierCompanies.KURYE_NET;
+            }
+            cardRequest.PersoCenterCode = PersoCenters.PLASTCARD;
+        }
+        return new PaycoreCreateCardRequest
+        {
+            CrdCard = cardRequest
+        };
     }
     public async Task<GetCardAuthorizationsResponse> GetCardAuthorizationsAsync(GetCardAuthorizationsQuery request)
     {
         try
         {
-            var cardAuthorization = await _clientService.ExecuteGenericAsync<CrdCardAuth>(
+            var cardAuthorization = await _clientService.ExecuteAsync<CrdCardAuth>(
                                   $"{_paycoreSettings.VaultSettings.BaseUrl}{_paycoreSettings.GetCardAuthorization}{request.CardNumber}",
                        PaycoreRequestType.Get);
 
@@ -183,7 +189,7 @@ public class PaycoreCardService : IPaycoreCardService
             {
                 IsSuccess = true,
                 Description = ResponseDescription.SUCCESS,
-                CrdCardAuth = cardAuthorization
+                CrdCardAuth = cardAuthorization.Result
             };
         }
         catch (Exception)
@@ -195,51 +201,48 @@ public class PaycoreCardService : IPaycoreCardService
             };
         }
     }
-    public async Task<List<GetCardInformationsResponse>> GetCardInformationsAsync(GetCardInformationsQuery request)
+    public async Task<GetCardInformationsResponse> GetCardInformationsAsync(GetCardInformationsQuery request)
     {
-        var informationResponse = await _clientService.ExecuteGenericAsync<List<PaycoreGetCardInformationResponse>>(
-                            $"{_paycoreSettings.VaultSettings.BaseUrl}{_paycoreSettings.GetCardInformation}{request.TokenPan}",
+        try
+        {
+            var informationResponse = await _clientService.ExecuteAsync<CrdCardInfo[]>(
+                            $"{_paycoreSettings.VaultSettings.BaseUrl}{_paycoreSettings.GetCardInformation}{request.CardNumber}",
             PaycoreRequestType.Get);
 
-        if (informationResponse==null)
-        {
-            throw new InvalidOperationException();
-        }
-        var result = new List<GetCardInformationsResponse>();
-        foreach (var cardInformations in informationResponse)
-        {
-           result.Add(new GetCardInformationsResponse
+            return new GetCardInformationsResponse
             {
                 IsSuccess = true,
-                ApplicationRefNo = cardInformations.ApplicationRefNo,
-                BankingCustomerNo = cardInformations.BankingCustomerNo,
-                BarcodeNo = cardInformations.BarcodeNo,
-                BatchBarcodeNo = cardInformations.BatchBarcodeNo,
-                CardNo = cardInformations.CardNo,
-                CustomerNo = cardInformations.CustomerNo,
-                CustomerType = cardInformations.CustomerType,
-                Dci = cardInformations.Dci,
-                ProductCode = cardInformations.ProductCode,
-                Segment = cardInformations.Segment
-            });     
+                Description = ResponseDescription.SUCCESS,
+                CrdCardInfo = informationResponse.Result
+            };
         }
-
-        return result;
+        catch (Exception)
+        {
+            return new GetCardInformationsResponse
+            {
+                IsSuccess = false,
+                Description = ResponseDescription.ERROR
+            };
+        }
     }
     public async Task<GetCardSensitiveDataResponse> GetCardSensitiveDataAsync(GetCardSensitiveDataQuery request)
     {
         try
         {
-            var sensitiveResponse = await _clientService.ExecuteGenericAsync<PaycoreGetCardEncryptedCvv2AndExpireDateResponse>(
+            var sensitiveResponse = await _clientService.ExecuteAsync<CrdCardSensitiveInfo[]>(
                               $"{_paycoreSettings.VaultSettings.BaseUrl}{_paycoreSettings.GetCardEncryptedCvv2AndExpireDate}{request.TokenPan}",
                 PaycoreRequestType.Get);
 
-            if (sensitiveResponse == null)
+            if (!sensitiveResponse.IsSuccess || !sensitiveResponse.Result.Any())
             {
-                throw new InvalidOperationException();
+                return new GetCardSensitiveDataResponse
+                {
+                    IsSuccess = false,
+                    Description = sensitiveResponse.message
+                };
             }
 
-            if (string.IsNullOrWhiteSpace(sensitiveResponse.cardNo))
+            if (string.IsNullOrWhiteSpace(sensitiveResponse.Result.FirstOrDefault().CardNo))
             {
                 return new GetCardSensitiveDataResponse
                 {
@@ -248,7 +251,7 @@ public class PaycoreCardService : IPaycoreCardService
                 };
             }
 
-            if (string.IsNullOrWhiteSpace(sensitiveResponse.expiryDateAndCvv2))
+            if (string.IsNullOrWhiteSpace(sensitiveResponse.Result.FirstOrDefault().ExpiryDate))
             {
                 return new GetCardSensitiveDataResponse
                 {
@@ -258,8 +261,8 @@ public class PaycoreCardService : IPaycoreCardService
             }
 
             var clearExpiryDateAndCvv2 = await _pinBlockService.DecryptEncryptedPinBlock(
-                sensitiveResponse.expiryDateAndCvv2,
-                sensitiveResponse.cardNo);
+                sensitiveResponse.Result.FirstOrDefault().ExpiryDate,
+                sensitiveResponse.Result.FirstOrDefault().CardNo);
 
             if (string.IsNullOrWhiteSpace(clearExpiryDateAndCvv2.Data) || clearExpiryDateAndCvv2.Data.Length < 7)
             {
@@ -271,17 +274,22 @@ public class PaycoreCardService : IPaycoreCardService
             }
 
             var expiryDate = clearExpiryDateAndCvv2.Data.Substring(0, 4); 
-            var cvv2 = clearExpiryDateAndCvv2.Data.Substring(4);         
+            var cvv2 = clearExpiryDateAndCvv2.Data.Substring(4);
+
+            CrdCardSensitiveInfo info = new CrdCardSensitiveInfo
+            {
+                CardNo = sensitiveResponse.Result.FirstOrDefault().CardNo,
+                BankingCustomerNo = sensitiveResponse.Result.FirstOrDefault().BankingCustomerNo,
+                CustomerNo = sensitiveResponse.Result.FirstOrDefault().CustomerNo,
+                ExpiryDate = expiryDate,
+                Cvv2 = cvv2
+            };
 
             return new GetCardSensitiveDataResponse
             {
                 IsSuccess = true,
                 Description = ResponseDescription.SUCCESS,
-                CardNo = sensitiveResponse.cardNo,
-                ExpiryDate = expiryDate,
-                Cvv2 = cvv2,
-                CustomerNo = sensitiveResponse.customerNo,
-                BankingCustomerNo = sensitiveResponse.bankingCustomerNo
+                CrdCardInfo = new CrdCardSensitiveInfo[1] {info}
             };
         }
         catch (Exception ex)
@@ -299,76 +307,106 @@ public class PaycoreCardService : IPaycoreCardService
     }
     public async Task<PaycoreResponse> UpdateCardAuthorizationsAsync(UpdateCardAuthorizationCommand request)
     {
-        PaycoreUpdateCardAuthorizationsRequest updateCardAuthorizationRequest = new PaycoreUpdateCardAuthorizationsRequest
+        try
         {
-            CardNo = request.CardNumber,
-            AuthDomEcom = request.CrdCardAuth.AuthDomEcom,
-            AuthDomMoto = request.CrdCardAuth.AuthDomMoto,
-            AuthDomNoCVV2 = request.CrdCardAuth.AuthDomNoCVV2,
-            AuthDomCash = request.CrdCardAuth.AuthDomCash,
-            AuthDomContactless = request.CrdCardAuth.AuthDomContactless,
-            AuthIntEcom = request.CrdCardAuth.AuthIntEcom,
-            AuthIntMoto = request.CrdCardAuth.AuthIntMoto,
-            AuthIntNoCVV2 = request.CrdCardAuth.AuthIntNoCVV2,
-            AuthIntContactless = request.CrdCardAuth.AuthIntContactless,
-            AuthIntCash = request.CrdCardAuth.AuthIntCash,
-            AuthIntPosSale = request.CrdCardAuth.AuthIntPosSale,
-            Auth3dSecure = request.CrdCardAuth.Auth3dSecure,
-            Auth3dSecureType = request.CrdCardAuth.Auth3dSecureType,
-            AuthCloseInstallment = request.CrdCardAuth.AuthCloseInstallment,
-            AuthDomCasino = request.CrdCardAuth.AuthDomCasino,
-            AuthIntCasino = request.CrdCardAuth.AuthIntCasino,
-            VisaAccountUpdaterOpt = request.CrdCardAuth.VisaAccountUpdaterOpt
-        };
+            PaycoreUpdateCardAuthorizationsRequest updateCardAuthorizationRequest = new PaycoreUpdateCardAuthorizationsRequest
+            {
+                CardNo = request.CardNumber,
+                AuthDomEcom = request.CrdCardAuth.AuthDomEcom,
+                AuthDomMoto = request.CrdCardAuth.AuthDomMoto,
+                AuthDomNoCVV2 = request.CrdCardAuth.AuthDomNoCVV2,
+                AuthDomCash = request.CrdCardAuth.AuthDomCash,
+                AuthDomContactless = request.CrdCardAuth.AuthDomContactless,
+                AuthIntEcom = request.CrdCardAuth.AuthIntEcom,
+                AuthIntMoto = request.CrdCardAuth.AuthIntMoto,
+                AuthIntNoCVV2 = request.CrdCardAuth.AuthIntNoCVV2,
+                AuthIntContactless = request.CrdCardAuth.AuthIntContactless,
+                AuthIntCash = request.CrdCardAuth.AuthIntCash,
+                AuthIntPosSale = request.CrdCardAuth.AuthIntPosSale,
+                Auth3dSecure = request.CrdCardAuth.Auth3dSecure,
+                Auth3dSecureType = request.CrdCardAuth.Auth3dSecureType,
+                AuthCloseInstallment = request.CrdCardAuth.AuthCloseInstallment,
+                AuthDomCasino = request.CrdCardAuth.AuthDomCasino,
+                AuthIntCasino = request.CrdCardAuth.AuthIntCasino,
+                VisaAccountUpdaterOpt = request.CrdCardAuth.VisaAccountUpdaterOpt
+            };
 
-        var updateCardAuthorizationsResponse = await _clientService.ExecuteAsync<PaycoreBaseResponse>(
-            $"{_paycoreSettings.VaultSettings.BaseUrl}{_paycoreSettings.UpdateCardAuthorization}",
-            PaycoreRequestType.Put,
-            updateCardAuthorizationRequest);
+            var updateCardAuthorizationsResponse = await _clientService.ExecuteAsync<PaycoreBaseResponse>(
+                $"{_paycoreSettings.VaultSettings.BaseUrl}{_paycoreSettings.UpdateCardAuthorization}",
+                PaycoreRequestType.Put,
+                updateCardAuthorizationRequest);
 
-        if (!updateCardAuthorizationsResponse.IsSuccess)
+            if (!updateCardAuthorizationsResponse.IsSuccess)
+            {
+                return new PaycoreResponse
+                {
+                    IsSuccess = false,
+                    Description = updateCardAuthorizationsResponse.message
+                };
+            }
+
+            return new PaycoreResponse
+            {
+                IsSuccess = true,
+                Description = updateCardAuthorizationsResponse.message
+            };
+        }
+        catch (Exception ex) 
         {
             return new PaycoreResponse
             {
                 IsSuccess = false,
-                Description = updateCardAuthorizationsResponse.message
+                Description = ex.Message
             };
         }
-
-        return new PaycoreResponse
-        {
-            IsSuccess = true,
-            Description = updateCardAuthorizationsResponse.message
-        };
     }
     public async Task<PaycoreResponse> UpdateCardStatusAsync(UpdateCardStatusCommand request)
     {
-        var updateCardRequest = new UpdateCardStatusRequest
+        try
         {
-            CardNo = request.CardNumber,
-            FreeText = request.Description,
-            StatCode = request.StatusCode,
-            StatusReasonCode = request.StatusReasonCode
-        };
+            var updateCardRequest = new UpdateCardStatusRequest
+            {
+                CardNo = request.CardNumber,
+                FreeText = request.Description,
+                StatCode = request.StatusCode,
+                StatusReasonCode = request.StatusReasonCode
+            };
 
-        var updateCard = await _clientService.ExecuteAsync<PaycoreUpdateCardStatusResponse>(
-            $"{_paycoreSettings.VaultSettings.BaseUrl}{_paycoreSettings.UpdateCardStatus}",
-            PaycoreRequestType.Put,
-            updateCardRequest);
+            var updateCard = await _clientService.ExecuteAsync<PaycoreBaseResponse>(
+                $"{_paycoreSettings.VaultSettings.BaseUrl}{_paycoreSettings.UpdateCardStatus}",
+                PaycoreRequestType.Put,
+                updateCardRequest);
 
-        if (!updateCard.IsSuccess)
+            if (!updateCard.IsSuccess)
+            {
+                return new PaycoreResponse
+                {
+                    IsSuccess = updateCard.IsSuccess,
+                    Description = updateCard.message
+                };
+            }
+
+            var customerWalletCard = await _customerWalletCard
+                        .GetAll()
+                        .FirstOrDefaultAsync(x => x.CardNumber == request.CardNumber);
+
+            customerWalletCard.IsActive = request.StatusCode == CardStatus.Cancelled ? false : true;
+            await _customerWalletCard.UpdateAsync(customerWalletCard);
+
+            return new PaycoreResponse
+            {
+                IsSuccess = updateCard.IsSuccess
+            };
+        }
+        catch (Exception ex)
         {
             return new PaycoreResponse
             {
-                IsSuccess = updateCard.IsSuccess,
-                Description = updateCard.exception.message
+                IsSuccess = false,
+                Description = ex.Message    
             };
         }
-
-        return new PaycoreResponse
-        {
-            IsSuccess = updateCard.IsSuccess
-        };
+        
     }
     public async Task<GetCardLastCourierActivityResponse> GetCardLastCorierActivityAsync(GetCardLastCourierActivityQuery request)
     {
@@ -413,63 +451,141 @@ public class PaycoreCardService : IPaycoreCardService
 
         return new GetCardLastCourierActivityResponse
         {
-           IsSuccess = true,
-           CardLastCourierActivities =  activities,
-           Description = ResponseDescription.SUCCESS
+            IsSuccess = true,
+            CardLastCourierActivities = activities,
+            Description = ResponseDescription.SUCCESS
         };
     }
-    public async Task<AddAdditionalLimitRestrictionResponse> AddAdditionalLimitRestrictionAsync(AddAdditionalLimitRestrictionCommand command)
+    public async Task<PaycoreResponse> AddAdditionalLimitRestrictionAsync(AddAdditionalLimitRestrictionCommand command)
     {
-        var addAdditionalLimitRestrictionRequest = new PaycoreAddAdditionalLimitRestrictionRequest
+        try
         {
-            CardNo = command.CardNo,
-            AdditionalLimits = command.AdditionalLimits,
-            LimitRestrictions = command.LimitRestrictions
-        };
+            var addAdditionalLimitRestrictionRequest = new PaycoreAddAdditionalLimitRestrictionRequest
+            {
+                CardNo = command.CardNo,
+                AdditionalLimits = command.AdditionalLimits,
+                LimitRestrictions = command.LimitRestrictions
+            };
 
-        var addAdditionalLimitRestriction = await _clientService.ExecuteAsync<PaycoreAddAdditionalLimitRestrictionResponse>(
-            $"{_paycoreSettings.VaultSettings.BaseUrl}{_paycoreSettings.AddAdditionalLimitRestriction}",
-            PaycoreRequestType.Put,
-            addAdditionalLimitRestrictionRequest);
+            var addAdditionalLimitRestriction = await _clientService.ExecuteAsync<PaycoreBaseResponse>(
+                $"{_paycoreSettings.VaultSettings.BaseUrl}{_paycoreSettings.AddAdditionalLimitRestriction}",
+                PaycoreRequestType.Put,
+                addAdditionalLimitRestrictionRequest);
 
         if (!addAdditionalLimitRestriction.IsSuccess)
         {
             return new AddAdditionalLimitRestrictionResponse
             {
                 IsSuccess = addAdditionalLimitRestriction.IsSuccess,
-                Description = addAdditionalLimitRestriction.exception.message
-
+                Description = "Service Error"
             };
         }
 
-        return new AddAdditionalLimitRestrictionResponse
-        {
-            IsSuccess = addAdditionalLimitRestriction.IsSuccess
-        };
-    }
-    public async Task<List<GetClearCardNoResponse>> GetClearCardNoAsync(GetClearCardNoQuery request)
-    {
-        var clearCardResponse = await _clientService.ExecuteGenericAsync<List<PaycoreGetClearCardNoResponse>>(
-           $"{_paycoreSettings.VaultSettings.BaseUrl}{_paycoreSettings.GetClearCardNo}[{request.Cards[0]}]",
-            PaycoreRequestType.Get);
-
-        if (clearCardResponse == null)
-        {
-            throw new InvalidOperationException();
+            return new AddAdditionalLimitRestrictionResponse
+            {
+                IsSuccess = addAdditionalLimitRestriction.IsSuccess,
+                Description = ResponseDescription.SUCCESS
+            };
         }
-        var result = new List<GetClearCardNoResponse>();
-        foreach (var card in clearCardResponse)
+        catch (Exception ex)
         {
-            result.Add(new GetClearCardNoResponse
+            return new AddAdditionalLimitRestrictionResponse
+            {
+                IsSuccess = false,
+                Description = ex.Message    
+            };
+        }
+        
+    }
+    public async Task<GetClearCardNoResponse> GetClearCardNoAsync(GetClearCardNoQuery request)
+    {
+        try
+        {
+            var clearCardResponse = await _clientService.ExecuteAsync<CrdClearCardInfo[]>(
+                   $"{_paycoreSettings.VaultSettings.BaseUrl}{_paycoreSettings.GetClearCardNo}[{request.Cards[0]}]",
+                    PaycoreRequestType.Get);
+
+            return new GetClearCardNoResponse
             {
                 IsSuccess = true,
-                CardNo = card.cardNo,
-                CardToken = card.cardToken,
-                CardUniqId = card.cardUniqId
-            });
+                Description = ResponseDescription.SUCCESS,
+                CrdClearCardInfo = clearCardResponse.Result
+            };
         }
-
-        return result;
+        catch (Exception)
+        {
+            return new GetClearCardNoResponse
+            {
+                IsSuccess = false,
+                Description = ResponseDescription.ERROR
+            };
+        }
     }
+    public async Task<CardRenewalResponse> CardRenewalAsync(CardRenewalCommand command)
+    {
+        try
+        {
+            var cardRenewalResponse = await _clientService.ExecuteAsync<PaycoreCardRenewalResponse>(
+                      $"{_paycoreSettings.VaultSettings.BaseUrl}{_paycoreSettings.CardRenewal}",
+                       PaycoreRequestType.Post,
+                       command);
 
+            if (!cardRenewalResponse.IsSuccess)
+            {
+                return new CardRenewalResponse
+                {
+                    IsSuccess = cardRenewalResponse.IsSuccess,
+                    Description = cardRenewalResponse.message
+                };
+            }
+
+            return new CardRenewalResponse
+            {
+                IsSuccess = true,
+                Description = ResponseDescription.SUCCESS,
+                CardNo = cardRenewalResponse.Result.cardNo,
+                ExpiryDate = cardRenewalResponse.Result.expiryDate,
+                PanSeqNumber = cardRenewalResponse.Result.panSeqNumber
+            };
+        }
+        catch (Exception ex) 
+        {
+            return new CardRenewalResponse
+            {
+                IsSuccess = false,
+                Description = ex.Message
+            };
+        }
+    }
+    public async Task<GetCardStatusResponse> GetCardStatusAsync(GetCardStatusQuery request)
+    {
+        try
+        {
+            List<string> cardList = new List<string>();
+            foreach (var card in request.CardNos)
+            {
+                cardList.Add(card);
+            }
+
+            var cardStatusResponse = await _clientService.ExecuteAsync<CrdCardStatus[]>(
+                $"{_paycoreSettings.VaultSettings.BaseUrl}{_paycoreSettings.GetCardStatus}[{cardList}]",
+                 PaycoreRequestType.Get);
+
+
+            return new GetCardStatusResponse
+            {
+                IsSuccess = cardStatusResponse.IsSuccess,
+                Description = ResponseDescription.SUCCESS,
+                Result = cardStatusResponse.Result
+            };
+        }
+        catch (Exception ex)
+        {
+            return new GetCardStatusResponse
+            {
+                IsSuccess = false,
+                Description = ex.Message
+            };
+        }
+    }
 }

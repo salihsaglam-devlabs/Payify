@@ -115,7 +115,7 @@ internal sealed class ContextBuilder : IContextBuilder
 
             if (!rootFiles.TryGetValue(row.IngestionFileId, out var rootFile))
             {
-                throw new ReconciliationContextException(ApiErrorCode.ReconciliationFileNotResolved, _localizer.Get("Reconciliation.FileNotResolved", row.IngestionFileId));
+                throw new ReconciliationFileNotResolvedException( _localizer.Get("Reconciliation.FileNotResolved", row.IngestionFileId));
             }
 
             var emoneyTransactions = new List<EmoneyCustomerTransactionDto>();
@@ -154,7 +154,11 @@ internal sealed class ContextBuilder : IContextBuilder
             var transactions = await _emoneyService.GetByCustomerTransactionIdAsync(customerTransactionId, cancellationToken);
             return EmoneyFetchResult.Success(transactions);
         }
-        catch (EmoneyIntegrationException ex)
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception ex)
         {
             return EmoneyFetchResult.Fail(
                 _localizer.Get("Reconciliation.CustomerTxnLookupFailed", customerTransactionId, ex.Message));
@@ -196,7 +200,7 @@ internal sealed class ContextBuilder : IContextBuilder
                 ClearingDetails = CollectDetails<ClearingMscDetail>(correlatedRows, FileType.Clearing, FileContentType.Msc),
                 EmoneyTransactions = emoneyTransactions
             },
-            _ => throw new ReconciliationBusinessRuleException(ApiErrorCode.ReconciliationUnsupportedContentType, _localizer.Get("Reconciliation.UnsupportedContentType", rootFile.ContentType))
+            _ => throw new ReconciliationUnsupportedContentTypeException(_localizer.Get("Reconciliation.UnsupportedContentType", rootFile.ContentType))
         };
     }
 

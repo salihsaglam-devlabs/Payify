@@ -1,3 +1,5 @@
+using LinkPara.Card.Application.Commons.Exceptions;
+
 namespace LinkPara.Card.Application.Commons.Models.FileIngestion.Configuration;
 
 public class FileIngestionOptions
@@ -14,9 +16,9 @@ public class FileIngestionOptions
         Processing.ValidateAndApplyDefaults();
 
         if (Connections is null)
-            throw new InvalidOperationException("Vault configuration missing: FileIngestion.Connections");
+            throw new FileIngestionConfigConnectionsMissingException("Vault configuration missing: FileIngestion.Connections");
         if (Profiles is null)
-            throw new InvalidOperationException("Vault configuration missing: FileIngestion.Profiles");
+            throw new FileIngestionConfigProfilesMissingException("Vault configuration missing: FileIngestion.Profiles");
 
         Connections.Validate();
     }

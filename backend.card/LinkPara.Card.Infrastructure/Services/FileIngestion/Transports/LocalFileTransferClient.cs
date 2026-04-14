@@ -1,3 +1,4 @@
+using LinkPara.Card.Application.Commons.Exceptions;
 using LinkPara.Card.Application.Commons.Interfaces;
 using Microsoft.Extensions.Localization;
 using LinkPara.Card.Domain.Enums.FileIngestion;
@@ -139,11 +140,11 @@ public class LocalFileTransferClient : IFileTransferClient
             : _options.Connections.Source.Local;
 
         if (!localOptions.Paths.TryGetValue(profileKey, out var location))
-            throw new InvalidOperationException(_localizer.Get("FileIngestion.LocalPathNotConfigured", profileKey));
+            throw new FileIngestionLocalPathNotConfiguredException(_localizer.Get("FileIngestion.LocalPathNotConfigured", profileKey));
 
         var rootPath = ResolveRootPath(location);
         if (string.IsNullOrWhiteSpace(rootPath))
-            throw new InvalidOperationException(_localizer.Get("FileIngestion.LocalRootPathEmpty", profileKey));
+            throw new FileIngestionLocalRootPathEmptyException(_localizer.Get("FileIngestion.LocalRootPathEmpty", profileKey));
 
         var now = _timeProvider.Now;
         var dateFolder = now.ToString("yyyy-MM-dd");

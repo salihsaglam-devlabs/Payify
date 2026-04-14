@@ -18,24 +18,24 @@ internal sealed class OperationPayloadAccessor
 
         if (string.IsNullOrWhiteSpace(payloadJson))
         {
-            throw new ReconciliationPayloadException(ApiErrorCode.ReconciliationOperationPayloadEmpty, _localizer.Get("Reconciliation.OperationPayloadEmpty"));
+            throw new ReconciliationOperationPayloadEmptyException(_localizer.Get("Reconciliation.OperationPayloadEmpty"));
         }
 
         _payload = JsonSerializer.Deserialize<Dictionary<string, List<OperationPayloadEntry>>>(payloadJson, JsonOptions)
-            ?? throw new ReconciliationPayloadException(ApiErrorCode.ReconciliationOperationPayloadDeserializeFailed, _localizer.Get("Reconciliation.OperationPayloadDeserializeFailed"));
+            ?? throw new ReconciliationOperationPayloadDeserializeFailedException(_localizer.Get("Reconciliation.OperationPayloadDeserializeFailed"));
     }
 
     public T GetRequiredValue<T>(string group, string key)
     {
         if (!_payload.TryGetValue(group, out var items))
         {
-            throw new ReconciliationPayloadException(ApiErrorCode.ReconciliationOperationPayloadValueMissing, _localizer.Get("Reconciliation.OperationPayloadValueMissing", group, key));
+            throw new ReconciliationOperationPayloadValueMissingException(_localizer.Get("Reconciliation.OperationPayloadValueMissing", group, key));
         }
 
         var entry = items.FirstOrDefault(x => string.Equals(x.Key, key, StringComparison.Ordinal));
         if (entry is null || string.IsNullOrWhiteSpace(entry.Value))
         {
-            throw new ReconciliationPayloadException(ApiErrorCode.ReconciliationOperationPayloadValueMissing, _localizer.Get("Reconciliation.OperationPayloadValueMissing", group, key));
+            throw new ReconciliationOperationPayloadValueMissingException(_localizer.Get("Reconciliation.OperationPayloadValueMissing", group, key));
         }
 
         return ConvertValue<T>(entry.Value);
@@ -89,7 +89,7 @@ internal sealed class OperationPayloadAccessor
 
         if (parsed is null)
         {
-            throw new ReconciliationPayloadException(ApiErrorCode.ReconciliationOperationPayloadConversionFailed, _localizer.Get("Reconciliation.OperationPayloadConversionFailed", value, targetType.Name));
+            throw new ReconciliationOperationPayloadConversionFailedException(_localizer.Get("Reconciliation.OperationPayloadConversionFailed", value, targetType.Name));
         }
 
         return (T)parsed;

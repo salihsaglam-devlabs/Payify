@@ -42,56 +42,70 @@ public class PaycoreSecurityService : IPaycoreSecurityService
 
     public async Task<SetCardBinResponse> SetCardPinAsync(SetCardPinCommand command)
     {
-        var clearCardResponse = await _paycoreCardService.GetClearCardNoAsync(
-                   new GetClearCardNoQuery()
-                   {
-                       Cards = new string[] { command.TokenPan }
-                   });
-        
-        var clearCardNo = clearCardResponse.First().CardNo;
-        if (string.IsNullOrWhiteSpace(clearCardNo))
+        try
+        {
+            var clearCardResponse = await _paycoreCardService.GetClearCardNoAsync(
+                              new GetClearCardNoQuery()
+                              {
+                                  Cards = new string[] { command.TokenPan }
+                              });
+
+            var clearCardNo = clearCardResponse.CrdClearCardInfo.First().CardNo;
+            if (string.IsNullOrWhiteSpace(clearCardNo))
+            {
+                return new SetCardBinResponse
+                {
+                    IsSuccess = false,
+                    Description = ResponseDescription.CLEAR_CARD_NO_EMPTY,
+                    Code = "CLEAR_CARD_NO_EMPTY",
+                    Data = string.Empty
+                };
+            }
+
+            var pinBlock = await _pinBlockService.GenerateEncryptedPinBlock(
+                 command.ClearPin,
+                 clearCardNo);
+
+            var request = new PaycoreSetCardPinRequest
+            {
+                CardNo = command.TokenPan,
+                PinBlock = pinBlock.Data
+            };
+
+            var response = await _clientService.ExecuteAsync<PaycoreSetCardPinResponse>(
+                    $"{_paycoreSettings.VaultSettings.BaseUrl}{_paycoreSettings.SetCardPin}",
+                    PaycoreRequestType.Put,
+                    request);
+
+            if (!response.IsSuccess)
+            {
+                return new SetCardBinResponse
+                {
+                    IsSuccess = false,
+                    Description = response.exception.message,
+                    Code = "SET_PIN_ERROR",
+                    Data = string.Empty
+                };
+            }
+
+            return new SetCardBinResponse
+            {
+                IsSuccess = true,
+                Description = "Success",
+                Code = "00",
+                Data = "SUCCESS"
+            };
+        }
+        catch (Exception ex) 
         {
             return new SetCardBinResponse
             {
                 IsSuccess = false,
-                Description = ResponseDescription.CLEAR_CARD_NO_EMPTY,
-                Code = "CLEAR_CARD_NO_EMPTY",
+                Description = ex.Message,
+                Code = "SET_PIN_ERROR",
                 Data = string.Empty
             };
         }
-
-        var pinBlock = await _pinBlockService.GenerateEncryptedPinBlock(
-             command.ClearPin,
-             clearCardNo);
-
-        var request = new PaycoreSetCardPinRequest
-        {
-            CardNo = command.TokenPan,
-            PinBlock = pinBlock.Data
-        }; 
-    
-    var response = await _clientService.ExecuteAsync<PaycoreSetCardPinResponse>(
-            $"{_paycoreSettings.VaultSettings.BaseUrl}{_paycoreSettings.SetCardPin}",
-            PaycoreRequestType.Put,
-            request);
-
-        if (!response.IsSuccess)
-        {
-            return new SetCardBinResponse
-            {
-                IsSuccess = false,
-                Description = response.exception.message,
-                Code = "SET_PIN_ERROR",
-                Data = string.Empty
-};
-        }
-
-        return new SetCardBinResponse
-        {
-            IsSuccess = true,
-            Description = "Success",
-            Code = "00",
-            Data = "SUCCESS"
-        };   
+       
     }
 }

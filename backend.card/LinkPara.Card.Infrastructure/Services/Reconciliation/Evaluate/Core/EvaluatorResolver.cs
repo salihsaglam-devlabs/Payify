@@ -21,7 +21,7 @@ internal sealed class EvaluatorResolver
         var evaluator = _evaluators.FirstOrDefault(x => x.CanEvaluate(fileContentType));
         if (evaluator is null)
         {
-            throw new ReconciliationConfigurationException(ApiErrorCode.ReconciliationNoEvaluatorRegistered, _localizer.Get("Reconciliation.NoEvaluatorRegistered", fileContentType));
+            throw new ReconciliationNoEvaluatorRegisteredException(_localizer.Get("Reconciliation.NoEvaluatorRegistered", fileContentType));
         }
 
         return evaluator;

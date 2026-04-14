@@ -39,7 +39,7 @@ public class ParsedRecordModelMapper : IParsedRecordModelMapper
             ("CardBkm", "H") => MapCardBkmHeader(parsedLine),
             ("CardBkm", "D") => MapCardBkmDetail(parsedLine),
             ("CardBkm", "F") => MapCardBkmFooter(parsedLine),
-            _ => throw new FileIngestionMappingException(ApiErrorCode.FileIngestionTypedSchemaMapperMissing, _localizer.Get("FileIngestion.TypedSchemaMapperMissing", profileKey, parsedLine.RecordType))
+            _ => throw new FileIngestionTypedSchemaMapperMissingException(_localizer.Get("FileIngestion.TypedSchemaMapperMissing", profileKey, parsedLine.RecordType))
         };
     }
 
@@ -464,7 +464,7 @@ public class ParsedRecordModelMapper : IParsedRecordModelMapper
         if (decimal.TryParse(rawValue, NumberStyles.Any, CultureInfo.GetCultureInfo("tr-TR"), out var trValue))
             return trValue;
 
-        throw new FileIngestionValueConversionException(ApiErrorCode.FileIngestionDecimalValueInvalid, _localizer.Get("FileIngestion.DecimalValueInvalid", rawValue, key));
+        throw new FileIngestionDecimalValueInvalidException(_localizer.Get("FileIngestion.DecimalValueInvalid", rawValue, key));
     }
 
     private int IntValue(ParsedFileLine line, string key, params string[] aliases)
@@ -479,7 +479,7 @@ public class ParsedRecordModelMapper : IParsedRecordModelMapper
         if (int.TryParse(rawValue, NumberStyles.Integer, CultureInfo.GetCultureInfo("tr-TR"), out var trValue))
             return trValue;
 
-        throw new FileIngestionValueConversionException(ApiErrorCode.FileIngestionIntValueInvalid, _localizer.Get("FileIngestion.IntValueInvalid", rawValue, key));
+        throw new FileIngestionIntValueInvalidException(_localizer.Get("FileIngestion.IntValueInvalid", rawValue, key));
     }
 
     private long LongValue(ParsedFileLine line, string key, params string[] aliases)
@@ -494,7 +494,7 @@ public class ParsedRecordModelMapper : IParsedRecordModelMapper
         if (long.TryParse(rawValue, NumberStyles.Integer, CultureInfo.GetCultureInfo("tr-TR"), out var trValue))
             return trValue;
 
-        throw new FileIngestionValueConversionException(ApiErrorCode.FileIngestionLongValueInvalid, _localizer.Get("FileIngestion.LongValueInvalid", rawValue, key));
+        throw new FileIngestionLongValueInvalidException(_localizer.Get("FileIngestion.LongValueInvalid", rawValue, key));
     }
 
     private TEnum EnumValue<TEnum>(ParsedFileLine line, string key, params string[] aliases)
@@ -530,6 +530,6 @@ public class ParsedRecordModelMapper : IParsedRecordModelMapper
                 return (TEnum)field.GetValue(null)!;
         }
 
-        throw new FileIngestionValueConversionException(ApiErrorCode.FileIngestionEnumValueInvalid, _localizer.Get("FileIngestion.EnumValueInvalid", rawValue, typeof(TEnum).Name));
+        throw new FileIngestionEnumValueInvalidException(_localizer.Get("FileIngestion.EnumValueInvalid", rawValue, typeof(TEnum).Name));
     }
 }

@@ -2,10 +2,6 @@
 {
     public class GetClearCardNoResponse : PaycoreResponse
     {
-        public string CardNo { get; set; }
-        public string CardToken { get; set; }
-        public int CardUniqId { get; set; }
-        
+        public CrdClearCardInfo[] CrdClearCardInfo { get; set; }
     }
-
 }

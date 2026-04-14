@@ -1,26 +1,27 @@
-using LinkPara.Card.Application.Commons.Models.Reconciliation.Contracts.Requests;
-using LinkPara.Card.Application.Commons.Models.Reconciliation.Contracts.Responses;
+using LinkPara.Card.Application.Commons.Interfaces.Reconciliation;
+using LinkPara.Card.Application.Commons.Models.Reconciliation.Shared;
+using LinkPara.SharedModels.Pagination;
 using MediatR;
 
 namespace LinkPara.Card.Application.Features.Reconciliation.Queries.PendingReviews
 {
-    public class GetPendingReviewsQuery : IRequest<PendingReviewsResponse>
+    public class GetPendingReviewsQuery : SearchQueryParams, IRequest<PaginatedList<ManualReview>>
     {
-        public PendingReviewsRequest Request { get; set; } = new PendingReviewsRequest();
+        public DateOnly? Date { get; set; }
     }
 
-    public class GetPendingReviewsQueryHandler : IRequestHandler<GetPendingReviewsQuery, PendingReviewsResponse>
+    public class GetPendingReviewsQueryHandler : IRequestHandler<GetPendingReviewsQuery, PaginatedList<ManualReview>>
     {
-        private readonly LinkPara.Card.Application.Commons.Interfaces.Reconciliation.IReconciliationService _service;
+        private readonly IReconciliationService _service;
 
-        public GetPendingReviewsQueryHandler(LinkPara.Card.Application.Commons.Interfaces.Reconciliation.IReconciliationService service)
+        public GetPendingReviewsQueryHandler(IReconciliationService service)
         {
             _service = service;
         }
 
-        public async Task<PendingReviewsResponse> Handle(GetPendingReviewsQuery request, CancellationToken cancellationToken)
+        public async Task<PaginatedList<ManualReview>> Handle(GetPendingReviewsQuery request, CancellationToken cancellationToken)
         {
-            return await _service.GetPendingReviewsAsync(request.Request, cancellationToken);
+            return await _service.GetPendingReviewsAsync(request, cancellationToken);
         }
     }
 }

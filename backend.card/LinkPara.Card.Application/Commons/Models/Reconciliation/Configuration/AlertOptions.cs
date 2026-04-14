@@ -1,3 +1,5 @@
+using LinkPara.Card.Application.Commons.Exceptions;
+
 namespace LinkPara.Card.Application.Commons.Models.Reconciliation.Configuration;
 
 public class AlertOptions
@@ -22,7 +24,7 @@ public class AlertOptions
         IncludeFailed ??= DefaultIncludeFailed;
 
         if (BatchSize <= 0)
-            throw new InvalidOperationException($"Reconciliation.Alert.BatchSize must be positive. Current: {BatchSize}");
+            throw new ReconciliationAlertBatchSizeInvalidException($"Reconciliation.Alert.BatchSize must be positive. Current: {BatchSize}");
     }
 
     [Obsolete("Use ValidateAndApplyDefaults() instead")]

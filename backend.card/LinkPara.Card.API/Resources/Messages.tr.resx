@@ -400,6 +400,143 @@
   <data name="FileIngestion.LocalRootPathEmpty" xml:space="preserve">
     <value>'{0}' profili için yerel kök yol boş.</value>
   </data>
+  <data name="FileIngestion.FtpConnecting" xml:space="preserve">
+    <value>{Host}:{Port} adresine FTP bağlantısı kuruluyor (deneme {Attempt}/{MaxAttempts}, uç nokta: {EndpointType}, yöntem: {Method})</value>
+  </data>
+  <data name="FileIngestion.FtpConnected" xml:space="preserve">
+    <value>{Host}:{Port} adresine FTP isteği {Attempt}. denemede başarılı oldu</value>
+  </data>
+  <data name="FileIngestion.FtpConnectionFailed" xml:space="preserve">
+    <value>{Host}:{Port} adresine FTP bağlantısı {MaxAttempts} deneme sonrası başarısız oldu. Son hata: {ErrorMessage} (Durum: {WebExceptionStatus})</value>
+  </data>
+  <data name="FileIngestion.FtpConnectionRetry" xml:space="preserve">
+    <value>{Host}:{Port} adresine FTP bağlantı denemesi {Attempt}/{MaxAttempts} başarısız oldu: {ErrorMessage} (Durum: {WebExceptionStatus}). {Delay}s sonra yeniden denenecek...</value>
+  </data>
+  <data name="FileIngestion.FtpUploadConnecting" xml:space="preserve">
+    <value>{Host}:{Port} adresine FTP yükleme bağlantısı kuruluyor (deneme {Attempt}/{MaxAttempts}, uç nokta: {EndpointType})</value>
+  </data>
+  <data name="FileIngestion.FtpUploadConnected" xml:space="preserve">
+    <value>{Host}:{Port} adresine FTP yükleme akışı {Attempt}. denemede açıldı</value>
+  </data>
+  <data name="FileIngestion.FtpUploadConnectionFailed" xml:space="preserve">
+    <value>{Host}:{Port} adresine FTP yükleme bağlantısı {MaxAttempts} deneme sonrası başarısız oldu. Son hata: {ErrorMessage} (Durum: {WebExceptionStatus})</value>
+  </data>
+  <data name="FileIngestion.FtpUploadConnectionRetry" xml:space="preserve">
+    <value>{Host}:{Port} adresine FTP yükleme denemesi {Attempt}/{MaxAttempts} başarısız oldu: {ErrorMessage} (Durum: {WebExceptionStatus}). {Delay}s sonra yeniden denenecek...</value>
+  </data>
+  <data name="FileIngestion.FtpRetryExhausted" xml:space="preserve">
+    <value>FTP yeniden deneme döngüsü beklenmedik şekilde sonlandı.</value>
+  </data>
+  <data name="FileIngestion.FtpUploadRetryExhausted" xml:space="preserve">
+    <value>FTP yükleme yeniden deneme döngüsü beklenmedik şekilde sonlandı.</value>
+  </data>
+  <data name="FileIngestion.SftpConnecting" xml:space="preserve">
+    <value>{Host}:{Port} adresine SFTP bağlantısı kuruluyor (deneme {Attempt}/{MaxAttempts}, uç nokta: {EndpointType}, zaman aşımı: {Timeout}s)</value>
+  </data>
+  <data name="FileIngestion.SftpConnected" xml:space="preserve">
+    <value>{Host}:{Port} adresine SFTP bağlantısı {Attempt}. denemede başarılı oldu</value>
+  </data>
+  <data name="FileIngestion.SftpConnectionFailed" xml:space="preserve">
+    <value>{Host}:{Port} adresine SFTP bağlantısı {MaxAttempts} deneme sonrası başarısız oldu. Son hata: {ErrorMessage}</value>
+  </data>
+  <data name="FileIngestion.SftpConnectionRetry" xml:space="preserve">
+    <value>{Host}:{Port} adresine SFTP bağlantı denemesi {Attempt}/{MaxAttempts} başarısız oldu: {ErrorMessage}. {Delay}s sonra yeniden denenecek...</value>
+  </data>
+
+  <!-- FileIngestion – Configuration Validation -->
+  <data name="Config.FileIngestion.VaultConfigMissing" xml:space="preserve">
+    <value>Vault anahtarı eksik: CardSecrets/FileIngestion (Connections ve Profiles gereklidir)</value>
+  </data>
+  <data name="Config.FileIngestion.ConnectionsMissing" xml:space="preserve">
+    <value>Vault yapılandırması eksik: FileIngestion.Connections</value>
+  </data>
+  <data name="Config.FileIngestion.ProfilesMissing" xml:space="preserve">
+    <value>Vault yapılandırması eksik: FileIngestion.Profiles</value>
+  </data>
+  <data name="Config.FileIngestion.ConnectionsSourceMissing" xml:space="preserve">
+    <value>Vault yapılandırması eksik: FileIngestion.Connections.Source</value>
+  </data>
+  <data name="Config.FileIngestion.ConnectionsTargetMissing" xml:space="preserve">
+    <value>Vault yapılandırması eksik: FileIngestion.Connections.Target</value>
+  </data>
+  <data name="Config.FileIngestion.ProtocolMissing" xml:space="preserve">
+    <value>Vault yapılandırması eksik: FileIngestion.Connections uç noktası Protocol</value>
+  </data>
+  <data name="Config.Sftp.TimeoutMustBePositive" xml:space="preserve">
+    <value>SftpOptions.TimeoutSeconds pozitif olmalıdır. Mevcut: {0}</value>
+  </data>
+  <data name="Config.Sftp.OperationTimeoutMustBePositive" xml:space="preserve">
+    <value>SftpOptions.OperationTimeoutSeconds pozitif olmalıdır. Mevcut: {0}</value>
+  </data>
+  <data name="Config.Sftp.RetryCountMustBeNonNegative" xml:space="preserve">
+    <value>SftpOptions.RetryCount negatif olmamalıdır. Mevcut: {0}</value>
+  </data>
+  <data name="Config.Sftp.RetryDelayMustBeNonNegative" xml:space="preserve">
+    <value>SftpOptions.RetryDelaySeconds negatif olmamalıdır. Mevcut: {0}</value>
+  </data>
+  <data name="Config.Ftp.TimeoutMustBePositive" xml:space="preserve">
+    <value>FtpOptions.TimeoutSeconds pozitif olmalıdır. Mevcut: {0}</value>
+  </data>
+  <data name="Config.Ftp.RetryCountMustBeNonNegative" xml:space="preserve">
+    <value>FtpOptions.RetryCount negatif olmamalıdır. Mevcut: {0}</value>
+  </data>
+  <data name="Config.Ftp.RetryDelayMustBeNonNegative" xml:space="preserve">
+    <value>FtpOptions.RetryDelaySeconds negatif olmamalıdır. Mevcut: {0}</value>
+  </data>
+  <data name="Config.Processing.BatchSizeMustBePositive" xml:space="preserve">
+    <value>FileIngestion.Processing.BatchSize pozitif olmalıdır. Mevcut: {0}</value>
+  </data>
+  <data name="Config.Processing.RetryBatchSizeMustBePositive" xml:space="preserve">
+    <value>FileIngestion.Processing.RetryBatchSize pozitif olmalıdır. Mevcut: {0}</value>
+  </data>
+  <data name="Config.Processing.MaxParallelismMustBePositive" xml:space="preserve">
+    <value>FileIngestion.Processing.MaxDegreeOfParallelism pozitif olmalıdır. Mevcut: {0}</value>
+  </data>
+  <data name="Config.Reconciliation.MaxEvaluationsMustBePositive" xml:space="preserve">
+    <value>Reconciliation.Execute.MaxEvaluations pozitif olmalıdır. Mevcut: {0}</value>
+  </data>
+  <data name="Config.Reconciliation.LeaseSecondsMustBePositive" xml:space="preserve">
+    <value>Reconciliation.Execute.LeaseSeconds pozitif olmalıdır. Mevcut: {0}</value>
+  </data>
+  <data name="Config.Reconciliation.ChunkSizeMustBePositive" xml:space="preserve">
+    <value>Reconciliation.Evaluate.ChunkSize pozitif olmalıdır. Mevcut: {0}</value>
+  </data>
+  <data name="Config.Reconciliation.ClaimTimeoutMustBePositive" xml:space="preserve">
+    <value>Reconciliation.Evaluate.ClaimTimeoutSeconds pozitif olmalıdır. Mevcut: {0}</value>
+  </data>
+  <data name="Config.Reconciliation.ClaimRetryCountMustBePositive" xml:space="preserve">
+    <value>Reconciliation.Evaluate.ClaimRetryCount pozitif olmalıdır. Mevcut: {0}</value>
+  </data>
+  <data name="Config.Reconciliation.BatchSizeMustBePositive" xml:space="preserve">
+    <value>Reconciliation.Alert.BatchSize pozitif olmalıdır. Mevcut: {0}</value>
+  </data>
+  <data name="Config.Archive.PreviewLimitMustBePositive" xml:space="preserve">
+    <value>Archive.Defaults.PreviewLimit pozitif olmalıdır. Mevcut: {0}</value>
+  </data>
+  <data name="Config.Archive.MaxRunCountMustBePositive" xml:space="preserve">
+    <value>Archive.Defaults.MaxRunCount pozitif olmalıdır. Mevcut: {0}</value>
+  </data>
+  <data name="Config.Archive.RetentionDaysMustBeNonNegative" xml:space="preserve">
+    <value>Archive.Rules.RetentionDays negatif olmamalıdır. Mevcut: {0}</value>
+  </data>
+  <data name="Config.Archive.MinLastUpdateAgeMustBeNonNegative" xml:space="preserve">
+    <value>Archive.Rules.MinLastUpdateAgeHours negatif olmamalıdır. Mevcut: {0}</value>
+  </data>
+  <data name="Config.Archive.OptionsNotConfigured" xml:space="preserve">
+    <value>ArchiveOptions yapılandırılmamış.</value>
+  </data>
+  <data name="Archive.PropertyNotFound" xml:space="preserve">
+    <value>'{0}' özelliği {1} varlık türünde bulunamadı.</value>
+  </data>
+  <data name="Archive.PrimaryKeyNotDefined" xml:space="preserve">
+    <value>{0} varlık türünde birincil anahtar tanımlı değil.</value>
+  </data>
+  <data name="Archive.EntityTypeNotFound" xml:space="preserve">
+    <value>EF modelinde varlık türü bulunamadı: {0}.</value>
+  </data>
+  <data name="Paycore.CustomerOperationFailed" xml:space="preserve">
+    <value>Paycore müşteri işlemi başarısız oldu.</value>
+  </data>
 
   <!-- FileIngestion – Parser -->
   <data name="FileIngestion.ParserLineEmpty" xml:space="preserve">
@@ -516,6 +653,15 @@
   </data>
   <data name="Reconciliation.OperationExecutionFailed" xml:space="preserve">
     <value>İşlem yürütme başarısız oldu.</value>
+  </data>
+  <data name="Reconciliation.EvaluationExecutionFailed" xml:space="preserve">
+    <value>'{0}' değerlendirmesinin yürütülmesi beklenmedik şekilde başarısız oldu.</value>
+  </data>
+  <data name="Reconciliation.GetPendingReviewsFailed" xml:space="preserve">
+    <value>Bekleyen incelemeler alınamadı.</value>
+  </data>
+  <data name="Reconciliation.GetAlertsFailed" xml:space="preserve">
+    <value>Uyarılar alınamadı.</value>
   </data>
   <data name="Reconciliation.ManualReviewNotResolved" xml:space="preserve">
     <value>Manuel inceleme kaydı çözümlenemedi.</value>
@@ -634,6 +780,18 @@
   </data>
   <data name="FileIngestion.ImportFailedNoDetails" xml:space="preserve">
     <value>Dosya içe aktarımı belirli hata detayı olmadan başarısız oldu.</value>
+  </data>
+  <data name="FileIngestion.TargetArchiveOpenFailed" xml:space="preserve">
+    <value>'{ProfileKey}' profili, '{FileName}' dosyası için hedef arşiv yazıcısı açılamadı: {ErrorMessage}</value>
+  </data>
+  <data name="FileIngestion.TargetArchiveWriteFailed" xml:space="preserve">
+    <value>Hedef arşiv yazma başarısız oldu: {ErrorMessage}</value>
+  </data>
+  <data name="FileIngestion.TargetArchiveFinalizeFailed" xml:space="preserve">
+    <value>Hedef arşiv sonlandırma başarısız oldu: {ErrorMessage}</value>
+  </data>
+  <data name="Consumer.JobFailed" xml:space="preserve">
+    <value>Tüketici işi başarısız oldu. Tür={JobType}</value>
   </data>
 
   <!-- ════════════════════════════════════════════ -->

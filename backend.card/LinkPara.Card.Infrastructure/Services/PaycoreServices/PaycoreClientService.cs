@@ -129,7 +129,10 @@ public class PaycoreClientService
             }
 
             var responseString = await response.Content.ReadAsStringAsync();
-            var result = JsonSerializer.Deserialize<PaycoreResponseModel<T>>(responseString);
+            var result = JsonSerializer.Deserialize<PaycoreResponseModel<T>>(responseString, new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            });
 
             return result;
         }

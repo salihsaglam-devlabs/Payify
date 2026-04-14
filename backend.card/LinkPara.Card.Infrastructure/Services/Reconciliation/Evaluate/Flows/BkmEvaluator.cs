@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Text.Json;
+using LinkPara.Card.Application.Commons.Exceptions;
 using LinkPara.Card.Application.Commons.Extensions;
 using LinkPara.Card.Domain.Entities.FileIngestion.Persistence;
 using LinkPara.Card.Domain.Entities.FileIngestion.Schemas;
@@ -49,7 +50,7 @@ internal sealed class BkmEvaluator : IEvaluator
 
         if (currentCard is null)
         {
-            throw new InvalidOperationException(_localizer.Get("Reconciliation.Bkm.CurrentCardRowMissing"));
+            throw new ReconciliationCurrentCardRowMissingException(_localizer.Get("Reconciliation.Bkm.CurrentCardRowMissing"));
         }
 
         var detail = currentCard;

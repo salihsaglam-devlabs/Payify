@@ -1,6 +1,7 @@
 using System.Data;
 using System.Text.Json;
 using LinkPara.Card.Application.Commons.Extensions;
+using LinkPara.Card.Application.Commons.Helpers;
 using LinkPara.Card.Application.Commons.Models.Archive.Contracts.Responses;
 using LinkPara.Card.Domain.Entities.Archive;
 using LinkPara.Card.Infrastructure.Persistence;
@@ -199,10 +200,7 @@ internal sealed class ArchiveExecutor
 
     private static string BuildSafeMessage(string failureReason, Exception ex)
     {
-        var baseMessage = ex.Message;
-        if (baseMessage.Length > 500)
-            baseMessage = baseMessage[..500];
-
+        var baseMessage = ExceptionDetailHelper.BuildDetailMessage(ex, 500);
         return $"[{failureReason}] {baseMessage}";
     }
 }

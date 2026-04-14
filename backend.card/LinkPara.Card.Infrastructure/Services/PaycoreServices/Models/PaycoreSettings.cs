@@ -21,12 +21,13 @@ public class PaycoreSettings
     public string UpdateLimit { get; set; }
     public string GetCardLastCourierActivity { get; set; }
     public string AddAdditionalLimitRestriction { get; set; }
+    public string CardRenewal { get; set; }
     public string GetClearCardNo { get; set; }
+    public string GetProducts { get; set; }
+    public string GetCardStatus { get; set; }
     public string ApiVersion { get; set; }
     public string Language { get; set; }
     public string Channel { get; set; }
-    public string GetProducts { get; set; }
-
 }
 
 public class PaycoreVaultSettings

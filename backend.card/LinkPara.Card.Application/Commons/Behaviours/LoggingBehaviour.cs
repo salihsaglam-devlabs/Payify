@@ -1,5 +1,6 @@
 ﻿using LinkPara.Audit;
 using LinkPara.Audit.Models;
+using LinkPara.Card.Application.Commons.Helpers;
 using LinkPara.Card.Application.Commons.Interfaces;
 using LinkPara.ContextProvider;
 using LinkPara.Card.Application.Commons.Attributes;
@@ -58,7 +59,7 @@ where TRequest : IRequest<TResponse>
                 auditLog.IsSuccess = false;
                 auditLog.Details = new Dictionary<string, string>
                 {
-                     {"ErrorMessage", ex.Message }
+                     {"ErrorMessage", ExceptionDetailHelper.BuildDetailMessage(ex, 2000) }
                 };
                 await _auditLogService.AuditLogAsync(auditLog);
             }

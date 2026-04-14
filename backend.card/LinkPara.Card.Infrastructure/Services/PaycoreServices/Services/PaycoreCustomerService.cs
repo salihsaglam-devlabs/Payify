@@ -13,7 +13,6 @@ using LinkPara.Card.Domain.Constants;
 using LinkPara.Card.Domain.Entities;
 using LinkPara.Card.Infrastructure.Services.PaycoreServices.Models;
 using LinkPara.Card.Infrastructure.Services.PaycoreServices.Models.CustomerModels.Requests;
-using LinkPara.Card.Infrastructure.Services.PaycoreServices.Models.CustomerModels.Responses;
 using LinkPara.ContextProvider;
 using LinkPara.HttpProviders.Vault;
 using LinkPara.Security;
@@ -93,7 +92,7 @@ public class PaycoreCustomerService : IPaycoreCustomerService
             CstCustomerCommunications = command.CustomerCommunications,
             Surname = command.Surname
         };
-        var customerResponse = await _clientService.ExecuteAsync<PaycoreCreateCustomerResponse>(
+        var customerResponse = await _clientService.ExecuteAsync<string>(
             $"{_paycoreSettings.VaultSettings.BaseUrl}{_paycoreSettings.CreateCustomer}",
             PaycoreRequestType.Post,
             createCustomerRequest);

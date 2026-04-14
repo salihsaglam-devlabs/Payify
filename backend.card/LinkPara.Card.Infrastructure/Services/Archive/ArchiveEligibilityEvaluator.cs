@@ -1,3 +1,4 @@
+using LinkPara.Card.Application.Commons.Exceptions;
 using LinkPara.Card.Application.Commons.Models.Archive.Configuration;
 using LinkPara.Card.Application.Commons.Models.Archive.Contracts.Responses;
 using Microsoft.Extensions.Options;
@@ -10,7 +11,7 @@ internal sealed class ArchiveEligibilityEvaluator
 
     public ArchiveEligibilityEvaluator(IOptions<ArchiveOptions> options)
     {
-        _options = options.Value ?? throw new InvalidOperationException("ArchiveOptions is not configured.");
+        _options = options.Value ?? throw new ArchiveOptionsNotConfiguredException("ArchiveOptions is not configured.");
     }
 
     public ArchiveEligibilityResult Evaluate(ArchiveAggregateSnapshot? snapshot, DateTime now)

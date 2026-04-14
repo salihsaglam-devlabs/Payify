@@ -1,26 +1,29 @@
-using LinkPara.Card.Application.Commons.Models.Reconciliation.Contracts.Requests;
-using LinkPara.Card.Application.Commons.Models.Reconciliation.Contracts.Responses;
+using LinkPara.Card.Application.Commons.Interfaces.Reconciliation;
+using LinkPara.Card.Application.Commons.Models.Reconciliation.Shared;
+using LinkPara.Card.Domain.Enums.Reconciliation;
+using LinkPara.SharedModels.Pagination;
 using MediatR;
 
 namespace LinkPara.Card.Application.Features.Reconciliation.Queries.GetAlerts
 {
-    public class GetAlertsQuery : IRequest<GetAlertsResponse>
+    public class GetAlertsQuery : SearchQueryParams, IRequest<PaginatedList<Alert>>
     {
-        public GetAlertsRequest Request { get; set; } = new GetAlertsRequest();
+        public DateOnly? Date { get; set; }
+        public AlertStatus? AlertStatus { get; set; }
     }
 
-    public class GetAlertsQueryHandler : IRequestHandler<GetAlertsQuery, GetAlertsResponse>
+    public class GetAlertsQueryHandler : IRequestHandler<GetAlertsQuery, PaginatedList<Alert>>
     {
-        private readonly LinkPara.Card.Application.Commons.Interfaces.Reconciliation.IReconciliationService _service;
+        private readonly IReconciliationService _service;
 
-        public GetAlertsQueryHandler(LinkPara.Card.Application.Commons.Interfaces.Reconciliation.IReconciliationService service)
+        public GetAlertsQueryHandler(IReconciliationService service)
         {
             _service = service;
         }
 
-        public async Task<GetAlertsResponse> Handle(GetAlertsQuery request, CancellationToken cancellationToken)
+        public async Task<PaginatedList<Alert>> Handle(GetAlertsQuery request, CancellationToken cancellationToken)
         {
-            return await _service.GetAlertsAsync(request.Request, cancellationToken);
+            return await _service.GetAlertsAsync(request, cancellationToken);
         }
     }
 }

@@ -117,6 +117,7 @@
   <resheader name="writer">
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
+  <!-- Legacy / Shared -->
   <data name="BankApiAlreadyExists" xml:space="preserve">
     <value>Bank API kullanımda !</value>
   </data>
@@ -251,5 +252,252 @@
   </data>
   <data name="AlreadyInUsePhoneNumberException" xml:space="preserve">
     <value>İlgili Telefon Numarası kullanımdadır !</value>
+  </data>
+  <!-- FileIngestion — Configuration -->
+  <data name="FileIngestionLocalPathNotConfiguredException" xml:space="preserve">
+    <value>Belirtilen profil için yerel dosya yolu yapılandırılmamış.</value>
+  </data>
+  <data name="FileIngestionLocalRootPathEmptyException" xml:space="preserve">
+    <value>Belirtilen profil için yerel kök yol boş.</value>
+  </data>
+  <data name="FileIngestionFtpPathNotConfiguredException" xml:space="preserve">
+    <value>Belirtilen profil için FTP yolu yapılandırılmamış.</value>
+  </data>
+  <data name="FileIngestionSftpPathNotConfiguredException" xml:space="preserve">
+    <value>Belirtilen profil için SFTP yolu yapılandırılmamış.</value>
+  </data>
+  <data name="FileIngestionProfileNotConfiguredException" xml:space="preserve">
+    <value>Dosya alım profili yapılandırılmamış.</value>
+  </data>
+  <data name="FileIngestionParsingNotDefinedException" xml:space="preserve">
+    <value>Ayrıştırma yapılandırması tanımlı değil.</value>
+  </data>
+  <data name="FileIngestionUnsupportedProtocolException" xml:space="preserve">
+    <value>Desteklenmeyen dosya transfer protokolü.</value>
+  </data>
+  <data name="FileIngestionConfigConnectionsMissingException" xml:space="preserve">
+    <value>Vault yapılandırması eksik: FileIngestion.Connections</value>
+  </data>
+  <data name="FileIngestionConfigProfilesMissingException" xml:space="preserve">
+    <value>Vault yapılandırması eksik: FileIngestion.Profiles</value>
+  </data>
+  <data name="FileIngestionConfigProtocolMissingException" xml:space="preserve">
+    <value>Vault yapılandırması eksik: endpoint Protocol</value>
+  </data>
+  <data name="FileIngestionConfigSourceMissingException" xml:space="preserve">
+    <value>Vault yapılandırması eksik: Connections.Source</value>
+  </data>
+  <data name="FileIngestionConfigTargetMissingException" xml:space="preserve">
+    <value>Vault yapılandırması eksik: Connections.Target</value>
+  </data>
+  <data name="FileIngestionVaultConfigMissingException" xml:space="preserve">
+    <value>Vault anahtarı eksik: CardSecrets/FileIngestion</value>
+  </data>
+  <!-- FileIngestion — Parsing -->
+  <data name="FileIngestionParserLineEmptyException" xml:space="preserve">
+    <value>Ayrıştırıcı boş satır aldı.</value>
+  </data>
+  <data name="FileIngestionParserUnsupportedRecordTypeException" xml:space="preserve">
+    <value>Ayrıştırılan satırda desteklenmeyen kayıt türü.</value>
+  </data>
+  <data name="FileIngestionHeaderNotResolvedException" xml:space="preserve">
+    <value>Başlık kaydı çözümlenemedi.</value>
+  </data>
+  <data name="FileIngestionFooterNotResolvedException" xml:space="preserve">
+    <value>Alt bilgi kaydı çözümlenemedi.</value>
+  </data>
+  <data name="FileIngestionBoundaryRecordReadFailedException" xml:space="preserve">
+    <value>Sınır kaydı okuması başarısız oldu.</value>
+  </data>
+  <data name="FileIngestionBoundaryRecordEmptyException" xml:space="preserve">
+    <value>Sınır kaydı boş.</value>
+  </data>
+  <data name="FileIngestionRecordTypeMismatchException" xml:space="preserve">
+    <value>Kayıt türü uyuşmazlığı.</value>
+  </data>
+  <!-- FileIngestion — Value Conversion -->
+  <data name="FileIngestionDecimalValueInvalidException" xml:space="preserve">
+    <value>Geçersiz ondalık değer.</value>
+  </data>
+  <data name="FileIngestionIntValueInvalidException" xml:space="preserve">
+    <value>Geçersiz tamsayı değer.</value>
+  </data>
+  <data name="FileIngestionLongValueInvalidException" xml:space="preserve">
+    <value>Geçersiz uzun tamsayı değer.</value>
+  </data>
+  <data name="FileIngestionEnumValueInvalidException" xml:space="preserve">
+    <value>Geçersiz enum değer.</value>
+  </data>
+  <!-- FileIngestion — Mapping -->
+  <data name="FileIngestionEntityTypeNotMappedException" xml:space="preserve">
+    <value>Varlık türü eşlenmemiş.</value>
+  </data>
+  <data name="FileIngestionTypedSchemaMapperMissingException" xml:space="preserve">
+    <value>Profil için tip bazlı şema eşleyici eksik.</value>
+  </data>
+  <data name="FileIngestionPropertyEmptyException" xml:space="preserve">
+    <value>Zorunlu özellik boş.</value>
+  </data>
+  <data name="FileIngestionPropertyNotMappedException" xml:space="preserve">
+    <value>Özellik eşlenmemiş.</value>
+  </data>
+  <data name="FileIngestionBulkPropertyMappingNotDefinedException" xml:space="preserve">
+    <value>Toplu özellik eşlemesi tanımlı değil.</value>
+  </data>
+  <data name="FileIngestionPropertyNotDefinedException" xml:space="preserve">
+    <value>Özellik hedef türde tanımlı değil.</value>
+  </data>
+  <data name="FileIngestionFooterTxnCountMissingException" xml:space="preserve">
+    <value>Alt bilgi işlem sayısı eksik.</value>
+  </data>
+  <!-- FileIngestion — Validation & Bulk -->
+  <data name="FileIngestionFilePatternMismatchException" xml:space="preserve">
+    <value>Dosya adı beklenen kalıpla eşleşmiyor.</value>
+  </data>
+  <data name="FileIngestionUnsupportedBulkTypeException" xml:space="preserve">
+    <value>Desteklenmeyen toplu ekleme türü.</value>
+  </data>
+  <data name="FileIngestionArchiveStatusUpdateRowMismatchException" xml:space="preserve">
+    <value>Arşiv durumu güncelleme satır sayısı uyuşmazlığı.</value>
+  </data>
+  <data name="FileIngestionSqlBulkInsertFailedException" xml:space="preserve">
+    <value>SQL Server toplu ekleme başarısız oldu.</value>
+  </data>
+  <data name="FileIngestionPostgreBulkInsertFailedException" xml:space="preserve">
+    <value>PostgreSQL toplu ekleme başarısız oldu.</value>
+  </data>
+  <data name="FileIngestionRecordNotFoundFromStartException" xml:space="preserve">
+    <value>Başlangıçtan arama yapılırken kayıt bulunamadı.</value>
+  </data>
+  <data name="FileIngestionRecordNotFoundFromEndException" xml:space="preserve">
+    <value>Sondan arama yapılırken kayıt bulunamadı.</value>
+  </data>
+  <!-- FileIngestion — Transport Options -->
+  <data name="FileIngestionSftpTimeoutInvalidException" xml:space="preserve">
+    <value>SFTP zaman aşımı yapılandırması geçersiz.</value>
+  </data>
+  <data name="FileIngestionSftpOperationTimeoutInvalidException" xml:space="preserve">
+    <value>SFTP işlem zaman aşımı yapılandırması geçersiz.</value>
+  </data>
+  <data name="FileIngestionSftpRetryCountInvalidException" xml:space="preserve">
+    <value>SFTP yeniden deneme sayısı yapılandırması geçersiz.</value>
+  </data>
+  <data name="FileIngestionSftpRetryDelayInvalidException" xml:space="preserve">
+    <value>SFTP yeniden deneme gecikmesi yapılandırması geçersiz.</value>
+  </data>
+  <data name="FileIngestionFtpTimeoutInvalidException" xml:space="preserve">
+    <value>FTP zaman aşımı yapılandırması geçersiz.</value>
+  </data>
+  <data name="FileIngestionFtpRetryCountInvalidException" xml:space="preserve">
+    <value>FTP yeniden deneme sayısı yapılandırması geçersiz.</value>
+  </data>
+  <data name="FileIngestionFtpRetryDelayInvalidException" xml:space="preserve">
+    <value>FTP yeniden deneme gecikmesi yapılandırması geçersiz.</value>
+  </data>
+  <data name="FileIngestionFtpRetryExhaustedException" xml:space="preserve">
+    <value>FTP indirme yeniden deneme hakları tükendi.</value>
+  </data>
+  <data name="FileIngestionFtpUploadRetryExhaustedException" xml:space="preserve">
+    <value>FTP yükleme yeniden deneme hakları tükendi.</value>
+  </data>
+  <!-- FileIngestion — Processing -->
+  <data name="FileIngestionProcessingBatchSizeInvalidException" xml:space="preserve">
+    <value>İşleme parti boyutu yapılandırması geçersiz.</value>
+  </data>
+  <data name="FileIngestionProcessingRetryBatchSizeInvalidException" xml:space="preserve">
+    <value>İşleme yeniden deneme parti boyutu yapılandırması geçersiz.</value>
+  </data>
+  <data name="FileIngestionProcessingMaxParallelismInvalidException" xml:space="preserve">
+    <value>İşleme maksimum paralellik yapılandırması geçersiz.</value>
+  </data>
+  <!-- Reconciliation — Context & Core -->
+  <data name="ReconciliationFileNotResolvedException" xml:space="preserve">
+    <value>Mutabakat dosyası çözümlenemedi.</value>
+  </data>
+  <data name="ReconciliationEvaluationContextNotBuiltException" xml:space="preserve">
+    <value>Değerlendirme bağlamı oluşturulamadı.</value>
+  </data>
+  <data name="ReconciliationCurrentCardRowMissingException" xml:space="preserve">
+    <value>Mutabakat bağlamında güncel kart satırı eksik.</value>
+  </data>
+  <data name="ReconciliationNoEvaluatorRegisteredException" xml:space="preserve">
+    <value>İçerik türü için kayıtlı değerlendirici bulunamadı.</value>
+  </data>
+  <data name="ReconciliationBranchRequiresManualGateException" xml:space="preserve">
+    <value>Dal, manuel kapı onayı gerektiriyor.</value>
+  </data>
+  <data name="ReconciliationUnsupportedContentTypeException" xml:space="preserve">
+    <value>Desteklenmeyen mutabakat içerik türü.</value>
+  </data>
+  <!-- Reconciliation — Payload -->
+  <data name="ReconciliationOperationPayloadEmptyException" xml:space="preserve">
+    <value>İşlem yükü boş.</value>
+  </data>
+  <data name="ReconciliationOperationPayloadDeserializeFailedException" xml:space="preserve">
+    <value>İşlem yükü seriden çözümleme başarısız.</value>
+  </data>
+  <data name="ReconciliationOperationPayloadValueMissingException" xml:space="preserve">
+    <value>İşlem yükünde gerekli değer eksik.</value>
+  </data>
+  <data name="ReconciliationOperationPayloadConversionFailedException" xml:space="preserve">
+    <value>İşlem yükü değer dönüşümü başarısız.</value>
+  </data>
+  <!-- Reconciliation — Operation -->
+  <data name="ReconciliationUnsupportedOperationCodeException" xml:space="preserve">
+    <value>Desteklenmeyen mutabakat işlem kodu.</value>
+  </data>
+  <!-- Reconciliation — Configuration -->
+  <data name="ReconciliationExecuteMaxEvaluationsInvalidException" xml:space="preserve">
+    <value>Maksimum değerlendirme sayısı yapılandırması geçersiz.</value>
+  </data>
+  <data name="ReconciliationExecuteLeaseSecondsInvalidException" xml:space="preserve">
+    <value>Kiralama süresi yapılandırması geçersiz.</value>
+  </data>
+  <data name="ReconciliationEvaluateChunkSizeInvalidException" xml:space="preserve">
+    <value>Değerlendirme parça boyutu yapılandırması geçersiz.</value>
+  </data>
+  <data name="ReconciliationEvaluateClaimTimeoutInvalidException" xml:space="preserve">
+    <value>Değerlendirme talep zaman aşımı yapılandırması geçersiz.</value>
+  </data>
+  <data name="ReconciliationEvaluateClaimRetryInvalidException" xml:space="preserve">
+    <value>Değerlendirme talep yeniden deneme yapılandırması geçersiz.</value>
+  </data>
+  <data name="ReconciliationAlertBatchSizeInvalidException" xml:space="preserve">
+    <value>Uyarı parti boyutu yapılandırması geçersiz.</value>
+  </data>
+  <!-- Archive — Configuration -->
+  <data name="ArchiveOptionsNotConfiguredException" xml:space="preserve">
+    <value>Arşiv seçenekleri yapılandırılmamış.</value>
+  </data>
+  <data name="ArchivePreviewLimitInvalidException" xml:space="preserve">
+    <value>Arşiv önizleme limiti yapılandırması geçersiz.</value>
+  </data>
+  <data name="ArchiveMaxRunCountInvalidException" xml:space="preserve">
+    <value>Arşiv maksimum çalıştırma sayısı yapılandırması geçersiz.</value>
+  </data>
+  <data name="ArchiveRetentionDaysInvalidException" xml:space="preserve">
+    <value>Arşiv saklama gün sayısı yapılandırması geçersiz.</value>
+  </data>
+  <data name="ArchiveMinUpdateAgeInvalidException" xml:space="preserve">
+    <value>Arşiv minimum güncelleme yaşı yapılandırması geçersiz.</value>
+  </data>
+  <!-- Archive — Verification & SQL -->
+  <data name="ArchiveLiveCountsNotClearedException" xml:space="preserve">
+    <value>Arşiv silme sonrası canlı sayılar temizlenmedi.</value>
+  </data>
+  <data name="ArchiveVerificationCountMismatchException" xml:space="preserve">
+    <value>Arşiv doğrulama sayısı uyuşmazlığı.</value>
+  </data>
+  <data name="ArchivePropertyNotFoundException" xml:space="preserve">
+    <value>Varlık türünde özellik bulunamadı.</value>
+  </data>
+  <data name="ArchivePrimaryKeyNotDefinedException" xml:space="preserve">
+    <value>Varlık türü için birincil anahtar tanımlı değil.</value>
+  </data>
+  <data name="ArchiveEntityTypeNotFoundException" xml:space="preserve">
+    <value>Veritabanı modelinde varlık türü bulunamadı.</value>
+  </data>
+  <data name="ArchiveUnsupportedBeforeDateStrategyException" xml:space="preserve">
+    <value>Desteklenmeyen önceki tarih stratejisi.</value>
   </data>
 </root>

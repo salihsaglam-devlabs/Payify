@@ -1,3 +1,5 @@
+using LinkPara.Card.Application.Commons.Exceptions;
+using LinkPara.Card.Application.Commons.Extensions;
 using LinkPara.Card.Domain.Entities.Archive;
 using LinkPara.Card.Domain.Entities.FileIngestion.Persistence;
 using LinkPara.Card.Domain.Entities.Reconciliation.Persistence;
@@ -5,6 +7,7 @@ using LinkPara.Card.Infrastructure.Persistence;
 using LinkPara.SharedModels.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.Extensions.Localization;
 
 namespace LinkPara.Card.Infrastructure.Services.Archive;
 
@@ -29,6 +32,7 @@ internal interface IArchiveSqlDialect
 internal sealed class ArchiveSqlDialect : IArchiveSqlDialect
 {
     private readonly CardDbContext _dbContext;
+    private readonly IStringLocalizer _localizer;
     private readonly bool _isSqlServer;
     
     private const string FileLineIdProperty = nameof(ReconciliationEvaluation.FileLineId);
@@ -46,9 +50,12 @@ internal sealed class ArchiveSqlDialect : IArchiveSqlDialect
 
     private const string FilterParamPlaceholder = "{2}";
 
-    public ArchiveSqlDialect(CardDbContext dbContext)
+    public ArchiveSqlDialect(
+        CardDbContext dbContext,
+        Func<LinkPara.Card.Application.Commons.Localization.LocalizerResource, IStringLocalizer> localizerFactory)
     {
         _dbContext = dbContext;
+        _localizer = localizerFactory(LinkPara.Card.Application.Commons.Localization.LocalizerResource.Messages);
         _isSqlServer = (_dbContext.Database.ProviderName ?? string.Empty)
             .Contains("SqlServer", StringComparison.OrdinalIgnoreCase);
     }
@@ -195,8 +202,8 @@ internal sealed class ArchiveSqlDialect : IArchiveSqlDialect
     {
         var entityType = FindEntityType<TEntity>();
         var property = entityType.FindProperty(propertyName)
-            ?? throw new InvalidOperationException(
-                $"Property '{propertyName}' not found on entity type {typeof(TEntity).Name}.");
+            ?? throw new ArchivePropertyNotFoundException(
+                _localizer.Get("Archive.PropertyNotFound", propertyName, typeof(TEntity).Name));
         return QuoteIdentifier(property.GetColumnName(GetStoreObject(entityType))!);
     }
 
@@ -204,15 +211,15 @@ internal sealed class ArchiveSqlDialect : IArchiveSqlDialect
     {
         var entityType = FindEntityType<TEntity>();
         var pk = entityType.FindPrimaryKey()
-            ?? throw new InvalidOperationException(
-                $"No primary key defined on entity type {typeof(TEntity).Name}.");
+            ?? throw new ArchivePrimaryKeyNotDefinedException(
+                _localizer.Get("Archive.PrimaryKeyNotDefined", typeof(TEntity).Name));
         return QuoteIdentifier(pk.Properties[0].GetColumnName(GetStoreObject(entityType))!);
     }
 
     private IEntityType FindEntityType<TEntity>() where TEntity : class
     {
         return _dbContext.Model.FindEntityType(typeof(TEntity))
-            ?? throw new InvalidOperationException($"Entity type not found in EF model: {typeof(TEntity).Name}.");
+            ?? throw new ArchiveEntityTypeNotFoundException(_localizer.Get("Archive.EntityTypeNotFound", typeof(TEntity).Name));
     }
 
     private static StoreObjectIdentifier GetStoreObject(IEntityType entityType)

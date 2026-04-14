@@ -17,7 +17,7 @@ public class FixedWidthRecordParser : IFixedWidthRecordParser
     public ParsedFileLine Parse(string line, ParsingOptions parsingRule)
     {
         if (string.IsNullOrWhiteSpace(line))
-            throw new FileIngestionParsingException(ApiErrorCode.FileIngestionParserLineEmpty, _localizer.Get("FileIngestion.ParserLineEmpty"));
+            throw new FileIngestionParserLineEmptyException(_localizer.Get("FileIngestion.ParserLineEmpty"));
         
         var recordType = string.IsNullOrWhiteSpace(line)
             ? string.Empty
@@ -29,7 +29,7 @@ public class FixedWidthRecordParser : IFixedWidthRecordParser
             };
         
         if (!parsingRule.Records.TryGetValue(recordType, out var recordRule))
-            throw new FileIngestionParsingException(ApiErrorCode.FileIngestionParserUnsupportedRecordType, _localizer.Get("FileIngestion.ParserUnsupportedRecordType", recordType));
+            throw new FileIngestionParserUnsupportedRecordTypeException(_localizer.Get("FileIngestion.ParserUnsupportedRecordType", recordType));
 
         var parsed = new ParsedFileLine
         {
@@ -54,8 +54,7 @@ public class FixedWidthRecordParser : IFixedWidthRecordParser
         }
         catch (Exception ex)
         {
-            throw new FileIngestionParsingException(
-                ApiErrorCode.FileIngestionBoundaryRecordReadFailed,
+            throw new FileIngestionBoundaryRecordReadFailedException(
                 _localizer.Get("FileIngestion.ParserRecordTypeError", recordType, ex.Message),
                 ex);
         }

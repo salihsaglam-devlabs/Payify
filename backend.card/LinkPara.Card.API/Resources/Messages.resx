@@ -400,6 +400,143 @@
   <data name="FileIngestion.LocalRootPathEmpty" xml:space="preserve">
     <value>Local root path is empty for profile '{0}'.</value>
   </data>
+  <data name="FileIngestion.FtpConnecting" xml:space="preserve">
+    <value>FTP connecting to {Host}:{Port} (attempt {Attempt}/{MaxAttempts}, endpoint: {EndpointType}, method: {Method})</value>
+  </data>
+  <data name="FileIngestion.FtpConnected" xml:space="preserve">
+    <value>FTP request to {Host}:{Port} succeeded on attempt {Attempt}</value>
+  </data>
+  <data name="FileIngestion.FtpConnectionFailed" xml:space="preserve">
+    <value>FTP connection failed to {Host}:{Port} after {MaxAttempts} attempts. Last error: {ErrorMessage} (Status: {WebExceptionStatus})</value>
+  </data>
+  <data name="FileIngestion.FtpConnectionRetry" xml:space="preserve">
+    <value>FTP connection attempt {Attempt}/{MaxAttempts} to {Host}:{Port} failed: {ErrorMessage} (Status: {WebExceptionStatus}). Retrying in {Delay}s...</value>
+  </data>
+  <data name="FileIngestion.FtpUploadConnecting" xml:space="preserve">
+    <value>FTP upload connecting to {Host}:{Port} (attempt {Attempt}/{MaxAttempts}, endpoint: {EndpointType})</value>
+  </data>
+  <data name="FileIngestion.FtpUploadConnected" xml:space="preserve">
+    <value>FTP upload stream to {Host}:{Port} opened on attempt {Attempt}</value>
+  </data>
+  <data name="FileIngestion.FtpUploadConnectionFailed" xml:space="preserve">
+    <value>FTP upload connection failed to {Host}:{Port} after {MaxAttempts} attempts. Last error: {ErrorMessage} (Status: {WebExceptionStatus})</value>
+  </data>
+  <data name="FileIngestion.FtpUploadConnectionRetry" xml:space="preserve">
+    <value>FTP upload attempt {Attempt}/{MaxAttempts} to {Host}:{Port} failed: {ErrorMessage} (Status: {WebExceptionStatus}). Retrying in {Delay}s...</value>
+  </data>
+  <data name="FileIngestion.FtpRetryExhausted" xml:space="preserve">
+    <value>FTP retry loop exited unexpectedly.</value>
+  </data>
+  <data name="FileIngestion.FtpUploadRetryExhausted" xml:space="preserve">
+    <value>FTP upload retry loop exited unexpectedly.</value>
+  </data>
+  <data name="FileIngestion.SftpConnecting" xml:space="preserve">
+    <value>SFTP connecting to {Host}:{Port} (attempt {Attempt}/{MaxAttempts}, endpoint: {EndpointType}, timeout: {Timeout}s)</value>
+  </data>
+  <data name="FileIngestion.SftpConnected" xml:space="preserve">
+    <value>SFTP connected to {Host}:{Port} on attempt {Attempt}</value>
+  </data>
+  <data name="FileIngestion.SftpConnectionFailed" xml:space="preserve">
+    <value>SFTP connection failed to {Host}:{Port} after {MaxAttempts} attempts. Last error: {ErrorMessage}</value>
+  </data>
+  <data name="FileIngestion.SftpConnectionRetry" xml:space="preserve">
+    <value>SFTP connection attempt {Attempt}/{MaxAttempts} to {Host}:{Port} failed: {ErrorMessage}. Retrying in {Delay}s...</value>
+  </data>
+
+  <!-- FileIngestion – Configuration Validation -->
+  <data name="Config.FileIngestion.VaultConfigMissing" xml:space="preserve">
+    <value>Vault key missing: CardSecrets/FileIngestion (Connections and Profiles are required)</value>
+  </data>
+  <data name="Config.FileIngestion.ConnectionsMissing" xml:space="preserve">
+    <value>Vault configuration missing: FileIngestion.Connections</value>
+  </data>
+  <data name="Config.FileIngestion.ProfilesMissing" xml:space="preserve">
+    <value>Vault configuration missing: FileIngestion.Profiles</value>
+  </data>
+  <data name="Config.FileIngestion.ConnectionsSourceMissing" xml:space="preserve">
+    <value>Vault configuration missing: FileIngestion.Connections.Source</value>
+  </data>
+  <data name="Config.FileIngestion.ConnectionsTargetMissing" xml:space="preserve">
+    <value>Vault configuration missing: FileIngestion.Connections.Target</value>
+  </data>
+  <data name="Config.FileIngestion.ProtocolMissing" xml:space="preserve">
+    <value>Vault configuration missing: FileIngestion.Connections endpoint Protocol</value>
+  </data>
+  <data name="Config.Sftp.TimeoutMustBePositive" xml:space="preserve">
+    <value>SftpOptions.TimeoutSeconds must be positive. Current: {0}</value>
+  </data>
+  <data name="Config.Sftp.OperationTimeoutMustBePositive" xml:space="preserve">
+    <value>SftpOptions.OperationTimeoutSeconds must be positive. Current: {0}</value>
+  </data>
+  <data name="Config.Sftp.RetryCountMustBeNonNegative" xml:space="preserve">
+    <value>SftpOptions.RetryCount must be non-negative. Current: {0}</value>
+  </data>
+  <data name="Config.Sftp.RetryDelayMustBeNonNegative" xml:space="preserve">
+    <value>SftpOptions.RetryDelaySeconds must be non-negative. Current: {0}</value>
+  </data>
+  <data name="Config.Ftp.TimeoutMustBePositive" xml:space="preserve">
+    <value>FtpOptions.TimeoutSeconds must be positive. Current: {0}</value>
+  </data>
+  <data name="Config.Ftp.RetryCountMustBeNonNegative" xml:space="preserve">
+    <value>FtpOptions.RetryCount must be non-negative. Current: {0}</value>
+  </data>
+  <data name="Config.Ftp.RetryDelayMustBeNonNegative" xml:space="preserve">
+    <value>FtpOptions.RetryDelaySeconds must be non-negative. Current: {0}</value>
+  </data>
+  <data name="Config.Processing.BatchSizeMustBePositive" xml:space="preserve">
+    <value>FileIngestion.Processing.BatchSize must be positive. Current: {0}</value>
+  </data>
+  <data name="Config.Processing.RetryBatchSizeMustBePositive" xml:space="preserve">
+    <value>FileIngestion.Processing.RetryBatchSize must be positive. Current: {0}</value>
+  </data>
+  <data name="Config.Processing.MaxParallelismMustBePositive" xml:space="preserve">
+    <value>FileIngestion.Processing.MaxDegreeOfParallelism must be positive. Current: {0}</value>
+  </data>
+  <data name="Config.Reconciliation.MaxEvaluationsMustBePositive" xml:space="preserve">
+    <value>Reconciliation.Execute.MaxEvaluations must be positive. Current: {0}</value>
+  </data>
+  <data name="Config.Reconciliation.LeaseSecondsMustBePositive" xml:space="preserve">
+    <value>Reconciliation.Execute.LeaseSeconds must be positive. Current: {0}</value>
+  </data>
+  <data name="Config.Reconciliation.ChunkSizeMustBePositive" xml:space="preserve">
+    <value>Reconciliation.Evaluate.ChunkSize must be positive. Current: {0}</value>
+  </data>
+  <data name="Config.Reconciliation.ClaimTimeoutMustBePositive" xml:space="preserve">
+    <value>Reconciliation.Evaluate.ClaimTimeoutSeconds must be positive. Current: {0}</value>
+  </data>
+  <data name="Config.Reconciliation.ClaimRetryCountMustBePositive" xml:space="preserve">
+    <value>Reconciliation.Evaluate.ClaimRetryCount must be positive. Current: {0}</value>
+  </data>
+  <data name="Config.Reconciliation.BatchSizeMustBePositive" xml:space="preserve">
+    <value>Reconciliation.Alert.BatchSize must be positive. Current: {0}</value>
+  </data>
+  <data name="Config.Archive.PreviewLimitMustBePositive" xml:space="preserve">
+    <value>Archive.Defaults.PreviewLimit must be positive. Current: {0}</value>
+  </data>
+  <data name="Config.Archive.MaxRunCountMustBePositive" xml:space="preserve">
+    <value>Archive.Defaults.MaxRunCount must be positive. Current: {0}</value>
+  </data>
+  <data name="Config.Archive.RetentionDaysMustBeNonNegative" xml:space="preserve">
+    <value>Archive.Rules.RetentionDays must be non-negative. Current: {0}</value>
+  </data>
+  <data name="Config.Archive.MinLastUpdateAgeMustBeNonNegative" xml:space="preserve">
+    <value>Archive.Rules.MinLastUpdateAgeHours must be non-negative. Current: {0}</value>
+  </data>
+  <data name="Config.Archive.OptionsNotConfigured" xml:space="preserve">
+    <value>ArchiveOptions is not configured.</value>
+  </data>
+  <data name="Archive.PropertyNotFound" xml:space="preserve">
+    <value>Property '{0}' not found on entity type {1}.</value>
+  </data>
+  <data name="Archive.PrimaryKeyNotDefined" xml:space="preserve">
+    <value>No primary key defined on entity type {0}.</value>
+  </data>
+  <data name="Archive.EntityTypeNotFound" xml:space="preserve">
+    <value>Entity type not found in EF model: {0}.</value>
+  </data>
+  <data name="Paycore.CustomerOperationFailed" xml:space="preserve">
+    <value>Paycore customer operation failed.</value>
+  </data>
 
   <!-- FileIngestion – Parser -->
   <data name="FileIngestion.ParserLineEmpty" xml:space="preserve">
@@ -521,6 +658,15 @@
   <data name="Reconciliation.OperationExecutionFailed" xml:space="preserve">
     <value>Operation execution failed.</value>
   </data>
+  <data name="Reconciliation.EvaluationExecutionFailed" xml:space="preserve">
+    <value>Execution of evaluation '{0}' failed unexpectedly.</value>
+  </data>
+  <data name="Reconciliation.GetPendingReviewsFailed" xml:space="preserve">
+    <value>Failed to retrieve pending reviews.</value>
+  </data>
+  <data name="Reconciliation.GetAlertsFailed" xml:space="preserve">
+    <value>Failed to retrieve alerts.</value>
+  </data>
   <data name="Reconciliation.ManualReviewNotResolved" xml:space="preserve">
     <value>Manual review record could not be resolved.</value>
   </data>
@@ -638,6 +784,18 @@
   </data>
   <data name="FileIngestion.ImportFailedNoDetails" xml:space="preserve">
     <value>File import failed without specific error details.</value>
+  </data>
+  <data name="FileIngestion.TargetArchiveOpenFailed" xml:space="preserve">
+    <value>Failed to open target archive writer for profile '{ProfileKey}', file '{FileName}': {ErrorMessage}</value>
+  </data>
+  <data name="FileIngestion.TargetArchiveWriteFailed" xml:space="preserve">
+    <value>Target archive write failed: {ErrorMessage}</value>
+  </data>
+  <data name="FileIngestion.TargetArchiveFinalizeFailed" xml:space="preserve">
+    <value>Target archive finalize failed: {ErrorMessage}</value>
+  </data>
+  <data name="Consumer.JobFailed" xml:space="preserve">
+    <value>Consumer job failed. Type={JobType}</value>
   </data>
 
   <!-- ════════════════════════════════════════════ -->

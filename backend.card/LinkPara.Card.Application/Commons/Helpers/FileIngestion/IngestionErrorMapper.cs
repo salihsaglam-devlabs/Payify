@@ -175,24 +175,7 @@ public sealed class IngestionErrorMapper : IIngestionErrorMapper
     }
 
     private static string BuildDetailMessage(Exception ex)
-    {
-        var sb = new StringBuilder();
-        var current = ex;
-        while (current != null)
-        {
-            if (sb.Length > 0)
-            {
-                sb.Append(" => ");
-            }
-
-            sb.Append(current.GetType().Name);
-            sb.Append(": ");
-            sb.Append(current.Message);
-            current = current.InnerException;
-        }
-
-        return sb.ToString();
-    }
+        => ExceptionDetailHelper.BuildDetailMessage(ex);
 
     private static string Trim(string value, int maxLength)
     {

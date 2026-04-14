@@ -12,6 +12,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Npgsql;
 using NpgsqlTypes;
@@ -23,6 +24,7 @@ using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using LinkPara.Card.Application.Commons.Extensions;
+using LinkPara.Card.Application.Commons.Helpers;
 using LinkPara.Card.Application.Commons.Models.FileIngestion.Configuration;
 using LinkPara.Card.Application.Commons.Models.FileIngestion.Contracts.Requests;
 using LinkPara.Card.Application.Commons.Models.FileIngestion.Contracts.Responses;
@@ -43,6 +45,7 @@ public class FileIngestionOrchestrator : IFileIngestionService
     private readonly FileIngestionOptions _options;
     private readonly IServiceScopeFactory _serviceScopeFactory;
     private readonly IIngestionErrorMapper _ingestionErrorMapper;
+    private readonly ILogger<FileIngestionOrchestrator> _logger;
     private readonly IStringLocalizer _localizer;
 
     public FileIngestionOrchestrator(
@@ -54,6 +57,7 @@ public class FileIngestionOrchestrator : IFileIngestionService
         IOptions<FileIngestionOptions> options,
         IServiceScopeFactory serviceScopeFactory,
         IIngestionErrorMapper ingestionErrorMapper,
+        ILogger<FileIngestionOrchestrator> logger,
         Func<LinkPara.Card.Application.Commons.Localization.LocalizerResource, IStringLocalizer> localizerFactory)
     {
         _dbContext = dbContext;
@@ -64,6 +68,7 @@ public class FileIngestionOrchestrator : IFileIngestionService
         _options = options.Value;
         _serviceScopeFactory = serviceScopeFactory;
         _ingestionErrorMapper = ingestionErrorMapper;
+        _logger = logger;
         _localizer = localizerFactory(LinkPara.Card.Application.Commons.Localization.LocalizerResource.Messages);
     }
 
@@ -183,7 +188,7 @@ public class FileIngestionOrchestrator : IFileIngestionService
                                 {
                                     Code = "OPERATION_CANCELLED",
                                     Message = _localizer.Get("FileIngestion.Cancelled"),
-                                    Detail = ex.Message,
+                                    Detail = ExceptionDetailHelper.BuildDetailMessage(ex),
                                     Step = "IMPORT",
                                     FileName = file.Name,
                                     Severity = "Warning"
@@ -261,7 +266,7 @@ public class FileIngestionOrchestrator : IFileIngestionService
                         {
                             Code = "OPERATION_CANCELLED",
                             Message = _localizer.Get("FileIngestion.Cancelled"),
-                            Detail = ex.Message,
+                            Detail = ExceptionDetailHelper.BuildDetailMessage(ex),
                             Step = "IMPORT",
                             FileName = file.Name,
                             Severity = "Warning"
@@ -310,7 +315,7 @@ public class FileIngestionOrchestrator : IFileIngestionService
             {
                 Code = "OPERATION_CANCELLED",
                 Message = _localizer.Get("FileIngestion.OperationCancelled"),
-                Detail = ex.Message,
+                Detail = ExceptionDetailHelper.BuildDetailMessage(ex),
                 Step = "INGESTION",
                 Severity = "Warning"
             };
@@ -354,7 +359,7 @@ public class FileIngestionOrchestrator : IFileIngestionService
         {
             var error = _ingestionErrorMapper.MapException(ex, "BOUNDARY_READ", fileName: file.Name);
             error.Code = ResolveBoundaryReadErrorCode(ex);
-            error.Detail = _localizer.Get("FileIngestion.Detail.BoundaryReadFailed", ex.Message);
+            error.Detail = _localizer.Get("FileIngestion.Detail.BoundaryReadFailed", ExceptionDetailHelper.BuildDetailMessage(ex));
             errors.Add(error);
             throw;
         }
@@ -616,7 +621,7 @@ public class FileIngestionOrchestrator : IFileIngestionService
         catch (Exception ex)
         {
             var error = _ingestionErrorMapper.MapException(ex, "FILE_PROCESSING", fileName: file.Name);
-            error.Detail = _localizer.Get("FileIngestion.Detail.FileProcessingError", progress.LastProcessedLineNumber, ex.Message);
+            error.Detail = _localizer.Get("FileIngestion.Detail.FileProcessingError", progress.LastProcessedLineNumber, ExceptionDetailHelper.BuildDetailMessage(ex));
             if (progress.LastProcessedLineNumber > 0)
                 error.LineNumber = progress.LastProcessedLineNumber;
             errors.Add(error);
@@ -637,6 +642,19 @@ public class FileIngestionOrchestrator : IFileIngestionService
             throw;
         }
 
+        if (!string.IsNullOrWhiteSpace(targetWriter.ErrorMessage))
+        {
+            errors.Add(new IngestionErrorDetail
+            {
+                Code = "ARCHIVE_FAILED",
+                Message = _localizer.Get("FileIngestion.FileImportedNotArchived", targetWriter.ErrorMessage),
+                Detail = targetWriter.ErrorMessage,
+                Step = targetWriter.ErrorStep ?? "ARCHIVE",
+                FileName = file.Name,
+                Severity = "Error"
+            });
+        }
+
         try
         {
             var auditStamp = _auditStampService.CreateStamp();
@@ -654,8 +672,7 @@ public class FileIngestionOrchestrator : IFileIngestionService
 
             if (affectedRows != 1)
             {
-                throw new FileIngestionValidationException(
-                    ApiErrorCode.FileIngestionArchiveStatusUpdateRowMismatch,
+                throw new FileIngestionArchiveStatusUpdateRowMismatchException(
                     _localizer.Get("FileIngestion.ArchiveStatusUpdateRowMismatch", affectedRows, transactionFileId));
             }
 
@@ -901,7 +918,7 @@ public class FileIngestionOrchestrator : IFileIngestionService
         catch (Exception ex)
         {
             var error = _ingestionErrorMapper.MapException(ex, "RECOVERY_MISSING_ROWS", fileName: sourceFile.Name);
-            error.Detail = _localizer.Get("FileIngestion.Detail.RecoveryMissingRowsProcessingError", progress.LastProcessedLineNumber, ex.Message);
+            error.Detail = _localizer.Get("FileIngestion.Detail.RecoveryMissingRowsProcessingError", progress.LastProcessedLineNumber, ExceptionDetailHelper.BuildDetailMessage(ex));
             if (progress.LastProcessedLineNumber > 0)
                 error.LineNumber = progress.LastProcessedLineNumber;
             errors.Add(error);
@@ -961,13 +978,14 @@ public class FileIngestionOrchestrator : IFileIngestionService
                     }
                     catch (Exception ex)
                     {
+                        var exceptionDetail = ExceptionDetailHelper.BuildDetailMessage(ex, 2000);
                         var error = _ingestionErrorMapper.MapException(ex, "ROW_RETRY", fileName: sourceFile.Name);
                         error.LineNumber = row.LineNumber;
-                        error.Detail = _localizer.Get("FileIngestion.Detail.RowRetryFailed", row.LineNumber, ex.Message);
+                        error.Detail = _localizer.Get("FileIngestion.Detail.RowRetryFailed", row.LineNumber, exceptionDetail);
                         errors.Add(error);
                         
                         row.Status = FileRowStatus.Failed;
-                        row.Message = ex.Message;
+                        row.Message = exceptionDetail;
                         row.RetryCount += 1;
                         if (row.ReconciliationStatus != ReconciliationStatus.Success)
                             row.ReconciliationStatus = ReconciliationStatus.Failed;
@@ -1109,8 +1127,7 @@ public class FileIngestionOrchestrator : IFileIngestionService
 
                 if (affectedRows != 1)
                 {
-                    throw new FileIngestionValidationException(
-                        ApiErrorCode.FileIngestionArchiveStatusUpdateRowMismatch,
+                    throw new FileIngestionArchiveStatusUpdateRowMismatchException(
                         _localizer.Get("FileIngestion.ArchiveStatusUpdateRowMismatch", affectedRows, transactionFileId));
                 }
 
@@ -1127,7 +1144,9 @@ public class FileIngestionOrchestrator : IFileIngestionService
         }
         catch (Exception ex)
         {
-            archiveErrorMessage = ex.Message;
+            archiveErrorMessage = $"[{ex.GetType().Name}] {ex.Message}";
+            if (ex.InnerException != null)
+                archiveErrorMessage += $" -> [{ex.InnerException.GetType().Name}] {ex.InnerException.Message}";
 
             try
             {
@@ -1184,9 +1203,9 @@ public class FileIngestionOrchestrator : IFileIngestionService
     {
         var file = await _dbContext.IngestionFiles
             .AsNoTracking()
-            .FirstAsync(x => x.Id == transactionFileId, cancellationToken);
+            .FirstOrDefaultAsync(x => x.Id == transactionFileId, cancellationToken);
 
-        if (!file.IsArchived)
+        if (file is null || !file.IsArchived)
             return false;
 
         var detailMetrics = await _dbContext.IngestionFileLines
@@ -1285,7 +1304,7 @@ public class FileIngestionOrchestrator : IFileIngestionService
         try
         {
             var entityType = _dbContext.Model.FindEntityType(typeof(IngestionFileLineEntity))
-                ?? throw new FileIngestionMappingException(ApiErrorCode.FileIngestionEntityTypeNotMapped, _localizer.Get("FileIngestion.EntityTypeNotMapped"));
+                ?? throw new FileIngestionEntityTypeNotMappedException(_localizer.Get("FileIngestion.EntityTypeNotMapped"));
 
             var storeObject = StoreObjectIdentifier.Table(entityType.GetTableName()!, entityType.GetSchema());
             var properties = GetBulkProperties(entityType, storeObject);
@@ -1337,8 +1356,7 @@ public class FileIngestionOrchestrator : IFileIngestionService
         }
         catch (Exception ex)
         {
-            throw new FileIngestionValidationException(
-                ApiErrorCode.FileIngestionSqlBulkInsertFailed,
+            throw new FileIngestionSqlBulkInsertFailedException(
                 _localizer.Get("FileIngestion.SqlBulkInsertFailed", ex.Message),
                 ex);
         }
@@ -1351,7 +1369,7 @@ public class FileIngestionOrchestrator : IFileIngestionService
         try
         {
             var entityType = _dbContext.Model.FindEntityType(typeof(IngestionFileLineEntity))
-                ?? throw new FileIngestionMappingException(ApiErrorCode.FileIngestionEntityTypeNotMapped, _localizer.Get("FileIngestion.EntityTypeNotMapped"));
+                ?? throw new FileIngestionEntityTypeNotMappedException(_localizer.Get("FileIngestion.EntityTypeNotMapped"));
 
             var storeObject = StoreObjectIdentifier.Table(entityType.GetTableName()!, entityType.GetSchema());
             var properties = GetBulkProperties(entityType, storeObject);
@@ -1365,8 +1383,7 @@ public class FileIngestionOrchestrator : IFileIngestionService
                 await connection.OpenAsync(cancellationToken);
 
             var efTransaction = _dbContext.Database.CurrentTransaction
-                ?? throw new FileIngestionValidationException(
-                    ApiErrorCode.FileIngestionPostgreBulkInsertFailed,
+                ?? throw new FileIngestionPostgreBulkInsertFailedException(
                     _localizer.Get("FileIngestion.PostgreBulkInsertFailed", "No active EF Core transaction for PostgreSQL COPY."));
             var npgsqlTransaction = (NpgsqlTransaction)efTransaction.GetDbTransaction();
 
@@ -1400,8 +1417,7 @@ public class FileIngestionOrchestrator : IFileIngestionService
         }
         catch (Exception ex)
         {
-            throw new FileIngestionValidationException(
-                ApiErrorCode.FileIngestionPostgreBulkInsertFailed,
+            throw new FileIngestionPostgreBulkInsertFailedException(
                 _localizer.Get("FileIngestion.PostgreBulkInsertFailed", ex.Message),
                 ex);
         }
@@ -1436,6 +1452,7 @@ public class FileIngestionOrchestrator : IFileIngestionService
                 nameof(IngestionFileLineEntity.DuplicateStatus),
                 nameof(IngestionFileLineEntity.DuplicateGroupId),
                 nameof(IngestionFileLineEntity.ReconciliationStatus),
+                nameof(IngestionFileLineEntity.MatchedClearingLineId),
                 nameof(IngestionFileLineEntity.CreateDate),
                 nameof(IngestionFileLineEntity.CreatedBy),
                 nameof(IngestionFileLineEntity.UpdateDate),
@@ -1472,15 +1489,13 @@ public class FileIngestionOrchestrator : IFileIngestionService
         }
         else
         {
-            throw new FileIngestionMappingException(
-                ApiErrorCode.FileIngestionBulkPropertyMappingNotDefined,
+            throw new FileIngestionBulkPropertyMappingNotDefinedException(
                 _localizer.Get("FileIngestion.BulkPropertyMappingNotDefined", entityType.ClrType.Name));
         }
 
         return propertyNames
             .Select(name => entityType.FindProperty(name)
-                ?? throw new FileIngestionMappingException(
-                    ApiErrorCode.FileIngestionPropertyNotMapped,
+                ?? throw new FileIngestionPropertyNotMappedException(
                     _localizer.Get("FileIngestion.PropertyNotMapped", name, entityType.Name)))            .Where(property => property.GetColumnName(storeObject) is not null)
             .ToArray();
     }
@@ -1521,8 +1536,7 @@ public class FileIngestionOrchestrator : IFileIngestionService
         if (effectiveType == typeof(DateTime))
             return importer.WriteAsync((DateTime)value, NpgsqlDbType.Timestamp, cancellationToken);
 
-        throw new FileIngestionValidationException(
-            ApiErrorCode.FileIngestionUnsupportedBulkType, 
+        throw new FileIngestionUnsupportedBulkTypeException(
             _localizer.Get("FileIngestion.UnsupportedBulkType", effectiveType.Name));
     }
 
@@ -1575,7 +1589,7 @@ public class FileIngestionOrchestrator : IFileIngestionService
                 RecordType = recordType,
                 RawData = lineReadResult.Line,
                 Status = FileRowStatus.Failed,
-                Message = ex.Message,
+                Message = ExceptionDetailHelper.BuildDetailMessage(ex, 2000),
                 RetryCount = 0,
                 ReconciliationStatus = recordType == "D" ? ReconciliationStatus.Failed : null
             };
@@ -1668,6 +1682,7 @@ public class FileIngestionOrchestrator : IFileIngestionService
         CancellationToken cancellationToken)
     {
         await ApplyDuplicateOutcomesAsync(transactionFileId, cancellationToken);
+        await ApplyClearingMatchAsync(transactionFileId, cancellationToken);
 
         var metrics = await _dbContext.IngestionFileLines
             .AsNoTracking()
@@ -1786,6 +1801,85 @@ public class FileIngestionOrchestrator : IFileIngestionService
                     .SetProperty(x => x.UpdateDate, auditStamp.Timestamp)
                     .SetProperty(x => x.LastModifiedBy, auditStamp.UserId),
                 cancellationToken);
+    }
+
+    private async Task ApplyClearingMatchAsync(
+        Guid transactionFileId,
+        CancellationToken cancellationToken)
+    {
+        var file = await _dbContext.IngestionFiles
+            .AsNoTracking()
+            .FirstAsync(x => x.Id == transactionFileId, cancellationToken);
+
+        if (file.FileType is not (FileType.Card or FileType.Clearing))
+            return;
+
+        var auditStamp = _auditStampService.CreateStamp();
+
+        if (file.FileType == FileType.Clearing)
+        {
+            var clearingLines = await _dbContext.IngestionFileLines
+                .AsNoTracking()
+                .Where(x => x.IngestionFileId == transactionFileId
+                            && x.RecordType == "D"
+                            && x.Status == FileRowStatus.Success
+                            && x.CorrelationKey != null
+                            && x.CorrelationValue != null)
+                .Select(x => new { x.Id, x.CorrelationKey, x.CorrelationValue })
+                .ToListAsync(cancellationToken);
+
+            foreach (var clearingLine in clearingLines)
+            {
+                await _dbContext.IngestionFileLines
+                    .Where(x => x.CorrelationKey == clearingLine.CorrelationKey
+                                && x.CorrelationValue == clearingLine.CorrelationValue
+                                && x.RecordType == "D"
+                                && x.IngestionFile.FileType == FileType.Card)
+                    .ExecuteUpdateAsync(update => update
+                            .SetProperty(x => x.MatchedClearingLineId, clearingLine.Id)
+                            .SetProperty(x => x.UpdateDate, auditStamp.Timestamp)
+                            .SetProperty(x => x.LastModifiedBy, auditStamp.UserId),
+                        cancellationToken);
+            }
+        }
+        else if (file.FileType == FileType.Card)
+        {
+            var cardLines = await _dbContext.IngestionFileLines
+                .AsNoTracking()
+                .Where(x => x.IngestionFileId == transactionFileId
+                            && x.RecordType == "D"
+                            && x.Status == FileRowStatus.Success
+                            && x.CorrelationKey != null
+                            && x.CorrelationValue != null)
+                .Select(x => new { x.Id, x.CorrelationKey, x.CorrelationValue })
+                .ToListAsync(cancellationToken);
+
+            foreach (var cardLine in cardLines)
+            {
+                var latestClearingLineId = await _dbContext.IngestionFileLines
+                    .AsNoTracking()
+                    .Where(x => x.CorrelationKey == cardLine.CorrelationKey
+                                && x.CorrelationValue == cardLine.CorrelationValue
+                                && x.RecordType == "D"
+                                && x.IngestionFile.FileType == FileType.Clearing)
+                    .OrderByDescending(x => x.CreateDate)
+                    .Select(x => (Guid?)x.Id)
+                    .FirstOrDefaultAsync(cancellationToken);
+
+                if (latestClearingLineId.HasValue)
+                {
+                    await _dbContext.IngestionFileLines
+                        .Where(x => x.Id == cardLine.Id)
+                        .ExecuteUpdateAsync(update => update
+                                .SetProperty(x => x.MatchedClearingLineId, latestClearingLineId.Value)
+                                .SetProperty(x => x.UpdateDate, auditStamp.Timestamp)
+                                .SetProperty(x => x.LastModifiedBy, auditStamp.UserId),
+                            cancellationToken);
+                }
+            }
+        }
+
+        _dbContext.ChangeTracker.Clear();
     }
 
     private async Task<List<IngestionFileLineEntity>> LoadDuplicateRowsAsync(
@@ -2025,12 +2119,12 @@ public class FileIngestionOrchestrator : IFileIngestionService
 
             if (headerLine is null)
             {
-                throw new FileIngestionParsingException(ApiErrorCode.FileIngestionHeaderNotResolved, _localizer.Get("FileIngestion.HeaderNotResolved", file.Name));
+                throw new FileIngestionHeaderNotResolvedException( _localizer.Get("FileIngestion.HeaderNotResolved", file.Name));
             }
 
             if (footerLine is null)
             {
-                throw new FileIngestionParsingException(ApiErrorCode.FileIngestionFooterNotResolved, _localizer.Get("FileIngestion.FooterNotResolved", file.Name));
+                throw new FileIngestionFooterNotResolvedException( _localizer.Get("FileIngestion.FooterNotResolved", file.Name));
             }
 
             return (
@@ -2039,7 +2133,7 @@ public class FileIngestionOrchestrator : IFileIngestionService
         }
         catch (Exception ex)
         {
-            throw new FileIngestionParsingException(ApiErrorCode.FileIngestionBoundaryRecordReadFailed, _localizer.Get("FileIngestion.BoundaryRecordReadFailed", file.Name, ex.Message), ex);
+            throw new FileIngestionBoundaryRecordReadFailedException( _localizer.Get("FileIngestion.BoundaryRecordReadFailed", file.Name, ex.Message), ex);
         }
     }
 
@@ -2050,13 +2144,12 @@ public class FileIngestionOrchestrator : IFileIngestionService
         string expectedRecordType)
     {
         if (string.IsNullOrWhiteSpace(line))
-            throw new FileIngestionParsingException(ApiErrorCode.FileIngestionBoundaryRecordEmpty, _localizer.Get("FileIngestion.BoundaryRecordEmpty", expectedRecordType));
+            throw new FileIngestionBoundaryRecordEmptyException( _localizer.Get("FileIngestion.BoundaryRecordEmpty", expectedRecordType));
 
         var parsed = _fixedWidthRecordParser.Parse(line, parsingRule);
         if (!string.Equals(parsed.RecordType, expectedRecordType, StringComparison.OrdinalIgnoreCase))
         {
-            throw new FileIngestionParsingException(
-                ApiErrorCode.FileIngestionRecordTypeMismatch,
+            throw new FileIngestionRecordTypeMismatchException(
                 _localizer.Get("FileIngestion.RecordTypeMismatch", expectedRecordType, parsed.RecordType));
         }
 
@@ -2084,15 +2177,14 @@ public class FileIngestionOrchestrator : IFileIngestionService
     private string GetRequiredProperty(object instance, string propertyName)
     {
         var property = instance.GetType().GetProperty(propertyName)
-            ?? throw new FileIngestionMappingException(
-                ApiErrorCode.FileIngestionPropertyNotDefined,
+            ?? throw new FileIngestionPropertyNotDefinedException(
                 _localizer.Get("FileIngestion.PropertyNotDefined", propertyName, instance.GetType().Name));
 
         var value = property.GetValue(instance);
         var stringValue = Convert.ToString(value, CultureInfo.InvariantCulture);
 
         if (string.IsNullOrWhiteSpace(stringValue))
-            throw new FileIngestionMappingException(ApiErrorCode.FileIngestionPropertyEmpty, _localizer.Get("FileIngestion.PropertyEmpty", propertyName, instance.GetType().Name));
+            throw new FileIngestionPropertyEmptyException( _localizer.Get("FileIngestion.PropertyEmpty", propertyName, instance.GetType().Name));
 
         return stringValue;
     }
@@ -2116,8 +2208,7 @@ public class FileIngestionOrchestrator : IFileIngestionService
     private long GetFooterTxnCount(object footerModel)
     {
         var property = footerModel.GetType().GetProperty("TxnCount")
-            ?? throw new FileIngestionMappingException(
-                ApiErrorCode.FileIngestionFooterTxnCountMissing,
+            ?? throw new FileIngestionFooterTxnCountMissingException(
                 _localizer.Get("FileIngestion.FooterTxnCountMissing", footerModel.GetType().Name));
 
         return Convert.ToInt64(property.GetValue(footerModel), CultureInfo.InvariantCulture);
@@ -2140,11 +2231,17 @@ public class FileIngestionOrchestrator : IFileIngestionService
                 FileTransferEndpointType.Target,
                 cancellationToken);
 
-            return new TargetWriter(targetStream);
+            return new TargetWriter(targetStream, _logger, _localizer);
         }
         catch (Exception ex)
         {
-            return new TargetWriter(null, ex.Message);
+            _logger.LogError(ex,
+                _localizer.Get("FileIngestion.TargetArchiveOpenFailed"),
+                profileKey, fileName, ex.Message);
+            var detailedMessage = $"[{ex.GetType().Name}] {ex.Message}";
+            if (ex.InnerException != null)
+                detailedMessage += $" -> [{ex.InnerException.GetType().Name}] {ex.InnerException.Message}";
+            return new TargetWriter(null, _logger, _localizer, detailedMessage);
         }
     }
 
@@ -2175,7 +2272,7 @@ public class FileIngestionOrchestrator : IFileIngestionService
 
             var explicitFileName = Path.GetFileName(request.FilePath);
             if (!MatchesProfileFileName(profile, explicitFileName))
-                throw new FileIngestionValidationException(ApiErrorCode.FileIngestionFilePatternMismatch, _localizer.Get("FileIngestion.FilePatternMismatch", explicitFileName));
+                throw new FileIngestionFilePatternMismatchException(_localizer.Get("FileIngestion.FilePatternMismatch", explicitFileName));
 
             return
             [
@@ -2197,7 +2294,7 @@ public class FileIngestionOrchestrator : IFileIngestionService
     private ProfileOptions GetProfile(string profileKey)
     {
         if (!_options.Profiles.TryGetValue(profileKey, out var profile))
-            throw new FileIngestionConfigurationException(ApiErrorCode.FileIngestionProfileNotConfigured, _localizer.Get("FileIngestion.ProfileNotConfigured", profileKey));
+            throw new FileIngestionProfileNotConfiguredException(_localizer.Get("FileIngestion.ProfileNotConfigured", profileKey));
 
         return profile;
     }
@@ -2205,7 +2302,7 @@ public class FileIngestionOrchestrator : IFileIngestionService
     private ParsingOptions GetParsingRule(ProfileOptions profile)
     {
         return profile.Parsing
-            ?? throw new FileIngestionConfigurationException(ApiErrorCode.FileIngestionParsingNotDefined, _localizer.Get("FileIngestion.ParsingNotDefined"));
+            ?? throw new FileIngestionParsingNotDefinedException(_localizer.Get("FileIngestion.ParsingNotDefined"));
     }
 
     private int GetBatchSize() => Math.Max(1, _options.Processing.BatchSize ?? 1);
@@ -2485,7 +2582,7 @@ public class FileIngestionOrchestrator : IFileIngestionService
                 return line;
         }
 
-        throw new InvalidOperationException(_localizer.Get("FileIngestion.RecordNotFoundFromStart", recordPrefix));
+        throw new FileIngestionRecordNotFoundFromStartException(_localizer.Get("FileIngestion.RecordNotFoundFromStart", recordPrefix));
     }
 
     private async Task<string> ReadLastMatchingLineAsync(
@@ -2505,7 +2602,7 @@ public class FileIngestionOrchestrator : IFileIngestionService
             }
 
             return lastMatchingLine
-                ?? throw new InvalidOperationException(_localizer.Get("FileIngestion.RecordNotFoundFromEnd", recordPrefix));
+                ?? throw new FileIngestionRecordNotFoundFromEndException(_localizer.Get("FileIngestion.RecordNotFoundFromEnd", recordPrefix));
         }
 
         const int blockSize = 4096;
@@ -2547,7 +2644,7 @@ public class FileIngestionOrchestrator : IFileIngestionService
         if (tail.StartsWith(recordPrefix, StringComparison.Ordinal))
             return tail;
 
-        throw new InvalidOperationException(_localizer.Get("FileIngestion.RecordNotFoundFromEnd", recordPrefix));
+        throw new FileIngestionRecordNotFoundFromEndException(_localizer.Get("FileIngestion.RecordNotFoundFromEnd", recordPrefix));
     }
 
     private static bool IsUniqueConstraintViolation(DbUpdateException ex)
@@ -2691,14 +2788,20 @@ public class FileIngestionOrchestrator : IFileIngestionService
     private sealed class TargetWriter
     {
         private Stream? _stream;
+        private readonly ILogger _logger;
+        private readonly IStringLocalizer _localizer;
 
-        public TargetWriter(Stream? stream, string? errorMessage = null)
+        public TargetWriter(Stream? stream, ILogger logger, IStringLocalizer localizer, string? errorMessage = null)
         {
             _stream = stream;
+            _logger = logger;
+            _localizer = localizer;
             ErrorMessage = errorMessage;
         }
 
         public string? ErrorMessage { get; private set; }
+
+        public string? ErrorStep { get; private set; }
 
         public async Task WriteAsync(ReadOnlyMemory<byte> buffer, CancellationToken cancellationToken)
         {
@@ -2711,8 +2814,10 @@ public class FileIngestionOrchestrator : IFileIngestionService
             }
             catch (Exception ex)
             {
-                ErrorMessage = ex.Message;
-                await _stream.DisposeAsync();
+                _logger.LogError(ex, _localizer.Get("FileIngestion.TargetArchiveWriteFailed"), ex.Message);
+                ErrorMessage = BuildDetailedErrorMessage(ex);
+                ErrorStep = "ARCHIVE_STREAM_WRITE";
+                try { await _stream.DisposeAsync(); } catch { /* best-effort cleanup */ }
                 _stream = null;
             }
         }
@@ -2729,12 +2834,22 @@ public class FileIngestionOrchestrator : IFileIngestionService
             }
             catch (Exception ex)
             {
-                ErrorMessage = ex.Message;
+                _logger.LogError(ex, _localizer.Get("FileIngestion.TargetArchiveFinalizeFailed"), ex.Message);
+                ErrorMessage = BuildDetailedErrorMessage(ex);
+                ErrorStep = "ARCHIVE_STREAM_FINALIZE";
             }
             finally
             {
                 _stream = null;
             }
+        }
+
+        private static string BuildDetailedErrorMessage(Exception ex)
+        {
+            var message = $"[{ex.GetType().Name}] {ex.Message}";
+            if (ex.InnerException != null)
+                message += $" -> [{ex.InnerException.GetType().Name}] {ex.InnerException.Message}";
+            return message;
         }
     }
 }

@@ -7,6 +7,7 @@ using LinkPara.Card.Application.Features.Reconciliation.Commands.Approve;
 using LinkPara.Card.Application.Features.Reconciliation.Commands.Reject;
 using LinkPara.Card.Application.Features.Reconciliation.Queries.PendingReviews;
 using LinkPara.Card.Application.Features.Reconciliation.Queries.GetAlerts;
+using LinkPara.SharedModels.Pagination;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -56,20 +57,16 @@ namespace LinkPara.Card.API.Controllers
 
         [Authorize(Policy = ReconciliationPolicies.ReadAll)]
         [HttpGet("Reviews/Pending")]
-        public async Task<PendingReviewsResponse> GetPendingManualReviews([FromQuery] PendingReviewsRequest req, CancellationToken ct = default)
+        public async Task<PaginatedList<ManualReview>> GetPendingManualReviews([FromQuery] GetPendingReviewsQuery query, CancellationToken ct = default)
         {
-            var q = new GetPendingReviewsQuery { Request = req ?? new PendingReviewsRequest() };
-            var res = await Mediator.Send(q, ct);
-            return res;
+            return await Mediator.Send(query, ct);
         }
 
         [Authorize(Policy = ReconciliationPolicies.ReadAll)]
         [HttpGet("Alerts")]
-        public async Task<GetAlertsResponse> GetAlerts([FromQuery] GetAlertsRequest req, CancellationToken ct = default)
+        public async Task<PaginatedList<Alert>> GetAlerts([FromQuery] GetAlertsQuery query, CancellationToken ct = default)
         {
-            var q = new GetAlertsQuery { Request = req ?? new GetAlertsRequest() };
-            var res = await Mediator.Send(q, ct);
-            return res;
+            return await Mediator.Send(query, ct);
         }
     }
 }

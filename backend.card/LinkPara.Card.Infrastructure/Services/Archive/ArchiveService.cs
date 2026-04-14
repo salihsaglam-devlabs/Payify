@@ -39,7 +39,7 @@ internal sealed class ArchiveService : IArchiveService
     {
         _reader = reader;
         _evaluator = evaluator;
-        _options = options.Value ?? throw new InvalidOperationException("ArchiveOptions is not configured.");
+        _options = options.Value ?? throw new ArchiveOptionsNotConfiguredException( "ArchiveOptions is not configured.");
         _errorMapper = errorMapper;
         _localizer = localizerFactory(LinkPara.Card.Application.Commons.Localization.LocalizerResource.Messages);
         _serviceProvider = serviceProvider;
@@ -218,8 +218,7 @@ internal sealed class ArchiveService : IArchiveService
 
         if (!SupportedBeforeDateStrategies.Contains(strategy))
         {
-            throw new ArchiveBusinessException(
-                "CONFIGURATION_ERROR",
+            throw new ArchiveUnsupportedBeforeDateStrategyException(
                 _localizer.Get("Archive.UnsupportedBeforeDateStrategy", strategy, string.Join(", ", SupportedBeforeDateStrategies)));
         }
 
@@ -227,8 +226,7 @@ internal sealed class ArchiveService : IArchiveService
         {
             "RetentionDays" => _timeProvider.Now.AddDays(-_options.Rules.RetentionDays.Value),
             "None" => null,
-            _ => throw new ArchiveBusinessException(
-                "CONFIGURATION_ERROR",
+            _ => throw new ArchiveUnsupportedBeforeDateStrategyException(
                 _localizer.Get("Archive.UnsupportedBeforeDateStrategy", strategy, string.Join(", ", SupportedBeforeDateStrategies)))
         };
     }

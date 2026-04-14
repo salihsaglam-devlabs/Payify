@@ -1,9 +1,11 @@
+using LinkPara.Card.Application.Commons.Exceptions;
+
 namespace LinkPara.Card.Application.Commons.Models.FileIngestion.Configuration;
 
 public class ProcessingOptions
 {
-    public const int DefaultBatchSize = 10_000;
-    public const int DefaultRetryBatchSize = 2_000;
+    public const int DefaultBatchSize = 25_000;
+    public const int DefaultRetryBatchSize = 5_000;
     public const int DefaultFailedRowMaxRetryCount = 3;
     public const bool DefaultUseBulkInsert = true;
     public const bool DefaultEnableParallelProcessing = true;
@@ -26,11 +28,11 @@ public class ProcessingOptions
         MaxDegreeOfParallelism ??= DefaultMaxDegreeOfParallelism;
 
         if (BatchSize <= 0)
-            throw new InvalidOperationException($"FileIngestion.Processing.BatchSize must be positive. Current: {BatchSize}");
+            throw new FileIngestionProcessingBatchSizeInvalidException($"FileIngestion.Processing.BatchSize must be positive. Current: {BatchSize}");
         if (RetryBatchSize <= 0)
-            throw new InvalidOperationException($"FileIngestion.Processing.RetryBatchSize must be positive. Current: {RetryBatchSize}");
+            throw new FileIngestionProcessingRetryBatchSizeInvalidException($"FileIngestion.Processing.RetryBatchSize must be positive. Current: {RetryBatchSize}");
         if (MaxDegreeOfParallelism <= 0)
-            throw new InvalidOperationException($"FileIngestion.Processing.MaxDegreeOfParallelism must be positive. Current: {MaxDegreeOfParallelism}");
+            throw new FileIngestionProcessingMaxParallelismInvalidException($"FileIngestion.Processing.MaxDegreeOfParallelism must be positive. Current: {MaxDegreeOfParallelism}");
     }
 
     [Obsolete("Use ValidateAndApplyDefaults() instead")]

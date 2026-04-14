@@ -1,3 +1,4 @@
+using LinkPara.Card.Application.Commons.Exceptions;
 using LinkPara.Card.Application.Commons.Extensions;
 using LinkPara.Card.Application.Commons.Models.FileIngestion.Configuration;
 using Microsoft.Extensions.Localization;
@@ -42,6 +43,6 @@ public class FileTransferClientResolver : IFileTransferClientResolver
         if (string.Equals(endpoint.Protocol, "Local", StringComparison.OrdinalIgnoreCase))
             return _clients.Single(x => x.SourceType == FileSourceType.Local);
 
-        throw new InvalidOperationException(_localizer.Get("FileIngestion.UnsupportedProtocol", endpoint.Protocol));
+        throw new FileIngestionUnsupportedProtocolException(_localizer.Get("FileIngestion.UnsupportedProtocol", endpoint.Protocol));
     }
 }

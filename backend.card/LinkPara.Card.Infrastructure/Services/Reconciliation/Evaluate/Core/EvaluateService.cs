@@ -2,6 +2,7 @@ using System.Data;
 using System.Text.Json;
 using LinkPara.Card.Application.Commons.Exceptions;
 using LinkPara.Card.Application.Commons.Extensions;
+using LinkPara.Card.Application.Commons.Helpers;
 using LinkPara.Card.Application.Commons.Interfaces;
 using LinkPara.Card.Application.Commons.Interfaces.Reconciliation;
 using LinkPara.Card.Application.Commons.Models.Reconciliation.Configuration;
@@ -96,7 +97,7 @@ internal sealed class EvaluateService : IEvaluateService
 
                         if (!contextMap.TryGetValue(row.Id, out var context))
                         {
-                            throw new ReconciliationContextException(ApiErrorCode.ReconciliationEvaluationContextNotBuilt, _localizer.Get("Reconciliation.EvaluationContextNotBuilt", row.Id));
+                            throw new ReconciliationEvaluationContextNotBuiltException( _localizer.Get("Reconciliation.EvaluationContextNotBuilt", row.Id));
                         }
 
                         var evaluator = _evaluatorResolver.Resolve(context.RootFile.ContentType);
@@ -105,11 +106,12 @@ internal sealed class EvaluateService : IEvaluateService
                     }
                     catch (Exception ex)
                     {
+                        var exceptionDetail = ExceptionDetailHelper.BuildDetailMessage(ex, 2000);
                         errors.Add(_errorMapper.MapException(
                             ex, "EVALUATION_ROW", fileLineId: row.Id,
                             message: _localizer.Get("Reconciliation.EvaluationRowFailed", row.Id)));
-                        await CreateFailedEvaluationAsync(row.Id, ex.Message, groupId, cancellationToken);
-                        await MarkRowAsync(row.Id, ReconciliationStatus.Failed, ex.Message, cancellationToken);
+                        await CreateFailedEvaluationAsync(row.Id, exceptionDetail, groupId, cancellationToken);
+                        await MarkRowAsync(row.Id, ReconciliationStatus.Failed, exceptionDetail, cancellationToken);
                         skippedCount++;
                     }
                 }
@@ -328,11 +330,12 @@ internal sealed class EvaluateService : IEvaluateService
                 }
                 catch (Exception ex)
                 {
+                    var exceptionDetail = ExceptionDetailHelper.BuildDetailMessage(ex, 2000);
                     errors.Add(_errorMapper.MapException(
                         ex, "EVALUATION_ROW", fileLineId: item.Row.Id,
                         message: _localizer.Get("Reconciliation.EvaluationRowFailed", item.Row.Id)));
-                    await CreateFailedEvaluationAsync(item.Row.Id, ex.Message, groupId, cancellationToken);
-                    await MarkRowAsync(item.Row.Id, ReconciliationStatus.Failed, ex.Message, cancellationToken);
+                    await CreateFailedEvaluationAsync(item.Row.Id, exceptionDetail, groupId, cancellationToken);
+                    await MarkRowAsync(item.Row.Id, ReconciliationStatus.Failed, exceptionDetail, cancellationToken);
                 }
             }
             return createdOperationCount;
@@ -478,7 +481,7 @@ internal sealed class EvaluateService : IEvaluateService
     {
         var manualGateSequence = operations.LastOrDefault(x => x.IsManual)?.SequenceIndex;
         if (manualGateSequence.HasValue) return manualGateSequence.Value;
-        throw new ReconciliationBusinessRuleException(ApiErrorCode.ReconciliationBranchRequiresManualGate, _localizer.Get("Reconciliation.BranchRequiresManualGate"));
+        throw new ReconciliationBranchRequiresManualGateException(_localizer.Get("Reconciliation.BranchRequiresManualGate"));
     }
 
     private DateTime? ResolveReviewExpirationAt(EvaluationOperation operation)
@@ -560,13 +563,15 @@ internal sealed class EvaluateService : IEvaluateService
                 ex, "EVALUATION_CHUNK", fileLineId: row.Id,
                 message: _localizer.Get("Reconciliation.EvaluationChunkFailed", row.Id)));
 
+            var exceptionDetail = ExceptionDetailHelper.BuildDetailMessage(ex, 2000);
+
             var evaluation = new ReconciliationEvaluation
             {
                 Id = Guid.NewGuid(),
                 GroupId = groupId,
                 FileLineId = row.Id,
                 Status = EvaluationStatus.Failed,
-                Message = ex.Message,
+                Message = exceptionDetail,
                 CreatedOperationCount = 0
             };
 
@@ -579,7 +584,7 @@ internal sealed class EvaluateService : IEvaluateService
                 OperationId = Guid.Empty,
                 Severity = "Error",
                 AlertType = "EvaluationFailed",
-                Message = ex.Message
+                Message = exceptionDetail
             });
 
             evaluations.Add(evaluation);

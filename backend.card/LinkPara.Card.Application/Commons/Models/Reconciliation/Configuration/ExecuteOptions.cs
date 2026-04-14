@@ -1,9 +1,11 @@
+using LinkPara.Card.Application.Commons.Exceptions;
+
 namespace LinkPara.Card.Application.Commons.Models.Reconciliation.Configuration;
 
 public class ExecuteOptions
 {
-    public const int DefaultMaxEvaluations = 50_000;
-    public const int DefaultLeaseSeconds = 120;
+    public const int DefaultMaxEvaluations = 100_000;
+    public const int DefaultLeaseSeconds = 300;
 
     public int? MaxEvaluations { get; set; }
 
@@ -15,9 +17,9 @@ public class ExecuteOptions
         LeaseSeconds ??= DefaultLeaseSeconds;
 
         if (MaxEvaluations <= 0)
-            throw new InvalidOperationException($"Reconciliation.Execute.MaxEvaluations must be positive. Current: {MaxEvaluations}");
+            throw new ReconciliationExecuteMaxEvaluationsInvalidException($"Reconciliation.Execute.MaxEvaluations must be positive. Current: {MaxEvaluations}");
         if (LeaseSeconds <= 0)
-            throw new InvalidOperationException($"Reconciliation.Execute.LeaseSeconds must be positive. Current: {LeaseSeconds}");
+            throw new ReconciliationExecuteLeaseSecondsInvalidException($"Reconciliation.Execute.LeaseSeconds must be positive. Current: {LeaseSeconds}");
     }
 
     [Obsolete("Use ValidateAndApplyDefaults() instead")]

@@ -117,4 +117,387 @@
   <resheader name="writer">
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
+  <!-- Legacy / Shared -->
+  <data name="BankApiAlreadyExists" xml:space="preserve">
+    <value>Bank API is already in use!</value>
+  </data>
+  <data name="CurrencyCodeMismatchException" xml:space="preserve">
+    <value>Currency code mismatch!</value>
+  </data>
+  <data name="DateIsNotWorkDayException" xml:space="preserve">
+    <value>Not a business day!</value>
+  </data>
+  <data name="InsufficientBalanceException" xml:space="preserve">
+    <value>Insufficient balance!</value>
+  </data>
+  <data name="InvalidIbanException" xml:space="preserve">
+    <value>Invalid IBAN number!</value>
+  </data>
+  <data name="InvalidTransactionStatusException" xml:space="preserve">
+    <value>Invalid transaction!</value>
+  </data>
+  <data name="InvalidWalletStatusException" xml:space="preserve">
+    <value>Invalid wallet!</value>
+  </data>
+  <data name="LimitExceededException" xml:space="preserve">
+    <value>Limit exceeded!</value>
+  </data>
+  <data name="MainWalletAlreadyExistsException" xml:space="preserve">
+    <value>Wallet is already registered in the system!</value>
+  </data>
+  <data name="MaxWalletLimitExceededException" xml:space="preserve">
+    <value>We cannot open a new account because you have reached your account opening limit.</value>
+  </data>
+  <data name="MoneyTransferOutsideEftHoursException" xml:space="preserve">
+    <value>Money transfer cannot be made outside EFT hours!</value>
+  </data>
+  <data name="DuplicateRecordException" xml:space="preserve">
+    <value>The record already exists in the system!</value>
+  </data>
+  <data name="MainWalletHasAsset" xml:space="preserve">
+    <value>Main wallet has balance!</value>
+  </data>
+  <data name="WalletHasBalanceException" xml:space="preserve">
+    <value>Wallet has balance and cannot be closed!</value>
+  </data>
+  <data name="WalletBlockedException" xml:space="preserve">
+    <value>Wallet is blocked!</value>
+  </data>
+  <data name="ProfileIsPassive" xml:space="preserve">
+    <value>The profile is passive!</value>
+  </data>
+  <data name="InvalidProfileItemException" xml:space="preserve">
+    <value>Invalid profile!</value>
+  </data>
+  <data name="AmountIntervalIsAlreadyInUseException" xml:space="preserve">
+    <value>There is another pricing that includes the amount range you want to define!</value>
+  </data>
+  <data name="DuplicateWalletException" xml:space="preserve">
+    <value>Please enter a different account name!</value>
+  </data>
+  <data name="PotentialFraudException" xml:space="preserve">
+    <value>We are unable to process your transaction at this time. Please send an email to @@informationMail for information.</value>
+  </data>
+  <data name="InvalidActivationDateException" xml:space="preserve">
+    <value>Activation date must be greater than today.</value>
+  </data>
+  <data name="AmountCanNotBeEmptyException" xml:space="preserve">
+    <value>Amount cannot be empty!</value>
+  </data>
+  <data name="InvalidAmountException" xml:space="preserve">
+    <value>Amount must be greater than 0!</value>
+  </data>
+  <data name="GreaterThanProvisionAmountException" xml:space="preserve">
+    <value>Requested amount cannot be greater than the provision amount!</value>
+  </data>
+  <data name="InitiateWithdrawException" xml:space="preserve">
+    <value>An error occurred during your withdrawal request!</value>
+  </data>
+  <data name="AlreadyInUseEmailException" xml:space="preserve">
+    <value>The email address is already in use!</value>
+  </data>
+  <data name="CommercialPricingStatusInvalid" xml:space="preserve">
+    <value>The status of the record is not suitable for the operation.</value>
+  </data>
+  <data name="InvalidDateRange" xml:space="preserve">
+    <value>Date range cannot exceed 3 months!</value>
+  </data>
+  <data name="CommercialPricingStatusInvalidException" xml:space="preserve">
+    <value>Only records with Active and Future statuses can be processed!</value>
+  </data>
+  <data name="InternalTransferLimitExceededException" xml:space="preserve">
+    <value>Transfer limit exceeded!</value>
+  </data>
+  <data name="DepositLimitExceededException" xml:space="preserve">
+    <value>Deposit limit exceeded!</value>
+  </data>
+  <data name="WithdrawalLimitExceededException" xml:space="preserve">
+    <value>Withdrawal limit exceeded!</value>
+  </data>
+  <data name="InternationalTransferLimitExceededException" xml:space="preserve">
+    <value>International transfer limit exceeded!</value>
+  </data>
+  <data name="MaxBalanceLimitExceededException" xml:space="preserve">
+    <value>Maximum balance limit exceeded!</value>
+  </data>
+  <data name="WithdrawIbanLimitExceededException" xml:space="preserve">
+    <value>IBAN withdrawal limit exceeded!</value>
+  </data>
+  <data name="InvalidTierPermissionException" xml:space="preserve">
+    <value>Account level is insufficient for this operation!</value>
+  </data>
+  <data name="BirthdateOutOfRange" xml:space="preserve">
+    <value>Users under @@minAge years of age are not allowed!</value>
+  </data>
+  <data name="UserInBlacklistException" xml:space="preserve">
+    <value>We are unable to process your transaction at this time. Please send an email to @@informationMail for information.</value>
+  </data>
+  <data name="ProfileIsPassiveException" xml:space="preserve">
+    <value>The profile is passive!</value>
+  </data>
+  <data name="InvalidKycLevelException" xml:space="preserve">
+    <value>Invalid user level!</value>
+  </data>
+  <data name="InvalidTierLevelException" xml:space="preserve">
+    <value>The user level is not defined!</value>
+  </data>
+  <data name="KPSValidationFailedException" xml:space="preserve">
+    <value>Identity verification failed.</value>
+  </data>
+  <data name="KPSInformationsNotMatchException" xml:space="preserve">
+    <value>Identity information did not match.</value>
+  </data>
+  <data name="InvalidTagLengthException" xml:space="preserve">
+    <value>Record name must be between 3 and 20 characters!</value>
+  </data>
+  <data name="AlreadyInUsePhoneNumberException" xml:space="preserve">
+    <value>The phone number is already in use!</value>
+  </data>
+  <!-- FileIngestion — Configuration -->
+  <data name="FileIngestionLocalPathNotConfiguredException" xml:space="preserve">
+    <value>Local file path is not configured for the specified profile.</value>
+  </data>
+  <data name="FileIngestionLocalRootPathEmptyException" xml:space="preserve">
+    <value>Local root path is empty for the specified profile.</value>
+  </data>
+  <data name="FileIngestionFtpPathNotConfiguredException" xml:space="preserve">
+    <value>FTP path is not configured for the specified profile.</value>
+  </data>
+  <data name="FileIngestionSftpPathNotConfiguredException" xml:space="preserve">
+    <value>SFTP path is not configured for the specified profile.</value>
+  </data>
+  <data name="FileIngestionProfileNotConfiguredException" xml:space="preserve">
+    <value>File ingestion profile is not configured.</value>
+  </data>
+  <data name="FileIngestionParsingNotDefinedException" xml:space="preserve">
+    <value>Parsing configuration is not defined.</value>
+  </data>
+  <data name="FileIngestionUnsupportedProtocolException" xml:space="preserve">
+    <value>Unsupported file transfer protocol.</value>
+  </data>
+  <data name="FileIngestionConfigConnectionsMissingException" xml:space="preserve">
+    <value>Vault configuration missing: FileIngestion.Connections</value>
+  </data>
+  <data name="FileIngestionConfigProfilesMissingException" xml:space="preserve">
+    <value>Vault configuration missing: FileIngestion.Profiles</value>
+  </data>
+  <data name="FileIngestionConfigProtocolMissingException" xml:space="preserve">
+    <value>Vault configuration missing: endpoint Protocol</value>
+  </data>
+  <data name="FileIngestionConfigSourceMissingException" xml:space="preserve">
+    <value>Vault configuration missing: Connections.Source</value>
+  </data>
+  <data name="FileIngestionConfigTargetMissingException" xml:space="preserve">
+    <value>Vault configuration missing: Connections.Target</value>
+  </data>
+  <data name="FileIngestionVaultConfigMissingException" xml:space="preserve">
+    <value>Vault key missing: CardSecrets/FileIngestion</value>
+  </data>
+  <!-- FileIngestion — Parsing -->
+  <data name="FileIngestionParserLineEmptyException" xml:space="preserve">
+    <value>Parser received an empty line.</value>
+  </data>
+  <data name="FileIngestionParserUnsupportedRecordTypeException" xml:space="preserve">
+    <value>Unsupported record type in parsed line.</value>
+  </data>
+  <data name="FileIngestionHeaderNotResolvedException" xml:space="preserve">
+    <value>Header record could not be resolved.</value>
+  </data>
+  <data name="FileIngestionFooterNotResolvedException" xml:space="preserve">
+    <value>Footer record could not be resolved.</value>
+  </data>
+  <data name="FileIngestionBoundaryRecordReadFailedException" xml:space="preserve">
+    <value>Boundary record read failed.</value>
+  </data>
+  <data name="FileIngestionBoundaryRecordEmptyException" xml:space="preserve">
+    <value>Boundary record is empty.</value>
+  </data>
+  <data name="FileIngestionRecordTypeMismatchException" xml:space="preserve">
+    <value>Record type mismatch.</value>
+  </data>
+  <!-- FileIngestion — Value Conversion -->
+  <data name="FileIngestionDecimalValueInvalidException" xml:space="preserve">
+    <value>Invalid decimal value.</value>
+  </data>
+  <data name="FileIngestionIntValueInvalidException" xml:space="preserve">
+    <value>Invalid integer value.</value>
+  </data>
+  <data name="FileIngestionLongValueInvalidException" xml:space="preserve">
+    <value>Invalid long value.</value>
+  </data>
+  <data name="FileIngestionEnumValueInvalidException" xml:space="preserve">
+    <value>Invalid enum value.</value>
+  </data>
+  <!-- FileIngestion — Mapping -->
+  <data name="FileIngestionEntityTypeNotMappedException" xml:space="preserve">
+    <value>Entity type is not mapped.</value>
+  </data>
+  <data name="FileIngestionTypedSchemaMapperMissingException" xml:space="preserve">
+    <value>Typed schema mapper is missing for the profile.</value>
+  </data>
+  <data name="FileIngestionPropertyEmptyException" xml:space="preserve">
+    <value>Required property is empty.</value>
+  </data>
+  <data name="FileIngestionPropertyNotMappedException" xml:space="preserve">
+    <value>Property is not mapped.</value>
+  </data>
+  <data name="FileIngestionBulkPropertyMappingNotDefinedException" xml:space="preserve">
+    <value>Bulk property mapping is not defined.</value>
+  </data>
+  <data name="FileIngestionPropertyNotDefinedException" xml:space="preserve">
+    <value>Property is not defined on the target type.</value>
+  </data>
+  <data name="FileIngestionFooterTxnCountMissingException" xml:space="preserve">
+    <value>Footer transaction count is missing.</value>
+  </data>
+  <!-- FileIngestion — Validation & Bulk -->
+  <data name="FileIngestionFilePatternMismatchException" xml:space="preserve">
+    <value>File name does not match expected pattern.</value>
+  </data>
+  <data name="FileIngestionUnsupportedBulkTypeException" xml:space="preserve">
+    <value>Unsupported bulk insert type.</value>
+  </data>
+  <data name="FileIngestionArchiveStatusUpdateRowMismatchException" xml:space="preserve">
+    <value>Archive status update row count mismatch.</value>
+  </data>
+  <data name="FileIngestionSqlBulkInsertFailedException" xml:space="preserve">
+    <value>SQL Server bulk insert failed.</value>
+  </data>
+  <data name="FileIngestionPostgreBulkInsertFailedException" xml:space="preserve">
+    <value>PostgreSQL bulk insert failed.</value>
+  </data>
+  <data name="FileIngestionRecordNotFoundFromStartException" xml:space="preserve">
+    <value>Record not found searching from start.</value>
+  </data>
+  <data name="FileIngestionRecordNotFoundFromEndException" xml:space="preserve">
+    <value>Record not found searching from end.</value>
+  </data>
+  <!-- FileIngestion — Transport Options -->
+  <data name="FileIngestionSftpTimeoutInvalidException" xml:space="preserve">
+    <value>SFTP timeout configuration is invalid.</value>
+  </data>
+  <data name="FileIngestionSftpOperationTimeoutInvalidException" xml:space="preserve">
+    <value>SFTP operation timeout configuration is invalid.</value>
+  </data>
+  <data name="FileIngestionSftpRetryCountInvalidException" xml:space="preserve">
+    <value>SFTP retry count configuration is invalid.</value>
+  </data>
+  <data name="FileIngestionSftpRetryDelayInvalidException" xml:space="preserve">
+    <value>SFTP retry delay configuration is invalid.</value>
+  </data>
+  <data name="FileIngestionFtpTimeoutInvalidException" xml:space="preserve">
+    <value>FTP timeout configuration is invalid.</value>
+  </data>
+  <data name="FileIngestionFtpRetryCountInvalidException" xml:space="preserve">
+    <value>FTP retry count configuration is invalid.</value>
+  </data>
+  <data name="FileIngestionFtpRetryDelayInvalidException" xml:space="preserve">
+    <value>FTP retry delay configuration is invalid.</value>
+  </data>
+  <data name="FileIngestionFtpRetryExhaustedException" xml:space="preserve">
+    <value>FTP download retry attempts exhausted.</value>
+  </data>
+  <data name="FileIngestionFtpUploadRetryExhaustedException" xml:space="preserve">
+    <value>FTP upload retry attempts exhausted.</value>
+  </data>
+  <!-- FileIngestion — Processing -->
+  <data name="FileIngestionProcessingBatchSizeInvalidException" xml:space="preserve">
+    <value>Processing batch size configuration is invalid.</value>
+  </data>
+  <data name="FileIngestionProcessingRetryBatchSizeInvalidException" xml:space="preserve">
+    <value>Processing retry batch size configuration is invalid.</value>
+  </data>
+  <data name="FileIngestionProcessingMaxParallelismInvalidException" xml:space="preserve">
+    <value>Processing max parallelism configuration is invalid.</value>
+  </data>
+  <!-- Reconciliation — Context & Core -->
+  <data name="ReconciliationFileNotResolvedException" xml:space="preserve">
+    <value>Reconciliation file could not be resolved.</value>
+  </data>
+  <data name="ReconciliationEvaluationContextNotBuiltException" xml:space="preserve">
+    <value>Evaluation context could not be built.</value>
+  </data>
+  <data name="ReconciliationCurrentCardRowMissingException" xml:space="preserve">
+    <value>Current card row is missing in reconciliation context.</value>
+  </data>
+  <data name="ReconciliationNoEvaluatorRegisteredException" xml:space="preserve">
+    <value>No evaluator registered for the content type.</value>
+  </data>
+  <data name="ReconciliationBranchRequiresManualGateException" xml:space="preserve">
+    <value>Branch requires manual gate approval.</value>
+  </data>
+  <data name="ReconciliationUnsupportedContentTypeException" xml:space="preserve">
+    <value>Unsupported reconciliation content type.</value>
+  </data>
+  <!-- Reconciliation — Payload -->
+  <data name="ReconciliationOperationPayloadEmptyException" xml:space="preserve">
+    <value>Operation payload is empty.</value>
+  </data>
+  <data name="ReconciliationOperationPayloadDeserializeFailedException" xml:space="preserve">
+    <value>Operation payload deserialization failed.</value>
+  </data>
+  <data name="ReconciliationOperationPayloadValueMissingException" xml:space="preserve">
+    <value>Required value is missing in operation payload.</value>
+  </data>
+  <data name="ReconciliationOperationPayloadConversionFailedException" xml:space="preserve">
+    <value>Operation payload value conversion failed.</value>
+  </data>
+  <!-- Reconciliation — Operation -->
+  <data name="ReconciliationUnsupportedOperationCodeException" xml:space="preserve">
+    <value>Unsupported reconciliation operation code.</value>
+  </data>
+  <!-- Reconciliation — Configuration -->
+  <data name="ReconciliationExecuteMaxEvaluationsInvalidException" xml:space="preserve">
+    <value>Max evaluations configuration is invalid.</value>
+  </data>
+  <data name="ReconciliationExecuteLeaseSecondsInvalidException" xml:space="preserve">
+    <value>Lease seconds configuration is invalid.</value>
+  </data>
+  <data name="ReconciliationEvaluateChunkSizeInvalidException" xml:space="preserve">
+    <value>Evaluate chunk size configuration is invalid.</value>
+  </data>
+  <data name="ReconciliationEvaluateClaimTimeoutInvalidException" xml:space="preserve">
+    <value>Evaluate claim timeout configuration is invalid.</value>
+  </data>
+  <data name="ReconciliationEvaluateClaimRetryInvalidException" xml:space="preserve">
+    <value>Evaluate claim retry configuration is invalid.</value>
+  </data>
+  <data name="ReconciliationAlertBatchSizeInvalidException" xml:space="preserve">
+    <value>Alert batch size configuration is invalid.</value>
+  </data>
+  <!-- Archive — Configuration -->
+  <data name="ArchiveOptionsNotConfiguredException" xml:space="preserve">
+    <value>Archive options are not configured.</value>
+  </data>
+  <data name="ArchivePreviewLimitInvalidException" xml:space="preserve">
+    <value>Archive preview limit configuration is invalid.</value>
+  </data>
+  <data name="ArchiveMaxRunCountInvalidException" xml:space="preserve">
+    <value>Archive max run count configuration is invalid.</value>
+  </data>
+  <data name="ArchiveRetentionDaysInvalidException" xml:space="preserve">
+    <value>Archive retention days configuration is invalid.</value>
+  </data>
+  <data name="ArchiveMinUpdateAgeInvalidException" xml:space="preserve">
+    <value>Archive min update age configuration is invalid.</value>
+  </data>
+  <!-- Archive — Verification & SQL -->
+  <data name="ArchiveLiveCountsNotClearedException" xml:space="preserve">
+    <value>Live counts were not cleared after archive delete.</value>
+  </data>
+  <data name="ArchiveVerificationCountMismatchException" xml:space="preserve">
+    <value>Archive verification count mismatch.</value>
+  </data>
+  <data name="ArchivePropertyNotFoundException" xml:space="preserve">
+    <value>Property not found on entity type.</value>
+  </data>
+  <data name="ArchivePrimaryKeyNotDefinedException" xml:space="preserve">
+    <value>Primary key is not defined for entity type.</value>
+  </data>
+  <data name="ArchiveEntityTypeNotFoundException" xml:space="preserve">
+    <value>Entity type not found in database model.</value>
+  </data>
+  <data name="ArchiveUnsupportedBeforeDateStrategyException" xml:space="preserve">
+    <value>Unsupported before-date strategy.</value>
+  </data>
 </root>

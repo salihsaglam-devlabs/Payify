@@ -21,6 +21,7 @@ public class IngestionFileLineConfiguration : IEntityTypeConfiguration<Ingestion
         builder.HasIndex(x => new { x.CorrelationKey, x.CorrelationValue });
         builder.HasIndex(x => x.ReconciliationStatus);
         builder.HasIndex(x => new { x.IngestionFileId, x.RecordType, x.ReconciliationStatus, x.UpdateDate });
+        builder.HasIndex(x => x.MatchedClearingLineId);
         builder.HasOne(x => x.IngestionFile)
             .WithMany()
             .HasForeignKey(x => x.IngestionFileId);
@@ -44,5 +45,6 @@ public class IngestionFileLineConfiguration : IEntityTypeConfiguration<Ingestion
         builder.Property(x => x.DuplicateStatus).HasColumnName("duplicate_status").HasMaxLength(64);
         builder.Property(x => x.DuplicateGroupId).HasColumnName("duplicate_group_id");
         builder.Property(x => x.ReconciliationStatus).HasColumnName("reconciliation_status").HasConversion<string>().HasMaxLength(32);
+        builder.Property(x => x.MatchedClearingLineId).HasColumnName("matched_clearing_line_id");
     }
 }

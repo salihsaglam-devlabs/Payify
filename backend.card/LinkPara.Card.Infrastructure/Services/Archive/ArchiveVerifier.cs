@@ -1,3 +1,4 @@
+using LinkPara.Card.Application.Commons.Exceptions;
 using LinkPara.Card.Application.Commons.Extensions;
 using LinkPara.Card.Application.Commons.Models.Archive.Contracts.Responses;
 using LinkPara.Card.Infrastructure.Persistence;
@@ -100,7 +101,7 @@ internal sealed class ArchiveVerifier
             counts.ReconciliationOperationExecutionCount != 0 ||
             counts.ReconciliationAlertCount != 0)
         {
-            throw new InvalidOperationException(_localizer.Get("Archive.LiveCountsNotCleared"));
+            throw new ArchiveLiveCountsNotClearedException( _localizer.Get("Archive.LiveCountsNotCleared"));
         }
     }
 
@@ -108,7 +109,7 @@ internal sealed class ArchiveVerifier
     {
         if (expected != actual)
         {
-            throw new InvalidOperationException(_localizer.Get("Archive.VerificationFailed", table, expected, actual));
+            throw new ArchiveVerificationCountMismatchException(_localizer.Get("Archive.VerificationFailed", table, expected, actual));
         }
     }
 }

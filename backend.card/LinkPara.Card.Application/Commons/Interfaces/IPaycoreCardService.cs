@@ -16,11 +16,14 @@ public interface IPaycoreCardService
     Task<CreateCardResponse> CreateCardAsync(CreateCardCommand command);
     Task<PaycoreResponse> UpdateCardStatusAsync(UpdateCardStatusCommand command);
     Task<GetCardAuthorizationsResponse> GetCardAuthorizationsAsync(GetCardAuthorizationsQuery command);
-    Task<List<GetCardInformationsResponse>> GetCardInformationsAsync(GetCardInformationsQuery command);
+    Task<GetCardInformationsResponse> GetCardInformationsAsync(GetCardInformationsQuery command);
     Task<PaycoreResponse> UpdateCardAuthorizationsAsync(UpdateCardAuthorizationCommand command);
     Task<GetCardTransactionsResponse> GetCardTransactionsAsync(GetCardTransactionsQuery command);
     Task<GetCardLastCourierActivityResponse> GetCardLastCorierActivityAsync(GetCardLastCourierActivityQuery command);
     Task<GetCardSensitiveDataResponse> GetCardSensitiveDataAsync(GetCardSensitiveDataQuery command);
-    Task<List<GetClearCardNoResponse>> GetClearCardNoAsync(GetClearCardNoQuery command);
-    Task<AddAdditionalLimitRestrictionResponse> AddAdditionalLimitRestrictionAsync(AddAdditionalLimitRestrictionCommand command); 
+    Task<GetClearCardNoResponse> GetClearCardNoAsync(GetClearCardNoQuery command);
+    Task<PaycoreResponse> AddAdditionalLimitRestrictionAsync(AddAdditionalLimitRestrictionCommand command);
+    Task<CardRenewalResponse> CardRenewalAsync(CardRenewalCommand command);
+    Task<GetCardStatusResponse> GetCardStatusAsync(GetCardStatusQuery command);
+
 }

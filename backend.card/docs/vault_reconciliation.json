@@ -1,7 +1,4 @@
 {
-  "Consumer": {
-    "RespondToContext": false
-  },
   "Alert": {
     "BatchSize": 10000000,
     "Enabled": true,
@@ -11,13 +8,16 @@
       "operasyon@company.com"
     ]
   },
+  "Consumer": {
+    "RespondToContext": false
+  },
   "Evaluate": {
-    "ChunkSize": 5000,
+    "ChunkSize": 10000,
     "ClaimRetryCount": 5,
-    "ClaimTimeoutSeconds": 600
+    "ClaimTimeoutSeconds": 900
   },
   "Execute": {
-    "LeaseSeconds": 120,
-    "MaxEvaluations": 50000
+    "LeaseSeconds": 300,
+    "MaxEvaluations": 100000
   }
 }

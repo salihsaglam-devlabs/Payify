@@ -4,10 +4,14 @@ using LinkPara.Card.Application.Commons.Interfaces.Reconciliation;
 using LinkPara.Card.Application.Commons.Models.Reconciliation.Contracts.Requests;
 using LinkPara.Card.Application.Commons.Models.Reconciliation.Contracts.Responses;
 using LinkPara.Card.Application.Commons.Models.Reconciliation.Shared;
+using LinkPara.Card.Application.Features.Reconciliation.Queries.GetAlerts;
+using LinkPara.Card.Application.Features.Reconciliation.Queries.PendingReviews;
 using LinkPara.Card.Infrastructure.Services.Reconciliation.Execute.Flow;
 using LinkPara.Card.Infrastructure.Services.Reconciliation.Evaluate.Core;
 using LinkPara.Card.Infrastructure.Services.Reconciliation.GetAlerts;
 using LinkPara.Card.Infrastructure.Services.Reconciliation.Reviews;
+using LinkPara.SharedModels.Pagination;
+using AlertModel = LinkPara.Card.Application.Commons.Models.Reconciliation.Shared.Alert;
 
 namespace LinkPara.Card.Infrastructure.Services.Reconciliation;
 
@@ -180,69 +184,39 @@ internal sealed class ReconciliationService : IReconciliationService
         }
     }
 
-    public async Task<PendingReviewsResponse> GetPendingReviewsAsync(PendingReviewsRequest request, CancellationToken cancellationToken = default)
+    public async Task<PaginatedList<ManualReview>> GetPendingReviewsAsync(GetPendingReviewsQuery query, CancellationToken cancellationToken = default)
     {
-        var errors = new List<ReconciliationErrorDetail>();
-        if (request is null)
-        {
-            errors.Add(_errorMapper.Create("INVALID_REQUEST", _localizer.Get("Reconciliation.RequestIsNull"), "RECONCILIATION_SERVICE_GET_PENDING_REVIEWS"));
-            return new PendingReviewsResponse
-            {
-                Message = BuildFailureMessage(_localizer.Get("Reconciliation.RequestFailed"), errors),
-                Errors = errors,
-                ErrorCount = errors.Count
-            };
-        }
-
         try
         {
-            var response = await _reviewService.GetPendingAsync(request, errors, cancellationToken);
-            response.Errors = errors;
-            response.ErrorCount = errors.Count;
-            return response;
+            return await _reviewService.GetPendingAsync(query, cancellationToken);
         }
         catch (Exception ex)
         {
-            errors.Add(_errorMapper.MapException(ex, "RECONCILIATION_SERVICE_GET_PENDING_REVIEWS"));
-            return new PendingReviewsResponse
-            {
-                Message = BuildFailureMessage(_localizer.Get("Reconciliation.PendingReviewsLoadFailed"), errors),
-                Errors = errors,
-                ErrorCount = errors.Count
-            };
+            throw new InvalidOperationException(
+                BuildFailureMessage(_localizer.Get("Reconciliation.GetPendingReviewsFailed"),
+                    new List<ReconciliationErrorDetail>
+                    {
+                        _errorMapper.MapException(ex, "RECONCILIATION_SERVICE_GET_PENDING_REVIEWS")
+                    }),
+                ex);
         }
     }
 
-    public async Task<GetAlertsResponse> GetAlertsAsync(GetAlertsRequest request, CancellationToken cancellationToken = default)
+    public async Task<PaginatedList<AlertModel>> GetAlertsAsync(GetAlertsQuery query, CancellationToken cancellationToken = default)
     {
-        var errors = new List<ReconciliationErrorDetail>();
-        if (request is null)
-        {
-            errors.Add(_errorMapper.Create("INVALID_REQUEST", _localizer.Get("Reconciliation.RequestIsNull"), "RECONCILIATION_SERVICE_GET_ALERTS"));
-            return new GetAlertsResponse
-            {
-                Message = BuildFailureMessage(_localizer.Get("Reconciliation.RequestFailed"), errors),
-                Errors = errors,
-                ErrorCount = errors.Count
-            };
-        }
-
         try
         {
-            var response = await _alertsService.GetAsync(request, errors, cancellationToken);
-            response.Errors = errors;
-            response.ErrorCount = errors.Count;
-            return response;
+            return await _alertsService.GetAsync(query, cancellationToken);
         }
         catch (Exception ex)
         {
-            errors.Add(_errorMapper.MapException(ex, "RECONCILIATION_SERVICE_GET_ALERTS"));
-            return new GetAlertsResponse
-            {
-                Message = BuildFailureMessage(_localizer.Get("Reconciliation.AlertsLoadFailed"), errors),
-                Errors = errors,
-                ErrorCount = errors.Count
-            };
+            throw new InvalidOperationException(
+                BuildFailureMessage(_localizer.Get("Reconciliation.GetAlertsFailed"),
+                    new List<ReconciliationErrorDetail>
+                    {
+                        _errorMapper.MapException(ex, "RECONCILIATION_SERVICE_GET_ALERTS")
+                    }),
+                ex);
         }
     }
 

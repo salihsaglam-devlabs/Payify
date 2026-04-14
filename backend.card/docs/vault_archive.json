@@ -1,26 +1,54 @@
 {
-  "Enabled": true,
-  "AutoArchiveAfterExecute": false,
+  "AutoArchiveAfterExecute": true,
   "Defaults": {
-    "PreviewLimit": 1000,
-    "MaxRunCount": 5000,
     "ContinueOnError": false,
-    "UseConfiguredBeforeDateOnly": false,
-    "DefaultBeforeDateStrategy": "RetentionDays"
+    "DefaultBeforeDateStrategy": "RetentionDays",
+    "MaxRunCount": 50000,
+    "PreviewLimit": 5000,
+    "UseConfiguredBeforeDateOnly": false
   },
+  "Enabled": true,
   "Rules": {
-    "RetentionDays": 90,
     "MinLastUpdateAgeHours": 72,
+    "RetentionDays": 90,
     "RetentionOnlyMode": false
   },
   "TerminalStatuses": {
-    "IngestionFile": ["Success", "Failed"],
-    "IngestionFileLine": ["Success", "Failed"],
-    "IngestionFileLineReconciliation": ["Success", "Failed"],
-    "ReconciliationEvaluation": ["Completed", "Failed"],
-    "ReconciliationOperation": ["Completed", "Failed", "Cancelled"],
-    "ReconciliationReview": ["Approved", "Rejected", "Cancelled"],
-    "ReconciliationOperationExecution": ["Completed", "Failed", "Skipped"],
-    "ReconciliationAlert": ["Consumed", "Failed", "Ignored"]
+    "IngestionFile": [
+      "Success",
+      "Failed"
+    ],
+    "IngestionFileLine": [
+      "Success",
+      "Failed"
+    ],
+    "IngestionFileLineReconciliation": [
+      "Success",
+      "Failed"
+    ],
+    "ReconciliationAlert": [
+      "Consumed",
+      "Failed",
+      "Ignored"
+    ],
+    "ReconciliationEvaluation": [
+      "Completed",
+      "Failed"
+    ],
+    "ReconciliationOperation": [
+      "Completed",
+      "Failed",
+      "Cancelled"
+    ],
+    "ReconciliationOperationExecution": [
+      "Completed",
+      "Failed",
+      "Skipped"
+    ],
+    "ReconciliationReview": [
+      "Approved",
+      "Rejected",
+      "Cancelled"
+    ]
   }
 }

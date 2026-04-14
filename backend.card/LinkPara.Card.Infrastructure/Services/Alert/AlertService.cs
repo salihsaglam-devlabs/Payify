@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Text;
 using LinkPara.Card.Application.Commons.Extensions;
+using LinkPara.Card.Application.Commons.Helpers;
 using LinkPara.Card.Application.Commons.Interfaces;
 using LinkPara.Card.Application.Commons.Models.Reconciliation.Configuration;
 using LinkPara.Card.Domain.Entities.Reconciliation.Persistence;
@@ -174,7 +175,17 @@ internal sealed class AlertService : IAlertService
                     alert.EvaluationId,
                     alert.OperationId);
 
-                await MarkAsFailedAsync(alert.Id, ex.Message, cancellationToken);
+                try
+                {
+                    await MarkAsFailedAsync(alert.Id, ExceptionDetailHelper.BuildDetailMessage(ex, 2000), cancellationToken);
+                }
+                catch (Exception markEx)
+                {
+                    _logger.LogError(
+                        markEx,
+                        _localizer.Get("Alert.ProcessingFailed") + " MarkAsFailedAsync also failed. AlertId={AlertId}",
+                        alert.Id);
+                }
             }
         }
     }

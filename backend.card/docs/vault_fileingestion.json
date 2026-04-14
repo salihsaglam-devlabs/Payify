@@ -2,7 +2,7 @@
   "Connections": {
     "Source": {
       "Ftp": {
-        "Host": "185.188.39.62",
+        "Host": "10.222.21.101",
         "Password": "PAYpwd1*",
         "Paths": {
           "CardBkm": "/turkonay/PROD/PTS2TURKONAY/PAYCORE_REPORTS",
@@ -13,6 +13,8 @@
           "ClearingVisa": "/turkonay/PROD/PTS2TURKONAY/VISA_REPORTS/OUTGOING"
         },
         "Port": 21,
+        "RetryCount": 3,
+        "RetryDelaySeconds": 5,
         "TimeoutSeconds": 60,
         "UsePassive": true,
         "Username": "payify"
@@ -71,8 +73,9 @@
       },
       "Protocol": "Sftp",
       "Sftp": {
-        "Host": "185.188.39.62",
+        "Host": "10.222.21.101",
         "KnownHostFingerprint": "",
+        "OperationTimeoutSeconds": 120,
         "Password": "PAYpwd1*",
         "Paths": {
           "CardBkm": "/turkonay/PROD/PTS2TURKONAY/PAYCORE_REPORTS",
@@ -85,6 +88,9 @@
         "Port": 22,
         "PrivateKeyPassphrase": "",
         "PrivateKeyPath": "",
+        "RetryCount": 3,
+        "RetryDelaySeconds": 5,
+        "TimeoutSeconds": 60,
         "Username": "payify"
       }
     },
@@ -101,6 +107,8 @@
           "ClearingVisa": "/turkonay/PROD/PTS2TURKONAY/ARCHIVE/CLEARING/VISA"
         },
         "Port": 21,
+        "RetryCount": 3,
+        "RetryDelaySeconds": 5,
         "TimeoutSeconds": 60,
         "UsePassive": true,
         "Username": "payify"
@@ -161,6 +169,7 @@
       "Sftp": {
         "Host": "10.222.21.101",
         "KnownHostFingerprint": "",
+        "OperationTimeoutSeconds": 120,
         "Password": "PAYpwd1*",
         "Paths": {
           "CardBkm": "/turkonay/PROD/PTS2TURKONAY/ARCHIVE/CARD/BKM",
@@ -173,16 +182,19 @@
         "Port": 22,
         "PrivateKeyPassphrase": "",
         "PrivateKeyPath": "",
+        "RetryCount": 3,
+        "RetryDelaySeconds": 5,
+        "TimeoutSeconds": 60,
         "Username": "payify"
       }
     }
   },
   "Processing": {
-    "BatchSize": 10000,
+    "BatchSize": 25000,
     "EnableParallelProcessing": true,
     "FailedRowMaxRetryCount": 3,
     "MaxDegreeOfParallelism": 10,
-    "RetryBatchSize": 2000,
+    "RetryBatchSize": 5000,
     "UseBulkInsert": true
   },
   "Profiles": {

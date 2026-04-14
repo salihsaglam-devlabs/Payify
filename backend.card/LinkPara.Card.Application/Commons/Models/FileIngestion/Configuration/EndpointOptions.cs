@@ -1,3 +1,5 @@
+using LinkPara.Card.Application.Commons.Exceptions;
+
 namespace LinkPara.Card.Application.Commons.Models.FileIngestion.Configuration;
 
 public class EndpointOptions
@@ -10,6 +12,9 @@ public class EndpointOptions
     public void Validate()
     {
         if (string.IsNullOrWhiteSpace(Protocol))
-            throw new InvalidOperationException("Vault configuration missing: FileIngestion.Connections endpoint Protocol");
+            throw new FileIngestionConfigProtocolMissingException("Vault configuration missing: FileIngestion.Connections endpoint Protocol");
+
+        Sftp?.ValidateAndApplyDefaults();
+        Ftp?.ValidateAndApplyDefaults();
     }
 }

@@ -1,11 +1,12 @@
 using LinkPara.Card.Application.Features.FileIngestion.Commands.IngestFile;
 using LinkPara.Card.Application.Features.Reconciliation.Commands.Evaluate;
 using LinkPara.Card.Application.Features.Reconciliation.Commands.Execute;
+using LinkPara.Card.Application.Commons.Extensions;
+using LinkPara.Card.Application.Commons.Helpers;
 using LinkPara.Card.Application.Commons.Models.FileIngestion.Contracts.Responses;
 using LinkPara.Card.Application.Commons.Models.Reconciliation.Configuration;
 using LinkPara.Card.Application.Commons.Models.Reconciliation.Contracts.Requests;
 using LinkPara.Card.Application.Commons.Models.Reconciliation.Contracts.Responses;
-using LinkPara.Card.Domain.Enums.FileIngestion;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -54,7 +55,8 @@ public class FileIngestionAndReconciliationConsumer : IConsumer<FileIngestionAnd
                         await RespondIfEnabled(context, new FileIngestionAndReconciliationJobResponse
                         {
                             Type = message.Type,
-                            IsSuccess = false
+                            IsSuccess = false,
+                            ErrorMessage = "IngestionRequest is null. Cannot process IngestFile job without a request payload."
                         });
 
                         return;
@@ -121,7 +123,8 @@ public class FileIngestionAndReconciliationConsumer : IConsumer<FileIngestionAnd
                     await RespondIfEnabled(context, new FileIngestionAndReconciliationJobResponse
                     {
                         Type = message.Type,
-                        IsSuccess = false
+                        IsSuccess = false,
+                        ErrorMessage = $"Unknown job type: {message.Type}. Supported types: IngestFile, Evaluate, Execute."
                     });
 
                     return;
@@ -130,11 +133,12 @@ public class FileIngestionAndReconciliationConsumer : IConsumer<FileIngestionAnd
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Consumer job failed. Type={JobType}", message.Type);
+            _logger.LogError(ex, _localizer.Get("Consumer.JobFailed"), message.Type);
             await RespondIfEnabled(context, new FileIngestionAndReconciliationJobResponse
             {
                 Type = message.Type,
-                IsSuccess = false
+                IsSuccess = false,
+                ErrorMessage = ExceptionDetailHelper.BuildDetailMessage(ex, 2000)
             });
             return;
         }
@@ -177,18 +181,16 @@ public class FileIngestionAndReconciliationConsumer : IConsumer<FileIngestionAnd
     private static bool IsSuccessful(IReadOnlyCollection<FileIngestionResponse> responses)
     {
         return responses.Count > 0 &&
-               responses.All(x => x.Status == FileStatus.Success && x.Errors.Count == 0);
+               responses.All(x => x.FileId != Guid.Empty);
     }
 
     private static bool IsSuccessful(EvaluateResponse response)
     {
-        return response.ErrorCount == 0;
+        return response.EvaluationRunId != Guid.Empty;
     }
 
     private static bool IsSuccessful(ExecuteResponse response)
     {
-        return response.ErrorCount == 0 &&
-               response.TotalAttempted > 0 &&
-               response.TotalFailed == 0;
+        return response.TotalAttempted >= 0;
     }
 }

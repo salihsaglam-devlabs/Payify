@@ -61,7 +61,7 @@ internal sealed class OperationExecutor
             OperationCodes.RejectPendingAccReview => ExecuteRejectPendingAccReviewAsync(operation, cancellationToken),
             OperationCodes.ApproveMissingPayifyTransaction => ExecuteApproveMissingPayifyTransactionAsync(operation, cancellationToken),
             OperationCodes.RejectMissingPayifyTransaction => ExecuteRejectMissingPayifyTransactionAsync(operation, cancellationToken),
-            _ => throw new ReconciliationUnsupportedOperationException(ApiErrorCode.ReconciliationUnsupportedOperationCode, _localizer.Get("Reconciliation.UnsupportedOperationCode", operation.Code))
+            _ => throw new ReconciliationUnsupportedOperationCodeException(_localizer.Get("Reconciliation.UnsupportedOperationCode", operation.Code))
         };
     }
 

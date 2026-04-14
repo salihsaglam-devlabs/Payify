@@ -1,9 +1,11 @@
+using LinkPara.Card.Application.Commons.Exceptions;
+
 namespace LinkPara.Card.Application.Commons.Models.Reconciliation.Configuration;
 
 public class EvaluateOptions
 {
-    public const int DefaultChunkSize = 5_000;
-    public const int DefaultClaimTimeoutSeconds = 600;
+    public const int DefaultChunkSize = 10_000;
+    public const int DefaultClaimTimeoutSeconds = 900;
     public const int DefaultClaimRetryCount = 5;
 
     public int? ChunkSize { get; set; }
@@ -19,11 +21,11 @@ public class EvaluateOptions
         ClaimRetryCount ??= DefaultClaimRetryCount;
 
         if (ChunkSize <= 0)
-            throw new InvalidOperationException($"Reconciliation.Evaluate.ChunkSize must be positive. Current: {ChunkSize}");
+            throw new ReconciliationEvaluateChunkSizeInvalidException($"Reconciliation.Evaluate.ChunkSize must be positive. Current: {ChunkSize}");
         if (ClaimTimeoutSeconds <= 0)
-            throw new InvalidOperationException($"Reconciliation.Evaluate.ClaimTimeoutSeconds must be positive. Current: {ClaimTimeoutSeconds}");
+            throw new ReconciliationEvaluateClaimTimeoutInvalidException($"Reconciliation.Evaluate.ClaimTimeoutSeconds must be positive. Current: {ClaimTimeoutSeconds}");
         if (ClaimRetryCount <= 0)
-            throw new InvalidOperationException($"Reconciliation.Evaluate.ClaimRetryCount must be positive. Current: {ClaimRetryCount}");
+            throw new ReconciliationEvaluateClaimRetryInvalidException($"Reconciliation.Evaluate.ClaimRetryCount must be positive. Current: {ClaimRetryCount}");
     }
 
     [Obsolete("Use ValidateAndApplyDefaults() instead")]

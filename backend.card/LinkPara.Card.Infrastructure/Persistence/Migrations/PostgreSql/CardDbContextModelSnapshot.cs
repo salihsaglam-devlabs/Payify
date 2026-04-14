@@ -197,6 +197,10 @@ namespace LinkPara.Card.Infrastructure.Persistence.Migrations.PostgreSql
                         .HasColumnType("bigint")
                         .HasColumnName("line_number");
 
+                    b.Property<Guid?>("MatchedClearingLineId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("matched_clearing_line_id");
+
                     b.Property<string>("Message")
                         .HasMaxLength(4000)
                         .HasColumnType("character varying(4000)")
@@ -1301,6 +1305,10 @@ namespace LinkPara.Card.Infrastructure.Persistence.Migrations.PostgreSql
                         .HasColumnType("bigint")
                         .HasColumnName("line_number");
 
+                    b.Property<Guid?>("MatchedClearingLineId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("matched_clearing_line_id");
+
                     b.Property<string>("Message")
                         .HasMaxLength(4000)
                         .HasColumnType("character varying(4000)")
@@ -1352,6 +1360,9 @@ namespace LinkPara.Card.Infrastructure.Persistence.Migrations.PostgreSql
 
                     b.HasIndex("DuplicateGroupId")
                         .HasDatabaseName("ix_file_line_duplicate_group_id");
+
+                    b.HasIndex("MatchedClearingLineId")
+                        .HasDatabaseName("ix_file_line_matched_clearing_line_id");
 
                     b.HasIndex("ReconciliationStatus")
                         .HasDatabaseName("ix_file_line_reconciliation_status");

@@ -1,5 +1,6 @@
 using System.Text.Json;
 using LinkPara.Card.Application.Commons.Extensions;
+using LinkPara.Card.Application.Commons.Helpers;
 using LinkPara.Card.Application.Commons.Interfaces;
 using Microsoft.Extensions.Localization;
 using LinkPara.Card.Application.Commons.Interfaces.Reconciliation;
@@ -84,14 +85,31 @@ internal sealed class ExecuteService
                 break;
             }
 
-            var results = await ExecuteEvaluationAsync(
-                evaluationId,
-                now,
-                remaining,
-                executeOptions.LeaseSeconds.Value,
-                selection,
-                errors,
-                cancellationToken);
+            List<OperationExecutionResult> results;
+            try
+            {
+                results = await ExecuteEvaluationAsync(
+                    evaluationId,
+                    now,
+                    remaining,
+                    executeOptions.LeaseSeconds.Value,
+                    selection,
+                    errors,
+                    cancellationToken);
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                errors.Add(_errorMapper.MapException(
+                    ex,
+                    "EXECUTION_EVALUATION",
+                    evaluationId: evaluationId,
+                    message: _localizer.Get("Reconciliation.EvaluationExecutionFailed", evaluationId)));
+                continue;
+            }
 
             foreach (var result in results)
             {
@@ -500,24 +518,24 @@ internal sealed class ExecuteService
                 evaluationId: operation.EvaluationId,
                 message: _localizer.Get("Reconciliation.UnexpectedOperationError", operation.Code)));
 
-            ScheduleRetry(operation, now, ex.Message);
+            ScheduleRetry(operation, now, ExceptionDetailHelper.BuildDetailMessage(ex, 2000));
 
             execution.Status = ExecutionStatus.Failed;
             execution.FinishedAt = _timeProvider.Now;
             execution.ResultCode = "FAILED";
             execution.ResultMessage = _localizer.Get("Reconciliation.OperationExecutionFailed");
             execution.ErrorCode = "OPERATION_EXECUTION_FAILED";
-            execution.ErrorMessage = ex.Message;
+            execution.ErrorMessage = ExceptionDetailHelper.BuildDetailMessage(ex, 2000);
 
             if (operation.Status == OperationStatus.Failed)
             {
-                await AddOperationFailureAlertAsync(operation, ex.Message, cancellationToken);
+                await AddOperationFailureAlertAsync(operation, ExceptionDetailHelper.BuildDetailMessage(ex, 2000), cancellationToken);
             }
 
             _auditStampService.StampForUpdate(new AuditEntity[] { operation, execution });
             await _dbContext.SaveChangesAsync(cancellationToken);
 
-            return CreateOperationResult(operation.Id, "Failed", ex.Message);
+            return CreateOperationResult(operation.Id, "Failed", ExceptionDetailHelper.BuildDetailMessage(ex, 2000));
         }
     }
 
