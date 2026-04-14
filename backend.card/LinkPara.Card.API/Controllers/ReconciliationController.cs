@@ -7,7 +7,6 @@ using LinkPara.Card.Application.Features.Reconciliation.Commands.Approve;
 using LinkPara.Card.Application.Features.Reconciliation.Commands.Reject;
 using LinkPara.Card.Application.Features.Reconciliation.Queries.PendingReviews;
 using LinkPara.Card.Application.Features.Reconciliation.Queries.GetAlerts;
-using LinkPara.SharedModels.Pagination;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -57,14 +56,14 @@ namespace LinkPara.Card.API.Controllers
 
         [Authorize(Policy = ReconciliationPolicies.ReadAll)]
         [HttpGet("Reviews/Pending")]
-        public async Task<PaginatedList<ManualReview>> GetPendingManualReviews([FromQuery] GetPendingReviewsQuery query, CancellationToken ct = default)
+        public async Task<GetPendingReviewsResponse> GetPendingManualReviews([FromQuery] GetPendingReviewsQuery query, CancellationToken ct = default)
         {
             return await Mediator.Send(query, ct);
         }
 
         [Authorize(Policy = ReconciliationPolicies.ReadAll)]
         [HttpGet("Alerts")]
-        public async Task<PaginatedList<Alert>> GetAlerts([FromQuery] GetAlertsQuery query, CancellationToken ct = default)
+        public async Task<GetAlertsResponse> GetAlerts([FromQuery] GetAlertsQuery query, CancellationToken ct = default)
         {
             return await Mediator.Send(query, ct);
         }

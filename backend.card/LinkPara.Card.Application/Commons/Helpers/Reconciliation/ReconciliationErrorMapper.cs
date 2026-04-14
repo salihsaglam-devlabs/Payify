@@ -1,6 +1,7 @@
 #nullable enable
 using System.Text;
 using LinkPara.Card.Application.Commons.Extensions;
+using LinkPara.SharedModels.Exceptions;
 using Microsoft.Extensions.Localization;
 using LinkPara.Card.Application.Commons.Interfaces.Reconciliation;
 using LinkPara.Card.Application.Commons.Models.Reconciliation.Shared;
@@ -70,6 +71,7 @@ public sealed class ReconciliationErrorMapper : IReconciliationErrorMapper
     {
         return ex switch
         {
+            ApiException apiEx => (apiEx.GetType().Name, _localizer.Get("Reconciliation.ApiError", apiEx.GetType().Name), apiEx.Message),
             OperationCanceledException oce => ("OPERATION_CANCELLED", _localizer.Get("Reconciliation.OperationCancelled"), oce.Message),
             InvalidOperationException ioe => ("INVALID_OPERATION", _localizer.Get("Reconciliation.InvalidOperation"), ioe.InnerException?.Message),
             ArgumentException ae => ("INVALID_ARGUMENT", _localizer.Get("Reconciliation.InvalidArgument"), ae.InnerException?.Message),

@@ -3,8 +3,8 @@ using LinkPara.SharedModels.Pagination;
 
 namespace LinkPara.Card.Application.Commons.Models.Reconciliation.Contracts.Responses;
 
-public class GetAlertsResponse : ReconciliationResponseBase
+public class GetPendingReviewsResponse : ReconciliationResponseBase
 {
-    public PaginatedList<Alert> Data { get; set; }
+    public PaginatedList<ManualReview> Data { get; set; }
 }
 

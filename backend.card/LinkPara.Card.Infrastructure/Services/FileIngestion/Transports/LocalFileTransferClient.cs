@@ -43,6 +43,8 @@ public class LocalFileTransferClient : IFileTransferClient
         if (string.IsNullOrWhiteSpace(rootPath))
             return Task.FromResult<IReadOnlyCollection<FileReference>>(Array.Empty<FileReference>());
 
+        rootPath = AppendSourceDateSubfolder(rootPath, profile);
+
         if (File.Exists(rootPath))
         {
             return Task.FromResult<IReadOnlyCollection<FileReference>>(new[]
@@ -166,5 +168,14 @@ public class LocalFileTransferClient : IFileTransferClient
             return location.Defaults.MacOS;
 
         return location.Defaults.Linux;
+    }
+
+    private string AppendSourceDateSubfolder(string rootPath, ProfileOptions profile)
+    {
+        if (string.IsNullOrWhiteSpace(profile.SourceDateSubfolderFormat))
+            return rootPath;
+
+        var dateSubfolder = _timeProvider.Now.ToString(profile.SourceDateSubfolderFormat);
+        return Path.Combine(rootPath, dateSubfolder);
     }
 }

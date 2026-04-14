@@ -10,8 +10,6 @@ using LinkPara.Card.Infrastructure.Services.Reconciliation.Execute.Flow;
 using LinkPara.Card.Infrastructure.Services.Reconciliation.Evaluate.Core;
 using LinkPara.Card.Infrastructure.Services.Reconciliation.GetAlerts;
 using LinkPara.Card.Infrastructure.Services.Reconciliation.Reviews;
-using LinkPara.SharedModels.Pagination;
-using AlertModel = LinkPara.Card.Application.Commons.Models.Reconciliation.Shared.Alert;
 
 namespace LinkPara.Card.Infrastructure.Services.Reconciliation;
 
@@ -184,39 +182,53 @@ internal sealed class ReconciliationService : IReconciliationService
         }
     }
 
-    public async Task<PaginatedList<ManualReview>> GetPendingReviewsAsync(GetPendingReviewsQuery query, CancellationToken cancellationToken = default)
+    public async Task<GetPendingReviewsResponse> GetPendingReviewsAsync(GetPendingReviewsQuery query, CancellationToken cancellationToken = default)
     {
+        var errors = new List<ReconciliationErrorDetail>();
         try
         {
-            return await _reviewService.GetPendingAsync(query, cancellationToken);
+            var data = await _reviewService.GetPendingAsync(query, cancellationToken);
+            return new GetPendingReviewsResponse
+            {
+                Data = data,
+                Errors = errors,
+                ErrorCount = errors.Count
+            };
         }
         catch (Exception ex)
         {
-            throw new InvalidOperationException(
-                BuildFailureMessage(_localizer.Get("Reconciliation.GetPendingReviewsFailed"),
-                    new List<ReconciliationErrorDetail>
-                    {
-                        _errorMapper.MapException(ex, "RECONCILIATION_SERVICE_GET_PENDING_REVIEWS")
-                    }),
-                ex);
+            errors.Add(_errorMapper.MapException(ex, "RECONCILIATION_SERVICE_GET_PENDING_REVIEWS"));
+            return new GetPendingReviewsResponse
+            {
+                Message = BuildFailureMessage(_localizer.Get("Reconciliation.GetPendingReviewsFailed"), errors),
+                Errors = errors,
+                ErrorCount = errors.Count
+            };
         }
     }
 
-    public async Task<PaginatedList<AlertModel>> GetAlertsAsync(GetAlertsQuery query, CancellationToken cancellationToken = default)
+    public async Task<GetAlertsResponse> GetAlertsAsync(GetAlertsQuery query, CancellationToken cancellationToken = default)
     {
+        var errors = new List<ReconciliationErrorDetail>();
         try
         {
-            return await _alertsService.GetAsync(query, cancellationToken);
+            var data = await _alertsService.GetAsync(query, cancellationToken);
+            return new GetAlertsResponse
+            {
+                Data = data,
+                Errors = errors,
+                ErrorCount = errors.Count
+            };
         }
         catch (Exception ex)
         {
-            throw new InvalidOperationException(
-                BuildFailureMessage(_localizer.Get("Reconciliation.GetAlertsFailed"),
-                    new List<ReconciliationErrorDetail>
-                    {
-                        _errorMapper.MapException(ex, "RECONCILIATION_SERVICE_GET_ALERTS")
-                    }),
-                ex);
+            errors.Add(_errorMapper.MapException(ex, "RECONCILIATION_SERVICE_GET_ALERTS"));
+            return new GetAlertsResponse
+            {
+                Message = BuildFailureMessage(_localizer.Get("Reconciliation.GetAlertsFailed"), errors),
+                Errors = errors,
+                ErrorCount = errors.Count
+            };
         }
     }
 

@@ -56,7 +56,7 @@ public class FileIngestionAndReconciliationConsumer : IConsumer<FileIngestionAnd
                         {
                             Type = message.Type,
                             IsSuccess = false,
-                            ErrorMessage = "IngestionRequest is null. Cannot process IngestFile job without a request payload."
+                            ErrorMessage = _localizer.Get("Consumer.IngestionRequestNull")
                         });
 
                         return;
@@ -124,7 +124,7 @@ public class FileIngestionAndReconciliationConsumer : IConsumer<FileIngestionAnd
                     {
                         Type = message.Type,
                         IsSuccess = false,
-                        ErrorMessage = $"Unknown job type: {message.Type}. Supported types: IngestFile, Evaluate, Execute."
+                        ErrorMessage = _localizer.Get("Consumer.UnknownJobType", message.Type)
                     });
 
                     return;

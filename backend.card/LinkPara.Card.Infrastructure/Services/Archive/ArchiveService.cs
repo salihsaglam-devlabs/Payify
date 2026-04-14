@@ -39,9 +39,9 @@ internal sealed class ArchiveService : IArchiveService
     {
         _reader = reader;
         _evaluator = evaluator;
-        _options = options.Value ?? throw new ArchiveOptionsNotConfiguredException( "ArchiveOptions is not configured.");
         _errorMapper = errorMapper;
         _localizer = localizerFactory(LinkPara.Card.Application.Commons.Localization.LocalizerResource.Messages);
+        _options = options.Value ?? throw new ArchiveOptionsNotConfiguredException(_localizer.Get("Config.Archive.OptionsNotConfigured"));
         _serviceProvider = serviceProvider;
         _auditStampService = auditStampService;
         _timeProvider = timeProvider;
@@ -88,7 +88,8 @@ internal sealed class ArchiveService : IArchiveService
                     {
                         IngestionFileId = candidateId,
                         IsEligible = false,
-                        FailureReasons = new List<string> { "PREVIEW_EVALUATION_FAILED" }
+                        FailureReasons = new List<string> { "PREVIEW_EVALUATION_FAILED" },
+                        Counts = new ArchiveAggregateCounts()
                     });
                 }
             }
@@ -142,14 +143,13 @@ internal sealed class ArchiveService : IArchiveService
                 }
                 catch (Exception ex)
                 {
-                    errors.Add(_errorMapper.MapException(ex, "ARCHIVE_EXECUTE", ingestionFileId: candidateId));
+                    var mappedError = _errorMapper.MapException(ex, "ARCHIVE_EXECUTE", ingestionFileId: candidateId);
+                    errors.Add(mappedError);
                     item = new ArchiveRunItemResult
                     {
                         IngestionFileId = candidateId,
                         Status = "Failed",
-                        Message = ex.InnerException != null
-                            ? $"{ex.Message} | Inner: {ex.InnerException.Message}"
-                            : ex.Message,
+                        Message = mappedError.Message,
                         FailureReasons = new List<string> { "ARCHIVE_EXECUTION_FAILED" }
                     };
                 }

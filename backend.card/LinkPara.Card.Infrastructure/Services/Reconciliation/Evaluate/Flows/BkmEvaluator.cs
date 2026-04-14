@@ -206,7 +206,7 @@ internal sealed class BkmEvaluator : IEvaluator
             return result;
         }
 
-        if (await HasAccPendingMatchAsync(detail, cancellationToken))
+        if (await HasAccPendingMatchAsync(detail, context, cancellationToken))
         {
             result.SetNote(note: _localizer.Get("Reconciliation.Bkm.AccPendingMatchNote"));
             result.AddAutoOperation(
@@ -223,7 +223,25 @@ internal sealed class BkmEvaluator : IEvaluator
                 rejectNote: _localizer.Get("Reconciliation.Bkm.CloseAfterManualReview"));
             return result;
         }
-
+        
+        if (context.ClearingDetails.Count == 0)
+        {
+            result.SetNote(note: _localizer.Get("Reconciliation.Bkm.ExpiredAccPendingNote"));
+            result.AddAutoOperation(
+                OperationCodes.RaiseAlert,
+                _localizer.Get("Reconciliation.Bkm.ExpiredAccPendingAlertOp"),
+                BkmSnapshotBuilder.Create(context, OperationCodes.RaiseAlert, "D2_ACC_PENDING"));
+            result.AddManualOperation(
+                OperationCodes.CreateManualReview,
+                _localizer.Get("Reconciliation.Bkm.ExpiredAccPendingReviewOp"),
+                code => BkmSnapshotBuilder.Create(context, code, "D2_ACC_PENDING"),
+                approveCode: OperationCodes.RecoverMissingCardRow,
+                approveNote: _localizer.Get("Reconciliation.Bkm.RequeueForReEvaluation"),
+                rejectCode: OperationCodes.RejectUnmatchedFlow,
+                rejectNote: _localizer.Get("Reconciliation.Bkm.CloseRecordManually"));
+            return result;
+        }
+        
         result.SetNote(note: _localizer.Get("Reconciliation.Bkm.ExpiredSuccessfulNoAccNote"));
         result.AddAutoOperation(
             OperationCodes.MoveTransactionToExpired,
@@ -246,6 +264,24 @@ internal sealed class BkmEvaluator : IEvaluator
         if (!IsSettled(detail))
         {
             result.SetNote(note: _localizer.Get("Reconciliation.Bkm.NotSettledNote"));
+            return result;
+        }
+        
+        if (context.ClearingDetails.Count == 0)
+        {
+            result.SetNote(note: _localizer.Get("Reconciliation.Bkm.AccNotYetReceivedNote"));
+            result.AddAutoOperation(
+                OperationCodes.RaiseAlert,
+                _localizer.Get("Reconciliation.Bkm.AccMissingAlertOp"),
+                BkmSnapshotBuilder.Create(context, OperationCodes.RaiseAlert, "ACC_MISSING"));
+            result.AddManualOperation(
+                OperationCodes.CreateManualReview,
+                _localizer.Get("Reconciliation.Bkm.AccMissingReviewOp"),
+                code => BkmSnapshotBuilder.Create(context, code, "ACC_MISSING"),
+                approveCode: OperationCodes.RecoverMissingCardRow,
+                approveNote: _localizer.Get("Reconciliation.Bkm.RequeueForReEvaluation"),
+                rejectCode: OperationCodes.RejectUnmatchedFlow,
+                rejectNote: _localizer.Get("Reconciliation.Bkm.CloseRecordManually"));
             return result;
         }
 
@@ -507,16 +543,86 @@ internal sealed class BkmEvaluator : IEvaluator
 
     private async Task<bool> HasAccPendingMatchAsync(
         CardBkmDetail detail,
+        BkmEvaluationContext context,
         CancellationToken cancellationToken)
     {
+        if (context.ClearingDetails.Any(c =>
+                c.ControlStat == ClearingBkmControlStat.Problem && IsAccFieldMatch(detail, c)))
+        {
+            return true;
+        }
+        
+        if (context.ClearingDetails.Count > 0)
+        {
+            return false;
+        }
+        
         var txnGuid = detail.OceanTxnGuid.ToString(CultureInfo.InvariantCulture);
+        var cutoffDate = DateTime.UtcNow.AddDays(-20);
 
-        return await _dbContext.Set<IngestionFileLine>()
+        var clearingParsedDataList = await _dbContext.Set<IngestionFileLine>()
             .AsNoTracking()
-            .AnyAsync(x => x.CorrelationKey == "OceanTxnGuid"
-                           && x.CorrelationValue == txnGuid
-                           && x.ReconciliationStatus == Domain.Enums.FileIngestion.ReconciliationStatus.Processing,
-                cancellationToken);
+            .Where(x => x.CorrelationKey == "OceanTxnGuid"
+                        && x.CorrelationValue == txnGuid
+                        && x.IngestionFile.FileType == FileType.Clearing
+                        && x.IngestionFile.ContentType == FileContentType.Bkm
+                        && x.RecordType == "D"
+                        && x.CreateDate >= cutoffDate)
+            .Select(x => x.ParsedData)
+            .ToListAsync(cancellationToken);
+
+        return clearingParsedDataList
+            .Select(DeserializeClearingDetail)
+            .Where(c => c is not null)
+            .Any(c => c!.ControlStat == ClearingBkmControlStat.Problem && IsAccFieldMatch(detail, c!));
+    }
+    
+    private static bool IsAccFieldMatch(CardBkmDetail card, ClearingBkmDetail clearing)
+    {
+        if (!string.IsNullOrWhiteSpace(card.Rrn) && !string.IsNullOrWhiteSpace(clearing.Rrn))
+        {
+            if (!string.Equals(card.Rrn.Trim(), clearing.Rrn.Trim(), StringComparison.OrdinalIgnoreCase))
+                return false;
+        }
+        
+        if (!string.Equals(card.CardNo?.Trim(), clearing.CardNo?.Trim(), StringComparison.OrdinalIgnoreCase))
+            return false;
+        
+        if (!string.Equals(card.ProvisionCode?.Trim(), clearing.ProvisionCode?.Trim(), StringComparison.OrdinalIgnoreCase))
+            return false;
+        
+        if (!string.Equals(card.Arn?.Trim(), clearing.Arn?.Trim(), StringComparison.OrdinalIgnoreCase))
+            return false;
+        
+        if (!int.TryParse(clearing.MccCode?.Trim(), NumberStyles.Integer, CultureInfo.InvariantCulture, out var clearingMcc)
+            || card.Mcc != clearingMcc)
+            return false;
+
+        if (decimal.Round(card.CardHolderBillingAmount, 2, MidpointRounding.AwayFromZero)
+            != decimal.Round(clearing.SourceAmount, 2, MidpointRounding.AwayFromZero))
+            return false;
+
+        if (card.CardHolderBillingCurrency != clearing.SourceCurrency)
+            return false;
+
+        return true;
+    }
+
+    private static ClearingBkmDetail? DeserializeClearingDetail(string? parsedData)
+    {
+        if (string.IsNullOrWhiteSpace(parsedData))
+        {
+            return null;
+        }
+
+        try
+        {
+            return JsonSerializer.Deserialize<ClearingBkmDetail>(parsedData, JsonOptions);
+        }
+        catch
+        {
+            return null;
+        }
     }
 
     private static CardBkmDetail? GetRootCardDetail(BkmEvaluationContext context)

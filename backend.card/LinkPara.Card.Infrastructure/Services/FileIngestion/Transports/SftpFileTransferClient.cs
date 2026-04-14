@@ -47,6 +47,8 @@ public class SftpFileTransferClient : IFileTransferClient
         if (!sftpOptions.Paths.TryGetValue(profileKey, out var remotePath))
             return Array.Empty<FileReference>();
 
+        remotePath = AppendSourceDateSubfolder(remotePath, profile);
+
         var regex = new Regex(profile.Pattern, RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
         var files = await Task.Run(() =>
@@ -215,6 +217,15 @@ public class SftpFileTransferClient : IFileTransferClient
         return endpointType == FileTransferEndpointType.Target
             ? _options.Connections.Target.Sftp
             : _options.Connections.Source.Sftp;
+    }
+
+    private string AppendSourceDateSubfolder(string remotePath, ProfileOptions profile)
+    {
+        if (string.IsNullOrWhiteSpace(profile.SourceDateSubfolderFormat))
+            return remotePath;
+
+        var dateSubfolder = _timeProvider.Now.ToString(profile.SourceDateSubfolderFormat);
+        return $"{remotePath.TrimEnd('/')}/{dateSubfolder}";
     }
 
     private string BuildRemoteFilePath(string profileKey, string fileName, FileTransferEndpointType endpointType)

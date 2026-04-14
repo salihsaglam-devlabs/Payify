@@ -99,6 +99,12 @@
   <data name="Validation.ArchiveMaxFilesRange" xml:space="preserve">
     <value>Max files must be between 0 and 1000.</value>
   </data>
+  <data name="Validation.OperationIdNotEmpty" xml:space="preserve">
+    <value>Operation ID must not be empty.</value>
+  </data>
+  <data name="Validation.RejectCommentRequired" xml:space="preserve">
+    <value>A comment is required for rejection.</value>
+  </data>
 
   <!-- ════════════════════════════════════════════ -->
   <!-- FileIngestion – Error Mapper                 -->
@@ -797,6 +803,12 @@
   <data name="Consumer.JobFailed" xml:space="preserve">
     <value>Consumer job failed. Type={JobType}</value>
   </data>
+  <data name="Consumer.IngestionRequestNull" xml:space="preserve">
+    <value>IngestionRequest is null. Cannot process IngestFile job without a request payload.</value>
+  </data>
+  <data name="Consumer.UnknownJobType" xml:space="preserve">
+    <value>Unknown job type: '{0}'. Supported types: IngestFile, Evaluate, Execute.</value>
+  </data>
 
   <!-- ════════════════════════════════════════════ -->
   <!-- Reconciliation – BKM Evaluator               -->
@@ -995,6 +1007,24 @@
   </data>
   <data name="Reconciliation.Bkm.CloseAmbiguousManually" xml:space="preserve">
     <value>Close the ambiguous record manually.</value>
+  </data>
+  <data name="Reconciliation.Bkm.AccNotYetReceivedNote" xml:space="preserve">
+    <value>The transaction is SUCCESSFUL and settled, but ACC clearing data has not yet been received. Reconciliation deferred pending ACC arrival.</value>
+  </data>
+  <data name="Reconciliation.Bkm.AccMissingAlertOp" xml:space="preserve">
+    <value>ACC clearing data missing for successful settled transaction — alert raised for manual tracking.</value>
+  </data>
+  <data name="Reconciliation.Bkm.AccMissingReviewOp" xml:space="preserve">
+    <value>Manual review required — ACC clearing data not available for reconciliation.</value>
+  </data>
+  <data name="Reconciliation.Bkm.ExpiredAccPendingNote" xml:space="preserve">
+    <value>The Card Transaction record is EXPIRE, the Payify record is SUCCESSFUL, but ACC clearing data has not yet been received. Permanent balance correction deferred.</value>
+  </data>
+  <data name="Reconciliation.Bkm.ExpiredAccPendingAlertOp" xml:space="preserve">
+    <value>ACC clearing data pending for expired transaction — permanent correction deferred, alert raised.</value>
+  </data>
+  <data name="Reconciliation.Bkm.ExpiredAccPendingReviewOp" xml:space="preserve">
+    <value>Manual review required — ACC data pending for expired transaction, balance correction on hold.</value>
   </data>
 
   <!-- Reconciliation – MSC / Visa Evaluator -->
@@ -1232,6 +1262,50 @@
   </data>
   <data name="Alert.Detail.AttemptPrefix" xml:space="preserve">
     <value>Attempt</value>
+  </data>
+
+  <!-- ════════════════════════════════════════════ -->
+  <!-- Handler-Level Errors                         -->
+  <!-- ════════════════════════════════════════════ -->
+  <data name="Handler.FileIngestion.Failed" xml:space="preserve">
+    <value>File ingestion handler failed. See errors for details.</value>
+  </data>
+  <data name="Handler.Reconciliation.EvaluateFailed" xml:space="preserve">
+    <value>Reconciliation evaluate handler failed. See errors for details.</value>
+  </data>
+  <data name="Handler.Reconciliation.ExecuteFailed" xml:space="preserve">
+    <value>Reconciliation execute handler failed. See errors for details.</value>
+  </data>
+  <data name="Handler.Reconciliation.ApproveFailed" xml:space="preserve">
+    <value>Reconciliation approve handler failed. See errors for details.</value>
+  </data>
+  <data name="Handler.Reconciliation.RejectFailed" xml:space="preserve">
+    <value>Reconciliation reject handler failed. See errors for details.</value>
+  </data>
+  <data name="Handler.Reconciliation.GetPendingReviewsFailed" xml:space="preserve">
+    <value>Failed to retrieve pending reviews. See errors for details.</value>
+  </data>
+  <data name="Handler.Reconciliation.GetAlertsFailed" xml:space="preserve">
+    <value>Failed to retrieve alerts. See errors for details.</value>
+  </data>
+  <data name="Handler.Archive.RunFailed" xml:space="preserve">
+    <value>Archive run handler failed. See errors for details.</value>
+  </data>
+  <data name="Handler.Archive.PreviewFailed" xml:space="preserve">
+    <value>Archive preview handler failed. See errors for details.</value>
+  </data>
+
+  <!-- ════════════════════════════════════════════ -->
+  <!-- ApiError – Error Mapper (ApiException)       -->
+  <!-- ════════════════════════════════════════════ -->
+  <data name="FileIngestion.ApiError" xml:space="preserve">
+    <value>File ingestion error [{0}].</value>
+  </data>
+  <data name="Reconciliation.ApiError" xml:space="preserve">
+    <value>Reconciliation error [{0}].</value>
+  </data>
+  <data name="Archive.ApiError" xml:space="preserve">
+    <value>Archive error [{0}].</value>
   </data>
 
 </root>

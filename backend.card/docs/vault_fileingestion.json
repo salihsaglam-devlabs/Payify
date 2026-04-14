@@ -1280,7 +1280,8 @@
         },
         "TreatFirstLineAsHeader": true
       },
-      "Pattern": "^BKMACC\\d{8}\\d+$"
+      "Pattern": "^BKMACC\\d{8}\\d+$",
+      "SourceDateSubfolderFormat": "yyMMdd"
     },
     "ClearingMsc": {
       "DefaultEncoding": "UTF-8",
@@ -1476,7 +1477,8 @@
         },
         "TreatFirstLineAsHeader": true
       },
-      "Pattern": "^MSCACC\\d{8}\\d+$"
+      "Pattern": "^MSCACC\\d{8}\\d+$",
+      "SourceDateSubfolderFormat": "yyMMdd"
     },
     "ClearingVisa": {
       "DefaultEncoding": "UTF-8",
@@ -1656,7 +1658,8 @@
         },
         "TreatFirstLineAsHeader": true
       },
-      "Pattern": "^VISAACC\\d{8}\\d+$"
+      "Pattern": "^VISAACC\\d{8}\\d+$",
+      "SourceDateSubfolderFormat": "yyMMdd"
     }
   }
 }

@@ -1,6 +1,7 @@
 #nullable enable
 using System.Text;
 using LinkPara.Card.Application.Commons.Extensions;
+using LinkPara.SharedModels.Exceptions;
 using Microsoft.Extensions.Localization;
 using LinkPara.Card.Application.Commons.Interfaces.Archive;
 using LinkPara.Card.Application.Commons.Models.Archive.Contracts.Responses;
@@ -62,6 +63,7 @@ public sealed class ArchiveErrorMapper : IArchiveErrorMapper
     {
         return ex switch
         {
+            ApiException apiEx => (apiEx.GetType().Name, _localizer.Get("Archive.ApiError", apiEx.GetType().Name), apiEx.Message),
             OperationCanceledException oce => ("OPERATION_CANCELLED", _localizer.Get("Archive.OperationCancelled"), oce.Message),
             InvalidOperationException ioe => ("INVALID_OPERATION", _localizer.Get("Archive.InvalidOperation"), ioe.InnerException?.Message),
             ArgumentException ae => ("INVALID_ARGUMENT", _localizer.Get("Archive.InvalidArgument"), ae.InnerException?.Message),

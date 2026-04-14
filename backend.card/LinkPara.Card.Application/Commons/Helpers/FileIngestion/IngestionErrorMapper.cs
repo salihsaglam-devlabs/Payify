@@ -2,6 +2,7 @@
 using System.Text;
 using LinkPara.Card.Application.Commons.Extensions;
 using LinkPara.Card.Application.Commons.Interfaces.FileIngestion;
+using LinkPara.SharedModels.Exceptions;
 using Microsoft.Extensions.Localization;
 using LinkPara.Card.Application.Commons.Models.FileIngestion.Contracts.Responses;
 
@@ -151,6 +152,7 @@ public sealed class IngestionErrorMapper : IIngestionErrorMapper
     {
         return ex switch
         {
+            ApiException apiEx => (apiEx.GetType().Name, _localizer.Get("FileIngestion.ApiError", apiEx.GetType().Name), apiEx.Message),
             FileNotFoundException fe => ("FILE_NOT_FOUND", _localizer.Get("FileIngestion.FileNotFound"), fe.Message),
             UnauthorizedAccessException uae => ("ACCESS_DENIED", _localizer.Get("FileIngestion.AccessDenied"), uae.Message),
             IOException ioe => ("IO_ERROR", _localizer.Get("FileIngestion.IoError"), ioe.Message),

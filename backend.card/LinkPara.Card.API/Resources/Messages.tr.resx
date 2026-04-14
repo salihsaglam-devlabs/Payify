@@ -99,6 +99,12 @@
   <data name="Validation.ArchiveMaxFilesRange" xml:space="preserve">
     <value>Maksimum dosya sayısı 0 ile 1000 arasında olmalıdır.</value>
   </data>
+  <data name="Validation.OperationIdNotEmpty" xml:space="preserve">
+    <value>İşlem kimliği boş olamaz.</value>
+  </data>
+  <data name="Validation.RejectCommentRequired" xml:space="preserve">
+    <value>Red işlemi için yorum zorunludur.</value>
+  </data>
 
   <!-- ════════════════════════════════════════════ -->
   <!-- FileIngestion – Error Mapper                 -->
@@ -793,6 +799,12 @@
   <data name="Consumer.JobFailed" xml:space="preserve">
     <value>Tüketici işi başarısız oldu. Tür={JobType}</value>
   </data>
+  <data name="Consumer.IngestionRequestNull" xml:space="preserve">
+    <value>IngestionRequest boş. İstek verisi olmadan IngestFile işi işlenemez.</value>
+  </data>
+  <data name="Consumer.UnknownJobType" xml:space="preserve">
+    <value>Bilinmeyen iş türü: '{0}'. Desteklenen türler: IngestFile, Evaluate, Execute.</value>
+  </data>
 
   <!-- ════════════════════════════════════════════ -->
   <!-- Reconciliation – BKM Evaluator               -->
@@ -991,6 +1003,24 @@
   </data>
   <data name="Reconciliation.Bkm.CloseAmbiguousManually" xml:space="preserve">
     <value>Belirsiz kaydı manuel olarak kapat.</value>
+  </data>
+  <data name="Reconciliation.Bkm.AccNotYetReceivedNote" xml:space="preserve">
+    <value>İşlem BAŞARILI ve settle edilmiş, ancak ACC takas verisi henüz alınmadı. Mutabakat ACC gelişine kadar ertelendi.</value>
+  </data>
+  <data name="Reconciliation.Bkm.AccMissingAlertOp" xml:space="preserve">
+    <value>Başarılı settle edilmiş işlem için ACC takas verisi eksik — manuel takip için uyarı oluşturuldu.</value>
+  </data>
+  <data name="Reconciliation.Bkm.AccMissingReviewOp" xml:space="preserve">
+    <value>Manuel inceleme gerekli — mutabakat için ACC takas verisi mevcut değil.</value>
+  </data>
+  <data name="Reconciliation.Bkm.ExpiredAccPendingNote" xml:space="preserve">
+    <value>Kart İşlem kaydı SÜRESİ DOLMUŞ, Payify kaydı BAŞARILI, ancak ACC takas verisi henüz alınmadı. Kalıcı bakiye düzeltmesi ertelendi.</value>
+  </data>
+  <data name="Reconciliation.Bkm.ExpiredAccPendingAlertOp" xml:space="preserve">
+    <value>Süresi dolmuş işlem için ACC takas verisi bekleniyor — kalıcı düzeltme ertelendi, uyarı oluşturuldu.</value>
+  </data>
+  <data name="Reconciliation.Bkm.ExpiredAccPendingReviewOp" xml:space="preserve">
+    <value>Manuel inceleme gerekli — süresi dolmuş işlem için ACC verisi bekleniyor, bakiye düzeltmesi askıda.</value>
   </data>
 
   <!-- Reconciliation – MSC / Visa Evaluator -->
@@ -1228,6 +1258,50 @@
   </data>
   <data name="Alert.Detail.AttemptPrefix" xml:space="preserve">
     <value>Deneme</value>
+  </data>
+
+  <!-- ════════════════════════════════════════════ -->
+  <!-- Handler-Level Errors                         -->
+  <!-- ════════════════════════════════════════════ -->
+  <data name="Handler.FileIngestion.Failed" xml:space="preserve">
+    <value>Dosya alım işleyicisi başarısız oldu. Ayrıntılar için hatalara bakın.</value>
+  </data>
+  <data name="Handler.Reconciliation.EvaluateFailed" xml:space="preserve">
+    <value>Mutabakat değerlendirme işleyicisi başarısız oldu. Ayrıntılar için hatalara bakın.</value>
+  </data>
+  <data name="Handler.Reconciliation.ExecuteFailed" xml:space="preserve">
+    <value>Mutabakat yürütme işleyicisi başarısız oldu. Ayrıntılar için hatalara bakın.</value>
+  </data>
+  <data name="Handler.Reconciliation.ApproveFailed" xml:space="preserve">
+    <value>Mutabakat onay işleyicisi başarısız oldu. Ayrıntılar için hatalara bakın.</value>
+  </data>
+  <data name="Handler.Reconciliation.RejectFailed" xml:space="preserve">
+    <value>Mutabakat red işleyicisi başarısız oldu. Ayrıntılar için hatalara bakın.</value>
+  </data>
+  <data name="Handler.Reconciliation.GetPendingReviewsFailed" xml:space="preserve">
+    <value>Bekleyen incelemeler alınamadı. Ayrıntılar için hatalara bakın.</value>
+  </data>
+  <data name="Handler.Reconciliation.GetAlertsFailed" xml:space="preserve">
+    <value>Uyarılar alınamadı. Ayrıntılar için hatalara bakın.</value>
+  </data>
+  <data name="Handler.Archive.RunFailed" xml:space="preserve">
+    <value>Arşiv çalıştırma işleyicisi başarısız oldu. Ayrıntılar için hatalara bakın.</value>
+  </data>
+  <data name="Handler.Archive.PreviewFailed" xml:space="preserve">
+    <value>Arşiv önizleme işleyicisi başarısız oldu. Ayrıntılar için hatalara bakın.</value>
+  </data>
+
+  <!-- ════════════════════════════════════════════ -->
+  <!-- ApiError – Error Mapper (ApiException)       -->
+  <!-- ════════════════════════════════════════════ -->
+  <data name="FileIngestion.ApiError" xml:space="preserve">
+    <value>Dosya alım hatası [{0}].</value>
+  </data>
+  <data name="Reconciliation.ApiError" xml:space="preserve">
+    <value>Mutabakat hatası [{0}].</value>
+  </data>
+  <data name="Archive.ApiError" xml:space="preserve">
+    <value>Arşiv hatası [{0}].</value>
   </data>
 
 </root>
