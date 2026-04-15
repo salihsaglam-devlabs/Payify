@@ -618,6 +618,53 @@
   <!-- ════════════════════════════════════════════ -->
   <!-- Reconciliation – Error Mapper                -->
   <!-- ════════════════════════════════════════════ -->
+  <!-- ════════════════════════════════════════════ -->
+  <!-- Reporting – Error Mapper                    -->
+  <!-- ════════════════════════════════════════════ -->
+  <data name="Reporting.ApiError" xml:space="preserve">
+    <value>Reporting error [{0}].</value>
+  </data>
+  <data name="Reporting.OperationCancelled" xml:space="preserve">
+    <value>Reporting operation was cancelled.</value>
+  </data>
+  <data name="Reporting.InvalidOperation" xml:space="preserve">
+    <value>Invalid reporting operation.</value>
+  </data>
+  <data name="Reporting.InvalidArgument" xml:space="preserve">
+    <value>Invalid reporting argument.</value>
+  </data>
+  <data name="Reporting.Timeout" xml:space="preserve">
+    <value>Reporting query timed out.</value>
+  </data>
+  <data name="Reporting.InternalError" xml:space="preserve">
+    <value>An internal reporting error occurred.</value>
+  </data>
+
+  <!-- ════════════════════════════════════════════ -->
+  <!-- Reporting – Handler Messages                -->
+  <!-- ════════════════════════════════════════════ -->
+  <data name="Handler.Reporting.GetTransactionsFailed" xml:space="preserve">
+    <value>Failed to retrieve reconciliation transactions. See errors for details.</value>
+  </data>
+  <data name="Handler.Reporting.GetProblemsFailed" xml:space="preserve">
+    <value>Failed to retrieve problem records. See errors for details.</value>
+  </data>
+  <data name="Handler.Reporting.GetUnmatchedFailed" xml:space="preserve">
+    <value>Failed to retrieve unmatched records. See errors for details.</value>
+  </data>
+  <data name="Handler.Reporting.GetSummaryDailyFailed" xml:space="preserve">
+    <value>Failed to retrieve daily summary. See errors for details.</value>
+  </data>
+  <data name="Handler.Reporting.GetSummaryNetworkFailed" xml:space="preserve">
+    <value>Failed to retrieve network summary. See errors for details.</value>
+  </data>
+  <data name="Handler.Reporting.GetSummaryFileFailed" xml:space="preserve">
+    <value>Failed to retrieve file summary. See errors for details.</value>
+  </data>
+  <data name="Handler.Reporting.GetSummaryOverallFailed" xml:space="preserve">
+    <value>Failed to retrieve overall summary. See errors for details.</value>
+  </data>
+
   <data name="Reconciliation.OperationCancelled" xml:space="preserve">
     <value>Reconciliation operation was cancelled.</value>
   </data>

@@ -616,6 +616,53 @@
   </data>
 
   <!-- ════════════════════════════════════════════ -->
+  <!-- Reporting – Error Mapper                    -->
+  <!-- ════════════════════════════════════════════ -->
+  <data name="Reporting.ApiError" xml:space="preserve">
+    <value>Raporlama hatası [{0}].</value>
+  </data>
+  <data name="Reporting.OperationCancelled" xml:space="preserve">
+    <value>Raporlama işlemi iptal edildi.</value>
+  </data>
+  <data name="Reporting.InvalidOperation" xml:space="preserve">
+    <value>Geçersiz raporlama işlemi.</value>
+  </data>
+  <data name="Reporting.InvalidArgument" xml:space="preserve">
+    <value>Geçersiz raporlama parametresi.</value>
+  </data>
+  <data name="Reporting.Timeout" xml:space="preserve">
+    <value>Raporlama sorgusu zaman aşımına uğradı.</value>
+  </data>
+  <data name="Reporting.InternalError" xml:space="preserve">
+    <value>Dahili raporlama hatası oluştu.</value>
+  </data>
+
+  <!-- ════════════════════════════════════════════ -->
+  <!-- Reporting – Handler Messages                -->
+  <!-- ════════════════════════════════════════════ -->
+  <data name="Handler.Reporting.GetTransactionsFailed" xml:space="preserve">
+    <value>Mutabakat işlemleri alınamadı. Detaylar için hatalara bakın.</value>
+  </data>
+  <data name="Handler.Reporting.GetProblemsFailed" xml:space="preserve">
+    <value>Sorunlu kayıtlar alınamadı. Detaylar için hatalara bakın.</value>
+  </data>
+  <data name="Handler.Reporting.GetUnmatchedFailed" xml:space="preserve">
+    <value>Eşleşmeyen kayıtlar alınamadı. Detaylar için hatalara bakın.</value>
+  </data>
+  <data name="Handler.Reporting.GetSummaryDailyFailed" xml:space="preserve">
+    <value>Günlük özet alınamadı. Detaylar için hatalara bakın.</value>
+  </data>
+  <data name="Handler.Reporting.GetSummaryNetworkFailed" xml:space="preserve">
+    <value>Ağ özeti alınamadı. Detaylar için hatalara bakın.</value>
+  </data>
+  <data name="Handler.Reporting.GetSummaryFileFailed" xml:space="preserve">
+    <value>Dosya özeti alınamadı. Detaylar için hatalara bakın.</value>
+  </data>
+  <data name="Handler.Reporting.GetSummaryOverallFailed" xml:space="preserve">
+    <value>Genel özet alınamadı. Detaylar için hatalara bakın.</value>
+  </data>
+
+  <!-- ════════════════════════════════════════════ -->
   <!-- Reconciliation                               -->
   <!-- ════════════════════════════════════════════ -->
   <data name="Reconciliation.OperationCancelled" xml:space="preserve">

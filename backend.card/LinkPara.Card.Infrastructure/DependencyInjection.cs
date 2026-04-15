@@ -8,6 +8,7 @@ using LinkPara.Card.Application.Commons.Interfaces.Reconciliation;
 using LinkPara.Card.Application.Commons.Helpers.FileIngestion;
 using LinkPara.Card.Application.Commons.Helpers.Reconciliation;
 using LinkPara.Card.Application.Commons.Helpers.Archive;
+using LinkPara.Card.Application.Commons.Helpers.Reporting;
 using LinkPara.Card.Application.Commons.Localization;
 using LinkPara.Card.Application.Commons.Models.EventBusConfiguration;
 using LinkPara.Card.Infrastructure.Persistence;
@@ -19,6 +20,8 @@ using LinkPara.Card.Infrastructure.Services.PaycoreServices;
 using LinkPara.Card.Infrastructure.Services.PaycoreServices.Services;
 using LinkPara.Card.Infrastructure.Services.Reconciliation;
 using LinkPara.Card.Infrastructure.Services.Reconciliation.Execute.Flow;
+using LinkPara.Card.Application.Commons.Interfaces.Reporting;
+using LinkPara.Card.Infrastructure.Services.Reporting;
 using LinkPara.Card.Infrastructure.Services.Reconciliation.GetAlerts;
 using LinkPara.Card.Infrastructure.Services.Reconciliation.Integrations.Emoney;
 using LinkPara.Card.Infrastructure.Services.Reconciliation.Reviews;
@@ -160,6 +163,7 @@ public static class DependencyInjection
         services.AddScoped<IIngestionErrorMapper, IngestionErrorMapper>();
         services.AddScoped<IReconciliationErrorMapper, ReconciliationErrorMapper>();
         services.AddScoped<IArchiveErrorMapper, ArchiveErrorMapper>();
+        services.AddScoped<IReportingErrorMapper, ReportingErrorMapper>();
         services.AddScoped<IAuditStampService, AuditStampService>();
         services.AddScoped<IFileIngestionService, FileIngestionOrchestrator>();
         services.AddScoped<IFileTransferClientResolver, FileTransferClientResolver>();
@@ -188,6 +192,7 @@ public static class DependencyInjection
         services.AddScoped<ArchiveVerifier>();
         services.AddScoped<ArchiveExecutor>();
         services.AddScoped<IArchiveSqlDialect, ArchiveSqlDialect>();
+        services.AddScoped<IReportingService, ReportingService>();
     }
 
     private static void ConfigureHttpClients(IServiceCollection services, IVaultClient vaultClient)

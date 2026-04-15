@@ -146,6 +146,16 @@ using (var scope = app.Services.CreateScope())
                 Log.Error(ex, "Error while ensuring tables exist after migration.");
                 throw;
             }
+
+            try
+            {
+                await DatabaseInitializer.ApplySqlMigrationsAsync(scope.ServiceProvider, startupLogger);
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "Error while applying SQL view migrations.");
+                throw;
+            }
         }
         else
         {

@@ -500,4 +500,29 @@
   <data name="ArchiveUnsupportedBeforeDateStrategyException" xml:space="preserve">
     <value>Unsupported before-date strategy.</value>
   </data>
+  <!-- Reporting -->
+  <data name="ReportingQueryFailedException" xml:space="preserve">
+    <value>Reporting query failed.</value>
+  </data>
+  <data name="ReportingTransactionsQueryFailedException" xml:space="preserve">
+    <value>Failed to retrieve reconciliation transactions.</value>
+  </data>
+  <data name="ReportingProblemRecordsQueryFailedException" xml:space="preserve">
+    <value>Failed to retrieve problem records.</value>
+  </data>
+  <data name="ReportingUnmatchedRecordsQueryFailedException" xml:space="preserve">
+    <value>Failed to retrieve unmatched records.</value>
+  </data>
+  <data name="ReportingSummaryDailyQueryFailedException" xml:space="preserve">
+    <value>Failed to retrieve daily summary.</value>
+  </data>
+  <data name="ReportingSummaryNetworkQueryFailedException" xml:space="preserve">
+    <value>Failed to retrieve network summary.</value>
+  </data>
+  <data name="ReportingSummaryFileQueryFailedException" xml:space="preserve">
+    <value>Failed to retrieve file summary.</value>
+  </data>
+  <data name="ReportingSummaryOverallQueryFailedException" xml:space="preserve">
+    <value>Failed to retrieve overall summary.</value>
+  </data>
 </root>

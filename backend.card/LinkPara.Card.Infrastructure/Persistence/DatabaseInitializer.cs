@@ -11,6 +11,69 @@ namespace LinkPara.Card.Infrastructure.Persistence;
 
 public static class DatabaseInitializer
 {
+    public static async Task ApplySqlMigrationsAsync(
+        IServiceProvider serviceProvider,
+        ILogger logger = null)
+    {
+        using var scope = serviceProvider.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<CardDbContext>();
+        var provider = db.Database.ProviderName ?? string.Empty;
+        var folder = provider.Contains("Npgsql") ? "PostgreSql" : "MsSql";
+
+        var candidates = new[]
+        {
+            Path.Combine(AppContext.BaseDirectory, "Persistence", "SqlMigrations", folder),
+            Path.Combine(Directory.GetCurrentDirectory(), "Persistence", "SqlMigrations", folder),
+        };
+
+        string sqlDir = null;
+        foreach (var candidate in candidates)
+        {
+            var fullPath = Path.GetFullPath(candidate);
+            if (Directory.Exists(fullPath))
+            {
+                sqlDir = fullPath;
+                break;
+            }
+        }
+
+        if (sqlDir == null)
+        {
+            var searchedPaths = string.Join(", ", candidates.Select(Path.GetFullPath));
+            logger?.LogError("SQL migration directory not found. Searched: {Paths}", searchedPaths);
+            Console.WriteLine($"[SqlMigrations] ERROR: SQL migration directory not found. Searched: {searchedPaths}");
+            return;
+        }
+
+        Console.WriteLine($"[SqlMigrations] Found SQL migration directory: {sqlDir}");
+
+        var sqlFiles = Directory.GetFiles(sqlDir, "*.sql")
+            .OrderBy(f => f)
+            .ToList();
+
+        Console.WriteLine($"[SqlMigrations] Found {sqlFiles.Count} SQL file(s) to apply.");
+
+        foreach (var file in sqlFiles)
+        {
+            var fileName = Path.GetFileName(file);
+            try
+            {
+                var sql = await File.ReadAllTextAsync(file);
+                await db.Database.ExecuteSqlRawAsync(sql);
+                logger?.LogInformation("Applied SQL migration: {File}", fileName);
+                Console.WriteLine($"[SqlMigrations] Applied: {fileName}");
+            }
+            catch (Exception ex)
+            {
+                logger?.LogError(ex, "Failed to apply SQL migration: {File}", fileName);
+                Console.WriteLine($"[SqlMigrations] FAILED: {fileName} — {ex.Message}");
+                throw;
+            }
+        }
+
+        Console.WriteLine("[SqlMigrations] All SQL migrations applied successfully.");
+    }
+
     public static async Task EnsureMigrationBaselineAsync(IServiceProvider serviceProvider, ILogger? logger = null)
     {
         using var scope = serviceProvider.CreateScope();

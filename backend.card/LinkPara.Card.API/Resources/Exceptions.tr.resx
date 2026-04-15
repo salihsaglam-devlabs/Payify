@@ -500,4 +500,29 @@
   <data name="ArchiveUnsupportedBeforeDateStrategyException" xml:space="preserve">
     <value>Desteklenmeyen önceki tarih stratejisi.</value>
   </data>
+  <!-- Reporting -->
+  <data name="ReportingQueryFailedException" xml:space="preserve">
+    <value>Raporlama sorgusu başarısız oldu.</value>
+  </data>
+  <data name="ReportingTransactionsQueryFailedException" xml:space="preserve">
+    <value>Mutabakat işlemleri alınamadı.</value>
+  </data>
+  <data name="ReportingProblemRecordsQueryFailedException" xml:space="preserve">
+    <value>Sorunlu kayıtlar alınamadı.</value>
+  </data>
+  <data name="ReportingUnmatchedRecordsQueryFailedException" xml:space="preserve">
+    <value>Eşleşmeyen kayıtlar alınamadı.</value>
+  </data>
+  <data name="ReportingSummaryDailyQueryFailedException" xml:space="preserve">
+    <value>Günlük özet alınamadı.</value>
+  </data>
+  <data name="ReportingSummaryNetworkQueryFailedException" xml:space="preserve">
+    <value>Ağ özeti alınamadı.</value>
+  </data>
+  <data name="ReportingSummaryFileQueryFailedException" xml:space="preserve">
+    <value>Dosya özeti alınamadı.</value>
+  </data>
+  <data name="ReportingSummaryOverallQueryFailedException" xml:space="preserve">
+    <value>Genel özet alınamadı.</value>
+  </data>
 </root>
