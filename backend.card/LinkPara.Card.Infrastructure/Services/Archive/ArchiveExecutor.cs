@@ -149,6 +149,12 @@ internal sealed class ArchiveExecutor
         {
             _sqlDialect.BuildCopyIngestionFileSql(),
             _sqlDialect.BuildCopyIngestionFileLineSql(),
+            _sqlDialect.BuildCopyIngestionCardVisaDetailSql(),
+            _sqlDialect.BuildCopyIngestionCardMscDetailSql(),
+            _sqlDialect.BuildCopyIngestionCardBkmDetailSql(),
+            _sqlDialect.BuildCopyIngestionClearingVisaDetailSql(),
+            _sqlDialect.BuildCopyIngestionClearingMscDetailSql(),
+            _sqlDialect.BuildCopyIngestionClearingBkmDetailSql(),
             _sqlDialect.BuildCopyReconciliationEvaluationSql(),
             _sqlDialect.BuildCopyReconciliationOperationSql(),
             _sqlDialect.BuildCopyReconciliationReviewSql(),
@@ -174,6 +180,12 @@ internal sealed class ArchiveExecutor
             _sqlDialect.BuildDeleteReconciliationReviewSql(),
             _sqlDialect.BuildDeleteReconciliationOperationSql(),
             _sqlDialect.BuildDeleteReconciliationEvaluationSql(),
+            _sqlDialect.BuildDeleteIngestionCardVisaDetailSql(),
+            _sqlDialect.BuildDeleteIngestionCardMscDetailSql(),
+            _sqlDialect.BuildDeleteIngestionCardBkmDetailSql(),
+            _sqlDialect.BuildDeleteIngestionClearingVisaDetailSql(),
+            _sqlDialect.BuildDeleteIngestionClearingMscDetailSql(),
+            _sqlDialect.BuildDeleteIngestionClearingBkmDetailSql(),
             _sqlDialect.BuildDeleteIngestionFileLineSql(),
             _sqlDialect.BuildDeleteIngestionFileSql()
         };

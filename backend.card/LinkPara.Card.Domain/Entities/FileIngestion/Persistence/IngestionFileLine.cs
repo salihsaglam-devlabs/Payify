@@ -23,4 +23,11 @@ public class IngestionFileLine : AuditEntity
     public Guid? DuplicateGroupId { get; set; }
     public ReconciliationStatus? ReconciliationStatus { get; set; }
     public Guid? MatchedClearingLineId { get; set; }
+    
+    public IngestionCardVisaDetail CardVisaDetail { get; set; }
+    public IngestionCardMscDetail CardMscDetail { get; set; }
+    public IngestionCardBkmDetail CardBkmDetail { get; set; }
+    public IngestionClearingVisaDetail ClearingVisaDetail { get; set; }
+    public IngestionClearingMscDetail ClearingMscDetail { get; set; }
+    public IngestionClearingBkmDetail ClearingBkmDetail { get; set; }
 }

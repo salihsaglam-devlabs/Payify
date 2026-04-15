@@ -3,8 +3,10 @@
   "Defaults": {
     "ContinueOnError": false,
     "DefaultBeforeDateStrategy": "RetentionDays",
+    "MaxRetryPerFile": 1,
     "MaxRunCount": 50000,
     "PreviewLimit": 5000,
+    "RetryDelaySeconds": 2,
     "UseConfiguredBeforeDateOnly": false
   },
   "Enabled": true,

@@ -94,16 +94,61 @@
     <value>Ingestion file IDs must be unique.</value>
   </data>
   <data name="Validation.ArchivePreviewLimitRange" xml:space="preserve">
-    <value>Preview limit must be between 0 and 1000.</value>
+    <value>Preview limit must be between 0 and 10,000.</value>
   </data>
   <data name="Validation.ArchiveMaxFilesRange" xml:space="preserve">
-    <value>Max files must be between 0 and 1000.</value>
+    <value>Max files must be between 0 and 10,000.</value>
   </data>
   <data name="Validation.OperationIdNotEmpty" xml:space="preserve">
     <value>Operation ID must not be empty.</value>
   </data>
   <data name="Validation.RejectCommentRequired" xml:space="preserve">
     <value>A comment is required for rejection.</value>
+  </data>
+  <data name="Validation.FileSourceTypeInvalid" xml:space="preserve">
+    <value>File source type is invalid. Allowed values: Remote (1), Local (2).</value>
+  </data>
+  <data name="Validation.FileTypeInvalid" xml:space="preserve">
+    <value>File type is invalid. Allowed values: Card (1), Clearing (2).</value>
+  </data>
+  <data name="Validation.FileContentTypeInvalid" xml:space="preserve">
+    <value>File content type is invalid. Allowed values: Bkm (1), Msc (2), Visa (3).</value>
+  </data>
+  <data name="Validation.CommentMaxLength" xml:space="preserve">
+    <value>Comment must not exceed 2000 characters.</value>
+  </data>
+  <data name="Validation.EvaluateChunkSizeRange" xml:space="preserve">
+    <value>Chunk size must be between 100 and 10,000.</value>
+  </data>
+  <data name="Validation.EvaluateClaimTimeoutRange" xml:space="preserve">
+    <value>Claim timeout must be between 30 and 3,600 seconds.</value>
+  </data>
+  <data name="Validation.EvaluateClaimRetryCountRange" xml:space="preserve">
+    <value>Claim retry count must be between 1 and 10.</value>
+  </data>
+  <data name="Validation.EvaluateOperationMaxRetriesRange" xml:space="preserve">
+    <value>Operation max retries must be between 0 and 50.</value>
+  </data>
+  <data name="Validation.ExecuteMaxEvaluationsRange" xml:space="preserve">
+    <value>Max evaluations must be between 1 and 100,000.</value>
+  </data>
+  <data name="Validation.ExecuteLeaseSecondsRange" xml:space="preserve">
+    <value>Lease seconds must be between 1 and 3,600.</value>
+  </data>
+  <data name="Validation.BeforeDateCannotBeFuture" xml:space="preserve">
+    <value>Before date cannot be in the future.</value>
+  </data>
+  <data name="Validation.AlertStatusInvalid" xml:space="preserve">
+    <value>Alert status is invalid.</value>
+  </data>
+  <data name="Validation.DateCannotBeFuture" xml:space="preserve">
+    <value>Date cannot be in the future.</value>
+  </data>
+  <data name="Validation.PageSizeRange" xml:space="preserve">
+    <value>Page size must be between 1 and 1,000.</value>
+  </data>
+  <data name="Validation.PageNumberMinimum" xml:space="preserve">
+    <value>Page number must be at least 1.</value>
   </data>
 
   <!-- ════════════════════════════════════════════ -->
@@ -1025,6 +1070,15 @@
   </data>
   <data name="Reconciliation.Bkm.ExpiredAccPendingReviewOp" xml:space="preserve">
     <value>Manual review required — ACC data pending for expired transaction, balance correction on hold.</value>
+  </data>
+  <data name="Reconciliation.Bkm.DataConsistencyAnomalyNote" xml:space="preserve">
+    <value>Data consistency anomaly detected: ResponseCode and IsSuccessfulTxn fields are contradictory. The record cannot be classified as SUCCESSFUL or FAILED and requires manual investigation.</value>
+  </data>
+  <data name="Reconciliation.Bkm.DataConsistencyAnomalyAlertOp" xml:space="preserve">
+    <value>Data anomaly alert — ResponseCode vs IsSuccessfulTxn mismatch detected, record flagged for review.</value>
+  </data>
+  <data name="Reconciliation.Bkm.DataConsistencyAnomalyReviewOp" xml:space="preserve">
+    <value>Manual review required — ResponseCode and IsSuccessfulTxn values are inconsistent, automated processing suspended.</value>
   </data>
 
   <!-- Reconciliation – MSC / Visa Evaluator -->

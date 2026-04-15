@@ -4,8 +4,8 @@ namespace LinkPara.Card.Application.Commons.Models.Reconciliation.Configuration;
 
 public class ExecuteOptions
 {
-    public const int DefaultMaxEvaluations = 100_000;
-    public const int DefaultLeaseSeconds = 300;
+    public const int DefaultMaxEvaluations = 500_000;
+    public const int DefaultLeaseSeconds = 900;
 
     public int? MaxEvaluations { get; set; }
 

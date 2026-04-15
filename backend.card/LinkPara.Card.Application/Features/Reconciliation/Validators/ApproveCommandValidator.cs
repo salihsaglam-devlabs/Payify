@@ -18,6 +18,11 @@ public class ApproveCommandValidator : AbstractValidator<ApproveCommand>
             RuleFor(x => x.Request.OperationId)
                 .NotEqual(Guid.Empty)
                 .WithMessage(localizer.GetString("Validation.OperationIdNotEmpty").Value);
+
+            RuleFor(x => x.Request.Comment)
+                .MaximumLength(2000)
+                .When(x => x.Request.Comment is not null)
+                .WithMessage(localizer.GetString("Validation.CommentMaxLength").Value);
         });
     }
 }

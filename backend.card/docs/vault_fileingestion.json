@@ -14,8 +14,8 @@
         },
         "Port": 21,
         "RetryCount": 3,
-        "RetryDelaySeconds": 5,
-        "TimeoutSeconds": 60,
+        "RetryDelaySeconds": 10,
+        "TimeoutSeconds": 300,
         "UsePassive": true,
         "Username": "payify"
       },
@@ -75,7 +75,7 @@
       "Sftp": {
         "Host": "10.222.21.101",
         "KnownHostFingerprint": "",
-        "OperationTimeoutSeconds": 120,
+        "OperationTimeoutSeconds": 600,
         "Password": "PAYpwd1*",
         "Paths": {
           "CardBkm": "/turkonay/PROD/PTS2TURKONAY/PAYCORE_REPORTS",
@@ -89,8 +89,8 @@
         "PrivateKeyPassphrase": "",
         "PrivateKeyPath": "",
         "RetryCount": 3,
-        "RetryDelaySeconds": 5,
-        "TimeoutSeconds": 60,
+        "RetryDelaySeconds": 10,
+        "TimeoutSeconds": 300,
         "Username": "payify"
       }
     },
@@ -108,8 +108,8 @@
         },
         "Port": 21,
         "RetryCount": 3,
-        "RetryDelaySeconds": 5,
-        "TimeoutSeconds": 60,
+        "RetryDelaySeconds": 10,
+        "TimeoutSeconds": 300,
         "UsePassive": true,
         "Username": "payify"
       },
@@ -169,7 +169,7 @@
       "Sftp": {
         "Host": "10.222.21.101",
         "KnownHostFingerprint": "",
-        "OperationTimeoutSeconds": 120,
+        "OperationTimeoutSeconds": 600,
         "Password": "PAYpwd1*",
         "Paths": {
           "CardBkm": "/turkonay/PROD/PTS2TURKONAY/ARCHIVE/CARD/BKM",
@@ -183,18 +183,18 @@
         "PrivateKeyPassphrase": "",
         "PrivateKeyPath": "",
         "RetryCount": 3,
-        "RetryDelaySeconds": 5,
-        "TimeoutSeconds": 60,
+        "RetryDelaySeconds": 10,
+        "TimeoutSeconds": 300,
         "Username": "payify"
       }
     }
   },
   "Processing": {
-    "BatchSize": 25000,
+    "BatchSize": 50000,
     "EnableParallelProcessing": true,
     "FailedRowMaxRetryCount": 3,
-    "MaxDegreeOfParallelism": 10,
-    "RetryBatchSize": 5000,
+    "MaxDegreeOfParallelism": 8,
+    "RetryBatchSize": 10000,
     "UseBulkInsert": true
   },
   "Profiles": {

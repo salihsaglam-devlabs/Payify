@@ -94,16 +94,61 @@
     <value>Dosya alım kimlikleri benzersiz olmalıdır.</value>
   </data>
   <data name="Validation.ArchivePreviewLimitRange" xml:space="preserve">
-    <value>Önizleme limiti 0 ile 1000 arasında olmalıdır.</value>
+    <value>Önizleme limiti 0 ile 10.000 arasında olmalıdır.</value>
   </data>
   <data name="Validation.ArchiveMaxFilesRange" xml:space="preserve">
-    <value>Maksimum dosya sayısı 0 ile 1000 arasında olmalıdır.</value>
+    <value>Maksimum dosya sayısı 0 ile 10.000 arasında olmalıdır.</value>
   </data>
   <data name="Validation.OperationIdNotEmpty" xml:space="preserve">
     <value>İşlem kimliği boş olamaz.</value>
   </data>
   <data name="Validation.RejectCommentRequired" xml:space="preserve">
     <value>Red işlemi için yorum zorunludur.</value>
+  </data>
+  <data name="Validation.FileSourceTypeInvalid" xml:space="preserve">
+    <value>Dosya kaynak türü geçersiz. İzin verilen değerler: Remote (1), Local (2).</value>
+  </data>
+  <data name="Validation.FileTypeInvalid" xml:space="preserve">
+    <value>Dosya türü geçersiz. İzin verilen değerler: Card (1), Clearing (2).</value>
+  </data>
+  <data name="Validation.FileContentTypeInvalid" xml:space="preserve">
+    <value>Dosya içerik türü geçersiz. İzin verilen değerler: Bkm (1), Msc (2), Visa (3).</value>
+  </data>
+  <data name="Validation.CommentMaxLength" xml:space="preserve">
+    <value>Yorum 2000 karakteri aşmamalıdır.</value>
+  </data>
+  <data name="Validation.EvaluateChunkSizeRange" xml:space="preserve">
+    <value>Chunk boyutu 100 ile 10.000 arasında olmalıdır.</value>
+  </data>
+  <data name="Validation.EvaluateClaimTimeoutRange" xml:space="preserve">
+    <value>Claim zaman aşımı 30 ile 3.600 saniye arasında olmalıdır.</value>
+  </data>
+  <data name="Validation.EvaluateClaimRetryCountRange" xml:space="preserve">
+    <value>Claim tekrar deneme sayısı 1 ile 10 arasında olmalıdır.</value>
+  </data>
+  <data name="Validation.EvaluateOperationMaxRetriesRange" xml:space="preserve">
+    <value>Operasyon maksimum tekrar deneme sayısı 0 ile 50 arasında olmalıdır.</value>
+  </data>
+  <data name="Validation.ExecuteMaxEvaluationsRange" xml:space="preserve">
+    <value>Maksimum değerlendirme sayısı 1 ile 100.000 arasında olmalıdır.</value>
+  </data>
+  <data name="Validation.ExecuteLeaseSecondsRange" xml:space="preserve">
+    <value>Kiralama süresi 1 ile 3.600 saniye arasında olmalıdır.</value>
+  </data>
+  <data name="Validation.BeforeDateCannotBeFuture" xml:space="preserve">
+    <value>Önceki tarih gelecekte olamaz.</value>
+  </data>
+  <data name="Validation.AlertStatusInvalid" xml:space="preserve">
+    <value>Uyarı durumu geçersiz.</value>
+  </data>
+  <data name="Validation.DateCannotBeFuture" xml:space="preserve">
+    <value>Tarih gelecekte olamaz.</value>
+  </data>
+  <data name="Validation.PageSizeRange" xml:space="preserve">
+    <value>Sayfa boyutu 1 ile 1.000 arasında olmalıdır.</value>
+  </data>
+  <data name="Validation.PageNumberMinimum" xml:space="preserve">
+    <value>Sayfa numarası en az 1 olmalıdır.</value>
   </data>
 
   <!-- ════════════════════════════════════════════ -->
@@ -1021,6 +1066,15 @@
   </data>
   <data name="Reconciliation.Bkm.ExpiredAccPendingReviewOp" xml:space="preserve">
     <value>Manuel inceleme gerekli — süresi dolmuş işlem için ACC verisi bekleniyor, bakiye düzeltmesi askıda.</value>
+  </data>
+  <data name="Reconciliation.Bkm.DataConsistencyAnomalyNote" xml:space="preserve">
+    <value>Veri tutarsızlığı tespit edildi: ResponseCode ve IsSuccessfulTxn alanları çelişkili. Kayıt BAŞARILI veya BAŞARISIZ olarak sınıflandırılamıyor, manuel inceleme gerekiyor.</value>
+  </data>
+  <data name="Reconciliation.Bkm.DataConsistencyAnomalyAlertOp" xml:space="preserve">
+    <value>Veri anomalisi uyarısı — ResponseCode ile IsSuccessfulTxn uyumsuzluğu tespit edildi, kayıt incelemeye alındı.</value>
+  </data>
+  <data name="Reconciliation.Bkm.DataConsistencyAnomalyReviewOp" xml:space="preserve">
+    <value>Manuel inceleme gerekli — ResponseCode ve IsSuccessfulTxn değerleri tutarsız, otomatik işleme askıya alındı.</value>
   </data>
 
   <!-- Reconciliation – MSC / Visa Evaluator -->

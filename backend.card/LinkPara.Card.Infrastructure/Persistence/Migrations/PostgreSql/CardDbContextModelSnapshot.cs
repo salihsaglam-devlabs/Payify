@@ -22,6 +22,1630 @@ namespace LinkPara.Card.Infrastructure.Persistence.Migrations.PostgreSql
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("LinkPara.Card.Domain.Entities.Archive.ArchiveIngestionCardBkmDetail", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<int>("AcquirerId")
+                        .HasColumnType("integer")
+                        .HasColumnName("acquirer_id");
+
+                    b.Property<string>("Arn")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("arn");
+
+                    b.Property<string>("BankingTxnCode")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("banking_txn_code");
+
+                    b.Property<decimal>("BcPoint")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)")
+                        .HasColumnName("bc_point");
+
+                    b.Property<decimal>("BcPointAmount")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)")
+                        .HasColumnName("bc_point_amount");
+
+                    b.Property<decimal>("BillingAmount")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)")
+                        .HasColumnName("billing_amount");
+
+                    b.Property<int>("BillingCurrency")
+                        .HasColumnType("integer")
+                        .HasColumnName("billing_currency");
+
+                    b.Property<string>("BranchId")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("branch_id");
+
+                    b.Property<decimal>("CardHolderBillingAmount")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)")
+                        .HasColumnName("cardholder_billing_amount");
+
+                    b.Property<int>("CardHolderBillingCurrency")
+                        .HasColumnType("integer")
+                        .HasColumnName("cardholder_billing_currency");
+
+                    b.Property<string>("CardNo")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("card_no");
+
+                    b.Property<decimal>("CashbackAmount")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)")
+                        .HasColumnName("cashback_amount");
+
+                    b.Property<decimal>("CcPoint")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)")
+                        .HasColumnName("cc_point");
+
+                    b.Property<decimal>("CcPointAmount")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)")
+                        .HasColumnName("cc_point_amount");
+
+                    b.Property<string>("ChannelCode")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("channel_code");
+
+                    b.Property<DateTime>("CreateDate")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("create_date");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("created_by");
+
+                    b.Property<int>("EndOfDayDate")
+                        .HasColumnType("integer")
+                        .HasColumnName("end_of_day_date");
+
+                    b.Property<string>("FinancialType")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("financial_type");
+
+                    b.Property<Guid>("IngestionFileLineId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("file_line_id");
+
+                    b.Property<int>("InstallCount")
+                        .HasColumnType("integer")
+                        .HasColumnName("install_count");
+
+                    b.Property<int>("InstallOrder")
+                        .HasColumnType("integer")
+                        .HasColumnName("install_order");
+
+                    b.Property<string>("IsSuccessfulTxn")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("is_successful_txn");
+
+                    b.Property<string>("IsTxnSettle")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("is_txn_settle");
+
+                    b.Property<string>("LastModifiedBy")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("last_modified_by");
+
+                    b.Property<decimal>("McPoint")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)")
+                        .HasColumnName("mc_point");
+
+                    b.Property<decimal>("McPointAmount")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)")
+                        .HasColumnName("mc_point_amount");
+
+                    b.Property<int>("Mcc")
+                        .HasColumnType("integer")
+                        .HasColumnName("mcc");
+
+                    b.Property<string>("MemberRefNo")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("member_ref_no");
+
+                    b.Property<string>("MerchantCity")
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)")
+                        .HasColumnName("merchant_city");
+
+                    b.Property<string>("MerchantCountry")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("merchant_country");
+
+                    b.Property<string>("MerchantId")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("merchant_id");
+
+                    b.Property<string>("MerchantName")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)")
+                        .HasColumnName("merchant_name");
+
+                    b.Property<string>("MerchantState")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("merchant_state");
+
+                    b.Property<long>("OceanMainTxnGuid")
+                        .HasColumnType("bigint")
+                        .HasColumnName("ocean_main_txn_guid");
+
+                    b.Property<long>("OceanTxnGuid")
+                        .HasColumnType("bigint")
+                        .HasColumnName("ocean_txn_guid");
+
+                    b.Property<string>("OperatorCode")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("operator_code");
+
+                    b.Property<decimal>("OriginalAmount")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)")
+                        .HasColumnName("original_amount");
+
+                    b.Property<int>("OriginalCurrency")
+                        .HasColumnType("integer")
+                        .HasColumnName("original_currency");
+
+                    b.Property<int>("Otc")
+                        .HasColumnType("integer")
+                        .HasColumnName("otc");
+
+                    b.Property<int>("Ots")
+                        .HasColumnType("integer")
+                        .HasColumnName("ots");
+
+                    b.Property<string>("PointType")
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("point_type");
+
+                    b.Property<string>("ProvisionCode")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("provision_code");
+
+                    b.Property<string>("RecordStatus")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("record_status");
+
+                    b.Property<string>("ResponseCode")
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("response_code");
+
+                    b.Property<string>("Rrn")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("rrn");
+
+                    b.Property<int>("SecurityLevelIndicator")
+                        .HasColumnType("integer")
+                        .HasColumnName("security_level_indicator");
+
+                    b.Property<decimal>("SettlementAmount")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)")
+                        .HasColumnName("settlement_amount");
+
+                    b.Property<int>("SettlementCurrency")
+                        .HasColumnType("integer")
+                        .HasColumnName("settlement_currency");
+
+                    b.Property<int>("Stan")
+                        .HasColumnType("integer")
+                        .HasColumnName("stan");
+
+                    b.Property<decimal>("SurchargeAmount")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)")
+                        .HasColumnName("surcharge_amount");
+
+                    b.Property<decimal>("Tax1")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)")
+                        .HasColumnName("tax1");
+
+                    b.Property<decimal>("Tax2")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)")
+                        .HasColumnName("tax2");
+
+                    b.Property<string>("TerminalId")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("terminal_id");
+
+                    b.Property<string>("TerminalType")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("terminal_type");
+
+                    b.Property<long>("TraceId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("trace_id");
+
+                    b.Property<int>("TransactionDate")
+                        .HasColumnType("integer")
+                        .HasColumnName("transaction_date");
+
+                    b.Property<int>("TransactionTime")
+                        .HasColumnType("integer")
+                        .HasColumnName("transaction_time");
+
+                    b.Property<string>("TxnDescription")
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)")
+                        .HasColumnName("txn_description");
+
+                    b.Property<string>("TxnEffect")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("txn_effect");
+
+                    b.Property<string>("TxnInstallType")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("txn_install_type");
+
+                    b.Property<string>("TxnOrigin")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("txn_origin");
+
+                    b.Property<string>("TxnRegion")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("txn_region");
+
+                    b.Property<string>("TxnSource")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("txn_source");
+
+                    b.Property<string>("TxnStat")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("txn_stat");
+
+                    b.Property<DateTime?>("UpdateDate")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("update_date");
+
+                    b.Property<int>("ValueDate")
+                        .HasColumnType("integer")
+                        .HasColumnName("value_date");
+
+                    b.HasKey("Id")
+                        .HasName("pk_ingestion_card_bkm_detail");
+
+                    b.ToTable("ingestion_card_bkm_detail", "archive");
+                });
+
+            modelBuilder.Entity("LinkPara.Card.Domain.Entities.Archive.ArchiveIngestionCardMscDetail", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<int>("AcquirerId")
+                        .HasColumnType("integer")
+                        .HasColumnName("acquirer_id");
+
+                    b.Property<string>("Arn")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("arn");
+
+                    b.Property<string>("BankingTxnCode")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("banking_txn_code");
+
+                    b.Property<decimal>("BcPoint")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)")
+                        .HasColumnName("bc_point");
+
+                    b.Property<decimal>("BcPointAmount")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)")
+                        .HasColumnName("bc_point_amount");
+
+                    b.Property<decimal>("BillingAmount")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)")
+                        .HasColumnName("billing_amount");
+
+                    b.Property<int>("BillingCurrency")
+                        .HasColumnType("integer")
+                        .HasColumnName("billing_currency");
+
+                    b.Property<string>("BranchId")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("branch_id");
+
+                    b.Property<decimal>("CardHolderBillingAmount")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)")
+                        .HasColumnName("cardholder_billing_amount");
+
+                    b.Property<int>("CardHolderBillingCurrency")
+                        .HasColumnType("integer")
+                        .HasColumnName("cardholder_billing_currency");
+
+                    b.Property<string>("CardNo")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("card_no");
+
+                    b.Property<decimal>("CashbackAmount")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)")
+                        .HasColumnName("cashback_amount");
+
+                    b.Property<decimal>("CcPoint")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)")
+                        .HasColumnName("cc_point");
+
+                    b.Property<decimal>("CcPointAmount")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)")
+                        .HasColumnName("cc_point_amount");
+
+                    b.Property<string>("ChannelCode")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("channel_code");
+
+                    b.Property<DateTime>("CreateDate")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("create_date");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("created_by");
+
+                    b.Property<int>("EndOfDayDate")
+                        .HasColumnType("integer")
+                        .HasColumnName("end_of_day_date");
+
+                    b.Property<string>("FinancialType")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("financial_type");
+
+                    b.Property<Guid>("IngestionFileLineId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("file_line_id");
+
+                    b.Property<int>("InstallCount")
+                        .HasColumnType("integer")
+                        .HasColumnName("install_count");
+
+                    b.Property<int>("InstallOrder")
+                        .HasColumnType("integer")
+                        .HasColumnName("install_order");
+
+                    b.Property<string>("IsSuccessfulTxn")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("is_successful_txn");
+
+                    b.Property<string>("IsTxnSettle")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("is_txn_settle");
+
+                    b.Property<string>("LastModifiedBy")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("last_modified_by");
+
+                    b.Property<decimal>("McPoint")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)")
+                        .HasColumnName("mc_point");
+
+                    b.Property<decimal>("McPointAmount")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)")
+                        .HasColumnName("mc_point_amount");
+
+                    b.Property<int>("Mcc")
+                        .HasColumnType("integer")
+                        .HasColumnName("mcc");
+
+                    b.Property<string>("MemberRefNo")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("member_ref_no");
+
+                    b.Property<string>("MerchantCity")
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)")
+                        .HasColumnName("merchant_city");
+
+                    b.Property<string>("MerchantCountry")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("merchant_country");
+
+                    b.Property<string>("MerchantId")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("merchant_id");
+
+                    b.Property<string>("MerchantName")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)")
+                        .HasColumnName("merchant_name");
+
+                    b.Property<string>("MerchantState")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("merchant_state");
+
+                    b.Property<long>("OceanMainTxnGuid")
+                        .HasColumnType("bigint")
+                        .HasColumnName("ocean_main_txn_guid");
+
+                    b.Property<long>("OceanTxnGuid")
+                        .HasColumnType("bigint")
+                        .HasColumnName("ocean_txn_guid");
+
+                    b.Property<string>("OperatorCode")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("operator_code");
+
+                    b.Property<decimal>("OriginalAmount")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)")
+                        .HasColumnName("original_amount");
+
+                    b.Property<int>("OriginalCurrency")
+                        .HasColumnType("integer")
+                        .HasColumnName("original_currency");
+
+                    b.Property<int>("Otc")
+                        .HasColumnType("integer")
+                        .HasColumnName("otc");
+
+                    b.Property<int>("Ots")
+                        .HasColumnType("integer")
+                        .HasColumnName("ots");
+
+                    b.Property<string>("PointType")
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("point_type");
+
+                    b.Property<string>("ProvisionCode")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("provision_code");
+
+                    b.Property<string>("RecordStatus")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("record_status");
+
+                    b.Property<string>("ResponseCode")
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("response_code");
+
+                    b.Property<string>("Rrn")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("rrn");
+
+                    b.Property<int>("SecurityLevelIndicator")
+                        .HasColumnType("integer")
+                        .HasColumnName("security_level_indicator");
+
+                    b.Property<decimal>("SettlementAmount")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)")
+                        .HasColumnName("settlement_amount");
+
+                    b.Property<int>("SettlementCurrency")
+                        .HasColumnType("integer")
+                        .HasColumnName("settlement_currency");
+
+                    b.Property<int>("Stan")
+                        .HasColumnType("integer")
+                        .HasColumnName("stan");
+
+                    b.Property<decimal>("SurchargeAmount")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)")
+                        .HasColumnName("surcharge_amount");
+
+                    b.Property<decimal>("Tax1")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)")
+                        .HasColumnName("tax1");
+
+                    b.Property<decimal>("Tax2")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)")
+                        .HasColumnName("tax2");
+
+                    b.Property<string>("TerminalId")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("terminal_id");
+
+                    b.Property<string>("TerminalType")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("terminal_type");
+
+                    b.Property<long>("TraceId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("trace_id");
+
+                    b.Property<int>("TransactionDate")
+                        .HasColumnType("integer")
+                        .HasColumnName("transaction_date");
+
+                    b.Property<int>("TransactionTime")
+                        .HasColumnType("integer")
+                        .HasColumnName("transaction_time");
+
+                    b.Property<string>("TxnDescription")
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)")
+                        .HasColumnName("txn_description");
+
+                    b.Property<string>("TxnEffect")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("txn_effect");
+
+                    b.Property<string>("TxnInstallType")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("txn_install_type");
+
+                    b.Property<string>("TxnOrigin")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("txn_origin");
+
+                    b.Property<string>("TxnRegion")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("txn_region");
+
+                    b.Property<string>("TxnSource")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("txn_source");
+
+                    b.Property<string>("TxnStat")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("txn_stat");
+
+                    b.Property<DateTime?>("UpdateDate")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("update_date");
+
+                    b.Property<int>("ValueDate")
+                        .HasColumnType("integer")
+                        .HasColumnName("value_date");
+
+                    b.HasKey("Id")
+                        .HasName("pk_ingestion_card_msc_detail");
+
+                    b.ToTable("ingestion_card_msc_detail", "archive");
+                });
+
+            modelBuilder.Entity("LinkPara.Card.Domain.Entities.Archive.ArchiveIngestionCardVisaDetail", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<int>("AcquirerId")
+                        .HasColumnType("integer")
+                        .HasColumnName("acquirer_id");
+
+                    b.Property<string>("Arn")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("arn");
+
+                    b.Property<string>("BankingTxnCode")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("banking_txn_code");
+
+                    b.Property<decimal>("BcPoint")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)")
+                        .HasColumnName("bc_point");
+
+                    b.Property<decimal>("BcPointAmount")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)")
+                        .HasColumnName("bc_point_amount");
+
+                    b.Property<decimal>("BillingAmount")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)")
+                        .HasColumnName("billing_amount");
+
+                    b.Property<int>("BillingCurrency")
+                        .HasColumnType("integer")
+                        .HasColumnName("billing_currency");
+
+                    b.Property<string>("BranchId")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("branch_id");
+
+                    b.Property<decimal>("CardHolderBillingAmount")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)")
+                        .HasColumnName("cardholder_billing_amount");
+
+                    b.Property<int>("CardHolderBillingCurrency")
+                        .HasColumnType("integer")
+                        .HasColumnName("cardholder_billing_currency");
+
+                    b.Property<string>("CardNo")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("card_no");
+
+                    b.Property<decimal>("CashbackAmount")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)")
+                        .HasColumnName("cashback_amount");
+
+                    b.Property<decimal>("CcPoint")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)")
+                        .HasColumnName("cc_point");
+
+                    b.Property<decimal>("CcPointAmount")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)")
+                        .HasColumnName("cc_point_amount");
+
+                    b.Property<string>("ChannelCode")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("channel_code");
+
+                    b.Property<DateTime>("CreateDate")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("create_date");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("created_by");
+
+                    b.Property<int>("EndOfDayDate")
+                        .HasColumnType("integer")
+                        .HasColumnName("end_of_day_date");
+
+                    b.Property<string>("FinancialType")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("financial_type");
+
+                    b.Property<Guid>("IngestionFileLineId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("file_line_id");
+
+                    b.Property<int>("InstallCount")
+                        .HasColumnType("integer")
+                        .HasColumnName("install_count");
+
+                    b.Property<int>("InstallOrder")
+                        .HasColumnType("integer")
+                        .HasColumnName("install_order");
+
+                    b.Property<string>("IsSuccessfulTxn")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("is_successful_txn");
+
+                    b.Property<string>("IsTxnSettle")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("is_txn_settle");
+
+                    b.Property<string>("LastModifiedBy")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("last_modified_by");
+
+                    b.Property<decimal>("McPoint")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)")
+                        .HasColumnName("mc_point");
+
+                    b.Property<decimal>("McPointAmount")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)")
+                        .HasColumnName("mc_point_amount");
+
+                    b.Property<int>("Mcc")
+                        .HasColumnType("integer")
+                        .HasColumnName("mcc");
+
+                    b.Property<string>("MemberRefNo")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("member_ref_no");
+
+                    b.Property<string>("MerchantCity")
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)")
+                        .HasColumnName("merchant_city");
+
+                    b.Property<string>("MerchantCountry")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("merchant_country");
+
+                    b.Property<string>("MerchantId")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("merchant_id");
+
+                    b.Property<string>("MerchantName")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)")
+                        .HasColumnName("merchant_name");
+
+                    b.Property<string>("MerchantState")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("merchant_state");
+
+                    b.Property<long>("OceanMainTxnGuid")
+                        .HasColumnType("bigint")
+                        .HasColumnName("ocean_main_txn_guid");
+
+                    b.Property<long>("OceanTxnGuid")
+                        .HasColumnType("bigint")
+                        .HasColumnName("ocean_txn_guid");
+
+                    b.Property<string>("OperatorCode")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("operator_code");
+
+                    b.Property<decimal>("OriginalAmount")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)")
+                        .HasColumnName("original_amount");
+
+                    b.Property<int>("OriginalCurrency")
+                        .HasColumnType("integer")
+                        .HasColumnName("original_currency");
+
+                    b.Property<int>("Otc")
+                        .HasColumnType("integer")
+                        .HasColumnName("otc");
+
+                    b.Property<int>("Ots")
+                        .HasColumnType("integer")
+                        .HasColumnName("ots");
+
+                    b.Property<string>("PointType")
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("point_type");
+
+                    b.Property<string>("ProvisionCode")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("provision_code");
+
+                    b.Property<string>("RecordStatus")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("record_status");
+
+                    b.Property<string>("ResponseCode")
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("response_code");
+
+                    b.Property<string>("Rrn")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("rrn");
+
+                    b.Property<int>("SecurityLevelIndicator")
+                        .HasColumnType("integer")
+                        .HasColumnName("security_level_indicator");
+
+                    b.Property<decimal>("SettlementAmount")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)")
+                        .HasColumnName("settlement_amount");
+
+                    b.Property<int>("SettlementCurrency")
+                        .HasColumnType("integer")
+                        .HasColumnName("settlement_currency");
+
+                    b.Property<int>("Stan")
+                        .HasColumnType("integer")
+                        .HasColumnName("stan");
+
+                    b.Property<decimal>("SurchargeAmount")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)")
+                        .HasColumnName("surcharge_amount");
+
+                    b.Property<decimal>("Tax1")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)")
+                        .HasColumnName("tax1");
+
+                    b.Property<decimal>("Tax2")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)")
+                        .HasColumnName("tax2");
+
+                    b.Property<string>("TerminalId")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("terminal_id");
+
+                    b.Property<string>("TerminalType")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("terminal_type");
+
+                    b.Property<long>("TraceId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("trace_id");
+
+                    b.Property<int>("TransactionDate")
+                        .HasColumnType("integer")
+                        .HasColumnName("transaction_date");
+
+                    b.Property<int>("TransactionTime")
+                        .HasColumnType("integer")
+                        .HasColumnName("transaction_time");
+
+                    b.Property<string>("TxnDescription")
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)")
+                        .HasColumnName("txn_description");
+
+                    b.Property<string>("TxnEffect")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("txn_effect");
+
+                    b.Property<string>("TxnInstallType")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("txn_install_type");
+
+                    b.Property<string>("TxnOrigin")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("txn_origin");
+
+                    b.Property<string>("TxnRegion")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("txn_region");
+
+                    b.Property<string>("TxnSource")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("txn_source");
+
+                    b.Property<string>("TxnStat")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("txn_stat");
+
+                    b.Property<DateTime?>("UpdateDate")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("update_date");
+
+                    b.Property<int>("ValueDate")
+                        .HasColumnType("integer")
+                        .HasColumnName("value_date");
+
+                    b.HasKey("Id")
+                        .HasName("pk_ingestion_card_visa_detail");
+
+                    b.ToTable("ingestion_card_visa_detail", "archive");
+                });
+
+            modelBuilder.Entity("LinkPara.Card.Domain.Entities.Archive.ArchiveIngestionClearingBkmDetail", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Arn")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("arn");
+
+                    b.Property<string>("CardAcceptorId")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("card_acceptor_id");
+
+                    b.Property<string>("CardDci")
+                        .HasMaxLength(8)
+                        .HasColumnType("character varying(8)")
+                        .HasColumnName("card_dci");
+
+                    b.Property<string>("CardNo")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("card_no");
+
+                    b.Property<decimal>("CashbackAmount")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)")
+                        .HasColumnName("cashback_amount");
+
+                    b.Property<long>("ClrNo")
+                        .HasColumnType("bigint")
+                        .HasColumnName("clr_no");
+
+                    b.Property<string>("ControlStat")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("control_stat");
+
+                    b.Property<DateTime>("CreateDate")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("create_date");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("created_by");
+
+                    b.Property<decimal>("DestinationAmount")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)")
+                        .HasColumnName("destination_amount");
+
+                    b.Property<int>("DestinationCurrency")
+                        .HasColumnType("integer")
+                        .HasColumnName("destination_currency");
+
+                    b.Property<string>("DisputeCode")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("dispute_code");
+
+                    b.Property<string>("FileId")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("file_id");
+
+                    b.Property<string>("FunctionCode")
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("function_code");
+
+                    b.Property<Guid>("IngestionFileLineId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("file_line_id");
+
+                    b.Property<string>("IoDate")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("io_date");
+
+                    b.Property<string>("IoFlag")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("io_flag");
+
+                    b.Property<string>("LastModifiedBy")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("last_modified_by");
+
+                    b.Property<string>("MccCode")
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("mcc_code");
+
+                    b.Property<string>("MerchantCity")
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)")
+                        .HasColumnName("merchant_city");
+
+                    b.Property<string>("MerchantName")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)")
+                        .HasColumnName("merchant_name");
+
+                    b.Property<int>("MicrofilmNumber")
+                        .HasColumnType("integer")
+                        .HasColumnName("microfilm_number");
+
+                    b.Property<string>("Mtid")
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("mtid");
+
+                    b.Property<long>("OceanTxnGuid")
+                        .HasColumnType("bigint")
+                        .HasColumnName("ocean_txn_guid");
+
+                    b.Property<string>("ProcessCode")
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("process_code");
+
+                    b.Property<string>("ProvisionCode")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("provision_code");
+
+                    b.Property<string>("ReasonCode")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("reason_code");
+
+                    b.Property<string>("RecordStatus")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("record_status");
+
+                    b.Property<decimal>("ReimbursementAmount")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)")
+                        .HasColumnName("reimbursement_amount");
+
+                    b.Property<string>("ReimbursementAttribute")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("reimbursement_attribute");
+
+                    b.Property<string>("Reserved")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)")
+                        .HasColumnName("reserved");
+
+                    b.Property<string>("Rrn")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("rrn");
+
+                    b.Property<decimal>("SourceAmount")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)")
+                        .HasColumnName("source_amount");
+
+                    b.Property<int>("SourceCurrency")
+                        .HasColumnType("integer")
+                        .HasColumnName("source_currency");
+
+                    b.Property<int>("TxnDate")
+                        .HasColumnType("integer")
+                        .HasColumnName("txn_date");
+
+                    b.Property<int>("TxnTime")
+                        .HasColumnType("integer")
+                        .HasColumnName("txn_time");
+
+                    b.Property<string>("TxnType")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("txn_type");
+
+                    b.Property<DateTime?>("UpdateDate")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("update_date");
+
+                    b.HasKey("Id")
+                        .HasName("pk_ingestion_clearing_bkm_detail");
+
+                    b.ToTable("ingestion_clearing_bkm_detail", "archive");
+                });
+
+            modelBuilder.Entity("LinkPara.Card.Domain.Entities.Archive.ArchiveIngestionClearingMscDetail", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("AncillaryTransactionAmount")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("ancillary_transaction_amount");
+
+                    b.Property<string>("AncillaryTransactionCode")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("ancillary_transaction_code");
+
+                    b.Property<string>("Arn")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("arn");
+
+                    b.Property<string>("CardAcceptorId")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("card_acceptor_id");
+
+                    b.Property<string>("CardDci")
+                        .HasMaxLength(8)
+                        .HasColumnType("character varying(8)")
+                        .HasColumnName("card_dci");
+
+                    b.Property<string>("CardNo")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("card_no");
+
+                    b.Property<decimal>("CashbackAmount")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)")
+                        .HasColumnName("cashback_amount");
+
+                    b.Property<long>("ClrNo")
+                        .HasColumnType("bigint")
+                        .HasColumnName("clr_no");
+
+                    b.Property<string>("ControlStat")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("control_stat");
+
+                    b.Property<DateTime>("CreateDate")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("create_date");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("created_by");
+
+                    b.Property<decimal>("DestinationAmount")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)")
+                        .HasColumnName("destination_amount");
+
+                    b.Property<int>("DestinationCurrency")
+                        .HasColumnType("integer")
+                        .HasColumnName("destination_currency");
+
+                    b.Property<string>("DisputeCode")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("dispute_code");
+
+                    b.Property<string>("FileId")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("file_id");
+
+                    b.Property<string>("FunctionCode")
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("function_code");
+
+                    b.Property<Guid>("IngestionFileLineId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("file_line_id");
+
+                    b.Property<string>("IoDate")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("io_date");
+
+                    b.Property<string>("IoFlag")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("io_flag");
+
+                    b.Property<string>("LastModifiedBy")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("last_modified_by");
+
+                    b.Property<string>("MccCode")
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("mcc_code");
+
+                    b.Property<string>("MerchantCity")
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)")
+                        .HasColumnName("merchant_city");
+
+                    b.Property<string>("MerchantName")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)")
+                        .HasColumnName("merchant_name");
+
+                    b.Property<int>("MicrofilmNumber")
+                        .HasColumnType("integer")
+                        .HasColumnName("microfilm_number");
+
+                    b.Property<string>("Mtid")
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("mtid");
+
+                    b.Property<long>("OceanTxnGuid")
+                        .HasColumnType("bigint")
+                        .HasColumnName("ocean_txn_guid");
+
+                    b.Property<string>("ProcessCode")
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("process_code");
+
+                    b.Property<string>("ProvisionCode")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("provision_code");
+
+                    b.Property<string>("ReasonCode")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("reason_code");
+
+                    b.Property<string>("RecordStatus")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("record_status");
+
+                    b.Property<decimal>("ReimbursementAmount")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)")
+                        .HasColumnName("reimbursement_amount");
+
+                    b.Property<string>("ReimbursementAttribute")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("reimbursement_attribute");
+
+                    b.Property<string>("Reserved")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)")
+                        .HasColumnName("reserved");
+
+                    b.Property<string>("ReversalIndicator")
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("reversal_indicator");
+
+                    b.Property<string>("Rrn")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("rrn");
+
+                    b.Property<decimal>("SourceAmount")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)")
+                        .HasColumnName("source_amount");
+
+                    b.Property<int>("SourceCurrency")
+                        .HasColumnType("integer")
+                        .HasColumnName("source_currency");
+
+                    b.Property<int>("TxnDate")
+                        .HasColumnType("integer")
+                        .HasColumnName("txn_date");
+
+                    b.Property<int>("TxnTime")
+                        .HasColumnType("integer")
+                        .HasColumnName("txn_time");
+
+                    b.Property<string>("TxnType")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("txn_type");
+
+                    b.Property<DateTime?>("UpdateDate")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("update_date");
+
+                    b.HasKey("Id")
+                        .HasName("pk_ingestion_clearing_msc_detail");
+
+                    b.ToTable("ingestion_clearing_msc_detail", "archive");
+                });
+
+            modelBuilder.Entity("LinkPara.Card.Domain.Entities.Archive.ArchiveIngestionClearingVisaDetail", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Arn")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("arn");
+
+                    b.Property<string>("CardAcceptorId")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("card_acceptor_id");
+
+                    b.Property<string>("CardDci")
+                        .HasMaxLength(8)
+                        .HasColumnType("character varying(8)")
+                        .HasColumnName("card_dci");
+
+                    b.Property<string>("CardNo")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("card_no");
+
+                    b.Property<decimal>("CashbackAmount")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)")
+                        .HasColumnName("cashback_amount");
+
+                    b.Property<long>("ClrNo")
+                        .HasColumnType("bigint")
+                        .HasColumnName("clr_no");
+
+                    b.Property<string>("ControlStat")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("control_stat");
+
+                    b.Property<DateTime>("CreateDate")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("create_date");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("created_by");
+
+                    b.Property<decimal>("DestinationAmount")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)")
+                        .HasColumnName("destination_amount");
+
+                    b.Property<int>("DestinationCurrency")
+                        .HasColumnType("integer")
+                        .HasColumnName("destination_currency");
+
+                    b.Property<string>("DisputeCode")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("dispute_code");
+
+                    b.Property<string>("FileId")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("file_id");
+
+                    b.Property<Guid>("IngestionFileLineId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("file_line_id");
+
+                    b.Property<string>("IoDate")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("io_date");
+
+                    b.Property<string>("IoFlag")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("io_flag");
+
+                    b.Property<string>("LastModifiedBy")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("last_modified_by");
+
+                    b.Property<string>("MccCode")
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("mcc_code");
+
+                    b.Property<string>("MerchantCity")
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)")
+                        .HasColumnName("merchant_city");
+
+                    b.Property<string>("MerchantName")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)")
+                        .HasColumnName("merchant_name");
+
+                    b.Property<int>("MicrofilmNumber")
+                        .HasColumnType("integer")
+                        .HasColumnName("microfilm_number");
+
+                    b.Property<long>("OceanTxnGuid")
+                        .HasColumnType("bigint")
+                        .HasColumnName("ocean_txn_guid");
+
+                    b.Property<string>("ProvisionCode")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("provision_code");
+
+                    b.Property<string>("ReasonCode")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("reason_code");
+
+                    b.Property<string>("RecordStatus")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("record_status");
+
+                    b.Property<decimal>("ReimbursementAmount")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)")
+                        .HasColumnName("reimbursement_amount");
+
+                    b.Property<string>("ReimbursementAttribute")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("reimbursement_attribute");
+
+                    b.Property<string>("Reserved")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)")
+                        .HasColumnName("reserved");
+
+                    b.Property<string>("Rrn")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("rrn");
+
+                    b.Property<decimal>("SourceAmount")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)")
+                        .HasColumnName("source_amount");
+
+                    b.Property<int>("SourceCurrency")
+                        .HasColumnType("integer")
+                        .HasColumnName("source_currency");
+
+                    b.Property<string>("Tc")
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("tc");
+
+                    b.Property<int>("TxnDate")
+                        .HasColumnType("integer")
+                        .HasColumnName("txn_date");
+
+                    b.Property<int>("TxnTime")
+                        .HasColumnType("integer")
+                        .HasColumnName("txn_time");
+
+                    b.Property<string>("TxnType")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("txn_type");
+
+                    b.Property<DateTime?>("UpdateDate")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("update_date");
+
+                    b.Property<string>("UsageCode")
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("usage_code");
+
+                    b.HasKey("Id")
+                        .HasName("pk_ingestion_clearing_visa_detail");
+
+                    b.ToTable("ingestion_clearing_visa_detail", "archive");
+                });
+
             modelBuilder.Entity("LinkPara.Card.Domain.Entities.Archive.ArchiveIngestionFile", b =>
                 {
                     b.Property<Guid>("Id")
@@ -150,6 +1774,30 @@ namespace LinkPara.Card.Infrastructure.Persistence.Migrations.PostgreSql
                         .HasColumnType("bigint")
                         .HasColumnName("byte_offset");
 
+                    b.Property<Guid?>("CardBkmDetailId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("card_bkm_detail_id");
+
+                    b.Property<Guid?>("CardMscDetailId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("card_msc_detail_id");
+
+                    b.Property<Guid?>("CardVisaDetailId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("card_visa_detail_id");
+
+                    b.Property<Guid?>("ClearingBkmDetailId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("clearing_bkm_detail_id");
+
+                    b.Property<Guid?>("ClearingMscDetailId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("clearing_msc_detail_id");
+
+                    b.Property<Guid?>("ClearingVisaDetailId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("clearing_visa_detail_id");
+
                     b.Property<string>("CorrelationKey")
                         .HasMaxLength(256)
                         .HasColumnType("character varying(256)")
@@ -246,6 +1894,24 @@ namespace LinkPara.Card.Infrastructure.Persistence.Migrations.PostgreSql
 
                     b.HasKey("Id")
                         .HasName("pk_ingestion_file_line");
+
+                    b.HasIndex("CardBkmDetailId")
+                        .HasDatabaseName("ix_ingestion_file_line_card_bkm_detail_id");
+
+                    b.HasIndex("CardMscDetailId")
+                        .HasDatabaseName("ix_ingestion_file_line_card_msc_detail_id");
+
+                    b.HasIndex("CardVisaDetailId")
+                        .HasDatabaseName("ix_ingestion_file_line_card_visa_detail_id");
+
+                    b.HasIndex("ClearingBkmDetailId")
+                        .HasDatabaseName("ix_ingestion_file_line_clearing_bkm_detail_id");
+
+                    b.HasIndex("ClearingMscDetailId")
+                        .HasDatabaseName("ix_ingestion_file_line_clearing_msc_detail_id");
+
+                    b.HasIndex("ClearingVisaDetailId")
+                        .HasDatabaseName("ix_ingestion_file_line_clearing_visa_detail_id");
 
                     b.ToTable("ingestion_file_line", "archive");
                 });
@@ -1123,6 +2789,1726 @@ namespace LinkPara.Card.Infrastructure.Persistence.Migrations.PostgreSql
                     b.ToTable("debit_authorization_fee", "core");
                 });
 
+            modelBuilder.Entity("LinkPara.Card.Domain.Entities.FileIngestion.Persistence.IngestionCardBkmDetail", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<int>("AcquirerId")
+                        .HasColumnType("integer")
+                        .HasColumnName("acquirer_id");
+
+                    b.Property<string>("Arn")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("arn");
+
+                    b.Property<string>("BankingTxnCode")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("banking_txn_code");
+
+                    b.Property<decimal>("BcPoint")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)")
+                        .HasColumnName("bc_point");
+
+                    b.Property<decimal>("BcPointAmount")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)")
+                        .HasColumnName("bc_point_amount");
+
+                    b.Property<decimal>("BillingAmount")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)")
+                        .HasColumnName("billing_amount");
+
+                    b.Property<int>("BillingCurrency")
+                        .HasColumnType("integer")
+                        .HasColumnName("billing_currency");
+
+                    b.Property<string>("BranchId")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("branch_id");
+
+                    b.Property<decimal>("CardHolderBillingAmount")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)")
+                        .HasColumnName("cardholder_billing_amount");
+
+                    b.Property<int>("CardHolderBillingCurrency")
+                        .HasColumnType("integer")
+                        .HasColumnName("cardholder_billing_currency");
+
+                    b.Property<string>("CardNo")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("card_no");
+
+                    b.Property<decimal>("CashbackAmount")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)")
+                        .HasColumnName("cashback_amount");
+
+                    b.Property<decimal>("CcPoint")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)")
+                        .HasColumnName("cc_point");
+
+                    b.Property<decimal>("CcPointAmount")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)")
+                        .HasColumnName("cc_point_amount");
+
+                    b.Property<string>("ChannelCode")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("channel_code");
+
+                    b.Property<DateTime>("CreateDate")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("create_date");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("created_by");
+
+                    b.Property<int>("EndOfDayDate")
+                        .HasColumnType("integer")
+                        .HasColumnName("end_of_day_date");
+
+                    b.Property<string>("FinancialType")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("financial_type");
+
+                    b.Property<Guid>("IngestionFileLineId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("file_line_id");
+
+                    b.Property<int>("InstallCount")
+                        .HasColumnType("integer")
+                        .HasColumnName("install_count");
+
+                    b.Property<int>("InstallOrder")
+                        .HasColumnType("integer")
+                        .HasColumnName("install_order");
+
+                    b.Property<string>("IsSuccessfulTxn")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("is_successful_txn");
+
+                    b.Property<string>("IsTxnSettle")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("is_txn_settle");
+
+                    b.Property<string>("LastModifiedBy")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("last_modified_by");
+
+                    b.Property<decimal>("McPoint")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)")
+                        .HasColumnName("mc_point");
+
+                    b.Property<decimal>("McPointAmount")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)")
+                        .HasColumnName("mc_point_amount");
+
+                    b.Property<int>("Mcc")
+                        .HasColumnType("integer")
+                        .HasColumnName("mcc");
+
+                    b.Property<string>("MemberRefNo")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("member_ref_no");
+
+                    b.Property<string>("MerchantCity")
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)")
+                        .HasColumnName("merchant_city");
+
+                    b.Property<string>("MerchantCountry")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("merchant_country");
+
+                    b.Property<string>("MerchantId")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("merchant_id");
+
+                    b.Property<string>("MerchantName")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)")
+                        .HasColumnName("merchant_name");
+
+                    b.Property<string>("MerchantState")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("merchant_state");
+
+                    b.Property<long>("OceanMainTxnGuid")
+                        .HasColumnType("bigint")
+                        .HasColumnName("ocean_main_txn_guid");
+
+                    b.Property<long>("OceanTxnGuid")
+                        .HasColumnType("bigint")
+                        .HasColumnName("ocean_txn_guid");
+
+                    b.Property<string>("OperatorCode")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("operator_code");
+
+                    b.Property<decimal>("OriginalAmount")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)")
+                        .HasColumnName("original_amount");
+
+                    b.Property<int>("OriginalCurrency")
+                        .HasColumnType("integer")
+                        .HasColumnName("original_currency");
+
+                    b.Property<int>("Otc")
+                        .HasColumnType("integer")
+                        .HasColumnName("otc");
+
+                    b.Property<int>("Ots")
+                        .HasColumnType("integer")
+                        .HasColumnName("ots");
+
+                    b.Property<string>("PointType")
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("point_type");
+
+                    b.Property<string>("ProvisionCode")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("provision_code");
+
+                    b.Property<string>("RecordStatus")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("record_status");
+
+                    b.Property<string>("ResponseCode")
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("response_code");
+
+                    b.Property<string>("Rrn")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("rrn");
+
+                    b.Property<int>("SecurityLevelIndicator")
+                        .HasColumnType("integer")
+                        .HasColumnName("security_level_indicator");
+
+                    b.Property<decimal>("SettlementAmount")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)")
+                        .HasColumnName("settlement_amount");
+
+                    b.Property<int>("SettlementCurrency")
+                        .HasColumnType("integer")
+                        .HasColumnName("settlement_currency");
+
+                    b.Property<int>("Stan")
+                        .HasColumnType("integer")
+                        .HasColumnName("stan");
+
+                    b.Property<decimal>("SurchargeAmount")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)")
+                        .HasColumnName("surcharge_amount");
+
+                    b.Property<decimal>("Tax1")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)")
+                        .HasColumnName("tax1");
+
+                    b.Property<decimal>("Tax2")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)")
+                        .HasColumnName("tax2");
+
+                    b.Property<string>("TerminalId")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("terminal_id");
+
+                    b.Property<string>("TerminalType")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("terminal_type");
+
+                    b.Property<long>("TraceId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("trace_id");
+
+                    b.Property<int>("TransactionDate")
+                        .HasColumnType("integer")
+                        .HasColumnName("transaction_date");
+
+                    b.Property<int>("TransactionTime")
+                        .HasColumnType("integer")
+                        .HasColumnName("transaction_time");
+
+                    b.Property<string>("TxnDescription")
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)")
+                        .HasColumnName("txn_description");
+
+                    b.Property<string>("TxnEffect")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("txn_effect");
+
+                    b.Property<string>("TxnInstallType")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("txn_install_type");
+
+                    b.Property<string>("TxnOrigin")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("txn_origin");
+
+                    b.Property<string>("TxnRegion")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("txn_region");
+
+                    b.Property<string>("TxnSource")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("txn_source");
+
+                    b.Property<string>("TxnStat")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("txn_stat");
+
+                    b.Property<DateTime?>("UpdateDate")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("update_date");
+
+                    b.Property<int>("ValueDate")
+                        .HasColumnType("integer")
+                        .HasColumnName("value_date");
+
+                    b.HasKey("Id")
+                        .HasName("pk_card_bkm_detail");
+
+                    b.HasIndex("Arn")
+                        .HasDatabaseName("ix_card_bkm_detail_arn");
+
+                    b.HasIndex("CardNo")
+                        .HasDatabaseName("ix_card_bkm_detail_card_no");
+
+                    b.HasIndex("IngestionFileLineId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_card_bkm_detail_file_line_id");
+
+                    b.HasIndex("OceanTxnGuid")
+                        .HasDatabaseName("ix_card_bkm_detail_ocean_txn_guid");
+
+                    b.HasIndex("Rrn")
+                        .HasDatabaseName("ix_card_bkm_detail_rrn");
+
+                    b.ToTable("card_bkm_detail", "ingestion");
+                });
+
+            modelBuilder.Entity("LinkPara.Card.Domain.Entities.FileIngestion.Persistence.IngestionCardMscDetail", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<int>("AcquirerId")
+                        .HasColumnType("integer")
+                        .HasColumnName("acquirer_id");
+
+                    b.Property<string>("Arn")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("arn");
+
+                    b.Property<string>("BankingTxnCode")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("banking_txn_code");
+
+                    b.Property<decimal>("BcPoint")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)")
+                        .HasColumnName("bc_point");
+
+                    b.Property<decimal>("BcPointAmount")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)")
+                        .HasColumnName("bc_point_amount");
+
+                    b.Property<decimal>("BillingAmount")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)")
+                        .HasColumnName("billing_amount");
+
+                    b.Property<int>("BillingCurrency")
+                        .HasColumnType("integer")
+                        .HasColumnName("billing_currency");
+
+                    b.Property<string>("BranchId")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("branch_id");
+
+                    b.Property<decimal>("CardHolderBillingAmount")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)")
+                        .HasColumnName("cardholder_billing_amount");
+
+                    b.Property<int>("CardHolderBillingCurrency")
+                        .HasColumnType("integer")
+                        .HasColumnName("cardholder_billing_currency");
+
+                    b.Property<string>("CardNo")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("card_no");
+
+                    b.Property<decimal>("CashbackAmount")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)")
+                        .HasColumnName("cashback_amount");
+
+                    b.Property<decimal>("CcPoint")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)")
+                        .HasColumnName("cc_point");
+
+                    b.Property<decimal>("CcPointAmount")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)")
+                        .HasColumnName("cc_point_amount");
+
+                    b.Property<string>("ChannelCode")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("channel_code");
+
+                    b.Property<DateTime>("CreateDate")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("create_date");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("created_by");
+
+                    b.Property<int>("EndOfDayDate")
+                        .HasColumnType("integer")
+                        .HasColumnName("end_of_day_date");
+
+                    b.Property<string>("FinancialType")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("financial_type");
+
+                    b.Property<Guid>("IngestionFileLineId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("file_line_id");
+
+                    b.Property<int>("InstallCount")
+                        .HasColumnType("integer")
+                        .HasColumnName("install_count");
+
+                    b.Property<int>("InstallOrder")
+                        .HasColumnType("integer")
+                        .HasColumnName("install_order");
+
+                    b.Property<string>("IsSuccessfulTxn")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("is_successful_txn");
+
+                    b.Property<string>("IsTxnSettle")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("is_txn_settle");
+
+                    b.Property<string>("LastModifiedBy")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("last_modified_by");
+
+                    b.Property<decimal>("McPoint")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)")
+                        .HasColumnName("mc_point");
+
+                    b.Property<decimal>("McPointAmount")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)")
+                        .HasColumnName("mc_point_amount");
+
+                    b.Property<int>("Mcc")
+                        .HasColumnType("integer")
+                        .HasColumnName("mcc");
+
+                    b.Property<string>("MemberRefNo")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("member_ref_no");
+
+                    b.Property<string>("MerchantCity")
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)")
+                        .HasColumnName("merchant_city");
+
+                    b.Property<string>("MerchantCountry")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("merchant_country");
+
+                    b.Property<string>("MerchantId")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("merchant_id");
+
+                    b.Property<string>("MerchantName")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)")
+                        .HasColumnName("merchant_name");
+
+                    b.Property<string>("MerchantState")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("merchant_state");
+
+                    b.Property<long>("OceanMainTxnGuid")
+                        .HasColumnType("bigint")
+                        .HasColumnName("ocean_main_txn_guid");
+
+                    b.Property<long>("OceanTxnGuid")
+                        .HasColumnType("bigint")
+                        .HasColumnName("ocean_txn_guid");
+
+                    b.Property<string>("OperatorCode")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("operator_code");
+
+                    b.Property<decimal>("OriginalAmount")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)")
+                        .HasColumnName("original_amount");
+
+                    b.Property<int>("OriginalCurrency")
+                        .HasColumnType("integer")
+                        .HasColumnName("original_currency");
+
+                    b.Property<int>("Otc")
+                        .HasColumnType("integer")
+                        .HasColumnName("otc");
+
+                    b.Property<int>("Ots")
+                        .HasColumnType("integer")
+                        .HasColumnName("ots");
+
+                    b.Property<string>("PointType")
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("point_type");
+
+                    b.Property<string>("ProvisionCode")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("provision_code");
+
+                    b.Property<string>("RecordStatus")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("record_status");
+
+                    b.Property<string>("ResponseCode")
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("response_code");
+
+                    b.Property<string>("Rrn")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("rrn");
+
+                    b.Property<int>("SecurityLevelIndicator")
+                        .HasColumnType("integer")
+                        .HasColumnName("security_level_indicator");
+
+                    b.Property<decimal>("SettlementAmount")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)")
+                        .HasColumnName("settlement_amount");
+
+                    b.Property<int>("SettlementCurrency")
+                        .HasColumnType("integer")
+                        .HasColumnName("settlement_currency");
+
+                    b.Property<int>("Stan")
+                        .HasColumnType("integer")
+                        .HasColumnName("stan");
+
+                    b.Property<decimal>("SurchargeAmount")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)")
+                        .HasColumnName("surcharge_amount");
+
+                    b.Property<decimal>("Tax1")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)")
+                        .HasColumnName("tax1");
+
+                    b.Property<decimal>("Tax2")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)")
+                        .HasColumnName("tax2");
+
+                    b.Property<string>("TerminalId")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("terminal_id");
+
+                    b.Property<string>("TerminalType")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("terminal_type");
+
+                    b.Property<long>("TraceId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("trace_id");
+
+                    b.Property<int>("TransactionDate")
+                        .HasColumnType("integer")
+                        .HasColumnName("transaction_date");
+
+                    b.Property<int>("TransactionTime")
+                        .HasColumnType("integer")
+                        .HasColumnName("transaction_time");
+
+                    b.Property<string>("TxnDescription")
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)")
+                        .HasColumnName("txn_description");
+
+                    b.Property<string>("TxnEffect")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("txn_effect");
+
+                    b.Property<string>("TxnInstallType")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("txn_install_type");
+
+                    b.Property<string>("TxnOrigin")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("txn_origin");
+
+                    b.Property<string>("TxnRegion")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("txn_region");
+
+                    b.Property<string>("TxnSource")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("txn_source");
+
+                    b.Property<string>("TxnStat")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("txn_stat");
+
+                    b.Property<DateTime?>("UpdateDate")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("update_date");
+
+                    b.Property<int>("ValueDate")
+                        .HasColumnType("integer")
+                        .HasColumnName("value_date");
+
+                    b.HasKey("Id")
+                        .HasName("pk_card_msc_detail");
+
+                    b.HasIndex("Arn")
+                        .HasDatabaseName("ix_card_msc_detail_arn");
+
+                    b.HasIndex("CardNo")
+                        .HasDatabaseName("ix_card_msc_detail_card_no");
+
+                    b.HasIndex("IngestionFileLineId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_card_msc_detail_file_line_id");
+
+                    b.HasIndex("OceanTxnGuid")
+                        .HasDatabaseName("ix_card_msc_detail_ocean_txn_guid");
+
+                    b.HasIndex("Rrn")
+                        .HasDatabaseName("ix_card_msc_detail_rrn");
+
+                    b.ToTable("card_msc_detail", "ingestion");
+                });
+
+            modelBuilder.Entity("LinkPara.Card.Domain.Entities.FileIngestion.Persistence.IngestionCardVisaDetail", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<int>("AcquirerId")
+                        .HasColumnType("integer")
+                        .HasColumnName("acquirer_id");
+
+                    b.Property<string>("Arn")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("arn");
+
+                    b.Property<string>("BankingTxnCode")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("banking_txn_code");
+
+                    b.Property<decimal>("BcPoint")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)")
+                        .HasColumnName("bc_point");
+
+                    b.Property<decimal>("BcPointAmount")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)")
+                        .HasColumnName("bc_point_amount");
+
+                    b.Property<decimal>("BillingAmount")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)")
+                        .HasColumnName("billing_amount");
+
+                    b.Property<int>("BillingCurrency")
+                        .HasColumnType("integer")
+                        .HasColumnName("billing_currency");
+
+                    b.Property<string>("BranchId")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("branch_id");
+
+                    b.Property<decimal>("CardHolderBillingAmount")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)")
+                        .HasColumnName("cardholder_billing_amount");
+
+                    b.Property<int>("CardHolderBillingCurrency")
+                        .HasColumnType("integer")
+                        .HasColumnName("cardholder_billing_currency");
+
+                    b.Property<string>("CardNo")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("card_no");
+
+                    b.Property<decimal>("CashbackAmount")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)")
+                        .HasColumnName("cashback_amount");
+
+                    b.Property<decimal>("CcPoint")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)")
+                        .HasColumnName("cc_point");
+
+                    b.Property<decimal>("CcPointAmount")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)")
+                        .HasColumnName("cc_point_amount");
+
+                    b.Property<string>("ChannelCode")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("channel_code");
+
+                    b.Property<DateTime>("CreateDate")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("create_date");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("created_by");
+
+                    b.Property<int>("EndOfDayDate")
+                        .HasColumnType("integer")
+                        .HasColumnName("end_of_day_date");
+
+                    b.Property<string>("FinancialType")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("financial_type");
+
+                    b.Property<Guid>("IngestionFileLineId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("file_line_id");
+
+                    b.Property<int>("InstallCount")
+                        .HasColumnType("integer")
+                        .HasColumnName("install_count");
+
+                    b.Property<int>("InstallOrder")
+                        .HasColumnType("integer")
+                        .HasColumnName("install_order");
+
+                    b.Property<string>("IsSuccessfulTxn")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("is_successful_txn");
+
+                    b.Property<string>("IsTxnSettle")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("is_txn_settle");
+
+                    b.Property<string>("LastModifiedBy")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("last_modified_by");
+
+                    b.Property<decimal>("McPoint")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)")
+                        .HasColumnName("mc_point");
+
+                    b.Property<decimal>("McPointAmount")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)")
+                        .HasColumnName("mc_point_amount");
+
+                    b.Property<int>("Mcc")
+                        .HasColumnType("integer")
+                        .HasColumnName("mcc");
+
+                    b.Property<string>("MemberRefNo")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("member_ref_no");
+
+                    b.Property<string>("MerchantCity")
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)")
+                        .HasColumnName("merchant_city");
+
+                    b.Property<string>("MerchantCountry")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("merchant_country");
+
+                    b.Property<string>("MerchantId")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("merchant_id");
+
+                    b.Property<string>("MerchantName")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)")
+                        .HasColumnName("merchant_name");
+
+                    b.Property<string>("MerchantState")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("merchant_state");
+
+                    b.Property<long>("OceanMainTxnGuid")
+                        .HasColumnType("bigint")
+                        .HasColumnName("ocean_main_txn_guid");
+
+                    b.Property<long>("OceanTxnGuid")
+                        .HasColumnType("bigint")
+                        .HasColumnName("ocean_txn_guid");
+
+                    b.Property<string>("OperatorCode")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("operator_code");
+
+                    b.Property<decimal>("OriginalAmount")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)")
+                        .HasColumnName("original_amount");
+
+                    b.Property<int>("OriginalCurrency")
+                        .HasColumnType("integer")
+                        .HasColumnName("original_currency");
+
+                    b.Property<int>("Otc")
+                        .HasColumnType("integer")
+                        .HasColumnName("otc");
+
+                    b.Property<int>("Ots")
+                        .HasColumnType("integer")
+                        .HasColumnName("ots");
+
+                    b.Property<string>("PointType")
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("point_type");
+
+                    b.Property<string>("ProvisionCode")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("provision_code");
+
+                    b.Property<string>("RecordStatus")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("record_status");
+
+                    b.Property<string>("ResponseCode")
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("response_code");
+
+                    b.Property<string>("Rrn")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("rrn");
+
+                    b.Property<int>("SecurityLevelIndicator")
+                        .HasColumnType("integer")
+                        .HasColumnName("security_level_indicator");
+
+                    b.Property<decimal>("SettlementAmount")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)")
+                        .HasColumnName("settlement_amount");
+
+                    b.Property<int>("SettlementCurrency")
+                        .HasColumnType("integer")
+                        .HasColumnName("settlement_currency");
+
+                    b.Property<int>("Stan")
+                        .HasColumnType("integer")
+                        .HasColumnName("stan");
+
+                    b.Property<decimal>("SurchargeAmount")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)")
+                        .HasColumnName("surcharge_amount");
+
+                    b.Property<decimal>("Tax1")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)")
+                        .HasColumnName("tax1");
+
+                    b.Property<decimal>("Tax2")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)")
+                        .HasColumnName("tax2");
+
+                    b.Property<string>("TerminalId")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("terminal_id");
+
+                    b.Property<string>("TerminalType")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("terminal_type");
+
+                    b.Property<long>("TraceId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("trace_id");
+
+                    b.Property<int>("TransactionDate")
+                        .HasColumnType("integer")
+                        .HasColumnName("transaction_date");
+
+                    b.Property<int>("TransactionTime")
+                        .HasColumnType("integer")
+                        .HasColumnName("transaction_time");
+
+                    b.Property<string>("TxnDescription")
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)")
+                        .HasColumnName("txn_description");
+
+                    b.Property<string>("TxnEffect")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("txn_effect");
+
+                    b.Property<string>("TxnInstallType")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("txn_install_type");
+
+                    b.Property<string>("TxnOrigin")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("txn_origin");
+
+                    b.Property<string>("TxnRegion")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("txn_region");
+
+                    b.Property<string>("TxnSource")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("txn_source");
+
+                    b.Property<string>("TxnStat")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("txn_stat");
+
+                    b.Property<DateTime?>("UpdateDate")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("update_date");
+
+                    b.Property<int>("ValueDate")
+                        .HasColumnType("integer")
+                        .HasColumnName("value_date");
+
+                    b.HasKey("Id")
+                        .HasName("pk_card_visa_detail");
+
+                    b.HasIndex("Arn")
+                        .HasDatabaseName("ix_card_visa_detail_arn");
+
+                    b.HasIndex("CardNo")
+                        .HasDatabaseName("ix_card_visa_detail_card_no");
+
+                    b.HasIndex("IngestionFileLineId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_card_visa_detail_file_line_id");
+
+                    b.HasIndex("OceanTxnGuid")
+                        .HasDatabaseName("ix_card_visa_detail_ocean_txn_guid");
+
+                    b.HasIndex("Rrn")
+                        .HasDatabaseName("ix_card_visa_detail_rrn");
+
+                    b.ToTable("card_visa_detail", "ingestion");
+                });
+
+            modelBuilder.Entity("LinkPara.Card.Domain.Entities.FileIngestion.Persistence.IngestionClearingBkmDetail", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Arn")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("arn");
+
+                    b.Property<string>("CardAcceptorId")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("card_acceptor_id");
+
+                    b.Property<string>("CardDci")
+                        .HasMaxLength(8)
+                        .HasColumnType("character varying(8)")
+                        .HasColumnName("card_dci");
+
+                    b.Property<string>("CardNo")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("card_no");
+
+                    b.Property<decimal>("CashbackAmount")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)")
+                        .HasColumnName("cashback_amount");
+
+                    b.Property<long>("ClrNo")
+                        .HasColumnType("bigint")
+                        .HasColumnName("clr_no");
+
+                    b.Property<string>("ControlStat")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("control_stat");
+
+                    b.Property<DateTime>("CreateDate")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("create_date");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("created_by");
+
+                    b.Property<decimal>("DestinationAmount")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)")
+                        .HasColumnName("destination_amount");
+
+                    b.Property<int>("DestinationCurrency")
+                        .HasColumnType("integer")
+                        .HasColumnName("destination_currency");
+
+                    b.Property<string>("DisputeCode")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("dispute_code");
+
+                    b.Property<string>("FileId")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("file_id");
+
+                    b.Property<string>("FunctionCode")
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("function_code");
+
+                    b.Property<Guid>("IngestionFileLineId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("file_line_id");
+
+                    b.Property<string>("IoDate")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("io_date");
+
+                    b.Property<string>("IoFlag")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("io_flag");
+
+                    b.Property<string>("LastModifiedBy")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("last_modified_by");
+
+                    b.Property<string>("MccCode")
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("mcc_code");
+
+                    b.Property<string>("MerchantCity")
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)")
+                        .HasColumnName("merchant_city");
+
+                    b.Property<string>("MerchantName")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)")
+                        .HasColumnName("merchant_name");
+
+                    b.Property<int>("MicrofilmNumber")
+                        .HasColumnType("integer")
+                        .HasColumnName("microfilm_number");
+
+                    b.Property<string>("Mtid")
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("mtid");
+
+                    b.Property<long>("OceanTxnGuid")
+                        .HasColumnType("bigint")
+                        .HasColumnName("ocean_txn_guid");
+
+                    b.Property<string>("ProcessCode")
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("process_code");
+
+                    b.Property<string>("ProvisionCode")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("provision_code");
+
+                    b.Property<string>("ReasonCode")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("reason_code");
+
+                    b.Property<string>("RecordStatus")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("record_status");
+
+                    b.Property<decimal>("ReimbursementAmount")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)")
+                        .HasColumnName("reimbursement_amount");
+
+                    b.Property<string>("ReimbursementAttribute")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("reimbursement_attribute");
+
+                    b.Property<string>("Reserved")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)")
+                        .HasColumnName("reserved");
+
+                    b.Property<string>("Rrn")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("rrn");
+
+                    b.Property<decimal>("SourceAmount")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)")
+                        .HasColumnName("source_amount");
+
+                    b.Property<int>("SourceCurrency")
+                        .HasColumnType("integer")
+                        .HasColumnName("source_currency");
+
+                    b.Property<int>("TxnDate")
+                        .HasColumnType("integer")
+                        .HasColumnName("txn_date");
+
+                    b.Property<int>("TxnTime")
+                        .HasColumnType("integer")
+                        .HasColumnName("txn_time");
+
+                    b.Property<string>("TxnType")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("txn_type");
+
+                    b.Property<DateTime?>("UpdateDate")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("update_date");
+
+                    b.HasKey("Id")
+                        .HasName("pk_clearing_bkm_detail");
+
+                    b.HasIndex("Arn")
+                        .HasDatabaseName("ix_clearing_bkm_detail_arn");
+
+                    b.HasIndex("CardNo")
+                        .HasDatabaseName("ix_clearing_bkm_detail_card_no");
+
+                    b.HasIndex("IngestionFileLineId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_clearing_bkm_detail_file_line_id");
+
+                    b.HasIndex("OceanTxnGuid")
+                        .HasDatabaseName("ix_clearing_bkm_detail_ocean_txn_guid");
+
+                    b.HasIndex("Rrn")
+                        .HasDatabaseName("ix_clearing_bkm_detail_rrn");
+
+                    b.ToTable("clearing_bkm_detail", "ingestion");
+                });
+
+            modelBuilder.Entity("LinkPara.Card.Domain.Entities.FileIngestion.Persistence.IngestionClearingMscDetail", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("AncillaryTransactionAmount")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("ancillary_transaction_amount");
+
+                    b.Property<string>("AncillaryTransactionCode")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("ancillary_transaction_code");
+
+                    b.Property<string>("Arn")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("arn");
+
+                    b.Property<string>("CardAcceptorId")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("card_acceptor_id");
+
+                    b.Property<string>("CardDci")
+                        .HasMaxLength(8)
+                        .HasColumnType("character varying(8)")
+                        .HasColumnName("card_dci");
+
+                    b.Property<string>("CardNo")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("card_no");
+
+                    b.Property<decimal>("CashbackAmount")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)")
+                        .HasColumnName("cashback_amount");
+
+                    b.Property<long>("ClrNo")
+                        .HasColumnType("bigint")
+                        .HasColumnName("clr_no");
+
+                    b.Property<string>("ControlStat")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("control_stat");
+
+                    b.Property<DateTime>("CreateDate")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("create_date");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("created_by");
+
+                    b.Property<decimal>("DestinationAmount")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)")
+                        .HasColumnName("destination_amount");
+
+                    b.Property<int>("DestinationCurrency")
+                        .HasColumnType("integer")
+                        .HasColumnName("destination_currency");
+
+                    b.Property<string>("DisputeCode")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("dispute_code");
+
+                    b.Property<string>("FileId")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("file_id");
+
+                    b.Property<string>("FunctionCode")
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("function_code");
+
+                    b.Property<Guid>("IngestionFileLineId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("file_line_id");
+
+                    b.Property<string>("IoDate")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("io_date");
+
+                    b.Property<string>("IoFlag")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("io_flag");
+
+                    b.Property<string>("LastModifiedBy")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("last_modified_by");
+
+                    b.Property<string>("MccCode")
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("mcc_code");
+
+                    b.Property<string>("MerchantCity")
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)")
+                        .HasColumnName("merchant_city");
+
+                    b.Property<string>("MerchantName")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)")
+                        .HasColumnName("merchant_name");
+
+                    b.Property<int>("MicrofilmNumber")
+                        .HasColumnType("integer")
+                        .HasColumnName("microfilm_number");
+
+                    b.Property<string>("Mtid")
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("mtid");
+
+                    b.Property<long>("OceanTxnGuid")
+                        .HasColumnType("bigint")
+                        .HasColumnName("ocean_txn_guid");
+
+                    b.Property<string>("ProcessCode")
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("process_code");
+
+                    b.Property<string>("ProvisionCode")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("provision_code");
+
+                    b.Property<string>("ReasonCode")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("reason_code");
+
+                    b.Property<string>("RecordStatus")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("record_status");
+
+                    b.Property<decimal>("ReimbursementAmount")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)")
+                        .HasColumnName("reimbursement_amount");
+
+                    b.Property<string>("ReimbursementAttribute")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("reimbursement_attribute");
+
+                    b.Property<string>("Reserved")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)")
+                        .HasColumnName("reserved");
+
+                    b.Property<string>("ReversalIndicator")
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("reversal_indicator");
+
+                    b.Property<string>("Rrn")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("rrn");
+
+                    b.Property<decimal>("SourceAmount")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)")
+                        .HasColumnName("source_amount");
+
+                    b.Property<int>("SourceCurrency")
+                        .HasColumnType("integer")
+                        .HasColumnName("source_currency");
+
+                    b.Property<int>("TxnDate")
+                        .HasColumnType("integer")
+                        .HasColumnName("txn_date");
+
+                    b.Property<int>("TxnTime")
+                        .HasColumnType("integer")
+                        .HasColumnName("txn_time");
+
+                    b.Property<string>("TxnType")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("txn_type");
+
+                    b.Property<DateTime?>("UpdateDate")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("update_date");
+
+                    b.HasKey("Id")
+                        .HasName("pk_clearing_msc_detail");
+
+                    b.HasIndex("Arn")
+                        .HasDatabaseName("ix_clearing_msc_detail_arn");
+
+                    b.HasIndex("CardNo")
+                        .HasDatabaseName("ix_clearing_msc_detail_card_no");
+
+                    b.HasIndex("IngestionFileLineId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_clearing_msc_detail_file_line_id");
+
+                    b.HasIndex("OceanTxnGuid")
+                        .HasDatabaseName("ix_clearing_msc_detail_ocean_txn_guid");
+
+                    b.HasIndex("Rrn")
+                        .HasDatabaseName("ix_clearing_msc_detail_rrn");
+
+                    b.ToTable("clearing_msc_detail", "ingestion");
+                });
+
+            modelBuilder.Entity("LinkPara.Card.Domain.Entities.FileIngestion.Persistence.IngestionClearingVisaDetail", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Arn")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("arn");
+
+                    b.Property<string>("CardAcceptorId")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("card_acceptor_id");
+
+                    b.Property<string>("CardDci")
+                        .HasMaxLength(8)
+                        .HasColumnType("character varying(8)")
+                        .HasColumnName("card_dci");
+
+                    b.Property<string>("CardNo")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("card_no");
+
+                    b.Property<decimal>("CashbackAmount")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)")
+                        .HasColumnName("cashback_amount");
+
+                    b.Property<long>("ClrNo")
+                        .HasColumnType("bigint")
+                        .HasColumnName("clr_no");
+
+                    b.Property<string>("ControlStat")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("control_stat");
+
+                    b.Property<DateTime>("CreateDate")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("create_date");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("created_by");
+
+                    b.Property<decimal>("DestinationAmount")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)")
+                        .HasColumnName("destination_amount");
+
+                    b.Property<int>("DestinationCurrency")
+                        .HasColumnType("integer")
+                        .HasColumnName("destination_currency");
+
+                    b.Property<string>("DisputeCode")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("dispute_code");
+
+                    b.Property<string>("FileId")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("file_id");
+
+                    b.Property<Guid>("IngestionFileLineId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("file_line_id");
+
+                    b.Property<string>("IoDate")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("io_date");
+
+                    b.Property<string>("IoFlag")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("io_flag");
+
+                    b.Property<string>("LastModifiedBy")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("last_modified_by");
+
+                    b.Property<string>("MccCode")
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("mcc_code");
+
+                    b.Property<string>("MerchantCity")
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)")
+                        .HasColumnName("merchant_city");
+
+                    b.Property<string>("MerchantName")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)")
+                        .HasColumnName("merchant_name");
+
+                    b.Property<int>("MicrofilmNumber")
+                        .HasColumnType("integer")
+                        .HasColumnName("microfilm_number");
+
+                    b.Property<long>("OceanTxnGuid")
+                        .HasColumnType("bigint")
+                        .HasColumnName("ocean_txn_guid");
+
+                    b.Property<string>("ProvisionCode")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("provision_code");
+
+                    b.Property<string>("ReasonCode")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("reason_code");
+
+                    b.Property<string>("RecordStatus")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("record_status");
+
+                    b.Property<decimal>("ReimbursementAmount")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)")
+                        .HasColumnName("reimbursement_amount");
+
+                    b.Property<string>("ReimbursementAttribute")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("reimbursement_attribute");
+
+                    b.Property<string>("Reserved")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)")
+                        .HasColumnName("reserved");
+
+                    b.Property<string>("Rrn")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("rrn");
+
+                    b.Property<decimal>("SourceAmount")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)")
+                        .HasColumnName("source_amount");
+
+                    b.Property<int>("SourceCurrency")
+                        .HasColumnType("integer")
+                        .HasColumnName("source_currency");
+
+                    b.Property<string>("Tc")
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("tc");
+
+                    b.Property<int>("TxnDate")
+                        .HasColumnType("integer")
+                        .HasColumnName("txn_date");
+
+                    b.Property<int>("TxnTime")
+                        .HasColumnType("integer")
+                        .HasColumnName("txn_time");
+
+                    b.Property<string>("TxnType")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("txn_type");
+
+                    b.Property<DateTime?>("UpdateDate")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("update_date");
+
+                    b.Property<string>("UsageCode")
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("usage_code");
+
+                    b.HasKey("Id")
+                        .HasName("pk_clearing_visa_detail");
+
+                    b.HasIndex("Arn")
+                        .HasDatabaseName("ix_clearing_visa_detail_arn");
+
+                    b.HasIndex("CardNo")
+                        .HasDatabaseName("ix_clearing_visa_detail_card_no");
+
+                    b.HasIndex("IngestionFileLineId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_clearing_visa_detail_file_line_id");
+
+                    b.HasIndex("OceanTxnGuid")
+                        .HasDatabaseName("ix_clearing_visa_detail_ocean_txn_guid");
+
+                    b.HasIndex("Rrn")
+                        .HasDatabaseName("ix_clearing_visa_detail_rrn");
+
+                    b.ToTable("clearing_visa_detail", "ingestion");
+                });
+
             modelBuilder.Entity("LinkPara.Card.Domain.Entities.FileIngestion.Persistence.IngestionFile", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1923,6 +5309,123 @@ namespace LinkPara.Card.Infrastructure.Persistence.Migrations.PostgreSql
                     b.ToTable("review", "reconciliation");
                 });
 
+            modelBuilder.Entity("LinkPara.Card.Domain.Entities.Archive.ArchiveIngestionFileLine", b =>
+                {
+                    b.HasOne("LinkPara.Card.Domain.Entities.FileIngestion.Persistence.IngestionCardBkmDetail", "CardBkmDetail")
+                        .WithMany()
+                        .HasForeignKey("CardBkmDetailId")
+                        .HasConstraintName("fk_ingestion_file_line_card_bkm_detail_card_bkm_detail_id");
+
+                    b.HasOne("LinkPara.Card.Domain.Entities.FileIngestion.Persistence.IngestionCardMscDetail", "CardMscDetail")
+                        .WithMany()
+                        .HasForeignKey("CardMscDetailId")
+                        .HasConstraintName("fk_ingestion_file_line_card_msc_detail_card_msc_detail_id");
+
+                    b.HasOne("LinkPara.Card.Domain.Entities.FileIngestion.Persistence.IngestionCardVisaDetail", "CardVisaDetail")
+                        .WithMany()
+                        .HasForeignKey("CardVisaDetailId")
+                        .HasConstraintName("fk_ingestion_file_line_card_visa_detail_card_visa_detail_id");
+
+                    b.HasOne("LinkPara.Card.Domain.Entities.FileIngestion.Persistence.IngestionClearingBkmDetail", "ClearingBkmDetail")
+                        .WithMany()
+                        .HasForeignKey("ClearingBkmDetailId")
+                        .HasConstraintName("fk_ingestion_file_line_clearing_bkm_detail_clearing_bkm_detail");
+
+                    b.HasOne("LinkPara.Card.Domain.Entities.FileIngestion.Persistence.IngestionClearingMscDetail", "ClearingMscDetail")
+                        .WithMany()
+                        .HasForeignKey("ClearingMscDetailId")
+                        .HasConstraintName("fk_ingestion_file_line_clearing_msc_detail_clearing_msc_detail");
+
+                    b.HasOne("LinkPara.Card.Domain.Entities.FileIngestion.Persistence.IngestionClearingVisaDetail", "ClearingVisaDetail")
+                        .WithMany()
+                        .HasForeignKey("ClearingVisaDetailId")
+                        .HasConstraintName("fk_ingestion_file_line_clearing_visa_detail_clearing_visa_deta");
+
+                    b.Navigation("CardBkmDetail");
+
+                    b.Navigation("CardMscDetail");
+
+                    b.Navigation("CardVisaDetail");
+
+                    b.Navigation("ClearingBkmDetail");
+
+                    b.Navigation("ClearingMscDetail");
+
+                    b.Navigation("ClearingVisaDetail");
+                });
+
+            modelBuilder.Entity("LinkPara.Card.Domain.Entities.FileIngestion.Persistence.IngestionCardBkmDetail", b =>
+                {
+                    b.HasOne("LinkPara.Card.Domain.Entities.FileIngestion.Persistence.IngestionFileLine", "IngestionFileLine")
+                        .WithOne("CardBkmDetail")
+                        .HasForeignKey("LinkPara.Card.Domain.Entities.FileIngestion.Persistence.IngestionCardBkmDetail", "IngestionFileLineId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_card_bkm_detail_file_line_file_line_id");
+
+                    b.Navigation("IngestionFileLine");
+                });
+
+            modelBuilder.Entity("LinkPara.Card.Domain.Entities.FileIngestion.Persistence.IngestionCardMscDetail", b =>
+                {
+                    b.HasOne("LinkPara.Card.Domain.Entities.FileIngestion.Persistence.IngestionFileLine", "IngestionFileLine")
+                        .WithOne("CardMscDetail")
+                        .HasForeignKey("LinkPara.Card.Domain.Entities.FileIngestion.Persistence.IngestionCardMscDetail", "IngestionFileLineId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_card_msc_detail_file_line_file_line_id");
+
+                    b.Navigation("IngestionFileLine");
+                });
+
+            modelBuilder.Entity("LinkPara.Card.Domain.Entities.FileIngestion.Persistence.IngestionCardVisaDetail", b =>
+                {
+                    b.HasOne("LinkPara.Card.Domain.Entities.FileIngestion.Persistence.IngestionFileLine", "IngestionFileLine")
+                        .WithOne("CardVisaDetail")
+                        .HasForeignKey("LinkPara.Card.Domain.Entities.FileIngestion.Persistence.IngestionCardVisaDetail", "IngestionFileLineId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_card_visa_detail_file_line_file_line_id");
+
+                    b.Navigation("IngestionFileLine");
+                });
+
+            modelBuilder.Entity("LinkPara.Card.Domain.Entities.FileIngestion.Persistence.IngestionClearingBkmDetail", b =>
+                {
+                    b.HasOne("LinkPara.Card.Domain.Entities.FileIngestion.Persistence.IngestionFileLine", "IngestionFileLine")
+                        .WithOne("ClearingBkmDetail")
+                        .HasForeignKey("LinkPara.Card.Domain.Entities.FileIngestion.Persistence.IngestionClearingBkmDetail", "IngestionFileLineId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_clearing_bkm_detail_file_line_file_line_id");
+
+                    b.Navigation("IngestionFileLine");
+                });
+
+            modelBuilder.Entity("LinkPara.Card.Domain.Entities.FileIngestion.Persistence.IngestionClearingMscDetail", b =>
+                {
+                    b.HasOne("LinkPara.Card.Domain.Entities.FileIngestion.Persistence.IngestionFileLine", "IngestionFileLine")
+                        .WithOne("ClearingMscDetail")
+                        .HasForeignKey("LinkPara.Card.Domain.Entities.FileIngestion.Persistence.IngestionClearingMscDetail", "IngestionFileLineId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_clearing_msc_detail_file_line_file_line_id");
+
+                    b.Navigation("IngestionFileLine");
+                });
+
+            modelBuilder.Entity("LinkPara.Card.Domain.Entities.FileIngestion.Persistence.IngestionClearingVisaDetail", b =>
+                {
+                    b.HasOne("LinkPara.Card.Domain.Entities.FileIngestion.Persistence.IngestionFileLine", "IngestionFileLine")
+                        .WithOne("ClearingVisaDetail")
+                        .HasForeignKey("LinkPara.Card.Domain.Entities.FileIngestion.Persistence.IngestionClearingVisaDetail", "IngestionFileLineId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_clearing_visa_detail_file_line_file_line_id");
+
+                    b.Navigation("IngestionFileLine");
+                });
+
             modelBuilder.Entity("LinkPara.Card.Domain.Entities.FileIngestion.Persistence.IngestionFileLine", b =>
                 {
                     b.HasOne("LinkPara.Card.Domain.Entities.FileIngestion.Persistence.IngestionFile", "IngestionFile")
@@ -2056,6 +5559,21 @@ namespace LinkPara.Card.Infrastructure.Persistence.Migrations.PostgreSql
                     b.Navigation("IngestionFileLine");
 
                     b.Navigation("Operation");
+                });
+
+            modelBuilder.Entity("LinkPara.Card.Domain.Entities.FileIngestion.Persistence.IngestionFileLine", b =>
+                {
+                    b.Navigation("CardBkmDetail");
+
+                    b.Navigation("CardMscDetail");
+
+                    b.Navigation("CardVisaDetail");
+
+                    b.Navigation("ClearingBkmDetail");
+
+                    b.Navigation("ClearingMscDetail");
+
+                    b.Navigation("ClearingVisaDetail");
                 });
 #pragma warning restore 612, 618
         }

@@ -136,22 +136,32 @@ internal sealed class ArchiveService : IArchiveService
 
             foreach (var candidateId in candidateIds)
             {
-                ArchiveRunItemResult item;
-                try
+                ArchiveRunItemResult item = null!;
+                var maxAttempts = _options.Defaults.MaxRetryPerFile!.Value + 1;
+
+                for (var attempt = 1; attempt <= maxAttempts; attempt++)
                 {
-                    item = await executor.ExecuteAsync(candidateId, cancellationToken);
-                }
-                catch (Exception ex)
-                {
-                    var mappedError = _errorMapper.MapException(ex, "ARCHIVE_EXECUTE", ingestionFileId: candidateId);
-                    errors.Add(mappedError);
-                    item = new ArchiveRunItemResult
+                    try
                     {
-                        IngestionFileId = candidateId,
-                        Status = "Failed",
-                        Message = mappedError.Message,
-                        FailureReasons = new List<string> { "ARCHIVE_EXECUTION_FAILED" }
-                    };
+                        item = await executor.ExecuteAsync(candidateId, cancellationToken);
+                    }
+                    catch (Exception ex)
+                    {
+                        var mappedError = _errorMapper.MapException(ex, "ARCHIVE_EXECUTE", ingestionFileId: candidateId);
+                        errors.Add(mappedError);
+                        item = new ArchiveRunItemResult
+                        {
+                            IngestionFileId = candidateId,
+                            Status = "Failed",
+                            Message = mappedError.Message,
+                            FailureReasons = new List<string> { "ARCHIVE_EXECUTION_FAILED" }
+                        };
+                    }
+
+                    if (item.Status != "Failed" || attempt >= maxAttempts)
+                        break;
+
+                    await Task.Delay(TimeSpan.FromSeconds(_options.Defaults.RetryDelaySeconds!.Value), cancellationToken);
                 }
 
                 response.Items.Add(item);

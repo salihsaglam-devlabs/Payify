@@ -22,6 +22,11 @@ public class RejectCommandValidator : AbstractValidator<RejectCommand>
             RuleFor(x => x.Request.Comment)
                 .NotEmpty()
                 .WithMessage(localizer.GetString("Validation.RejectCommentRequired").Value);
+
+            RuleFor(x => x.Request.Comment)
+                .MaximumLength(2000)
+                .When(x => x.Request.Comment is not null)
+                .WithMessage(localizer.GetString("Validation.CommentMaxLength").Value);
         });
     }
 }

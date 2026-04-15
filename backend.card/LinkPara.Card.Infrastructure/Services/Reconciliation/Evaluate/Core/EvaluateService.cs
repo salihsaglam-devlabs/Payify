@@ -424,7 +424,7 @@ internal sealed class EvaluateService : IEvaluateService
                 Branch = operation.Branch,
                 Status = status,
                 RetryCount = 0,
-                MaxRetries = 5,
+                MaxRetries = _options.Evaluate.OperationMaxRetries!.Value,
                 IdempotencyKey = ResolveIdempotencyKey(transactionFileDataId, sequence, operation)
             });
         }

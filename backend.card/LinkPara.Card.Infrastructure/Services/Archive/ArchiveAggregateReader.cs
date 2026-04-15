@@ -104,6 +104,36 @@ internal sealed class ArchiveAggregateReader
             return snapshot;
         }
 
+        snapshot.Counts.IngestionCardVisaDetailCount = await _dbContext.IngestionCardVisaDetails
+            .AsNoTracking()
+            .Where(x => fileLineIds.Contains(x.IngestionFileLineId))
+            .CountAsync(cancellationToken);
+
+        snapshot.Counts.IngestionCardMscDetailCount = await _dbContext.IngestionCardMscDetails
+            .AsNoTracking()
+            .Where(x => fileLineIds.Contains(x.IngestionFileLineId))
+            .CountAsync(cancellationToken);
+
+        snapshot.Counts.IngestionCardBkmDetailCount = await _dbContext.IngestionCardBkmDetails
+            .AsNoTracking()
+            .Where(x => fileLineIds.Contains(x.IngestionFileLineId))
+            .CountAsync(cancellationToken);
+
+        snapshot.Counts.IngestionClearingVisaDetailCount = await _dbContext.IngestionClearingVisaDetails
+            .AsNoTracking()
+            .Where(x => fileLineIds.Contains(x.IngestionFileLineId))
+            .CountAsync(cancellationToken);
+
+        snapshot.Counts.IngestionClearingMscDetailCount = await _dbContext.IngestionClearingMscDetails
+            .AsNoTracking()
+            .Where(x => fileLineIds.Contains(x.IngestionFileLineId))
+            .CountAsync(cancellationToken);
+
+        snapshot.Counts.IngestionClearingBkmDetailCount = await _dbContext.IngestionClearingBkmDetails
+            .AsNoTracking()
+            .Where(x => fileLineIds.Contains(x.IngestionFileLineId))
+            .CountAsync(cancellationToken);
+
         snapshot.Counts.ReconciliationEvaluationCount = await _dbContext.ReconciliationEvaluations
             .AsNoTracking()
             .Where(x => fileLineIds.Contains(x.FileLineId))

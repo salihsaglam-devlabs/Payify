@@ -31,17 +31,19 @@ using LinkPara.Card.Application.Commons.Models.FileIngestion.Contracts.Responses
 using LinkPara.SharedModels.Exceptions;
 using IngestionFileLineEntity = LinkPara.Card.Domain.Entities.FileIngestion.Persistence.IngestionFileLine;
 using IngestionFileEntity = LinkPara.Card.Domain.Entities.FileIngestion.Persistence.IngestionFile;
+using LinkPara.Card.Domain.Entities.FileIngestion.Persistence;
 
 namespace LinkPara.Card.Infrastructure.Services.FileIngestion.Orchestration;
 
 public class FileIngestionOrchestrator : IFileIngestionService
 {
-    private const int QueryBatchSize = 5_000;
+    private const int QueryBatchSize = 10_000;
     private readonly CardDbContext _dbContext;
     private readonly IAuditStampService _auditStampService;
     private readonly IFileTransferClientResolver _fileTransferClientResolver;
     private readonly IFixedWidthRecordParser _fixedWidthRecordParser;
     private readonly IParsedRecordModelMapper _parsedRecordModelMapper;
+    private readonly IIngestionDetailEntityMapper _detailEntityMapper;
     private readonly FileIngestionOptions _options;
     private readonly IServiceScopeFactory _serviceScopeFactory;
     private readonly IIngestionErrorMapper _ingestionErrorMapper;
@@ -54,6 +56,7 @@ public class FileIngestionOrchestrator : IFileIngestionService
         IFileTransferClientResolver fileTransferClientResolver,
         IFixedWidthRecordParser fixedWidthRecordParser,
         IParsedRecordModelMapper parsedRecordModelMapper,
+        IIngestionDetailEntityMapper detailEntityMapper,
         IOptions<FileIngestionOptions> options,
         IServiceScopeFactory serviceScopeFactory,
         IIngestionErrorMapper ingestionErrorMapper,
@@ -65,6 +68,7 @@ public class FileIngestionOrchestrator : IFileIngestionService
         _fileTransferClientResolver = fileTransferClientResolver;
         _fixedWidthRecordParser = fixedWidthRecordParser;
         _parsedRecordModelMapper = parsedRecordModelMapper;
+        _detailEntityMapper = detailEntityMapper;
         _options = options.Value;
         _serviceScopeFactory = serviceScopeFactory;
         _ingestionErrorMapper = ingestionErrorMapper;
@@ -975,6 +979,7 @@ public class FileIngestionOrchestrator : IFileIngestionService
                         row.RetryCount += 1;
                         row.Message = _localizer.Get("FileIngestion.ReprocessedSuccessfully");
                         ApplyCorrelation(row, profileKey, GetFileTypeFromProfileKey(profileKey), parsed.ParsedDataModel);
+                        _detailEntityMapper.AttachTypedDetail(row, profileKey, parsed.ParsedDataModel);
                     }
                     catch (Exception ex)
                     {
@@ -993,6 +998,7 @@ public class FileIngestionOrchestrator : IFileIngestionService
                 }
 
                 _auditStampService.StampForUpdate(failedRows.Cast<AuditEntity>());
+                StampTypedDetails(failedRows);
                 await _dbContext.SaveChangesAsync(cancellationToken);
                 _dbContext.ChangeTracker.Clear();
             }
@@ -1054,119 +1060,136 @@ public class FileIngestionOrchestrator : IFileIngestionService
 
         string? archiveErrorMessage = null;
         var auditStamp = _auditStampService.CreateStamp();
+        const int maxArchiveAttempts = 3;
 
-        try
+        for (var archiveAttempt = 1; archiveAttempt <= maxArchiveAttempts; archiveAttempt++)
         {
-            var targetTransferClient = _fileTransferClientResolver.Create(
-                ResolveTargetSourceType(),
-                FileTransferEndpointType.Target);
-
-            var profileKey = BuildProfileKey(file.FileType, file.ContentType);
-
-            Stream targetStream;
-            try
-            {
-                targetStream = await targetTransferClient.OpenWriteAsync(
-                    profileKey,
-                    sourceFile.Name,
-                    FileTransferEndpointType.Target,
-                    cancellationToken);
-            }
-            catch (Exception ex)
-            {
-                var error = _ingestionErrorMapper.MapIOError(ex, fileName: sourceFile.Name);
-                error.Step = "ARCHIVE_STREAM_OPEN_TARGET";
-                error.Detail = _localizer.Get("FileIngestion.Detail.ArchiveStreamOpenTargetFailed");
-                errors.Add(error);
-                throw;
-            }
-
-            Stream sourceStream;
-            try
-            {
-                sourceStream = await sourceTransferClient.OpenReadAsync(sourceFile, cancellationToken);
-            }
-            catch (Exception ex)
-            {
-                var error = _ingestionErrorMapper.MapIOError(ex, fileName: sourceFile.Name);
-                error.Step = "ARCHIVE_STREAM_OPEN_SOURCE";
-                error.Detail = _localizer.Get("FileIngestion.Detail.ArchiveStreamOpenSourceFailed");
-                errors.Add(error);
-                throw;
-            }
+            var errorCountBeforeAttempt = errors.Count;
+            archiveErrorMessage = null;
 
             try
             {
-                await sourceStream.CopyToAsync(targetStream, cancellationToken);
-                await targetStream.FlushAsync(cancellationToken);
-            }
-            catch (Exception ex)
-            {
-                var error = _ingestionErrorMapper.MapIOError(ex, fileName: sourceFile.Name);
-                error.Step = "ARCHIVE_STREAM_COPY";
-                error.Detail = _localizer.Get("FileIngestion.Detail.ArchiveStreamCopyFailed");
-                errors.Add(error);
-                throw;
-            }
-            finally
-            {
-                await targetStream.DisposeAsync();
-                await sourceStream.DisposeAsync();
-            }
+                var targetTransferClient = _fileTransferClientResolver.Create(
+                    ResolveTargetSourceType(),
+                    FileTransferEndpointType.Target);
 
-            try
-            {
-                var affectedRows = await _dbContext.IngestionFiles
-                    .Where(x => x.Id == transactionFileId)
-                    .ExecuteUpdateAsync(
-                        setters => setters
-                            .SetProperty(x => x.IsArchived, true)
-                            .SetProperty(x => x.UpdateDate, auditStamp.Timestamp)
-                            .SetProperty(x => x.LastModifiedBy, auditStamp.UserId),
-                        cancellationToken);
+                var profileKey = BuildProfileKey(file.FileType, file.ContentType);
 
-                if (affectedRows != 1)
+                Stream targetStream;
+                try
                 {
-                    throw new FileIngestionArchiveStatusUpdateRowMismatchException(
-                        _localizer.Get("FileIngestion.ArchiveStatusUpdateRowMismatch", affectedRows, transactionFileId));
+                    targetStream = await targetTransferClient.OpenWriteAsync(
+                        profileKey,
+                        sourceFile.Name,
+                        FileTransferEndpointType.Target,
+                        cancellationToken);
+                }
+                catch (Exception ex)
+                {
+                    var error = _ingestionErrorMapper.MapIOError(ex, fileName: sourceFile.Name);
+                    error.Step = "ARCHIVE_STREAM_OPEN_TARGET";
+                    error.Detail = _localizer.Get("FileIngestion.Detail.ArchiveStreamOpenTargetFailed");
+                    errors.Add(error);
+                    throw;
                 }
 
-                _dbContext.ChangeTracker.Clear();
+                Stream sourceStream;
+                try
+                {
+                    sourceStream = await sourceTransferClient.OpenReadAsync(sourceFile, cancellationToken);
+                }
+                catch (Exception ex)
+                {
+                    var error = _ingestionErrorMapper.MapIOError(ex, fileName: sourceFile.Name);
+                    error.Step = "ARCHIVE_STREAM_OPEN_SOURCE";
+                    error.Detail = _localizer.Get("FileIngestion.Detail.ArchiveStreamOpenSourceFailed");
+                    errors.Add(error);
+                    throw;
+                }
+
+                try
+                {
+                    await sourceStream.CopyToAsync(targetStream, cancellationToken);
+                    await targetStream.FlushAsync(cancellationToken);
+                }
+                catch (Exception ex)
+                {
+                    var error = _ingestionErrorMapper.MapIOError(ex, fileName: sourceFile.Name);
+                    error.Step = "ARCHIVE_STREAM_COPY";
+                    error.Detail = _localizer.Get("FileIngestion.Detail.ArchiveStreamCopyFailed");
+                    errors.Add(error);
+                    throw;
+                }
+                finally
+                {
+                    await targetStream.DisposeAsync();
+                    await sourceStream.DisposeAsync();
+                }
+
+                try
+                {
+                    var affectedRows = await _dbContext.IngestionFiles
+                        .Where(x => x.Id == transactionFileId)
+                        .ExecuteUpdateAsync(
+                            setters => setters
+                                .SetProperty(x => x.IsArchived, true)
+                                .SetProperty(x => x.UpdateDate, auditStamp.Timestamp)
+                                .SetProperty(x => x.LastModifiedBy, auditStamp.UserId),
+                            cancellationToken);
+
+                    if (affectedRows != 1)
+                    {
+                        throw new FileIngestionArchiveStatusUpdateRowMismatchException(
+                            _localizer.Get("FileIngestion.ArchiveStatusUpdateRowMismatch", affectedRows, transactionFileId));
+                    }
+
+                    _dbContext.ChangeTracker.Clear();
+                }
+                catch (Exception ex)
+                {
+                    var error = _ingestionErrorMapper.MapDatabaseError(ex, fileName: sourceFile.Name);
+                    error.Step = "ARCHIVE_MARK_COMPLETE";
+                    error.Detail = _localizer.Get("FileIngestion.Detail.ArchiveMarkCompleteFailed");
+                    errors.Add(error);
+                    throw;
+                }
+
+                break;
             }
             catch (Exception ex)
             {
-                var error = _ingestionErrorMapper.MapDatabaseError(ex, fileName: sourceFile.Name);
-                error.Step = "ARCHIVE_MARK_COMPLETE";
-                error.Detail = _localizer.Get("FileIngestion.Detail.ArchiveMarkCompleteFailed");
-                errors.Add(error);
-                throw;
-            }
-        }
-        catch (Exception ex)
-        {
-            archiveErrorMessage = $"[{ex.GetType().Name}] {ex.Message}";
-            if (ex.InnerException != null)
-                archiveErrorMessage += $" -> [{ex.InnerException.GetType().Name}] {ex.InnerException.Message}";
+                archiveErrorMessage = $"[{ex.GetType().Name}] {ex.Message}";
+                if (ex.InnerException != null)
+                    archiveErrorMessage += $" -> [{ex.InnerException.GetType().Name}] {ex.InnerException.Message}";
 
-            try
-            {
-                await _dbContext.IngestionFiles
-                    .Where(x => x.Id == transactionFileId)
-                    .ExecuteUpdateAsync(
-                        setters => setters
-                            .SetProperty(x => x.IsArchived, false)
-                            .SetProperty(x => x.UpdateDate, auditStamp.Timestamp)
-                            .SetProperty(x => x.LastModifiedBy, auditStamp.UserId),
-                        cancellationToken);
+                if (archiveAttempt < maxArchiveAttempts)
+                {
+                    errors.RemoveRange(errorCountBeforeAttempt, errors.Count - errorCountBeforeAttempt);
+                    _dbContext.ChangeTracker.Clear();
+                    await Task.Delay(TimeSpan.FromSeconds(2), cancellationToken);
+                    continue;
+                }
 
-                _dbContext.ChangeTracker.Clear();
-            }
-            catch (Exception exMarkIncomplete)
-            {
-                var error = _ingestionErrorMapper.MapDatabaseError(exMarkIncomplete, fileName: sourceFile.Name);
-                error.Step = "ARCHIVE_MARK_INCOMPLETE";
-                error.Detail = _localizer.Get("FileIngestion.Detail.ArchiveMarkIncompleteFailed");
-                errors.Add(error);
+                try
+                {
+                    await _dbContext.IngestionFiles
+                        .Where(x => x.Id == transactionFileId)
+                        .ExecuteUpdateAsync(
+                            setters => setters
+                                .SetProperty(x => x.IsArchived, false)
+                                .SetProperty(x => x.UpdateDate, auditStamp.Timestamp)
+                                .SetProperty(x => x.LastModifiedBy, auditStamp.UserId),
+                            cancellationToken);
+
+                    _dbContext.ChangeTracker.Clear();
+                }
+                catch (Exception exMarkIncomplete)
+                {
+                    var error = _ingestionErrorMapper.MapDatabaseError(exMarkIncomplete, fileName: sourceFile.Name);
+                    error.Step = "ARCHIVE_MARK_INCOMPLETE";
+                    error.Detail = _localizer.Get("FileIngestion.Detail.ArchiveMarkIncompleteFailed");
+                    errors.Add(error);
+                }
             }
         }
 
@@ -1273,6 +1296,7 @@ public class FileIngestionOrchestrator : IFileIngestionService
         if (_options.Processing.UseBulkInsert != true)
         {
             _auditStampService.StampForCreate(rows.Cast<AuditEntity>());
+            StampTypedDetails(rows);
             await _dbContext.IngestionFileLines.AddRangeAsync(rows, cancellationToken);
             await _dbContext.SaveChangesAsync(cancellationToken);
             return;
@@ -1283,18 +1307,65 @@ public class FileIngestionOrchestrator : IFileIngestionService
         if (providerName.Contains("SqlServer", StringComparison.OrdinalIgnoreCase))
         {
             await BulkInsertSqlServerAsync(rows, cancellationToken);
+            await PersistTypedDetailEntitiesAsync(rows, cancellationToken);
             return;
         }
 
         if (providerName.Contains("Npgsql", StringComparison.OrdinalIgnoreCase))
         {
             await BulkInsertPostgreSqlAsync(rows, cancellationToken);
+            await PersistTypedDetailEntitiesAsync(rows, cancellationToken);
             return;
         }
 
         _auditStampService.StampForCreate(rows.Cast<AuditEntity>());
+        StampTypedDetails(rows);
         await _dbContext.IngestionFileLines.AddRangeAsync(rows, cancellationToken);
         await _dbContext.SaveChangesAsync(cancellationToken);
+    }
+    
+    private async Task PersistTypedDetailEntitiesAsync(
+        IReadOnlyList<IngestionFileLineEntity> rows,
+        CancellationToken cancellationToken)
+    {
+        var details = new List<AuditEntity>();
+        foreach (var row in rows)
+        {
+            var detail = ExtractTypedDetail(row);
+            if (detail is null) continue;
+            ((IIngestionTypedDetail)detail).IngestionFileLineId = row.Id;
+            details.Add(detail);
+        }
+
+        if (details.Count == 0)
+            return;
+
+        _auditStampService.StampForCreate(details);
+        _dbContext.AddRange(details);
+        await _dbContext.SaveChangesAsync(cancellationToken);
+    }
+    
+    private void StampTypedDetails(IReadOnlyList<IngestionFileLineEntity> rows)
+    {
+        var details = rows
+            .Select(ExtractTypedDetail)
+            .Where(d => d is not null)
+            .Cast<AuditEntity>()
+            .ToList();
+
+        if (details.Count > 0)
+            _auditStampService.StampForCreate(details);
+    }
+
+    private static AuditEntity? ExtractTypedDetail(IngestionFileLineEntity row)
+    {
+        if (row.CardVisaDetail is not null) return row.CardVisaDetail;
+        if (row.CardMscDetail is not null) return row.CardMscDetail;
+        if (row.CardBkmDetail is not null) return row.CardBkmDetail;
+        if (row.ClearingVisaDetail is not null) return row.ClearingVisaDetail;
+        if (row.ClearingMscDetail is not null) return row.ClearingMscDetail;
+        if (row.ClearingBkmDetail is not null) return row.ClearingBkmDetail;
+        return null;
     }
 
     private async Task BulkInsertSqlServerAsync(
@@ -1343,7 +1414,8 @@ public class FileIngestionOrchestrator : IFileIngestionService
             using var bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.Default, transaction)
             {
                 DestinationTableName = destinationTableName,
-                BatchSize = rows.Count
+                BatchSize = rows.Count,
+                BulkCopyTimeout = 600
             };
 
             foreach (var property in properties)
@@ -1576,6 +1648,7 @@ public class FileIngestionOrchestrator : IFileIngestionService
             };
 
             ApplyCorrelation(entity, profileKey, fileType, parsed.ParsedDataModel);
+            _detailEntityMapper.AttachTypedDetail(entity, profileKey, parsed.ParsedDataModel);
             return entity;
         }
         catch (Exception ex)
@@ -2441,7 +2514,7 @@ public class FileIngestionOrchestrator : IFileIngestionService
             return;
         }
 
-        var buffer = ArrayPool<byte>.Shared.Rent(8192);
+        var buffer = ArrayPool<byte>.Shared.Rent(65_536);
 
         try
         {
@@ -2472,7 +2545,7 @@ public class FileIngestionOrchestrator : IFileIngestionService
         long startingLineNumber = 0,
         long startingByteOffset = 0)
     {
-        const int ioBufferSize = 64 * 1024;
+        const int ioBufferSize = 128 * 1024;
 
         var preamble = encoding.GetPreamble();
         if (preamble.Length > 0 && stream.CanSeek && stream.Position == 0 && stream.Length >= preamble.Length)
@@ -2605,7 +2678,7 @@ public class FileIngestionOrchestrator : IFileIngestionService
                 ?? throw new FileIngestionRecordNotFoundFromEndException(_localizer.Get("FileIngestion.RecordNotFoundFromEnd", recordPrefix));
         }
 
-        const int blockSize = 4096;
+        const int blockSize = 8192;
         var position = stream.Length;
         var carry = Array.Empty<byte>();
 
@@ -2674,7 +2747,7 @@ public class FileIngestionOrchestrator : IFileIngestionService
         [System.Runtime.CompilerServices.EnumeratorCancellation]
         CancellationToken cancellationToken)
     {
-        const int ioBufferSize = 64 * 1024;
+        const int ioBufferSize = 128 * 1024;
 
         var preamble = encoding.GetPreamble();
         if (preamble.Length > 0 && stream.CanSeek && stream.Position == 0 && stream.Length >= preamble.Length)

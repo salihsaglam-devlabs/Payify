@@ -118,6 +118,7 @@ public class EvaluateOptions
     public int? ChunkSize { get; set; }
     public int? ClaimTimeoutSeconds { get; set; }
     public int? ClaimRetryCount { get; set; }
+    public int? OperationMaxRetries { get; set; }
 }
 
 public class ExecuteRequest
@@ -293,9 +294,10 @@ public static class FileIngestionAndReconciliationPayloadFactory
                 IngestionFileIds = Array.Empty<Guid>(),
                 Options = new EvaluateOptions
                 {
-                    ChunkSize = 5000,
-                    ClaimTimeoutSeconds = 600,
-                    ClaimRetryCount = 5
+                    ChunkSize = 50_000,
+                    ClaimTimeoutSeconds = 1_800,
+                    ClaimRetryCount = 5,
+                    OperationMaxRetries = 5
                 }
             }
         },
@@ -311,8 +313,8 @@ public static class FileIngestionAndReconciliationPayloadFactory
                 OperationIds = Array.Empty<Guid>(),
                 Options = new ExecuteOptions
                 {
-                    MaxEvaluations = 50000,
-                    LeaseSeconds = 120
+                    MaxEvaluations = 500_000,
+                    LeaseSeconds = 900
                 }
             }
         }

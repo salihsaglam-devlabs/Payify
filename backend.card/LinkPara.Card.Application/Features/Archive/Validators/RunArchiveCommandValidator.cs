@@ -27,6 +27,11 @@ public class RunArchiveCommandValidator : AbstractValidator<RunArchiveCommand>
                 .InclusiveBetween(0, 10_000)
                 .When(x => x.Request.MaxFiles.HasValue)
                 .WithMessage(localizer.GetString("Validation.ArchiveMaxFilesRange").Value);
+
+            RuleFor(x => x.Request.BeforeDate)
+                .LessThanOrEqualTo(DateTime.UtcNow)
+                .When(x => x.Request.BeforeDate.HasValue)
+                .WithMessage(localizer.GetString("Validation.BeforeDateCannotBeFuture").Value);
         });
     }
 }

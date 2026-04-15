@@ -44,6 +44,18 @@ public class ArchiveAggregateCounts
 
     public int IngestionFileLineCount { get; set; }
 
+    public int IngestionCardVisaDetailCount { get; set; }
+
+    public int IngestionCardMscDetailCount { get; set; }
+
+    public int IngestionCardBkmDetailCount { get; set; }
+
+    public int IngestionClearingVisaDetailCount { get; set; }
+
+    public int IngestionClearingMscDetailCount { get; set; }
+
+    public int IngestionClearingBkmDetailCount { get; set; }
+
     public int ReconciliationEvaluationCount { get; set; }
 
     public int ReconciliationOperationCount { get; set; }

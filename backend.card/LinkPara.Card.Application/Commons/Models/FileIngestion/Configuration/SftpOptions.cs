@@ -4,11 +4,11 @@ namespace LinkPara.Card.Application.Commons.Models.FileIngestion.Configuration;
 
 public class SftpOptions
 {
-    public const int DefaultTimeoutSeconds = 60;
-    public const int DefaultOperationTimeoutSeconds = 120;
+    public const int DefaultTimeoutSeconds = 300;
+    public const int DefaultOperationTimeoutSeconds = 600;
     public const int DefaultPort = 22;
     public const int DefaultRetryCount = 3;
-    public const int DefaultRetryDelaySeconds = 5;
+    public const int DefaultRetryDelaySeconds = 10;
 
     public string Host { get; set; }
     public int? Port { get; set; }

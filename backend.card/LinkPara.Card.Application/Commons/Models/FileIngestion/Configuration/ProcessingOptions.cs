@@ -4,12 +4,12 @@ namespace LinkPara.Card.Application.Commons.Models.FileIngestion.Configuration;
 
 public class ProcessingOptions
 {
-    public const int DefaultBatchSize = 25_000;
-    public const int DefaultRetryBatchSize = 5_000;
+    public const int DefaultBatchSize = 50_000;
+    public const int DefaultRetryBatchSize = 10_000;
     public const int DefaultFailedRowMaxRetryCount = 3;
     public const bool DefaultUseBulkInsert = true;
     public const bool DefaultEnableParallelProcessing = true;
-    public const int DefaultMaxDegreeOfParallelism = 10;
+    public const int DefaultMaxDegreeOfParallelism = 8;
 
     public int? BatchSize { get; set; }
     public int? RetryBatchSize { get; set; }

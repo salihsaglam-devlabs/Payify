@@ -38,6 +38,13 @@ internal sealed class ArchiveVerifier
             return counts;
         }
 
+        counts.IngestionCardVisaDetailCount = await _dbContext.IngestionCardVisaDetails.CountAsync(x => fileLineIdQuery.Contains(x.IngestionFileLineId), cancellationToken);
+        counts.IngestionCardMscDetailCount = await _dbContext.IngestionCardMscDetails.CountAsync(x => fileLineIdQuery.Contains(x.IngestionFileLineId), cancellationToken);
+        counts.IngestionCardBkmDetailCount = await _dbContext.IngestionCardBkmDetails.CountAsync(x => fileLineIdQuery.Contains(x.IngestionFileLineId), cancellationToken);
+        counts.IngestionClearingVisaDetailCount = await _dbContext.IngestionClearingVisaDetails.CountAsync(x => fileLineIdQuery.Contains(x.IngestionFileLineId), cancellationToken);
+        counts.IngestionClearingMscDetailCount = await _dbContext.IngestionClearingMscDetails.CountAsync(x => fileLineIdQuery.Contains(x.IngestionFileLineId), cancellationToken);
+        counts.IngestionClearingBkmDetailCount = await _dbContext.IngestionClearingBkmDetails.CountAsync(x => fileLineIdQuery.Contains(x.IngestionFileLineId), cancellationToken);
+
         counts.ReconciliationEvaluationCount = await _dbContext.ReconciliationEvaluations.CountAsync(x => fileLineIdQuery.Contains(x.FileLineId), cancellationToken);
         counts.ReconciliationOperationCount = await _dbContext.ReconciliationOperations.CountAsync(x => fileLineIdQuery.Contains(x.FileLineId), cancellationToken);
         counts.ReconciliationReviewCount = await _dbContext.ReconciliationReviews.CountAsync(x => fileLineIdQuery.Contains(x.FileLineId), cancellationToken);
@@ -66,6 +73,19 @@ internal sealed class ArchiveVerifier
             return counts;
         }
 
+        counts.IngestionCardVisaDetailCount = await _dbContext.ArchiveIngestionCardVisaDetails
+            .CountAsync(x => archiveFileLineIdQuery.Contains(x.IngestionFileLineId), cancellationToken);
+        counts.IngestionCardMscDetailCount = await _dbContext.ArchiveIngestionCardMscDetails
+            .CountAsync(x => archiveFileLineIdQuery.Contains(x.IngestionFileLineId), cancellationToken);
+        counts.IngestionCardBkmDetailCount = await _dbContext.ArchiveIngestionCardBkmDetails
+            .CountAsync(x => archiveFileLineIdQuery.Contains(x.IngestionFileLineId), cancellationToken);
+        counts.IngestionClearingVisaDetailCount = await _dbContext.ArchiveIngestionClearingVisaDetails
+            .CountAsync(x => archiveFileLineIdQuery.Contains(x.IngestionFileLineId), cancellationToken);
+        counts.IngestionClearingMscDetailCount = await _dbContext.ArchiveIngestionClearingMscDetails
+            .CountAsync(x => archiveFileLineIdQuery.Contains(x.IngestionFileLineId), cancellationToken);
+        counts.IngestionClearingBkmDetailCount = await _dbContext.ArchiveIngestionClearingBkmDetails
+            .CountAsync(x => archiveFileLineIdQuery.Contains(x.IngestionFileLineId), cancellationToken);
+
         counts.ReconciliationEvaluationCount = await _dbContext.ArchiveReconciliationEvaluations
             .CountAsync(x => archiveFileLineIdQuery.Contains(x.FileLineId), cancellationToken);
         counts.ReconciliationOperationCount = await _dbContext.ArchiveReconciliationOperations
@@ -84,6 +104,12 @@ internal sealed class ArchiveVerifier
     {
         EnsureEqual(liveCounts.IngestionFileCount, archiveCounts.IngestionFileCount, "archive.ingestion_file");
         EnsureEqual(liveCounts.IngestionFileLineCount, archiveCounts.IngestionFileLineCount, "archive.ingestion_file_line");
+        EnsureEqual(liveCounts.IngestionCardVisaDetailCount, archiveCounts.IngestionCardVisaDetailCount, "archive.ingestion_card_visa_detail");
+        EnsureEqual(liveCounts.IngestionCardMscDetailCount, archiveCounts.IngestionCardMscDetailCount, "archive.ingestion_card_msc_detail");
+        EnsureEqual(liveCounts.IngestionCardBkmDetailCount, archiveCounts.IngestionCardBkmDetailCount, "archive.ingestion_card_bkm_detail");
+        EnsureEqual(liveCounts.IngestionClearingVisaDetailCount, archiveCounts.IngestionClearingVisaDetailCount, "archive.ingestion_clearing_visa_detail");
+        EnsureEqual(liveCounts.IngestionClearingMscDetailCount, archiveCounts.IngestionClearingMscDetailCount, "archive.ingestion_clearing_msc_detail");
+        EnsureEqual(liveCounts.IngestionClearingBkmDetailCount, archiveCounts.IngestionClearingBkmDetailCount, "archive.ingestion_clearing_bkm_detail");
         EnsureEqual(liveCounts.ReconciliationEvaluationCount, archiveCounts.ReconciliationEvaluationCount, "archive.reconciliation_evaluation");
         EnsureEqual(liveCounts.ReconciliationOperationCount, archiveCounts.ReconciliationOperationCount, "archive.reconciliation_operation");
         EnsureEqual(liveCounts.ReconciliationReviewCount, archiveCounts.ReconciliationReviewCount, "archive.reconciliation_review");
@@ -95,6 +121,12 @@ internal sealed class ArchiveVerifier
     {
         if (counts.IngestionFileCount != 0 ||
             counts.IngestionFileLineCount != 0 ||
+            counts.IngestionCardVisaDetailCount != 0 ||
+            counts.IngestionCardMscDetailCount != 0 ||
+            counts.IngestionCardBkmDetailCount != 0 ||
+            counts.IngestionClearingVisaDetailCount != 0 ||
+            counts.IngestionClearingMscDetailCount != 0 ||
+            counts.IngestionClearingBkmDetailCount != 0 ||
             counts.ReconciliationEvaluationCount != 0 ||
             counts.ReconciliationOperationCount != 0 ||
             counts.ReconciliationReviewCount != 0 ||

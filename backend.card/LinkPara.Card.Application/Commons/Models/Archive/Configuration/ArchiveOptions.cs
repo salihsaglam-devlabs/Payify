@@ -43,6 +43,8 @@ public class ArchiveDefaultOptions
     public const bool DefaultContinueOnError = false;
     public const bool DefaultUseConfiguredBeforeDateOnly = false;
     public const string DefaultDefaultBeforeDateStrategy = "RetentionDays";
+    public const int DefaultMaxRetryPerFile = 1;
+    public const int DefaultRetryDelaySeconds = 2;
 
     public int? PreviewLimit { get; set; }
 
@@ -54,6 +56,10 @@ public class ArchiveDefaultOptions
 
     public string DefaultBeforeDateStrategy { get; set; }
 
+    public int? MaxRetryPerFile { get; set; }
+
+    public int? RetryDelaySeconds { get; set; }
+
     public void ValidateAndApplyDefaults()
     {
         PreviewLimit ??= DefaultPreviewLimit;
@@ -63,11 +69,17 @@ public class ArchiveDefaultOptions
         DefaultBeforeDateStrategy = string.IsNullOrWhiteSpace(DefaultBeforeDateStrategy)
             ? DefaultDefaultBeforeDateStrategy
             : DefaultBeforeDateStrategy;
+        MaxRetryPerFile ??= DefaultMaxRetryPerFile;
+        RetryDelaySeconds ??= DefaultRetryDelaySeconds;
 
         if (PreviewLimit <= 0)
             throw new ArchivePreviewLimitInvalidException( $"Archive.Defaults.PreviewLimit must be positive. Current: {PreviewLimit}");
         if (MaxRunCount <= 0)
             throw new ArchiveMaxRunCountInvalidException( $"Archive.Defaults.MaxRunCount must be positive. Current: {MaxRunCount}");
+        if (MaxRetryPerFile < 0)
+            throw new ArchiveMaxRetryPerFileInvalidException($"Archive.Defaults.MaxRetryPerFile must be non-negative. Current: {MaxRetryPerFile}");
+        if (RetryDelaySeconds < 0)
+            throw new ArchiveRetryDelaySecondsInvalidException($"Archive.Defaults.RetryDelaySeconds must be non-negative. Current: {RetryDelaySeconds}");
     }
 
     [Obsolete("Use ValidateAndApplyDefaults() instead")]

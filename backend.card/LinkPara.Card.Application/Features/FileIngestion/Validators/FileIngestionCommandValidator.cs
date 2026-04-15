@@ -11,6 +11,18 @@ public class FileIngestionCommandValidator : AbstractValidator<FileIngestionComm
     {
         var localizer = factory.Create("Messages", "LinkPara.Card.API");
 
+        RuleFor(x => x.FileSourceType)
+            .IsInEnum()
+            .WithMessage(localizer.GetString("Validation.FileSourceTypeInvalid").Value);
+
+        RuleFor(x => x.FileType)
+            .IsInEnum()
+            .WithMessage(localizer.GetString("Validation.FileTypeInvalid").Value);
+
+        RuleFor(x => x.FileContentType)
+            .IsInEnum()
+            .WithMessage(localizer.GetString("Validation.FileContentTypeInvalid").Value);
+
         RuleFor(x => x.FilePath)
             .Must(path => string.IsNullOrWhiteSpace(path))
             .When(x => x.FileSourceType == FileSourceType.Remote)

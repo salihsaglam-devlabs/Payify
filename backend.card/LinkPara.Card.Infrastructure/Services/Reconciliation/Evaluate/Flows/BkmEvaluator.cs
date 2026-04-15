@@ -91,6 +91,24 @@ internal sealed class BkmEvaluator : IEvaluator
             return await EvaluateExpiredTransactionAsync(result, bkmContext, detail, payifyStatus, cancellationToken);
         }
 
+        if (HasStatusResponseCodeAnomaly(detail))
+        {
+            result.SetNote(note: _localizer.Get("Reconciliation.Bkm.DataConsistencyAnomalyNote"));
+            result.AddAutoOperation(
+                OperationCodes.RaiseAlert,
+                _localizer.Get("Reconciliation.Bkm.DataConsistencyAnomalyAlertOp"),
+                BkmSnapshotBuilder.Create(bkmContext, OperationCodes.RaiseAlert, "DATA_ANOMALY"));
+            result.AddManualOperation(
+                OperationCodes.CreateManualReview,
+                _localizer.Get("Reconciliation.Bkm.DataConsistencyAnomalyReviewOp"),
+                code => BkmSnapshotBuilder.Create(bkmContext, code, "DATA_ANOMALY"),
+                approveCode: OperationCodes.RecoverMissingCardRow,
+                approveNote: _localizer.Get("Reconciliation.Bkm.RequeueForReEvaluation"),
+                rejectCode: OperationCodes.RejectUnmatchedFlow,
+                rejectNote: _localizer.Get("Reconciliation.Bkm.CloseRecordManually"));
+            return result;
+        }
+
         if (IsSuccessful(detail))
         {
             return EvaluateSuccessfulTransaction(result, bkmContext, detail, payifyStatus, latestEmoney);
@@ -668,28 +686,42 @@ internal sealed class BkmEvaluator : IEvaluator
         if (transactions.Count > 1) return PayifyStatus.Ambiguous;
 
         var tx = transactions[0];
-        return string.Equals(tx.TransactionStatus, "Failed", StringComparison.OrdinalIgnoreCase)
-            ? PayifyStatus.Failed
-            : PayifyStatus.Successful;
+        var status = tx.TransactionStatus?.Trim();
+
+        if (string.Equals(status, "Failed", StringComparison.OrdinalIgnoreCase))
+            return PayifyStatus.Failed;
+
+        if (string.Equals(status, "Completed", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(status, "Success", StringComparison.OrdinalIgnoreCase))
+            return PayifyStatus.Successful;
+
+        return PayifyStatus.Ambiguous;
     }
 
     private static bool IsCancelOrReversal(CardBkmDetail detail)
         => detail.TxnStat is CardBkmTxnStat.Reverse or CardBkmTxnStat.Void;
 
     private static bool IsFailed(CardBkmDetail detail)
-        => detail.IsSuccessfulTxn == CardBkmIsSuccessfulTxn.Unsuccessful;
+        => detail.IsSuccessfulTxn == CardBkmIsSuccessfulTxn.Unsuccessful
+           && detail.ResponseCode != "00";
 
     private static bool IsExpired(CardBkmDetail detail)
         => detail.TxnStat == CardBkmTxnStat.Expired;
 
     private static bool IsSuccessful(CardBkmDetail detail)
-        => detail.IsSuccessfulTxn == CardBkmIsSuccessfulTxn.Successful;
+        => detail.IsSuccessfulTxn == CardBkmIsSuccessfulTxn.Successful
+           && detail.ResponseCode == "00";
 
     private static bool IsSettled(CardBkmDetail detail)
         => detail.IsTxnSettle == CardBkmIsTxnSettle.Settled;
 
+    private static bool HasStatusResponseCodeAnomaly(CardBkmDetail detail)
+        => (detail.IsSuccessfulTxn == CardBkmIsSuccessfulTxn.Unsuccessful && detail.ResponseCode == "00")
+           || (detail.IsSuccessfulTxn == CardBkmIsSuccessfulTxn.Successful && detail.ResponseCode != "00");
+
     private static bool IsRefund(CardBkmDetail detail)
-        => detail.TxnEffect == CardBkmTxnEffect.Credit;
+        => string.Equals(detail.BankingTxnCode?.Trim(), "Refund", StringComparison.OrdinalIgnoreCase)
+           || string.Equals(detail.BankingTxnCode?.Trim(), "ReferenceRefund", StringComparison.OrdinalIgnoreCase);
 
     private static bool IsLinkedRefund(CardBkmDetail detail)
         => detail.OceanMainTxnGuid > 0 && detail.OceanMainTxnGuid != detail.OceanTxnGuid;
@@ -703,8 +735,7 @@ internal sealed class BkmEvaluator : IEvaluator
            < decimal.Round(billingAmount, 2, MidpointRounding.AwayFromZero);
 
     private static bool HasFileLengthValidationFailure(BkmEvaluationContext context)
-        => !string.IsNullOrWhiteSpace(context.RootRow.Message)
-           && context.RootRow.Message.Contains("length", StringComparison.OrdinalIgnoreCase);
+        => context.RootRow.Status == FileRowStatus.Failed;
 
     private static DuplicateStatus ResolveDuplicateStatus(IngestionFileLine row)
     {

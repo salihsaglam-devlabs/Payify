@@ -77,6 +77,7 @@ public static class ApiErrorCode
     public const string ReconciliationEvaluateClaimTimeoutInvalid = _prefix + "076";
     public const string ReconciliationEvaluateClaimRetryInvalid = _prefix + "077";
     public const string ReconciliationAlertBatchSizeInvalid = _prefix + "078";
+    public const string ReconciliationEvaluateOperationMaxRetriesInvalid = _prefix + "079";
 
 
     // Archive — Configuration Validation
@@ -93,6 +94,8 @@ public static class ApiErrorCode
     public const string ArchivePrimaryKeyNotDefined = _prefix + "094";
     public const string ArchiveEntityTypeNotFound = _prefix + "095";
     public const string ArchiveUnsupportedBeforeDateStrategy = _prefix + "106";
+    public const string ArchiveMaxRetryPerFileInvalid = _prefix + "107";
+    public const string ArchiveRetryDelaySecondsInvalid = _prefix + "108";
 
     // FileIngestion — SFTP/FTP Transport
     public const string FileIngestionSftpRetryDelayInvalid = _prefix + "096";

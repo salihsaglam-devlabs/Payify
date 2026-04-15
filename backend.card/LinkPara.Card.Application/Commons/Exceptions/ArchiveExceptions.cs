@@ -113,3 +113,22 @@ public class ArchiveUnsupportedBeforeDateStrategyException : ApiException
     protected ArchiveUnsupportedBeforeDateStrategyException(SerializationInfo info, StreamingContext context) : base(info, context) { }
 }
 
+[Serializable]
+public class ArchiveMaxRetryPerFileInvalidException : ApiException
+{
+    public ArchiveMaxRetryPerFileInvalidException()
+        : base(ApiErrorCode.ArchiveMaxRetryPerFileInvalid, "MaxRetryPerFileInvalid") { }
+    public ArchiveMaxRetryPerFileInvalidException(string message)
+        : base(ApiErrorCode.ArchiveMaxRetryPerFileInvalid, message) { }
+    protected ArchiveMaxRetryPerFileInvalidException(SerializationInfo info, StreamingContext context) : base(info, context) { }
+}
+
+[Serializable]
+public class ArchiveRetryDelaySecondsInvalidException : ApiException
+{
+    public ArchiveRetryDelaySecondsInvalidException()
+        : base(ApiErrorCode.ArchiveRetryDelaySecondsInvalid, "RetryDelaySecondsInvalid") { }
+    public ArchiveRetryDelaySecondsInvalidException(string message)
+        : base(ApiErrorCode.ArchiveRetryDelaySecondsInvalid, message) { }
+    protected ArchiveRetryDelaySecondsInvalidException(SerializationInfo info, StreamingContext context) : base(info, context) { }
+}

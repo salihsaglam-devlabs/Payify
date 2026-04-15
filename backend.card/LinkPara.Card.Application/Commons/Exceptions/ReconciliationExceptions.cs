@@ -164,6 +164,16 @@ public class ReconciliationEvaluateClaimRetryInvalidException : ApiException
 }
 
 [Serializable]
+public class ReconciliationEvaluateOperationMaxRetriesInvalidException : ApiException
+{
+    public ReconciliationEvaluateOperationMaxRetriesInvalidException()
+        : base(ApiErrorCode.ReconciliationEvaluateOperationMaxRetriesInvalid, "EvaluateOperationMaxRetriesInvalid") { }
+    public ReconciliationEvaluateOperationMaxRetriesInvalidException(string message)
+        : base(ApiErrorCode.ReconciliationEvaluateOperationMaxRetriesInvalid, message) { }
+    protected ReconciliationEvaluateOperationMaxRetriesInvalidException(SerializationInfo info, StreamingContext context) : base(info, context) { }
+}
+
+[Serializable]
 public class ReconciliationAlertBatchSizeInvalidException : ApiException
 {
     public ReconciliationAlertBatchSizeInvalidException()

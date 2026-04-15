@@ -26,16 +26,24 @@ public class EvaluateCommandValidator : AbstractValidator<EvaluateCommand>
             When(x => x.Request.Options is not null, () =>
             {
                 RuleFor(x => x.Request.Options!.ChunkSize)
-                    .NotNull()
-                    .InclusiveBetween(100, 10_000);
+                    .InclusiveBetween(100, 10_000)
+                    .When(x => x.Request.Options!.ChunkSize.HasValue)
+                    .WithMessage(localizer.GetString("Validation.EvaluateChunkSizeRange").Value);
 
                 RuleFor(x => x.Request.Options!.ClaimTimeoutSeconds)
-                    .NotNull()
-                    .InclusiveBetween(30, 3600);
+                    .InclusiveBetween(30, 3600)
+                    .When(x => x.Request.Options!.ClaimTimeoutSeconds.HasValue)
+                    .WithMessage(localizer.GetString("Validation.EvaluateClaimTimeoutRange").Value);
 
                 RuleFor(x => x.Request.Options!.ClaimRetryCount)
-                    .NotNull()
-                    .InclusiveBetween(1, 10);
+                    .InclusiveBetween(1, 10)
+                    .When(x => x.Request.Options!.ClaimRetryCount.HasValue)
+                    .WithMessage(localizer.GetString("Validation.EvaluateClaimRetryCountRange").Value);
+
+                RuleFor(x => x.Request.Options!.OperationMaxRetries)
+                    .InclusiveBetween(0, 50)
+                    .When(x => x.Request.Options!.OperationMaxRetries.HasValue)
+                    .WithMessage(localizer.GetString("Validation.EvaluateOperationMaxRetriesRange").Value);
             });
         });
     }

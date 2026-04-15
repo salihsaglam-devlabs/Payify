@@ -12,12 +12,13 @@
     "RespondToContext": false
   },
   "Evaluate": {
-    "ChunkSize": 10000,
+    "ChunkSize": 50000,
     "ClaimRetryCount": 5,
-    "ClaimTimeoutSeconds": 900
+    "ClaimTimeoutSeconds": 1800,
+    "OperationMaxRetries": 5
   },
   "Execute": {
-    "LeaseSeconds": 300,
-    "MaxEvaluations": 100000
+    "LeaseSeconds": 900,
+    "MaxEvaluations": 500000
   }
 }

@@ -25,6 +25,13 @@ public class CardDbContext : BaseDbContext
     public DbSet<IngestionFile> IngestionFiles { get; set; }
     public DbSet<IngestionFileLine> IngestionFileLines { get; set; }
 
+    public DbSet<IngestionCardVisaDetail> IngestionCardVisaDetails { get; set; }
+    public DbSet<IngestionCardMscDetail> IngestionCardMscDetails { get; set; }
+    public DbSet<IngestionCardBkmDetail> IngestionCardBkmDetails { get; set; }
+    public DbSet<IngestionClearingVisaDetail> IngestionClearingVisaDetails { get; set; }
+    public DbSet<IngestionClearingMscDetail> IngestionClearingMscDetails { get; set; }
+    public DbSet<IngestionClearingBkmDetail> IngestionClearingBkmDetails { get; set; }
+
     public DbSet<ReconciliationEvaluation> ReconciliationEvaluations { get; set; }
     public DbSet<ReconciliationOperation> ReconciliationOperations { get; set; }
     public DbSet<ReconciliationReview> ReconciliationReviews { get; set; }
@@ -35,6 +42,13 @@ public class CardDbContext : BaseDbContext
 
     public DbSet<ArchiveIngestionFile> ArchiveIngestionFiles { get; set; }
     public DbSet<ArchiveIngestionFileLine> ArchiveIngestionFileLines { get; set; }
+
+    public DbSet<ArchiveIngestionCardVisaDetail> ArchiveIngestionCardVisaDetails { get; set; }
+    public DbSet<ArchiveIngestionCardMscDetail> ArchiveIngestionCardMscDetails { get; set; }
+    public DbSet<ArchiveIngestionCardBkmDetail> ArchiveIngestionCardBkmDetails { get; set; }
+    public DbSet<ArchiveIngestionClearingVisaDetail> ArchiveIngestionClearingVisaDetails { get; set; }
+    public DbSet<ArchiveIngestionClearingMscDetail> ArchiveIngestionClearingMscDetails { get; set; }
+    public DbSet<ArchiveIngestionClearingBkmDetail> ArchiveIngestionClearingBkmDetails { get; set; }
     public DbSet<ArchiveReconciliationEvaluation> ArchiveReconciliationEvaluations { get; set; }
     public DbSet<ArchiveReconciliationOperation> ArchiveReconciliationOperations { get; set; }
     public DbSet<ArchiveReconciliationReview> ArchiveReconciliationReviews { get; set; }
@@ -82,6 +96,13 @@ public class CardDbContext : BaseDbContext
         builder.Entity<IngestionFile>().ToTable("file", ingestionSchema);
         builder.Entity<IngestionFileLine>().ToTable("file_line", ingestionSchema);
 
+        builder.Entity<IngestionCardVisaDetail>().ToTable("card_visa_detail", ingestionSchema);
+        builder.Entity<IngestionCardMscDetail>().ToTable("card_msc_detail", ingestionSchema);
+        builder.Entity<IngestionCardBkmDetail>().ToTable("card_bkm_detail", ingestionSchema);
+        builder.Entity<IngestionClearingVisaDetail>().ToTable("clearing_visa_detail", ingestionSchema);
+        builder.Entity<IngestionClearingMscDetail>().ToTable("clearing_msc_detail", ingestionSchema);
+        builder.Entity<IngestionClearingBkmDetail>().ToTable("clearing_bkm_detail", ingestionSchema);
+
         builder.Entity<ReconciliationEvaluation>().ToTable("evaluation", reconSchema);
         builder.Entity<ReconciliationOperation>().ToTable("operation", reconSchema);
         builder.Entity<ReconciliationReview>().ToTable("review", reconSchema);
@@ -92,6 +113,14 @@ public class CardDbContext : BaseDbContext
 
         builder.Entity<ArchiveIngestionFile>().ToTable("ingestion_file", archiveSchema);
         builder.Entity<ArchiveIngestionFileLine>().ToTable("ingestion_file_line", archiveSchema);
+
+        builder.Entity<ArchiveIngestionCardVisaDetail>().ToTable("ingestion_card_visa_detail", archiveSchema);
+        builder.Entity<ArchiveIngestionCardMscDetail>().ToTable("ingestion_card_msc_detail", archiveSchema);
+        builder.Entity<ArchiveIngestionCardBkmDetail>().ToTable("ingestion_card_bkm_detail", archiveSchema);
+        builder.Entity<ArchiveIngestionClearingVisaDetail>().ToTable("ingestion_clearing_visa_detail", archiveSchema);
+        builder.Entity<ArchiveIngestionClearingMscDetail>().ToTable("ingestion_clearing_msc_detail", archiveSchema);
+        builder.Entity<ArchiveIngestionClearingBkmDetail>().ToTable("ingestion_clearing_bkm_detail", archiveSchema);
+
         builder.Entity<ArchiveReconciliationEvaluation>().ToTable("reconciliation_evaluation", archiveSchema);
         builder.Entity<ArchiveReconciliationOperation>().ToTable("reconciliation_operation", archiveSchema);
         builder.Entity<ArchiveReconciliationReview>().ToTable("reconciliation_review", archiveSchema);
@@ -113,6 +142,13 @@ public class CardDbContext : BaseDbContext
         builder.Entity<IngestionFile>().ToTable("File", ingestionSchema);
         builder.Entity<IngestionFileLine>().ToTable("FileLine", ingestionSchema);
 
+        builder.Entity<IngestionCardVisaDetail>().ToTable("CardVisaDetail", ingestionSchema);
+        builder.Entity<IngestionCardMscDetail>().ToTable("CardMscDetail", ingestionSchema);
+        builder.Entity<IngestionCardBkmDetail>().ToTable("CardBkmDetail", ingestionSchema);
+        builder.Entity<IngestionClearingVisaDetail>().ToTable("ClearingVisaDetail", ingestionSchema);
+        builder.Entity<IngestionClearingMscDetail>().ToTable("ClearingMscDetail", ingestionSchema);
+        builder.Entity<IngestionClearingBkmDetail>().ToTable("ClearingBkmDetail", ingestionSchema);
+
         builder.Entity<ReconciliationEvaluation>().ToTable("Evaluation", reconSchema);
         builder.Entity<ReconciliationOperation>().ToTable("Operation", reconSchema);
         builder.Entity<ReconciliationReview>().ToTable("Review", reconSchema);
@@ -123,6 +159,14 @@ public class CardDbContext : BaseDbContext
 
         builder.Entity<ArchiveIngestionFile>().ToTable("IngestionFile", archiveSchema);
         builder.Entity<ArchiveIngestionFileLine>().ToTable("IngestionFileLine", archiveSchema);
+
+        builder.Entity<ArchiveIngestionCardVisaDetail>().ToTable("IngestionCardVisaDetail", archiveSchema);
+        builder.Entity<ArchiveIngestionCardMscDetail>().ToTable("IngestionCardMscDetail", archiveSchema);
+        builder.Entity<ArchiveIngestionCardBkmDetail>().ToTable("IngestionCardBkmDetail", archiveSchema);
+        builder.Entity<ArchiveIngestionClearingVisaDetail>().ToTable("IngestionClearingVisaDetail", archiveSchema);
+        builder.Entity<ArchiveIngestionClearingMscDetail>().ToTable("IngestionClearingMscDetail", archiveSchema);
+        builder.Entity<ArchiveIngestionClearingBkmDetail>().ToTable("IngestionClearingBkmDetail", archiveSchema);
+
         builder.Entity<ArchiveReconciliationEvaluation>().ToTable("ReconciliationEvaluation", archiveSchema);
         builder.Entity<ArchiveReconciliationOperation>().ToTable("ReconciliationOperation", archiveSchema);
         builder.Entity<ArchiveReconciliationReview>().ToTable("ReconciliationReview", archiveSchema);

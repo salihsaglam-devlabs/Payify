@@ -165,6 +165,7 @@ public static class DependencyInjection
         services.AddScoped<IFileTransferClientResolver, FileTransferClientResolver>();
         services.AddScoped<IFixedWidthRecordParser, FixedWidthRecordParser>();
         services.AddScoped<IParsedRecordModelMapper, ParsedRecordModelMapper>();
+        services.AddScoped<IIngestionDetailEntityMapper, IngestionDetailEntityMapper>();
         services.AddScoped<IFileTransferClient, LocalFileTransferClient>();
         services.AddScoped<IFileTransferClient, FtpFileTransferClient>();
         services.AddScoped<IFileTransferClient, SftpFileTransferClient>();
@@ -242,13 +243,22 @@ public static class DependencyInjection
                         options => options
                             .UseSqlServer(connectionString, b => b
                                 .MigrationsAssembly(typeof(CardDbContext).Assembly.FullName)
-                                .EnableRetryOnFailure())
+                                .CommandTimeout(600)
+                                .EnableRetryOnFailure(
+                                    maxRetryCount: 5,
+                                    maxRetryDelay: TimeSpan.FromSeconds(30),
+                                    errorNumbersToAdd: null))
                             .UseQueryTrackingBehavior(QueryTrackingBehavior.NoTracking));
                 break;
             default:
                 AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
                 services.AddDbContext<CardDbContext>((sp, options) => options
-                    .UseNpgsql(connectionString, b => b.EnableRetryOnFailure())
+                    .UseNpgsql(connectionString, b => b
+                        .CommandTimeout(600)
+                        .EnableRetryOnFailure(
+                            maxRetryCount: 5,
+                            maxRetryDelay: TimeSpan.FromSeconds(30),
+                            errorCodesToAdd: null))
                     .UseSnakeCaseNamingConvention()
                     .UseQueryTrackingBehavior(QueryTrackingBehavior.NoTracking)
                     .AddInterceptors(sp.GetRequiredService<IDbCommandInterceptor>()));

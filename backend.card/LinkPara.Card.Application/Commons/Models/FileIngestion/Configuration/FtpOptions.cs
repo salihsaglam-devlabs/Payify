@@ -4,10 +4,10 @@ namespace LinkPara.Card.Application.Commons.Models.FileIngestion.Configuration;
 
 public class FtpOptions
 {
-    public const int DefaultTimeoutSeconds = 60;
+    public const int DefaultTimeoutSeconds = 300;
     public const int DefaultPort = 21;
     public const int DefaultRetryCount = 3;
-    public const int DefaultRetryDelaySeconds = 5;
+    public const int DefaultRetryDelaySeconds = 10;
 
     public string Host { get; set; }
     public int? Port { get; set; }

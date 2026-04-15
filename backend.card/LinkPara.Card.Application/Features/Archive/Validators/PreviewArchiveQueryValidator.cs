@@ -27,6 +27,11 @@ public class PreviewArchiveQueryValidator : AbstractValidator<PreviewArchiveQuer
                 .InclusiveBetween(0, 10_000)
                 .When(x => x.Request.Limit.HasValue)
                 .WithMessage(localizer.GetString("Validation.ArchivePreviewLimitRange").Value);
+
+            RuleFor(x => x.Request.BeforeDate)
+                .LessThanOrEqualTo(DateTime.UtcNow)
+                .When(x => x.Request.BeforeDate.HasValue)
+                .WithMessage(localizer.GetString("Validation.BeforeDateCannotBeFuture").Value);
         });
     }
 }

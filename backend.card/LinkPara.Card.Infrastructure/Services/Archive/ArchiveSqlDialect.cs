@@ -15,6 +15,12 @@ internal interface IArchiveSqlDialect
 {
     string BuildCopyIngestionFileSql();
     string BuildCopyIngestionFileLineSql();
+    string BuildCopyIngestionCardVisaDetailSql();
+    string BuildCopyIngestionCardMscDetailSql();
+    string BuildCopyIngestionCardBkmDetailSql();
+    string BuildCopyIngestionClearingVisaDetailSql();
+    string BuildCopyIngestionClearingMscDetailSql();
+    string BuildCopyIngestionClearingBkmDetailSql();
     string BuildCopyReconciliationEvaluationSql();
     string BuildCopyReconciliationOperationSql();
     string BuildCopyReconciliationReviewSql();
@@ -25,6 +31,12 @@ internal interface IArchiveSqlDialect
     string BuildDeleteReconciliationReviewSql();
     string BuildDeleteReconciliationOperationSql();
     string BuildDeleteReconciliationEvaluationSql();
+    string BuildDeleteIngestionCardVisaDetailSql();
+    string BuildDeleteIngestionCardMscDetailSql();
+    string BuildDeleteIngestionCardBkmDetailSql();
+    string BuildDeleteIngestionClearingVisaDetailSql();
+    string BuildDeleteIngestionClearingMscDetailSql();
+    string BuildDeleteIngestionClearingBkmDetailSql();
     string BuildDeleteIngestionFileLineSql();
     string BuildDeleteIngestionFileSql();
 }
@@ -37,6 +49,7 @@ internal sealed class ArchiveSqlDialect : IArchiveSqlDialect
     
     private const string FileLineIdProperty = nameof(ReconciliationEvaluation.FileLineId);
     private const string IngestionFileIdProperty = nameof(IngestionFileLine.IngestionFileId);
+    private const string IngestionFileLineIdProperty = nameof(IngestionCardVisaDetail.IngestionFileLineId);
 
     /// <summary>
     /// Archive copy sırasında kaynak satırdan kopyalanmak yerine parametre ile override edilecek kolonlar.
@@ -78,6 +91,24 @@ internal sealed class ArchiveSqlDialect : IArchiveSqlDialect
             $"WHERE s.{fk} = {FilterParamPlaceholder}");
     }
 
+    public string BuildCopyIngestionCardVisaDetailSql()
+        => BuildIngestionDetailCopySql<IngestionCardVisaDetail, ArchiveIngestionCardVisaDetail>();
+
+    public string BuildCopyIngestionCardMscDetailSql()
+        => BuildIngestionDetailCopySql<IngestionCardMscDetail, ArchiveIngestionCardMscDetail>();
+
+    public string BuildCopyIngestionCardBkmDetailSql()
+        => BuildIngestionDetailCopySql<IngestionCardBkmDetail, ArchiveIngestionCardBkmDetail>();
+
+    public string BuildCopyIngestionClearingVisaDetailSql()
+        => BuildIngestionDetailCopySql<IngestionClearingVisaDetail, ArchiveIngestionClearingVisaDetail>();
+
+    public string BuildCopyIngestionClearingMscDetailSql()
+        => BuildIngestionDetailCopySql<IngestionClearingMscDetail, ArchiveIngestionClearingMscDetail>();
+
+    public string BuildCopyIngestionClearingBkmDetailSql()
+        => BuildIngestionDetailCopySql<IngestionClearingBkmDetail, ArchiveIngestionClearingBkmDetail>();
+
     public string BuildCopyReconciliationEvaluationSql()
         => BuildReconCopySql<ReconciliationEvaluation, ArchiveReconciliationEvaluation>();
 
@@ -107,6 +138,24 @@ internal sealed class ArchiveSqlDialect : IArchiveSqlDialect
 
     public string BuildDeleteReconciliationEvaluationSql()
         => BuildReconDeleteSql<ReconciliationEvaluation>();
+
+    public string BuildDeleteIngestionCardVisaDetailSql()
+        => BuildIngestionDetailDeleteSql<IngestionCardVisaDetail>();
+
+    public string BuildDeleteIngestionCardMscDetailSql()
+        => BuildIngestionDetailDeleteSql<IngestionCardMscDetail>();
+
+    public string BuildDeleteIngestionCardBkmDetailSql()
+        => BuildIngestionDetailDeleteSql<IngestionCardBkmDetail>();
+
+    public string BuildDeleteIngestionClearingVisaDetailSql()
+        => BuildIngestionDetailDeleteSql<IngestionClearingVisaDetail>();
+
+    public string BuildDeleteIngestionClearingMscDetailSql()
+        => BuildIngestionDetailDeleteSql<IngestionClearingMscDetail>();
+
+    public string BuildDeleteIngestionClearingBkmDetailSql()
+        => BuildIngestionDetailDeleteSql<IngestionClearingBkmDetail>();
 
     public string BuildDeleteIngestionFileLineSql()
     {
@@ -138,6 +187,31 @@ internal sealed class ArchiveSqlDialect : IArchiveSqlDialect
     private string BuildReconDeleteSql<TEntity>() where TEntity : class
     {
         var fileLineIdCol = Col<TEntity>(FileLineIdProperty);
+        var fileLinePk = Pk<IngestionFileLine>();
+        var fileLineTable = Tbl<IngestionFileLine>();
+        var fileLineFileId = Col<IngestionFileLine>(IngestionFileIdProperty);
+
+        return $"DELETE FROM {Tbl<TEntity>()} WHERE {fileLineIdCol} IN (SELECT {fileLinePk} FROM {fileLineTable} WHERE {fileLineFileId} = {{0}});";
+    }
+
+    private string BuildIngestionDetailCopySql<TSource, TArchive>()
+        where TSource : class
+        where TArchive : class
+    {
+        var sourceFileLineId = Col<TSource>(IngestionFileLineIdProperty);
+        var fileLinePk = Pk<IngestionFileLine>();
+        var fileLineFileId = Col<IngestionFileLine>(IngestionFileIdProperty);
+        var fileLineTable = Tbl<IngestionFileLine>();
+
+        return BuildCopySql<TSource, TArchive>(
+            "s",
+            $"FROM {Tbl<TSource>()} s JOIN {fileLineTable} l ON l.{fileLinePk} = s.{sourceFileLineId}",
+            $"WHERE l.{fileLineFileId} = {FilterParamPlaceholder}");
+    }
+
+    private string BuildIngestionDetailDeleteSql<TEntity>() where TEntity : class
+    {
+        var fileLineIdCol = Col<TEntity>(IngestionFileLineIdProperty);
         var fileLinePk = Pk<IngestionFileLine>();
         var fileLineTable = Tbl<IngestionFileLine>();
         var fileLineFileId = Col<IngestionFileLine>(IngestionFileIdProperty);
