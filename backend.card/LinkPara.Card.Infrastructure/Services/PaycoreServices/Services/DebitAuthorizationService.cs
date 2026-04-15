@@ -81,12 +81,12 @@ namespace LinkPara.Card.Infrastructure.Services.PaycoreServices.Services
                 return GenerateDebitAuthResponse(command, null, TransactionResponseCodes.DisallowedCardTransaction, EmoneyResponseCodes.DisallowedCardTransaction7Msg);
             }
 
-            bool existingRecord = _dbContext.DebitAuthorization.Any(x => x.OceanTxnGUID == command.OceanTxnGUID &&
+            bool existingRecord = _dbContext.DebitAuthorization.Any(x => x.CorrelationID == command.CorrelationID &&
                         x.RequestType == TxnRequestTypes.NORMAL);
 
             if (existingRecord)
             {
-                _logger.LogError("Debit authorization dublicated transaction : {command.OceanTxnGUID}", command.OceanTxnGUID);
+                _logger.LogError("Debit authorization dublicated transaction : {command.CorrelationID}", command.CorrelationID);
                 return GenerateDebitAuthResponse(command, null, TransactionResponseCodes.McrDuplicatedTransaction, EmoneyResponseCodes.McrDuplicatedTransaction);
             }
 
@@ -120,6 +120,7 @@ namespace LinkPara.Card.Infrastructure.Services.PaycoreServices.Services
                 else
                 {
                     paycoreResponseCode = TransactionResponseCodes.SystemError96;
+                    paycoreResponseMsg = ex.Message;
                 }
                 _logger.LogError(paycoreResponseCode, ex);
             }
@@ -137,7 +138,7 @@ namespace LinkPara.Card.Infrastructure.Services.PaycoreServices.Services
             DebitAuthorizationResponse response = new DebitAuthorizationResponse();
             response.CorrelationID = command.CorrelationID;
 
-            if (txnResponse != null)
+            if (txnResponse != null && EmoneyResponseCodes.Approved.Equals(txnResponse.ResponseCode))
             {
                 response.BillingAmount = new PaycoreAmount();
                 response.BillingAmount.Amount = command.BillingAmount.Amount;
@@ -181,6 +182,11 @@ namespace LinkPara.Card.Infrastructure.Services.PaycoreServices.Services
             }
             else
             {
+                if(txnResponse != null && txnResponse.ResponseCode != null)
+                {
+                    responseCode = txnResponse.ResponseCode;
+                }
+
                 response.ResponseCode = responseCode;
                 response.ResponseMessage = responseMsg ?? EmoneyResponseCodes.SystemError96;
                 response.ResponseDescription = responseMsg ?? EmoneyResponseCodes.SystemError96Msg;
@@ -197,10 +203,10 @@ namespace LinkPara.Card.Infrastructure.Services.PaycoreServices.Services
                 updateBalanceRequest.Utid = command.OceanTxnGUID.ToString();
                 updateBalanceRequest.TransactionType = MapPaycoreTxnTypes(command.TransactionType);
 
-                if (command.TransactionType != TxnTypes.ATMCASHIN || command.TransactionType != TxnTypes.KKPT)
-                    updateBalanceRequest.TransactionDirection = EmoneyTransactionDirection.MoneyOut;
-                else
+                if (command.TransactionType == TxnTypes.ATMCASHIN || command.TransactionType == TxnTypes.KKPT)
                     updateBalanceRequest.TransactionDirection = EmoneyTransactionDirection.MoneyIn;
+                else
+                    updateBalanceRequest.TransactionDirection = EmoneyTransactionDirection.MoneyOut;
 
                 updateBalanceRequest.Channel = command.TerminalType + Delimiter + command.EntryType;
                 updateBalanceRequest.CurrencyCode = command.BillingAmount.CurrencyCode.ToString();
@@ -226,6 +232,25 @@ namespace LinkPara.Card.Infrastructure.Services.PaycoreServices.Services
 
                 var walletNumber = await _walletCardRepository.GetAll().FirstOrDefaultAsync(x => x.CardNumber == command.CardNo).Select(x => x.WalletNumber);
                 updateBalanceRequest.WalletNumber = walletNumber;
+
+                if (walletNumber == null)
+                {
+                    return new UpdateBalanceResponse
+                    {
+                        ResponseCode = TransactionResponseCodes.InvalidAccountNo
+                    };
+                }
+
+                var validationResponse = await _walletService.ValidateWalletAsync(new ValidateWalletRequest
+                {
+                    WalletNumber = walletNumber.ToString(),
+                    CurrencyCode = command.TransactionAmount.CurrencyCode.ToString()
+                });
+
+                if(validationResponse != null && !EmoneyResponseCodes.Approved.Equals(validationResponse.ResponseCode))
+                {
+                    return new UpdateBalanceResponse { ResponseCode = validationResponse.ResponseCode};
+                } 
 
                 if (command.RequestType == TxnRequestTypes.VOID || command.RequestType == TxnRequestTypes.REVERSAL)
                 {
