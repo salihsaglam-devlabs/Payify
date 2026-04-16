@@ -3,7 +3,7 @@ using System.Text.Json;
 using LinkPara.Card.Application.Commons.Extensions;
 using LinkPara.Card.Application.Commons.Helpers;
 using LinkPara.Card.Application.Commons.Models.Archive.Contracts.Responses;
-using LinkPara.Card.Domain.Entities.Archive;
+using LinkPara.Card.Domain.Entities.Archive.Persistence;
 using LinkPara.Card.Infrastructure.Persistence;
 using LinkPara.Card.Infrastructure.Services.Audit;
 using Microsoft.EntityFrameworkCore;

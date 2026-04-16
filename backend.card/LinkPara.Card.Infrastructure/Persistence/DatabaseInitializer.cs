@@ -59,7 +59,12 @@ public static class DatabaseInitializer
             try
             {
                 var sql = await File.ReadAllTextAsync(file);
-                await db.Database.ExecuteSqlRawAsync(sql);
+                var statements = SplitSqlStatements(sql);
+                foreach (var statement in statements)
+                {
+                    if (!string.IsNullOrWhiteSpace(statement))
+                        await db.Database.ExecuteSqlRawAsync(statement);
+                }
                 logger?.LogInformation("Applied SQL migration: {File}", fileName);
                 Console.WriteLine($"[SqlMigrations] Applied: {fileName}");
             }
@@ -271,5 +276,82 @@ public static class DatabaseInitializer
             return guard;
         }
         return createStmt;
+    }
+    
+    private static List<string> SplitSqlStatements(string sql)
+    {
+        var statements = new List<string>();
+        var current = new System.Text.StringBuilder();
+        var i = 0;
+
+        while (i < sql.Length)
+        {
+            var ch = sql[i];
+            
+            if (ch == '-' && i + 1 < sql.Length && sql[i + 1] == '-')
+            {
+                var end = sql.IndexOf('\n', i);
+                if (end < 0) end = sql.Length;
+                current.Append(sql, i, end - i + (end < sql.Length ? 1 : 0));
+                i = end < sql.Length ? end + 1 : end;
+                continue;
+            }
+            
+            if (ch == '\'')
+            {
+                current.Append(ch);
+                i++;
+                while (i < sql.Length)
+                {
+                    current.Append(sql[i]);
+                    if (sql[i] == '\'' && (i + 1 >= sql.Length || sql[i + 1] != '\''))
+                    { i++; break; }
+                    if (sql[i] == '\'' && i + 1 < sql.Length && sql[i + 1] == '\'')
+                    { current.Append(sql[i + 1]); i += 2; continue; }
+                    i++;
+                }
+                continue;
+            }
+            
+            if (ch == '$')
+            {
+                var tagEnd = sql.IndexOf('$', i + 1);
+                if (tagEnd > i)
+                {
+                    var tag = sql.Substring(i, tagEnd - i + 1);
+                    current.Append(tag);
+                    var closeIdx = sql.IndexOf(tag, tagEnd + 1, StringComparison.Ordinal);
+                    if (closeIdx > tagEnd)
+                    {
+                        current.Append(sql, tagEnd + 1, closeIdx - tagEnd - 1);
+                        current.Append(tag);
+                        i = closeIdx + tag.Length;
+                        continue;
+                    }
+                }
+                current.Append(ch);
+                i++;
+                continue;
+            }
+            
+            if (ch == ';')
+            {
+                var stmt = current.ToString().Trim();
+                if (stmt.Length > 0)
+                    statements.Add(stmt);
+                current.Clear();
+                i++;
+                continue;
+            }
+
+            current.Append(ch);
+            i++;
+        }
+
+        var last = current.ToString().Trim();
+        if (last.Length > 0)
+            statements.Add(last);
+
+        return statements;
     }
 }

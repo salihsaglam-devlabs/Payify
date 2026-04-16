@@ -38,23 +38,6 @@ public sealed class ReportingErrorMapper : IReportingErrorMapper
         };
     }
 
-    public ReconciliationErrorDetail Create(
-        string code,
-        string message,
-        string step,
-        string? detail = null,
-        string severity = "Error")
-    {
-        return new ReconciliationErrorDetail
-        {
-            Code = code,
-            Message = message,
-            Detail = detail,
-            Step = step,
-            Severity = severity
-        };
-    }
-
     private (string code, string message, string? detail) ClassifyException(Exception ex)
     {
         return ex switch

@@ -54,7 +54,6 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<Folder Include="Consumers\CronJobs\" />
 		<Folder Include="Persistence\Migrations\PostgreSql\" />
 		<Folder Include="Persistence\SqlMigrations\PostgreSql\" />
 	</ItemGroup>

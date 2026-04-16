@@ -10,12 +10,5 @@ public interface IReportingErrorMapper
         string step,
         string? detail = null,
         string? message = null);
-
-    ReconciliationErrorDetail Create(
-        string code,
-        string message,
-        string step,
-        string? detail = null,
-        string severity = "Error");
 }
 

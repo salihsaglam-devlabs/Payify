@@ -22,7 +22,1439 @@ namespace LinkPara.Card.Infrastructure.Persistence.Migrations.PostgreSql
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
-            modelBuilder.Entity("LinkPara.Card.Domain.Entities.Archive.ArchiveIngestionCardBkmDetail", b =>
+            modelBuilder.Entity("LinkPara.Card.Application.Commons.Models.Reporting.Dtos.ArchiveBacklogTrendDto", b =>
+                {
+                    b.Property<long>("ArchiveRunCount")
+                        .HasColumnType("bigint")
+                        .HasColumnName("archive_run_count");
+
+                    b.Property<long>("FailedRunCount")
+                        .HasColumnType("bigint")
+                        .HasColumnName("failed_run_count");
+
+                    b.Property<long>("OtherRunCount")
+                        .HasColumnType("bigint")
+                        .HasColumnName("other_run_count");
+
+                    b.Property<DateTime>("ReportDate")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("report_date");
+
+                    b.Property<long>("SuccessRunCount")
+                        .HasColumnType("bigint")
+                        .HasColumnName("success_run_count");
+
+                    b.ToTable((string)null);
+
+                    b.ToView("vw_archive_backlog_trend", "reporting");
+                });
+
+            modelBuilder.Entity("LinkPara.Card.Application.Commons.Models.Reporting.Dtos.ArchiveEligibilityDto", b =>
+                {
+                    b.Property<decimal>("AgeDays")
+                        .HasColumnType("numeric")
+                        .HasColumnName("age_days");
+
+                    b.Property<string>("ArchiveEligibilityStatus")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("archive_eligibility_status");
+
+                    b.Property<string>("ContentType")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("content_type");
+
+                    b.Property<DateTime>("FileCreatedAt")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("file_created_at");
+
+                    b.Property<Guid>("FileId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("file_id");
+
+                    b.Property<string>("FileName")
+                        .HasColumnType("text")
+                        .HasColumnName("file_name");
+
+                    b.Property<string>("FileStatus")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("file_status");
+
+                    b.Property<string>("FileType")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("file_type");
+
+                    b.Property<bool>("IsArchived")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_archived");
+
+                    b.Property<long>("ReconOpenLineCount")
+                        .HasColumnType("bigint")
+                        .HasColumnName("recon_open_line_count");
+
+                    b.Property<long>("ReconSuccessLineCount")
+                        .HasColumnType("bigint")
+                        .HasColumnName("recon_success_line_count");
+
+                    b.Property<long>("TotalReconLineCount")
+                        .HasColumnType("bigint")
+                        .HasColumnName("total_recon_line_count");
+
+                    b.ToTable((string)null);
+
+                    b.ToView("vw_archive_eligibility", "reporting");
+                });
+
+            modelBuilder.Entity("LinkPara.Card.Application.Commons.Models.Reporting.Dtos.ArchiveRetentionSnapshotDto", b =>
+                {
+                    b.Property<long>("ActiveFileCount")
+                        .HasColumnType("bigint")
+                        .HasColumnName("active_file_count");
+
+                    b.Property<long>("ArchiveTableAlertCount")
+                        .HasColumnType("bigint")
+                        .HasColumnName("archive_table_alert_count");
+
+                    b.Property<long>("ArchiveTableEvaluationCount")
+                        .HasColumnType("bigint")
+                        .HasColumnName("archive_table_evaluation_count");
+
+                    b.Property<long>("ArchiveTableExecutionCount")
+                        .HasColumnType("bigint")
+                        .HasColumnName("archive_table_execution_count");
+
+                    b.Property<long>("ArchiveTableFileCount")
+                        .HasColumnType("bigint")
+                        .HasColumnName("archive_table_file_count");
+
+                    b.Property<long>("ArchiveTableFileLineCount")
+                        .HasColumnType("bigint")
+                        .HasColumnName("archive_table_file_line_count");
+
+                    b.Property<long>("ArchiveTableOperationCount")
+                        .HasColumnType("bigint")
+                        .HasColumnName("archive_table_operation_count");
+
+                    b.Property<long>("ArchiveTableReviewCount")
+                        .HasColumnType("bigint")
+                        .HasColumnName("archive_table_review_count");
+
+                    b.Property<long>("ArchivedMarkedFileCount")
+                        .HasColumnType("bigint")
+                        .HasColumnName("archived_marked_file_count");
+
+                    b.Property<DateTime?>("OldestUnarchivedFileDate")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("oldest_unarchived_file_date");
+
+                    b.ToTable((string)null);
+
+                    b.ToView("vw_archive_retention_snapshot", "reporting");
+                });
+
+            modelBuilder.Entity("LinkPara.Card.Application.Commons.Models.Reporting.Dtos.ArchiveRunOverviewDto", b =>
+                {
+                    b.Property<long>("ArchiveDurationSeconds")
+                        .HasColumnType("bigint")
+                        .HasColumnName("archive_duration_seconds");
+
+                    b.Property<Guid>("ArchiveLogId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("archive_log_id");
+
+                    b.Property<string>("ArchiveMessage")
+                        .HasColumnType("text")
+                        .HasColumnName("archive_message");
+
+                    b.Property<DateTime>("ArchiveStartedAt")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("archive_started_at");
+
+                    b.Property<string>("ArchiveStatus")
+                        .HasColumnType("text")
+                        .HasColumnName("archive_status");
+
+                    b.Property<DateTime?>("ArchiveUpdatedAt")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("archive_updated_at");
+
+                    b.Property<string>("ContentType")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("content_type");
+
+                    b.Property<string>("FailureReasonsJson")
+                        .HasColumnType("text")
+                        .HasColumnName("failure_reasons_json");
+
+                    b.Property<string>("FileName")
+                        .HasColumnType("text")
+                        .HasColumnName("file_name");
+
+                    b.Property<string>("FileType")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("file_type");
+
+                    b.Property<string>("FilterJson")
+                        .HasColumnType("text")
+                        .HasColumnName("filter_json");
+
+                    b.Property<Guid?>("IngestionFileId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("ingestion_file_id");
+
+                    b.ToTable((string)null);
+
+                    b.ToView("vw_archive_run_overview", "reporting");
+                });
+
+            modelBuilder.Entity("LinkPara.Card.Application.Commons.Models.Reporting.Dtos.IngestionDailySummaryDto", b =>
+                {
+                    b.Property<string>("ContentType")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("content_type");
+
+                    b.Property<string>("DataScope")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("data_scope");
+
+                    b.Property<long?>("ExpectedLineCount")
+                        .HasColumnType("bigint")
+                        .HasColumnName("expected_line_count");
+
+                    b.Property<long>("FailedFileCount")
+                        .HasColumnType("bigint")
+                        .HasColumnName("failed_file_count");
+
+                    b.Property<long?>("FailedLineCount")
+                        .HasColumnType("bigint")
+                        .HasColumnName("failed_line_count");
+
+                    b.Property<long>("FileCount")
+                        .HasColumnType("bigint")
+                        .HasColumnName("file_count");
+
+                    b.Property<string>("FileType")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("file_type");
+
+                    b.Property<long?>("ProcessedLineCount")
+                        .HasColumnType("bigint")
+                        .HasColumnName("processed_line_count");
+
+                    b.Property<decimal>("ProcessedLineSuccessRatePct")
+                        .HasColumnType("numeric")
+                        .HasColumnName("processed_line_success_rate_pct");
+
+                    b.Property<long>("ProcessingFileCount")
+                        .HasColumnType("bigint")
+                        .HasColumnName("processing_file_count");
+
+                    b.Property<DateTime>("ReportDate")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("report_date");
+
+                    b.Property<long>("SuccessFileCount")
+                        .HasColumnType("bigint")
+                        .HasColumnName("success_file_count");
+
+                    b.Property<long?>("SuccessfulLineCount")
+                        .HasColumnType("bigint")
+                        .HasColumnName("successful_line_count");
+
+                    b.ToTable((string)null);
+
+                    b.ToView("vw_ingestion_daily_summary", "reporting");
+                });
+
+            modelBuilder.Entity("LinkPara.Card.Application.Commons.Models.Reporting.Dtos.IngestionExceptionHotspotDto", b =>
+                {
+                    b.Property<string>("ContentType")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("content_type");
+
+                    b.Property<string>("DataScope")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("data_scope");
+
+                    b.Property<long>("DistinctErrorMessageCount")
+                        .HasColumnType("bigint")
+                        .HasColumnName("distinct_error_message_count");
+
+                    b.Property<long>("FailedLineCount")
+                        .HasColumnType("bigint")
+                        .HasColumnName("failed_line_count");
+
+                    b.Property<DateTime>("FileCreatedAt")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("file_created_at");
+
+                    b.Property<Guid>("FileId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("file_id");
+
+                    b.Property<string>("FileMessage")
+                        .HasColumnType("text")
+                        .HasColumnName("file_message");
+
+                    b.Property<string>("FileName")
+                        .HasColumnType("text")
+                        .HasColumnName("file_name");
+
+                    b.Property<string>("FileStatus")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("file_status");
+
+                    b.Property<string>("FileType")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("file_type");
+
+                    b.Property<long>("MaxRetryCount")
+                        .HasColumnType("bigint")
+                        .HasColumnName("max_retry_count");
+
+                    b.Property<long>("ProcessedLineCount")
+                        .HasColumnType("bigint")
+                        .HasColumnName("processed_line_count");
+
+                    b.Property<string>("SeverityLevel")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("severity_level");
+
+                    b.Property<string>("SourceType")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("source_type");
+
+                    b.Property<long>("TotalRetryCount")
+                        .HasColumnType("bigint")
+                        .HasColumnName("total_retry_count");
+
+                    b.ToTable((string)null);
+
+                    b.ToView("vw_ingestion_exception_hotspots", "reporting");
+                });
+
+            modelBuilder.Entity("LinkPara.Card.Application.Commons.Models.Reporting.Dtos.IngestionFileOverviewDto", b =>
+                {
+                    b.Property<long>("ActualFailedLineCount")
+                        .HasColumnType("bigint")
+                        .HasColumnName("actual_failed_line_count");
+
+                    b.Property<long>("ActualLineCount")
+                        .HasColumnType("bigint")
+                        .HasColumnName("actual_line_count");
+
+                    b.Property<long>("ActualProcessingLineCount")
+                        .HasColumnType("bigint")
+                        .HasColumnName("actual_processing_line_count");
+
+                    b.Property<long>("ActualSuccessLineCount")
+                        .HasColumnType("bigint")
+                        .HasColumnName("actual_success_line_count");
+
+                    b.Property<decimal>("CompletenessPct")
+                        .HasColumnType("numeric")
+                        .HasColumnName("completeness_pct");
+
+                    b.Property<string>("ContentType")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("content_type");
+
+                    b.Property<string>("DataScope")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("data_scope");
+
+                    b.Property<long>("DuplicateLineCount")
+                        .HasColumnType("bigint")
+                        .HasColumnName("duplicate_line_count");
+
+                    b.Property<long>("ExpectedLineCount")
+                        .HasColumnType("bigint")
+                        .HasColumnName("expected_line_count");
+
+                    b.Property<long>("FailedLineCount")
+                        .HasColumnType("bigint")
+                        .HasColumnName("failed_line_count");
+
+                    b.Property<DateTime>("FileCreatedAt")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("file_created_at");
+
+                    b.Property<Guid>("FileId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("file_id");
+
+                    b.Property<string>("FileKey")
+                        .HasColumnType("text")
+                        .HasColumnName("file_key");
+
+                    b.Property<string>("FileMessage")
+                        .HasColumnType("text")
+                        .HasColumnName("file_message");
+
+                    b.Property<string>("FileName")
+                        .HasColumnType("text")
+                        .HasColumnName("file_name");
+
+                    b.Property<string>("FileStatus")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("file_status");
+
+                    b.Property<string>("FileType")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("file_type");
+
+                    b.Property<DateTime?>("FileUpdatedAt")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("file_updated_at");
+
+                    b.Property<bool>("IsArchived")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_archived");
+
+                    b.Property<long>("LastProcessedByteOffset")
+                        .HasColumnType("bigint")
+                        .HasColumnName("last_processed_byte_offset");
+
+                    b.Property<long>("LastProcessedLineNumber")
+                        .HasColumnType("bigint")
+                        .HasColumnName("last_processed_line_number");
+
+                    b.Property<decimal>("LineFailRatePct")
+                        .HasColumnType("numeric")
+                        .HasColumnName("line_fail_rate_pct");
+
+                    b.Property<decimal>("LineSuccessRatePct")
+                        .HasColumnType("numeric")
+                        .HasColumnName("line_success_rate_pct");
+
+                    b.Property<long>("ProcessedLineCount")
+                        .HasColumnType("bigint")
+                        .HasColumnName("processed_line_count");
+
+                    b.Property<long>("ProcessingDurationSeconds")
+                        .HasColumnType("bigint")
+                        .HasColumnName("processing_duration_seconds");
+
+                    b.Property<long>("ReconFailedCount")
+                        .HasColumnType("bigint")
+                        .HasColumnName("recon_failed_count");
+
+                    b.Property<long>("ReconReadyCount")
+                        .HasColumnType("bigint")
+                        .HasColumnName("recon_ready_count");
+
+                    b.Property<long>("ReconSuccessCount")
+                        .HasColumnType("bigint")
+                        .HasColumnName("recon_success_count");
+
+                    b.Property<string>("SourceType")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("source_type");
+
+                    b.Property<long>("SuccessfulLineCount")
+                        .HasColumnType("bigint")
+                        .HasColumnName("successful_line_count");
+
+                    b.ToTable((string)null);
+
+                    b.ToView("vw_ingestion_file_overview", "reporting");
+                });
+
+            modelBuilder.Entity("LinkPara.Card.Application.Commons.Models.Reporting.Dtos.IngestionFileQualityDto", b =>
+                {
+                    b.Property<string>("ContentType")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("content_type");
+
+                    b.Property<string>("DataScope")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("data_scope");
+
+                    b.Property<long>("DuplicateConflictCount")
+                        .HasColumnType("bigint")
+                        .HasColumnName("duplicate_conflict_count");
+
+                    b.Property<decimal>("DuplicateImpactPct")
+                        .HasColumnType("numeric")
+                        .HasColumnName("duplicate_impact_pct");
+
+                    b.Property<long>("DuplicatePrimaryCount")
+                        .HasColumnType("bigint")
+                        .HasColumnName("duplicate_primary_count");
+
+                    b.Property<long>("DuplicateSecondaryCount")
+                        .HasColumnType("bigint")
+                        .HasColumnName("duplicate_secondary_count");
+
+                    b.Property<long>("DuplicateUniqueCount")
+                        .HasColumnType("bigint")
+                        .HasColumnName("duplicate_unique_count");
+
+                    b.Property<decimal>("ErrorRatePct")
+                        .HasColumnType("numeric")
+                        .HasColumnName("error_rate_pct");
+
+                    b.Property<long>("FailedLineCount")
+                        .HasColumnType("bigint")
+                        .HasColumnName("failed_line_count");
+
+                    b.Property<DateTime>("FileCreatedAt")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("file_created_at");
+
+                    b.Property<Guid>("FileId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("file_id");
+
+                    b.Property<string>("FileName")
+                        .HasColumnType("text")
+                        .HasColumnName("file_name");
+
+                    b.Property<string>("FileStatus")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("file_status");
+
+                    b.Property<string>("FileType")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("file_type");
+
+                    b.Property<long>("LinesWithRetryCount")
+                        .HasColumnType("bigint")
+                        .HasColumnName("lines_with_retry_count");
+
+                    b.Property<long>("ProcessingLineCount")
+                        .HasColumnType("bigint")
+                        .HasColumnName("processing_line_count");
+
+                    b.Property<long>("SuccessLineCount")
+                        .HasColumnType("bigint")
+                        .HasColumnName("success_line_count");
+
+                    b.Property<long>("TotalLineCount")
+                        .HasColumnType("bigint")
+                        .HasColumnName("total_line_count");
+
+                    b.Property<long>("TotalRetryCount")
+                        .HasColumnType("bigint")
+                        .HasColumnName("total_retry_count");
+
+                    b.ToTable((string)null);
+
+                    b.ToView("vw_ingestion_file_quality", "reporting");
+                });
+
+            modelBuilder.Entity("LinkPara.Card.Application.Commons.Models.Reporting.Dtos.IngestionNetworkMatrixDto", b =>
+                {
+                    b.Property<string>("ContentType")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("content_type");
+
+                    b.Property<string>("DataScope")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("data_scope");
+
+                    b.Property<long>("FailedFileCount")
+                        .HasColumnType("bigint")
+                        .HasColumnName("failed_file_count");
+
+                    b.Property<long?>("FailedLineCount")
+                        .HasColumnType("bigint")
+                        .HasColumnName("failed_line_count");
+
+                    b.Property<long>("FileCount")
+                        .HasColumnType("bigint")
+                        .HasColumnName("file_count");
+
+                    b.Property<string>("FileType")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("file_type");
+
+                    b.Property<DateTime>("FirstFileAt")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("first_file_at");
+
+                    b.Property<DateTime>("LastFileAt")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("last_file_at");
+
+                    b.Property<long?>("ProcessedLineCount")
+                        .HasColumnType("bigint")
+                        .HasColumnName("processed_line_count");
+
+                    b.Property<long>("SuccessFileCount")
+                        .HasColumnType("bigint")
+                        .HasColumnName("success_file_count");
+
+                    b.Property<long?>("SuccessfulLineCount")
+                        .HasColumnType("bigint")
+                        .HasColumnName("successful_line_count");
+
+                    b.ToTable((string)null);
+
+                    b.ToView("vw_ingestion_network_matrix", "reporting");
+                });
+
+            modelBuilder.Entity("LinkPara.Card.Application.Commons.Models.Reporting.Dtos.ReconAlertSummaryDto", b =>
+                {
+                    b.Property<long>("AlertCount")
+                        .HasColumnType("bigint")
+                        .HasColumnName("alert_count");
+
+                    b.Property<string>("AlertStatus")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("alert_status");
+
+                    b.Property<string>("AlertType")
+                        .HasColumnType("text")
+                        .HasColumnName("alert_type");
+
+                    b.Property<string>("DataScope")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("data_scope");
+
+                    b.Property<long>("DistinctGroupCount")
+                        .HasColumnType("bigint")
+                        .HasColumnName("distinct_group_count");
+
+                    b.Property<long>("DistinctOperationCount")
+                        .HasColumnType("bigint")
+                        .HasColumnName("distinct_operation_count");
+
+                    b.Property<DateTime>("FirstAlertAt")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("first_alert_at");
+
+                    b.Property<DateTime>("LastAlertAt")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("last_alert_at");
+
+                    b.Property<string>("Severity")
+                        .HasColumnType("text")
+                        .HasColumnName("severity");
+
+                    b.ToTable((string)null);
+
+                    b.ToView("vw_recon_alert_summary", "reporting");
+                });
+
+            modelBuilder.Entity("LinkPara.Card.Application.Commons.Models.Reporting.Dtos.ReconCardContentDailyDto", b =>
+                {
+                    b.Property<decimal?>("AvgCardOriginalAmount")
+                        .HasColumnType("numeric")
+                        .HasColumnName("avg_card_original_amount");
+
+                    b.Property<string>("ChannelCode")
+                        .HasColumnType("text")
+                        .HasColumnName("channel_code");
+
+                    b.Property<string>("DataScope")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("data_scope");
+
+                    b.Property<long>("DistinctFileCount")
+                        .HasColumnType("bigint")
+                        .HasColumnName("distinct_file_count");
+
+                    b.Property<string>("FinancialType")
+                        .HasColumnType("text")
+                        .HasColumnName("financial_type");
+
+                    b.Property<string>("IsSuccessfulTxn")
+                        .HasColumnType("text")
+                        .HasColumnName("is_successful_txn");
+
+                    b.Property<string>("IsTxnSettle")
+                        .HasColumnType("text")
+                        .HasColumnName("is_txn_settle");
+
+                    b.Property<string>("LineStatus")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("line_status");
+
+                    b.Property<long>("MatchedCount")
+                        .HasColumnType("bigint")
+                        .HasColumnName("matched_count");
+
+                    b.Property<string>("Network")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("network");
+
+                    b.Property<int>("OriginalCurrency")
+                        .HasColumnType("integer")
+                        .HasColumnName("original_currency");
+
+                    b.Property<string>("ReconciliationStatus")
+                        .HasColumnType("text")
+                        .HasColumnName("reconciliation_status");
+
+                    b.Property<DateTime>("ReportDate")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("report_date");
+
+                    b.Property<string>("ResponseCode")
+                        .HasColumnType("text")
+                        .HasColumnName("response_code");
+
+                    b.Property<string>("TerminalType")
+                        .HasColumnType("text")
+                        .HasColumnName("terminal_type");
+
+                    b.Property<decimal?>("TotalCardBillingAmount")
+                        .HasColumnType("numeric")
+                        .HasColumnName("total_card_billing_amount");
+
+                    b.Property<decimal?>("TotalCardOriginalAmount")
+                        .HasColumnType("numeric")
+                        .HasColumnName("total_card_original_amount");
+
+                    b.Property<decimal?>("TotalCardSettlementAmount")
+                        .HasColumnType("numeric")
+                        .HasColumnName("total_card_settlement_amount");
+
+                    b.Property<long>("TransactionCount")
+                        .HasColumnType("bigint")
+                        .HasColumnName("transaction_count");
+
+                    b.Property<string>("TxnEffect")
+                        .HasColumnType("text")
+                        .HasColumnName("txn_effect");
+
+                    b.Property<string>("TxnRegion")
+                        .HasColumnType("text")
+                        .HasColumnName("txn_region");
+
+                    b.Property<string>("TxnSource")
+                        .HasColumnType("text")
+                        .HasColumnName("txn_source");
+
+                    b.Property<string>("TxnStat")
+                        .HasColumnType("text")
+                        .HasColumnName("txn_stat");
+
+                    b.Property<long>("UnmatchedCount")
+                        .HasColumnType("bigint")
+                        .HasColumnName("unmatched_count");
+
+                    b.ToTable((string)null);
+
+                    b.ToView("vw_recon_live_card_content_daily", "reporting");
+                });
+
+            modelBuilder.Entity("LinkPara.Card.Application.Commons.Models.Reporting.Dtos.ReconClearingContentDailyDto", b =>
+                {
+                    b.Property<decimal?>("AvgClearingSourceAmount")
+                        .HasColumnType("numeric")
+                        .HasColumnName("avg_clearing_source_amount");
+
+                    b.Property<string>("ControlStat")
+                        .HasColumnType("text")
+                        .HasColumnName("control_stat");
+
+                    b.Property<string>("DataScope")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("data_scope");
+
+                    b.Property<long>("DistinctFileCount")
+                        .HasColumnType("bigint")
+                        .HasColumnName("distinct_file_count");
+
+                    b.Property<string>("IoFlag")
+                        .HasColumnType("text")
+                        .HasColumnName("io_flag");
+
+                    b.Property<string>("LineStatus")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("line_status");
+
+                    b.Property<long>("MatchedCount")
+                        .HasColumnType("bigint")
+                        .HasColumnName("matched_count");
+
+                    b.Property<string>("Network")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("network");
+
+                    b.Property<string>("ReconciliationStatus")
+                        .HasColumnType("text")
+                        .HasColumnName("reconciliation_status");
+
+                    b.Property<DateTime>("ReportDate")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("report_date");
+
+                    b.Property<int>("SourceCurrency")
+                        .HasColumnType("integer")
+                        .HasColumnName("source_currency");
+
+                    b.Property<decimal?>("TotalClearingDestinationAmount")
+                        .HasColumnType("numeric")
+                        .HasColumnName("total_clearing_destination_amount");
+
+                    b.Property<decimal?>("TotalClearingSourceAmount")
+                        .HasColumnType("numeric")
+                        .HasColumnName("total_clearing_source_amount");
+
+                    b.Property<long>("TransactionCount")
+                        .HasColumnType("bigint")
+                        .HasColumnName("transaction_count");
+
+                    b.Property<string>("TxnType")
+                        .HasColumnType("text")
+                        .HasColumnName("txn_type");
+
+                    b.Property<long>("UnmatchedCount")
+                        .HasColumnType("bigint")
+                        .HasColumnName("unmatched_count");
+
+                    b.ToTable((string)null);
+
+                    b.ToView("vw_recon_live_clearing_content_daily", "reporting");
+                });
+
+            modelBuilder.Entity("LinkPara.Card.Application.Commons.Models.Reporting.Dtos.ReconClearingControlStatAnalysisDto", b =>
+                {
+                    b.Property<string>("ControlStat")
+                        .HasColumnType("text")
+                        .HasColumnName("control_stat");
+
+                    b.Property<string>("DataScope")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("data_scope");
+
+                    b.Property<string>("IoFlag")
+                        .HasColumnType("text")
+                        .HasColumnName("io_flag");
+
+                    b.Property<string>("LineStatus")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("line_status");
+
+                    b.Property<long>("MatchedCount")
+                        .HasColumnType("bigint")
+                        .HasColumnName("matched_count");
+
+                    b.Property<string>("Network")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("network");
+
+                    b.Property<decimal?>("TotalClearingSourceAmount")
+                        .HasColumnType("numeric")
+                        .HasColumnName("total_clearing_source_amount");
+
+                    b.Property<long>("TransactionCount")
+                        .HasColumnType("bigint")
+                        .HasColumnName("transaction_count");
+
+                    b.Property<long>("UnmatchedCount")
+                        .HasColumnType("bigint")
+                        .HasColumnName("unmatched_count");
+
+                    b.Property<decimal>("UnmatchedRatePct")
+                        .HasColumnType("numeric")
+                        .HasColumnName("unmatched_rate_pct");
+
+                    b.ToTable((string)null);
+
+                    b.ToView("vw_recon_clearing_controlstat_analysis", "reporting");
+                });
+
+            modelBuilder.Entity("LinkPara.Card.Application.Commons.Models.Reporting.Dtos.ReconContentDailyDto", b =>
+                {
+                    b.Property<string>("DataScope")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("data_scope");
+
+                    b.Property<long>("DistinctFileCount")
+                        .HasColumnType("bigint")
+                        .HasColumnName("distinct_file_count");
+
+                    b.Property<string>("LineStatus")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("line_status");
+
+                    b.Property<long>("MatchedCount")
+                        .HasColumnType("bigint")
+                        .HasColumnName("matched_count");
+
+                    b.Property<string>("Network")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("network");
+
+                    b.Property<string>("ReconciliationStatus")
+                        .HasColumnType("text")
+                        .HasColumnName("reconciliation_status");
+
+                    b.Property<DateTime>("ReportDate")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("report_date");
+
+                    b.Property<string>("Side")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("side");
+
+                    b.Property<decimal?>("TotalCardBillingAmount")
+                        .HasColumnType("numeric")
+                        .HasColumnName("total_card_billing_amount");
+
+                    b.Property<decimal?>("TotalCardOriginalAmount")
+                        .HasColumnType("numeric")
+                        .HasColumnName("total_card_original_amount");
+
+                    b.Property<decimal?>("TotalCardSettlementAmount")
+                        .HasColumnType("numeric")
+                        .HasColumnName("total_card_settlement_amount");
+
+                    b.Property<decimal?>("TotalClearingDestinationAmount")
+                        .HasColumnType("numeric")
+                        .HasColumnName("total_clearing_destination_amount");
+
+                    b.Property<decimal?>("TotalClearingSourceAmount")
+                        .HasColumnType("numeric")
+                        .HasColumnName("total_clearing_source_amount");
+
+                    b.Property<long>("TransactionCount")
+                        .HasColumnType("bigint")
+                        .HasColumnName("transaction_count");
+
+                    b.Property<long>("UnmatchedCount")
+                        .HasColumnType("bigint")
+                        .HasColumnName("unmatched_count");
+
+                    b.ToTable((string)null);
+
+                    b.ToView("vw_recon_content_daily", "reporting");
+                });
+
+            modelBuilder.Entity("LinkPara.Card.Application.Commons.Models.Reporting.Dtos.ReconDailyOverviewDto", b =>
+                {
+                    b.Property<long>("ApprovedReviewCount")
+                        .HasColumnType("bigint")
+                        .HasColumnName("approved_review_count");
+
+                    b.Property<decimal>("AvgExecutionDurationSeconds")
+                        .HasColumnType("numeric")
+                        .HasColumnName("avg_execution_duration_seconds");
+
+                    b.Property<long>("BlockedOperationCount")
+                        .HasColumnType("bigint")
+                        .HasColumnName("blocked_operation_count");
+
+                    b.Property<long>("CompletedEvaluationCount")
+                        .HasColumnType("bigint")
+                        .HasColumnName("completed_evaluation_count");
+
+                    b.Property<long>("CompletedExecutionCount")
+                        .HasColumnType("bigint")
+                        .HasColumnName("completed_execution_count");
+
+                    b.Property<long>("CompletedOperationCount")
+                        .HasColumnType("bigint")
+                        .HasColumnName("completed_operation_count");
+
+                    b.Property<string>("DataScope")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("data_scope");
+
+                    b.Property<long>("FailedAlertCount")
+                        .HasColumnType("bigint")
+                        .HasColumnName("failed_alert_count");
+
+                    b.Property<long>("FailedEvaluationCount")
+                        .HasColumnType("bigint")
+                        .HasColumnName("failed_evaluation_count");
+
+                    b.Property<long>("FailedExecutionCount")
+                        .HasColumnType("bigint")
+                        .HasColumnName("failed_execution_count");
+
+                    b.Property<long>("FailedOperationCount")
+                        .HasColumnType("bigint")
+                        .HasColumnName("failed_operation_count");
+
+                    b.Property<long>("ManualOperationCount")
+                        .HasColumnType("bigint")
+                        .HasColumnName("manual_operation_count");
+
+                    b.Property<decimal>("OperationSuccessRatePct")
+                        .HasColumnType("numeric")
+                        .HasColumnName("operation_success_rate_pct");
+
+                    b.Property<long>("PendingAlertCount")
+                        .HasColumnType("bigint")
+                        .HasColumnName("pending_alert_count");
+
+                    b.Property<long>("PendingReviewCount")
+                        .HasColumnType("bigint")
+                        .HasColumnName("pending_review_count");
+
+                    b.Property<long>("PlannedOperationCount")
+                        .HasColumnType("bigint")
+                        .HasColumnName("planned_operation_count");
+
+                    b.Property<long>("RejectedReviewCount")
+                        .HasColumnType("bigint")
+                        .HasColumnName("rejected_review_count");
+
+                    b.Property<DateTime>("ReportDate")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("report_date");
+
+                    b.Property<long>("TotalEvaluationCount")
+                        .HasColumnType("bigint")
+                        .HasColumnName("total_evaluation_count");
+
+                    b.Property<long>("TotalExecutionCount")
+                        .HasColumnType("bigint")
+                        .HasColumnName("total_execution_count");
+
+                    b.Property<long>("TotalOperationCount")
+                        .HasColumnType("bigint")
+                        .HasColumnName("total_operation_count");
+
+                    b.ToTable((string)null);
+
+                    b.ToView("vw_recon_daily_overview", "reporting");
+                });
+
+            modelBuilder.Entity("LinkPara.Card.Application.Commons.Models.Reporting.Dtos.ReconFinancialSummaryDto", b =>
+                {
+                    b.Property<decimal?>("CreditAmount")
+                        .HasColumnType("numeric")
+                        .HasColumnName("credit_amount");
+
+                    b.Property<string>("DataScope")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("data_scope");
+
+                    b.Property<decimal?>("DebitAmount")
+                        .HasColumnType("numeric")
+                        .HasColumnName("debit_amount");
+
+                    b.Property<string>("FinancialType")
+                        .HasColumnType("text")
+                        .HasColumnName("financial_type");
+
+                    b.Property<string>("LineStatus")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("line_status");
+
+                    b.Property<long>("MatchedCount")
+                        .HasColumnType("bigint")
+                        .HasColumnName("matched_count");
+
+                    b.Property<string>("Network")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("network");
+
+                    b.Property<int>("OriginalCurrency")
+                        .HasColumnType("integer")
+                        .HasColumnName("original_currency");
+
+                    b.Property<long>("SettledCount")
+                        .HasColumnType("bigint")
+                        .HasColumnName("settled_count");
+
+                    b.Property<decimal?>("TotalCardBillingAmount")
+                        .HasColumnType("numeric")
+                        .HasColumnName("total_card_billing_amount");
+
+                    b.Property<decimal?>("TotalCardOriginalAmount")
+                        .HasColumnType("numeric")
+                        .HasColumnName("total_card_original_amount");
+
+                    b.Property<decimal?>("TotalCardSettlementAmount")
+                        .HasColumnType("numeric")
+                        .HasColumnName("total_card_settlement_amount");
+
+                    b.Property<long>("TransactionCount")
+                        .HasColumnType("bigint")
+                        .HasColumnName("transaction_count");
+
+                    b.Property<string>("TxnEffect")
+                        .HasColumnType("text")
+                        .HasColumnName("txn_effect");
+
+                    b.Property<long>("UnmatchedCount")
+                        .HasColumnType("bigint")
+                        .HasColumnName("unmatched_count");
+
+                    b.Property<long>("UnsettledCount")
+                        .HasColumnType("bigint")
+                        .HasColumnName("unsettled_count");
+
+                    b.ToTable((string)null);
+
+                    b.ToView("vw_recon_financial_summary", "reporting");
+                });
+
+            modelBuilder.Entity("LinkPara.Card.Application.Commons.Models.Reporting.Dtos.ReconManualReviewQueueDto", b =>
+                {
+                    b.Property<string>("Comment")
+                        .HasColumnType("text")
+                        .HasColumnName("comment");
+
+                    b.Property<string>("Decision")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("decision");
+
+                    b.Property<DateTime?>("DecisionAt")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("decision_at");
+
+                    b.Property<Guid>("EvaluationId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("evaluation_id");
+
+                    b.Property<string>("ExpirationAction")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("expiration_action");
+
+                    b.Property<string>("ExpirationFlowAction")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("expiration_flow_action");
+
+                    b.Property<DateTime?>("ExpiresAt")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("expires_at");
+
+                    b.Property<Guid>("FileLineId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("file_line_id");
+
+                    b.Property<Guid>("GroupId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("group_id");
+
+                    b.Property<string>("OperationBranch")
+                        .HasColumnType("text")
+                        .HasColumnName("operation_branch");
+
+                    b.Property<string>("OperationCode")
+                        .HasColumnType("text")
+                        .HasColumnName("operation_code");
+
+                    b.Property<Guid>("OperationId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("operation_id");
+
+                    b.Property<string>("OperationStatus")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("operation_status");
+
+                    b.Property<DateTime>("ReviewCreatedAt")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("review_created_at");
+
+                    b.Property<Guid>("ReviewId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("review_id");
+
+                    b.Property<Guid?>("ReviewerId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("reviewer_id");
+
+                    b.Property<string>("UrgencyLevel")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("urgency_level");
+
+                    b.Property<decimal>("WaitingHours")
+                        .HasColumnType("numeric")
+                        .HasColumnName("waiting_hours");
+
+                    b.ToTable((string)null);
+
+                    b.ToView("vw_recon_manual_review_queue", "reporting");
+                });
+
+            modelBuilder.Entity("LinkPara.Card.Application.Commons.Models.Reporting.Dtos.ReconOpenItemAgingDto", b =>
+                {
+                    b.Property<long>("BlockedCount")
+                        .HasColumnType("bigint")
+                        .HasColumnName("blocked_count");
+
+                    b.Property<string>("BucketName")
+                        .HasColumnType("text")
+                        .HasColumnName("bucket_name");
+
+                    b.Property<long>("ExecutingCount")
+                        .HasColumnType("bigint")
+                        .HasColumnName("executing_count");
+
+                    b.Property<long>("ItemCount")
+                        .HasColumnType("bigint")
+                        .HasColumnName("item_count");
+
+                    b.Property<long>("ManualCount")
+                        .HasColumnType("bigint")
+                        .HasColumnName("manual_count");
+
+                    b.Property<long>("PlannedCount")
+                        .HasColumnType("bigint")
+                        .HasColumnName("planned_count");
+
+                    b.ToTable((string)null);
+
+                    b.ToView("vw_recon_open_item_aging", "reporting");
+                });
+
+            modelBuilder.Entity("LinkPara.Card.Application.Commons.Models.Reporting.Dtos.ReconOpenItemDto", b =>
+                {
+                    b.Property<decimal>("AgeHours")
+                        .HasColumnType("numeric")
+                        .HasColumnName("age_hours");
+
+                    b.Property<string>("Branch")
+                        .HasColumnType("text")
+                        .HasColumnName("branch");
+
+                    b.Property<Guid>("EvaluationId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("evaluation_id");
+
+                    b.Property<int>("EvaluationOperationCount")
+                        .HasColumnType("integer")
+                        .HasColumnName("evaluation_operation_count");
+
+                    b.Property<string>("EvaluationStatus")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("evaluation_status");
+
+                    b.Property<Guid>("FileLineId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("file_line_id");
+
+                    b.Property<Guid>("GroupId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("group_id");
+
+                    b.Property<bool>("IsManual")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_manual");
+
+                    b.Property<string>("LastError")
+                        .HasColumnType("text")
+                        .HasColumnName("last_error");
+
+                    b.Property<DateTime?>("LeaseExpiresAt")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("lease_expires_at");
+
+                    b.Property<string>("LeaseOwner")
+                        .HasColumnType("text")
+                        .HasColumnName("lease_owner");
+
+                    b.Property<int>("MaxRetryCount")
+                        .HasColumnType("integer")
+                        .HasColumnName("max_retry_count");
+
+                    b.Property<DateTime?>("NextAttemptAt")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("next_attempt_at");
+
+                    b.Property<string>("OperationCode")
+                        .HasColumnType("text")
+                        .HasColumnName("operation_code");
+
+                    b.Property<DateTime>("OperationCreatedAt")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("operation_created_at");
+
+                    b.Property<Guid>("OperationId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("operation_id");
+
+                    b.Property<string>("OperationStatus")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("operation_status");
+
+                    b.Property<DateTime?>("OperationUpdatedAt")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("operation_updated_at");
+
+                    b.Property<int?>("ParentSequenceNumber")
+                        .HasColumnType("integer")
+                        .HasColumnName("parent_sequence_number");
+
+                    b.Property<int>("RetryCount")
+                        .HasColumnType("integer")
+                        .HasColumnName("retry_count");
+
+                    b.Property<int>("SequenceNumber")
+                        .HasColumnType("integer")
+                        .HasColumnName("sequence_number");
+
+                    b.ToTable((string)null);
+
+                    b.ToView("vw_recon_open_items", "reporting");
+                });
+
+            modelBuilder.Entity("LinkPara.Card.Application.Commons.Models.Reporting.Dtos.ReconResponseStatusAnalysisDto", b =>
+                {
+                    b.Property<string>("DataScope")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("data_scope");
+
+                    b.Property<string>("IsSuccessfulTxn")
+                        .HasColumnType("text")
+                        .HasColumnName("is_successful_txn");
+
+                    b.Property<string>("IsTxnSettle")
+                        .HasColumnType("text")
+                        .HasColumnName("is_txn_settle");
+
+                    b.Property<string>("LineStatus")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("line_status");
+
+                    b.Property<long>("MatchedCount")
+                        .HasColumnType("bigint")
+                        .HasColumnName("matched_count");
+
+                    b.Property<string>("Network")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("network");
+
+                    b.Property<string>("ReconciliationStatus")
+                        .HasColumnType("text")
+                        .HasColumnName("reconciliation_status");
+
+                    b.Property<string>("ResponseCode")
+                        .HasColumnType("text")
+                        .HasColumnName("response_code");
+
+                    b.Property<decimal?>("TotalCardOriginalAmount")
+                        .HasColumnType("numeric")
+                        .HasColumnName("total_card_original_amount");
+
+                    b.Property<long>("TransactionCount")
+                        .HasColumnType("bigint")
+                        .HasColumnName("transaction_count");
+
+                    b.Property<string>("TxnStat")
+                        .HasColumnType("text")
+                        .HasColumnName("txn_stat");
+
+                    b.Property<long>("UnmatchedCount")
+                        .HasColumnType("bigint")
+                        .HasColumnName("unmatched_count");
+
+                    b.ToTable((string)null);
+
+                    b.ToView("vw_recon_response_status_analysis", "reporting");
+                });
+
+            modelBuilder.Entity("LinkPara.Card.Domain.Entities.Archive.Persistence.ArchiveIngestionCardBkmDetail", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -361,7 +1793,7 @@ namespace LinkPara.Card.Infrastructure.Persistence.Migrations.PostgreSql
                     b.ToTable("ingestion_card_bkm_detail", "archive");
                 });
 
-            modelBuilder.Entity("LinkPara.Card.Domain.Entities.Archive.ArchiveIngestionCardMscDetail", b =>
+            modelBuilder.Entity("LinkPara.Card.Domain.Entities.Archive.Persistence.ArchiveIngestionCardMscDetail", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -700,7 +2132,7 @@ namespace LinkPara.Card.Infrastructure.Persistence.Migrations.PostgreSql
                     b.ToTable("ingestion_card_msc_detail", "archive");
                 });
 
-            modelBuilder.Entity("LinkPara.Card.Domain.Entities.Archive.ArchiveIngestionCardVisaDetail", b =>
+            modelBuilder.Entity("LinkPara.Card.Domain.Entities.Archive.Persistence.ArchiveIngestionCardVisaDetail", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -1039,7 +2471,7 @@ namespace LinkPara.Card.Infrastructure.Persistence.Migrations.PostgreSql
                     b.ToTable("ingestion_card_visa_detail", "archive");
                 });
 
-            modelBuilder.Entity("LinkPara.Card.Domain.Entities.Archive.ArchiveIngestionClearingBkmDetail", b =>
+            modelBuilder.Entity("LinkPara.Card.Domain.Entities.Archive.Persistence.ArchiveIngestionClearingBkmDetail", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -1238,7 +2670,7 @@ namespace LinkPara.Card.Infrastructure.Persistence.Migrations.PostgreSql
                     b.ToTable("ingestion_clearing_bkm_detail", "archive");
                 });
 
-            modelBuilder.Entity("LinkPara.Card.Domain.Entities.Archive.ArchiveIngestionClearingMscDetail", b =>
+            modelBuilder.Entity("LinkPara.Card.Domain.Entities.Archive.Persistence.ArchiveIngestionClearingMscDetail", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -1452,7 +2884,7 @@ namespace LinkPara.Card.Infrastructure.Persistence.Migrations.PostgreSql
                     b.ToTable("ingestion_clearing_msc_detail", "archive");
                 });
 
-            modelBuilder.Entity("LinkPara.Card.Domain.Entities.Archive.ArchiveIngestionClearingVisaDetail", b =>
+            modelBuilder.Entity("LinkPara.Card.Domain.Entities.Archive.Persistence.ArchiveIngestionClearingVisaDetail", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -1646,7 +3078,7 @@ namespace LinkPara.Card.Infrastructure.Persistence.Migrations.PostgreSql
                     b.ToTable("ingestion_clearing_visa_detail", "archive");
                 });
 
-            modelBuilder.Entity("LinkPara.Card.Domain.Entities.Archive.ArchiveIngestionFile", b =>
+            modelBuilder.Entity("LinkPara.Card.Domain.Entities.Archive.Persistence.ArchiveIngestionFile", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -1759,7 +3191,7 @@ namespace LinkPara.Card.Infrastructure.Persistence.Migrations.PostgreSql
                     b.ToTable("ingestion_file", "archive");
                 });
 
-            modelBuilder.Entity("LinkPara.Card.Domain.Entities.Archive.ArchiveIngestionFileLine", b =>
+            modelBuilder.Entity("LinkPara.Card.Domain.Entities.Archive.Persistence.ArchiveIngestionFileLine", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -1916,7 +3348,7 @@ namespace LinkPara.Card.Infrastructure.Persistence.Migrations.PostgreSql
                     b.ToTable("ingestion_file_line", "archive");
                 });
 
-            modelBuilder.Entity("LinkPara.Card.Domain.Entities.Archive.ArchiveLog", b =>
+            modelBuilder.Entity("LinkPara.Card.Domain.Entities.Archive.Persistence.ArchiveLog", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -1980,7 +3412,7 @@ namespace LinkPara.Card.Infrastructure.Persistence.Migrations.PostgreSql
                     b.ToTable("archive_log", "archive");
                 });
 
-            modelBuilder.Entity("LinkPara.Card.Domain.Entities.Archive.ArchiveReconciliationAlert", b =>
+            modelBuilder.Entity("LinkPara.Card.Domain.Entities.Archive.Persistence.ArchiveReconciliationAlert", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -2055,7 +3487,7 @@ namespace LinkPara.Card.Infrastructure.Persistence.Migrations.PostgreSql
                     b.ToTable("reconciliation_alert", "archive");
                 });
 
-            modelBuilder.Entity("LinkPara.Card.Domain.Entities.Archive.ArchiveReconciliationEvaluation", b =>
+            modelBuilder.Entity("LinkPara.Card.Domain.Entities.Archive.Persistence.ArchiveReconciliationEvaluation", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -2116,7 +3548,7 @@ namespace LinkPara.Card.Infrastructure.Persistence.Migrations.PostgreSql
                     b.ToTable("reconciliation_evaluation", "archive");
                 });
 
-            modelBuilder.Entity("LinkPara.Card.Domain.Entities.Archive.ArchiveReconciliationOperation", b =>
+            modelBuilder.Entity("LinkPara.Card.Domain.Entities.Archive.Persistence.ArchiveReconciliationOperation", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -2234,7 +3666,7 @@ namespace LinkPara.Card.Infrastructure.Persistence.Migrations.PostgreSql
                     b.ToTable("reconciliation_operation", "archive");
                 });
 
-            modelBuilder.Entity("LinkPara.Card.Domain.Entities.Archive.ArchiveReconciliationOperationExecution", b =>
+            modelBuilder.Entity("LinkPara.Card.Domain.Entities.Archive.Persistence.ArchiveReconciliationOperationExecution", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -2334,7 +3766,7 @@ namespace LinkPara.Card.Infrastructure.Persistence.Migrations.PostgreSql
                     b.ToTable("reconciliation_operation_execution", "archive");
                 });
 
-            modelBuilder.Entity("LinkPara.Card.Domain.Entities.Archive.ArchiveReconciliationReview", b =>
+            modelBuilder.Entity("LinkPara.Card.Domain.Entities.Archive.Persistence.ArchiveReconciliationReview", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -5309,7 +6741,7 @@ namespace LinkPara.Card.Infrastructure.Persistence.Migrations.PostgreSql
                     b.ToTable("review", "reconciliation");
                 });
 
-            modelBuilder.Entity("LinkPara.Card.Domain.Entities.Archive.ArchiveIngestionFileLine", b =>
+            modelBuilder.Entity("LinkPara.Card.Domain.Entities.Archive.Persistence.ArchiveIngestionFileLine", b =>
                 {
                     b.HasOne("LinkPara.Card.Domain.Entities.FileIngestion.Persistence.IngestionCardBkmDetail", "CardBkmDetail")
                         .WithMany()

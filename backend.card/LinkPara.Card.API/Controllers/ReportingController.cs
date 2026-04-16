@@ -1,72 +1,195 @@
 using LinkPara.Card.Application.Commons.Models.Reporting;
 using LinkPara.Card.Application.Commons.Models.Reporting.Contracts.Responses;
-using LinkPara.Card.Application.Features.Reporting.Queries.GetProblemRecords;
-using LinkPara.Card.Application.Features.Reporting.Queries.GetSummaryByFile;
-using LinkPara.Card.Application.Features.Reporting.Queries.GetSummaryByNetwork;
-using LinkPara.Card.Application.Features.Reporting.Queries.GetSummaryDaily;
-using LinkPara.Card.Application.Features.Reporting.Queries.GetSummaryOverall;
-using LinkPara.Card.Application.Features.Reporting.Queries.GetTransactions;
-using LinkPara.Card.Application.Features.Reporting.Queries.GetUnmatchedRecords;
+using LinkPara.Card.Application.Features.Reporting.Queries.Archive;
+using LinkPara.Card.Application.Features.Reporting.Queries.Ingestion;
+using LinkPara.Card.Application.Features.Reporting.Queries.ReconContent;
+using LinkPara.Card.Application.Features.Reporting.Queries.ReconProcess;
+using LinkPara.Card.Application.Features.Reporting.Queries.ReconAdvanced;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace LinkPara.Card.API.Controllers;
 
-[Route("v1/Reporting/Reconciliation")]
+[Route("v1/Reporting")]
 public class ReportingController : ApiControllerBase
 {
+    #region Ingestion
+
     [Authorize(Policy = ReportingPolicies.Read)]
-    [HttpGet("Transactions")]
-    public async Task<GetTransactionsResponse> GetTransactions(
-        [FromQuery] GetTransactionsQuery query, CancellationToken ct = default)
-    {
-        return await Mediator.Send(query, ct);
-    }
+    [HttpGet("Ingestion/FileOverview")]
+    public async Task<GetIngestionFileOverviewResponse> GetIngestionFileOverview(
+        [FromQuery] GetIngestionFileOverviewQuery query, CancellationToken ct = default)
+        => await Mediator.Send(query, ct);
+
+    [Authorize(Policy = ReportingPolicies.Read)]
+    [HttpGet("Ingestion/FileQuality")]
+    public async Task<GetIngestionFileQualityResponse> GetIngestionFileQuality(
+        [FromQuery] GetIngestionFileQualityQuery query, CancellationToken ct = default)
+        => await Mediator.Send(query, ct);
+
+    [Authorize(Policy = ReportingPolicies.Read)]
+    [HttpGet("Ingestion/DailySummary")]
+    public async Task<GetIngestionDailySummaryResponse> GetIngestionDailySummary(
+        [FromQuery] GetIngestionDailySummaryQuery query, CancellationToken ct = default)
+        => await Mediator.Send(query, ct);
+
+    [Authorize(Policy = ReportingPolicies.Read)]
+    [HttpGet("Ingestion/NetworkMatrix")]
+    public async Task<GetIngestionNetworkMatrixResponse> GetIngestionNetworkMatrix(
+        [FromQuery] GetIngestionNetworkMatrixQuery query, CancellationToken ct = default)
+        => await Mediator.Send(query, ct);
+
+    [Authorize(Policy = ReportingPolicies.Read)]
+    [HttpGet("Ingestion/ExceptionHotspots")]
+    public async Task<GetIngestionExceptionHotspotsResponse> GetIngestionExceptionHotspots(
+        [FromQuery] GetIngestionExceptionHotspotsQuery query, CancellationToken ct = default)
+        => await Mediator.Send(query, ct);
+
+    #endregion
+
+    #region Reconciliation Process
+
+    [Authorize(Policy = ReportingPolicies.Read)]
+    [HttpGet("Reconciliation/DailyOverview")]
+    public async Task<GetReconDailyOverviewResponse> GetReconDailyOverview(
+        [FromQuery] GetReconDailyOverviewQuery query, CancellationToken ct = default)
+        => await Mediator.Send(query, ct);
+
+    [Authorize(Policy = ReportingPolicies.Read)]
+    [HttpGet("Reconciliation/OpenItems")]
+    public async Task<GetReconOpenItemsResponse> GetReconOpenItems(
+        [FromQuery] GetReconOpenItemsQuery query, CancellationToken ct = default)
+        => await Mediator.Send(query, ct);
+
+    [Authorize(Policy = ReportingPolicies.Read)]
+    [HttpGet("Reconciliation/OpenItemAging")]
+    public async Task<GetReconOpenItemAgingResponse> GetReconOpenItemAging(CancellationToken ct = default)
+        => await Mediator.Send(new GetReconOpenItemAgingQuery(), ct);
+
+    [Authorize(Policy = ReportingPolicies.Read)]
+    [HttpGet("Reconciliation/ManualReviewQueue")]
+    public async Task<GetReconManualReviewQueueResponse> GetReconManualReviewQueue(
+        [FromQuery] GetReconManualReviewQueueQuery query, CancellationToken ct = default)
+        => await Mediator.Send(query, ct);
+
+    [Authorize(Policy = ReportingPolicies.Read)]
+    [HttpGet("Reconciliation/AlertSummary")]
+    public async Task<GetReconAlertSummaryResponse> GetReconAlertSummary(
+        [FromQuery] GetReconAlertSummaryQuery query, CancellationToken ct = default)
+        => await Mediator.Send(query, ct);
+
+    #endregion
     
+    #region Reconciliation Content
+
     [Authorize(Policy = ReportingPolicies.Read)]
-    [HttpGet("Problems")]
-    public async Task<GetTransactionsResponse> GetProblemRecords(
-        [FromQuery] GetProblemRecordsQuery query, CancellationToken ct = default)
-    {
-        return await Mediator.Send(query, ct);
-    }
+    [HttpGet("Reconciliation/LiveCardContentDaily")]
+    public async Task<GetReconCardContentDailyResponse> GetReconLiveCardContentDaily(
+        [FromQuery] GetReconLiveCardContentDailyQuery query, CancellationToken ct = default)
+        => await Mediator.Send(query, ct);
+
+    [Authorize(Policy = ReportingPolicies.Read)]
+    [HttpGet("Reconciliation/LiveClearingContentDaily")]
+    public async Task<GetReconClearingContentDailyResponse> GetReconLiveClearingContentDaily(
+        [FromQuery] GetReconLiveClearingContentDailyQuery query, CancellationToken ct = default)
+        => await Mediator.Send(query, ct);
+
+    [Authorize(Policy = ReportingPolicies.Read)]
+    [HttpGet("Reconciliation/ArchiveCardContentDaily")]
+    public async Task<GetReconCardContentDailyResponse> GetReconArchiveCardContentDaily(
+        [FromQuery] GetReconArchiveCardContentDailyQuery query, CancellationToken ct = default)
+        => await Mediator.Send(query, ct);
+
+    [Authorize(Policy = ReportingPolicies.Read)]
+    [HttpGet("Reconciliation/ArchiveClearingContentDaily")]
+    public async Task<GetReconClearingContentDailyResponse> GetReconArchiveClearingContentDaily(
+        [FromQuery] GetReconArchiveClearingContentDailyQuery query, CancellationToken ct = default)
+        => await Mediator.Send(query, ct);
+
+    [Authorize(Policy = ReportingPolicies.Read)]
+    [HttpGet("Reconciliation/ContentDaily")]
+    public async Task<GetReconContentDailyResponse> GetReconContentDaily(
+        [FromQuery] GetReconContentDailyQuery query, CancellationToken ct = default)
+        => await Mediator.Send(query, ct);
+
+    [Authorize(Policy = ReportingPolicies.Read)]
+    [HttpGet("Reconciliation/ClearingControlStatAnalysis")]
+    public async Task<GetReconClearingControlStatAnalysisResponse> GetReconClearingControlStatAnalysis(
+        [FromQuery] GetReconClearingControlStatAnalysisQuery query, CancellationToken ct = default)
+        => await Mediator.Send(query, ct);
+
+    [Authorize(Policy = ReportingPolicies.Read)]
+    [HttpGet("Reconciliation/FinancialSummary")]
+    public async Task<GetReconFinancialSummaryResponse> GetReconFinancialSummary(
+        [FromQuery] GetReconFinancialSummaryQuery query, CancellationToken ct = default)
+        => await Mediator.Send(query, ct);
+
+    [Authorize(Policy = ReportingPolicies.Read)]
+    [HttpGet("Reconciliation/ResponseStatusAnalysis")]
+    public async Task<GetReconResponseStatusAnalysisResponse> GetReconResponseStatusAnalysis(
+        [FromQuery] GetReconResponseStatusAnalysisQuery query, CancellationToken ct = default)
+        => await Mediator.Send(query, ct);
+
+    #endregion
     
+    #region Archive
+
     [Authorize(Policy = ReportingPolicies.Read)]
-    [HttpGet("Unmatched")]
-    public async Task<GetTransactionsResponse> GetUnmatchedRecords(
-        [FromQuery] GetUnmatchedRecordsQuery query, CancellationToken ct = default)
-    {
-        return await Mediator.Send(query, ct);
-    }
-    
+    [HttpGet("Archive/RunOverview")]
+    public async Task<GetArchiveRunOverviewResponse> GetArchiveRunOverview(
+        [FromQuery] GetArchiveRunOverviewQuery query, CancellationToken ct = default)
+        => await Mediator.Send(query, ct);
+
     [Authorize(Policy = ReportingPolicies.Read)]
-    [HttpGet("Summary/Daily")]
-    public async Task<GetSummaryDailyResponse> GetSummaryDaily(
-        [FromQuery] GetSummaryDailyQuery query, CancellationToken ct = default)
-    {
-        return await Mediator.Send(query, ct);
-    }
-    
+    [HttpGet("Archive/Eligibility")]
+    public async Task<GetArchiveEligibilityResponse> GetArchiveEligibility(
+        [FromQuery] GetArchiveEligibilityQuery query, CancellationToken ct = default)
+        => await Mediator.Send(query, ct);
+
     [Authorize(Policy = ReportingPolicies.Read)]
-    [HttpGet("Summary/Network")]
-    public async Task<GetSummaryByNetworkResponse> GetSummaryByNetwork(
-        [FromQuery] GetSummaryByNetworkQuery query, CancellationToken ct = default)
-    {
-        return await Mediator.Send(query, ct);
-    }
-    
+    [HttpGet("Archive/BacklogTrend")]
+    public async Task<GetArchiveBacklogTrendResponse> GetArchiveBacklogTrend(
+        [FromQuery] GetArchiveBacklogTrendQuery query, CancellationToken ct = default)
+        => await Mediator.Send(query, ct);
+
     [Authorize(Policy = ReportingPolicies.Read)]
-    [HttpGet("Summary/File")]
-    public async Task<GetSummaryByFileResponse> GetSummaryByFile(
-        [FromQuery] GetSummaryByFileQuery query, CancellationToken ct = default)
-    {
-        return await Mediator.Send(query, ct);
-    }
-    
+    [HttpGet("Archive/RetentionSnapshot")]
+    public async Task<GetArchiveRetentionSnapshotResponse> GetArchiveRetentionSnapshot(CancellationToken ct = default)
+        => await Mediator.Send(new GetArchiveRetentionSnapshotQuery(), ct);
+
+    #endregion
+
+    #region Advanced Reconciliation Reports
+
     [Authorize(Policy = ReportingPolicies.Read)]
-    [HttpGet("Summary")]
-    public async Task<GetSummaryOverallResponse> GetSummaryOverall(CancellationToken ct = default)
-    {
-        return await Mediator.Send(new GetSummaryOverallQuery(), ct);
-    }
+    [HttpGet("Reconciliation/FileReconSummary")]
+    public async Task<GetFileReconSummaryResponse> GetFileReconSummary(
+        [FromQuery] GetFileReconSummaryQuery query, CancellationToken ct = default)
+        => await Mediator.Send(query, ct);
+
+    [Authorize(Policy = ReportingPolicies.Read)]
+    [HttpGet("Reconciliation/MatchRateTrend")]
+    public async Task<GetReconMatchRateTrendResponse> GetReconMatchRateTrend(
+        [FromQuery] GetReconMatchRateTrendQuery query, CancellationToken ct = default)
+        => await Mediator.Send(query, ct);
+
+    [Authorize(Policy = ReportingPolicies.Read)]
+    [HttpGet("Reconciliation/GapAnalysis")]
+    public async Task<GetReconGapAnalysisResponse> GetReconGapAnalysis(
+        [FromQuery] GetReconGapAnalysisQuery query, CancellationToken ct = default)
+        => await Mediator.Send(query, ct);
+
+    [Authorize(Policy = ReportingPolicies.Read)]
+    [HttpGet("Reconciliation/UnmatchedTransactionAging")]
+    public async Task<GetUnmatchedTransactionAgingResponse> GetUnmatchedTransactionAging(
+        [FromQuery] GetUnmatchedTransactionAgingQuery query, CancellationToken ct = default)
+        => await Mediator.Send(query, ct);
+
+    [Authorize(Policy = ReportingPolicies.Read)]
+    [HttpGet("Reconciliation/NetworkScorecard")]
+    public async Task<GetNetworkReconScorecardResponse> GetNetworkReconScorecard(
+        [FromQuery] GetNetworkReconScorecardQuery query, CancellationToken ct = default)
+        => await Mediator.Send(query, ct);
+
+    #endregion
 }
