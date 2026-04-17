@@ -342,7 +342,7 @@ internal sealed class AlertService : IAlertService
         AppendLine(sb, $"- {localizer.Get("Alert.Detail.Id")}: {evaluation?.Id.ToString() ?? alert.EvaluationId.ToString()}");
         AppendLine(sb, $"- {localizer.Get("Alert.Detail.Status")}: {evaluation?.Status.ToString() ?? string.Empty}");
         AppendLine(sb, $"- {localizer.Get("Alert.Detail.Message")}: {evaluation?.Message ?? string.Empty}");
-        AppendLine(sb, $"- {localizer.Get("Alert.Detail.CreatedOperationCount")}: {evaluation?.CreatedOperationCount.ToString() ?? "0"}");
+        AppendLine(sb, $"- {localizer.Get("Alert.Detail.CreatedOperationCount")}: {evaluation?.OperationCount.ToString() ?? "0"}");
         AppendLine(sb);
 
         AppendLine(sb, localizer.Get("Alert.Detail.OperationHeader"));

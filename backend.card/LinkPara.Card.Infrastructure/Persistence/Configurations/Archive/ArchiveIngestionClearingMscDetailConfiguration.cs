@@ -13,7 +13,7 @@ public class ArchiveIngestionClearingMscDetailConfiguration : IEntityTypeConfigu
 
         IngestionClearingMscDetailConfiguration.ConfigureColumns(builder);
 
-        builder.Ignore(x => x.IngestionFileLine);
+        builder.Ignore(x => x.FileLine);
     }
 }
 

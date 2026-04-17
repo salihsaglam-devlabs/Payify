@@ -14,5 +14,8 @@ public enum ReconciliationStatus
     Success = 3,
 
     [Description("Reconciliation is currently being processed.")]
-    Processing = 4
+    Processing = 4,
+    
+    [Description("Technical reconciliation done, waiting for clearing to become financially final.")]
+    AwaitingClearing = 5
 }

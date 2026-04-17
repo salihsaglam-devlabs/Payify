@@ -16,9 +16,9 @@ namespace LinkPara.Card.Domain.Entities.Reconciliation.Persistence
 
         public Guid GroupId { get; set; }
 
-        public int SequenceIndex { get; set; }
+        public int SequenceNumber { get; set; }
 
-        public int? ParentSequenceIndex { get; set; }
+        public int? ParentSequenceNumber { get; set; }
 
         public string Code { get; set; }
 

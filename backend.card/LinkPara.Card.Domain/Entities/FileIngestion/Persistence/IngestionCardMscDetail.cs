@@ -3,54 +3,53 @@ using LinkPara.SharedModels.Persistence;
 
 namespace LinkPara.Card.Domain.Entities.FileIngestion.Persistence;
 
-public class IngestionCardMscDetail : AuditEntity, IIngestionTypedDetail
+public class IngestionCardMscDetail : AuditEntity, IIngestionTypedDetail,ICardMscDetail
 {
-    public Guid IngestionFileLineId { get; set; }
-    public IngestionFileLine IngestionFileLine { get; set; }
+    public Guid FileLineId { get; set; }
+    public IngestionFileLine FileLine { get; set; }
 
-    // CardMscDetail fields
     public int TransactionDate { get; set; }
     public int TransactionTime { get; set; }
     public int ValueDate { get; set; }
     public int EndOfDayDate { get; set; }
-    public string CardNo { get; set; } = default!;
+    public string CardNo { get; set; }
     public long OceanTxnGuid { get; set; }
     public long OceanMainTxnGuid { get; set; }
-    public string BranchId { get; set; } = default!;
-    public string Rrn { get; set; } = default!;
-    public string Arn { get; set; } = default!;
-    public string ProvisionCode { get; set; } = default!;
+    public string BranchId { get; set; }
+    public string Rrn { get; set; }
+    public string Arn { get; set; }
+    public string ProvisionCode { get; set; }
     public int Stan { get; set; }
-    public string MemberRefNo { get; set; } = default!;
+    public string MemberRefNo { get; set; }
     public long TraceId { get; set; }
     public int Otc { get; set; }
     public int Ots { get; set; }
     public CardMscTxnInstallType TxnInstallType { get; set; }
-    public string BankingTxnCode { get; set; } = default!;
-    public string TxnDescription { get; set; } = default!;
-    public string MerchantName { get; set; } = default!;
-    public string MerchantCity { get; set; } = default!;
-    public string MerchantState { get; set; } = default!;
-    public string MerchantCountry { get; set; } = default!;
+    public string BankingTxnCode { get; set; }
+    public string TxnDescription { get; set; }
+    public string MerchantName { get; set; }
+    public string MerchantCity { get; set; }
+    public string MerchantState { get; set; }
+    public string MerchantCountry { get; set; }
     public CardMscFinancialType FinancialType { get; set; }
     public CardMscTxnEffect TxnEffect { get; set; }
     public CardMscTxnSource TxnSource { get; set; }
     public CardMscTxnRegion TxnRegion { get; set; }
     public CardMscTerminalType TerminalType { get; set; }
     public CardMscChannelCode ChannelCode { get; set; }
-    public string TerminalId { get; set; } = default!;
-    public string MerchantId { get; set; } = default!;
+    public string TerminalId { get; set; }
+    public string MerchantId { get; set; }
     public int Mcc { get; set; }
     public int AcquirerId { get; set; }
     public int SecurityLevelIndicator { get; set; }
     public CardMscIsTxnSettle IsTxnSettle { get; set; }
     public CardMscTxnStat TxnStat { get; set; }
-    public string ResponseCode { get; set; } = default!;
+    public string ResponseCode { get; set; }
     public CardMscIsSuccessfulTxn IsSuccessfulTxn { get; set; }
     public CardMscTxnOrigin TxnOrigin { get; set; }
     public int InstallCount { get; set; }
     public int InstallOrder { get; set; }
-    public string OperatorCode { get; set; } = default!;
+    public string OperatorCode { get; set; }
     public decimal OriginalAmount { get; set; }
     public int OriginalCurrency { get; set; }
     public decimal SettlementAmount { get; set; }
@@ -63,7 +62,7 @@ public class IngestionCardMscDetail : AuditEntity, IIngestionTypedDetail
     public decimal Tax2 { get; set; }
     public decimal CashbackAmount { get; set; }
     public decimal SurchargeAmount { get; set; }
-    public string PointType { get; set; } = default!;
+    public string PointType { get; set; }
     public decimal BcPoint { get; set; }
     public decimal McPoint { get; set; }
     public decimal CcPoint { get; set; }

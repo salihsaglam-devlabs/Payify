@@ -2,16 +2,15 @@ using System.Runtime.Serialization;
 
 namespace LinkPara.Card.Domain.Entities.FileIngestion.Schemas;
 
-#region CLEARING VISA
 
-public partial class ClearingVisa
+public partial class ClearingVisa : IClearingVisa
 {
-    public ClearingVisaHeader Header { get; set; } = new();
-    public ClearingVisaDetail Detail { get; set; } = new();
-    public ClearingVisaFooter Footer { get; set; } = new();
+    public IClearingVisaHeader Header { get; set; }
+    public IClearingVisaDetail Detail { get; set; }
+    public IClearingVisaFooter Footer { get; set; }
 }
 
-public partial class ClearingVisaHeader
+public partial class ClearingVisaHeader : IClearingVisaHeader
 {
     public ClearingVisaHeaderCode HeaderCode { get; set; }
     public string FileDate { get; set; } = default!;
@@ -19,7 +18,7 @@ public partial class ClearingVisaHeader
     public string FileVersionNumber { get; set; } = default!;
 }
 
-public partial class ClearingVisaDetail
+public partial class ClearingVisaDetail : IClearingVisaDetail
 {
     public ClearingVisaTxnType TxnType { get; set; }
     public string IoDate { get; set; } = default!;
@@ -54,7 +53,7 @@ public partial class ClearingVisaDetail
     public string FileId { get; set; } = default!;
 }
 
-public partial class ClearingVisaFooter
+public partial class ClearingVisaFooter : IClearingVisaFooter
 {
     public ClearingVisaFooterCode FooterCode { get; set; }
     public string FileDate { get; set; } = default!;
@@ -169,18 +168,16 @@ public enum ClearingVisaControlStat
     DisputeEnd
 }
 
-#endregion
 
-#region CLEARING MSC
 
-public partial class ClearingMsc
+public partial class ClearingMsc : IClearingMsc
 {
-    public ClearingMscHeader Header { get; set; } = new();
-    public ClearingMscDetail Detail { get; set; } = new();
-    public ClearingMscFooter Footer { get; set; } = new();
+    public IClearingMscHeader Header { get; set; }
+    public IClearingMscDetail Detail { get; set; }
+    public IClearingMscFooter Footer { get; set; }
 }
 
-public partial class ClearingMscHeader
+public partial class ClearingMscHeader : IClearingMscHeader
 {
     public ClearingMscHeaderCode HeaderCode { get; set; }
     public string FileDate { get; set; } = default!;
@@ -188,7 +185,7 @@ public partial class ClearingMscHeader
     public string FileVersionNumber { get; set; } = default!;
 }
 
-public partial class ClearingMscDetail
+public partial class ClearingMscDetail : IClearingMscDetail
 {
     public ClearingMscTxnType TxnType { get; set; }
     public string IoDate { get; set; } = default!;
@@ -227,7 +224,7 @@ public partial class ClearingMscDetail
     public string FileId { get; set; } = default!;
 }
 
-public partial class ClearingMscFooter
+public partial class ClearingMscFooter : IClearingMscFooter
 {
     public ClearingMscFooterCode FooterCode { get; set; }
     public string FileDate { get; set; } = default!;
@@ -342,18 +339,16 @@ public enum ClearingMscControlStat
     DisputeEnd
 }
 
-#endregion
 
-#region CLEARING BKM
 
-public partial class ClearingBkm
+public partial class ClearingBkm : IClearingBkm
 {
-    public ClearingBkmHeader Header { get; set; } = new();
-    public ClearingBkmDetail Detail { get; set; } = new();
-    public ClearingBkmFooter Footer { get; set; } = new();
+    public IClearingBkmHeader Header { get; set; }
+    public IClearingBkmDetail Detail { get; set; }
+    public IClearingBkmFooter Footer { get; set; }
 }
 
-public partial class ClearingBkmHeader
+public partial class ClearingBkmHeader : IClearingBkmHeader
 {
     public ClearingBkmHeaderCode HeaderCode { get; set; }
     public string FileDate { get; set; } = default!;
@@ -361,7 +356,7 @@ public partial class ClearingBkmHeader
     public string FileVersionNumber { get; set; } = default!;
 }
 
-public partial class ClearingBkmDetail
+public partial class ClearingBkmDetail : IClearingBkmDetail
 {
     public ClearingBkmTxnType TxnType { get; set; }
     public string IoDate { get; set; } = default!;
@@ -397,7 +392,7 @@ public partial class ClearingBkmDetail
     public string FileId { get; set; } = default!;
 }
 
-public partial class ClearingBkmFooter
+public partial class ClearingBkmFooter : IClearingBkmFooter
 {
     public ClearingBkmFooterCode FooterCode { get; set; }
     public string FileDate { get; set; } = default!;
@@ -514,18 +509,16 @@ public enum ClearingBkmControlStat
     DisputeEnd
 }
 
-#endregion
 
-#region CARD VISA
 
-public partial class CardVisa
+public partial class CardVisa : ICardVisa
 {
-    public CardVisaHeader Header { get; set; } = new();
-    public CardVisaDetail Detail { get; set; } = new();
-    public CardVisaFooter Footer { get; set; } = new();
+    public ICardVisaHeader Header { get; set; }
+    public ICardVisaDetail Detail { get; set; }
+    public ICardVisaFooter Footer { get; set; }
 }
 
-public partial class CardVisaHeader
+public partial class CardVisaHeader : ICardVisaHeader
 {
     public CardVisaHeaderCode HeaderCode { get; set; }
     public string FileDate { get; set; } = default!;
@@ -533,7 +526,7 @@ public partial class CardVisaHeader
     public string FileVersionNumber { get; set; } = default!;
 }
 
-public partial class CardVisaDetail
+public partial class CardVisaDetail : ICardVisaDetail
 {
     public int TransactionDate { get; set; }
     public int TransactionTime { get; set; }
@@ -598,7 +591,7 @@ public partial class CardVisaDetail
     public decimal CcPointAmount { get; set; }
 }
 
-public partial class CardVisaFooter
+public partial class CardVisaFooter : ICardVisaFooter
 {
     public CardVisaFooterCode FooterCode { get; set; }
     public string FileDate { get; set; } = default!;
@@ -757,18 +750,16 @@ public enum CardVisaTxnOrigin
     ChannelGenerated
 }
 
-#endregion
 
-#region CARD MSC
 
-public partial class CardMsc
+public partial class CardMsc : ICardMsc
 {
-    public CardMscHeader Header { get; set; } = new();
-    public CardMscDetail Detail { get; set; } = new();
-    public CardMscFooter Footer { get; set; } = new();
+    public ICardMscHeader Header { get; set; }
+    public ICardMscDetail Detail { get; set; }
+    public ICardMscFooter Footer { get; set; }
 }
 
-public partial class CardMscHeader
+public partial class CardMscHeader : ICardMscHeader
 {
     public CardMscHeaderCode HeaderCode { get; set; }
     public string FileDate { get; set; } = default!;
@@ -776,7 +767,7 @@ public partial class CardMscHeader
     public string FileVersionNumber { get; set; } = default!;
 }
 
-public partial class CardMscDetail
+public partial class CardMscDetail : ICardMscDetail
 {
     public int TransactionDate { get; set; }
     public int TransactionTime { get; set; }
@@ -841,7 +832,7 @@ public partial class CardMscDetail
     public decimal CcPointAmount { get; set; }
 }
 
-public partial class CardMscFooter
+public partial class CardMscFooter : ICardMscFooter
 {
     public CardMscFooterCode FooterCode { get; set; }
     public string FileDate { get; set; } = default!;
@@ -1000,18 +991,16 @@ public enum CardMscTxnOrigin
     ChannelGenerated
 }
 
-#endregion
 
-#region CARD BKM
 
-public partial class CardBkm
+public partial class CardBkm : ICardBkm
 {
-    public CardBkmHeader Header { get; set; } = new();
-    public CardBkmDetail Detail { get; set; } = new();
-    public CardBkmFooter Footer { get; set; } = new();
+    public ICardBkmHeader Header { get; set; }
+    public ICardBkmDetail Detail { get; set; }
+    public ICardBkmFooter Footer { get; set; }
 }
 
-public partial class CardBkmHeader
+public partial class CardBkmHeader : ICardBkmHeader
 {
     public CardBkmHeaderCode HeaderCode { get; set; }
     public string FileDate { get; set; } = default!;
@@ -1019,7 +1008,7 @@ public partial class CardBkmHeader
     public string FileVersionNumber { get; set; } = default!;
 }
 
-public partial class CardBkmDetail
+public partial class CardBkmDetail : ICardBkmDetail
 {
     public int TransactionDate { get; set; }
     public int TransactionTime { get; set; }
@@ -1084,7 +1073,7 @@ public partial class CardBkmDetail
     public decimal CcPointAmount { get; set; }
 }
 
-public partial class CardBkmFooter
+public partial class CardBkmFooter : ICardBkmFooter
 {
     public CardBkmFooterCode FooterCode { get; set; }
     public string FileDate { get; set; } = default!;
@@ -1242,5 +1231,3 @@ public enum CardBkmTxnOrigin
     [EnumMember(Value = "3")]
     ChannelGenerated
 }
-
-#endregion

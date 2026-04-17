@@ -31,13 +31,13 @@ public class ReconciliationAlertConfiguration : IEntityTypeConfiguration<Reconci
 
     internal static void ConfigureColumns<T>(EntityTypeBuilder<T> builder) where T : ReconciliationAlert
     {
-        builder.Property(x => x.FileLineId).HasColumnName("file_line_id");
-        builder.Property(x => x.GroupId).HasColumnName("group_id");
-        builder.Property(x => x.EvaluationId).HasColumnName("evaluation_id");
-        builder.Property(x => x.OperationId).HasColumnName("operation_id");
-        builder.Property(x => x.Severity).HasColumnName("severity").HasMaxLength(20);
-        builder.Property(x => x.AlertType).HasColumnName("alert_type").HasMaxLength(200);
-        builder.Property(x => x.Message).HasColumnName("message").HasMaxLength(2000);
-        builder.Property(x => x.AlertStatus).HasColumnName("alert_status").HasConversion<string>().HasMaxLength(32).IsRequired();
+        builder.Property(x => x.FileLineId);
+        builder.Property(x => x.GroupId);
+        builder.Property(x => x.EvaluationId);
+        builder.Property(x => x.OperationId);
+        builder.Property(x => x.Severity).HasMaxLength(20);
+        builder.Property(x => x.AlertType).HasMaxLength(200);
+        builder.Property(x => x.Message).HasMaxLength(2000);
+        builder.Property(x => x.AlertStatus).HasConversion<string>().IsRequired();
     }
 }

@@ -39,6 +39,8 @@ internal sealed class EvaluationResult
 {
     public string Note { get; set; } = string.Empty;
     public List<EvaluationOperation> Operations { get; set; } = [];
+    public bool IsAwaitingClearing { get; set; }
+    public string DecisionPoint { get; set; } = string.Empty;
 }
 
 internal sealed class EvaluationOperation

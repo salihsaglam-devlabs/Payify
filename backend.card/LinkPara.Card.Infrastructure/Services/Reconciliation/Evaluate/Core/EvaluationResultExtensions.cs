@@ -9,6 +9,13 @@ internal static class EvaluationResultExtensions
         result.Note = note;
         return result;
     }
+    
+    public static EvaluationResult MarkAwaitingClearing(this EvaluationResult result, string decisionPoint)
+    {
+        result.IsAwaitingClearing = true;
+        result.DecisionPoint = decisionPoint;
+        return result;
+    }
 
     public static void AddAutoOperation(
         this EvaluationResult result,

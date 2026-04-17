@@ -3,29 +3,28 @@ using LinkPara.SharedModels.Persistence;
 
 namespace LinkPara.Card.Domain.Entities.FileIngestion.Persistence;
 
-public class IngestionClearingMscDetail : AuditEntity, IIngestionTypedDetail
+public class IngestionClearingMscDetail : AuditEntity, IIngestionTypedDetail,IClearingMscDetail
 {
-    public Guid IngestionFileLineId { get; set; }
-    public IngestionFileLine IngestionFileLine { get; set; }
+    public Guid FileLineId { get; set; }
+    public IngestionFileLine FileLine { get; set; }
 
-    // ClearingMscDetail fields
     public ClearingMscTxnType TxnType { get; set; }
-    public string IoDate { get; set; } = default!;
+    public string IoDate { get; set; }
     public ClearingMscIoFlag IoFlag { get; set; }
     public long OceanTxnGuid { get; set; }
     public long ClrNo { get; set; }
-    public string Rrn { get; set; } = default!;
-    public string Arn { get; set; } = default!;
-    public string ReasonCode { get; set; } = default!;
-    public string Reserved { get; set; } = default!;
-    public string ProvisionCode { get; set; } = default!;
-    public string CardNo { get; set; } = default!;
+    public string Rrn { get; set; }
+    public string Arn { get; set; }
+    public string ReasonCode { get; set; }
+    public string Reserved { get; set; }
+    public string ProvisionCode { get; set; }
+    public string CardNo { get; set; }
     public ClearingMscCardDci? CardDci { get; set; }
-    public string MccCode { get; set; } = default!;
-    public string Mtid { get; set; } = default!;
-    public string FunctionCode { get; set; } = default!;
-    public string ProcessCode { get; set; } = default!;
-    public string ReversalIndicator { get; set; } = default!;
+    public string MccCode { get; set; }
+    public string Mtid { get; set; }
+    public string FunctionCode { get; set; }
+    public string ProcessCode { get; set; }
+    public string ReversalIndicator { get; set; }
     public ClearingMscDisputeCode DisputeCode { get; set; }
     public ClearingMscControlStat ControlStat { get; set; }
     public decimal SourceAmount { get; set; }
@@ -34,15 +33,15 @@ public class IngestionClearingMscDetail : AuditEntity, IIngestionTypedDetail
     public int DestinationCurrency { get; set; }
     public decimal CashbackAmount { get; set; }
     public decimal ReimbursementAmount { get; set; }
-    public string ReimbursementAttribute { get; set; } = default!;
-    public string AncillaryTransactionCode { get; set; } = default!;
-    public string AncillaryTransactionAmount { get; set; } = default!;
+    public string ReimbursementAttribute { get; set; }
+    public string AncillaryTransactionCode { get; set; }
+    public string AncillaryTransactionAmount { get; set; }
     public int MicrofilmNumber { get; set; }
-    public string MerchantCity { get; set; } = default!;
-    public string MerchantName { get; set; } = default!;
-    public string CardAcceptorId { get; set; } = default!;
+    public string MerchantCity { get; set; }
+    public string MerchantName { get; set; }
+    public string CardAcceptorId { get; set; }
     public int TxnDate { get; set; }
     public int TxnTime { get; set; }
-    public string FileId { get; set; } = default!;
+    public string FileId { get; set; }
 }
 

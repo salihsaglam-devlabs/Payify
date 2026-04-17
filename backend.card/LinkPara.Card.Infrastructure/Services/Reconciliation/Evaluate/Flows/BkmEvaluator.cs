@@ -78,11 +78,19 @@ internal sealed class BkmEvaluator : IEvaluator
 
         if (IsCancelOrReversal(detail))
         {
+            if (bkmContext.ClearingDetails.Count == 0)
+            {
+                return BuildAwaitingClearingResult(result, bkmContext, "AWAIT_CLEARING_REVERSAL");
+            }
             return await EvaluateCancelOrReversalAsync(result, bkmContext, detail, cancellationToken);
         }
 
         if (IsFailed(detail))
         {
+            if (bkmContext.ClearingDetails.Count == 0)
+            {
+                return BuildAwaitingClearingResult(result, bkmContext, "AWAIT_CLEARING_FAILED");
+            }
             return EvaluateFailedTransaction(result, bkmContext, payifyStatus);
         }
 
@@ -147,16 +155,22 @@ internal sealed class BkmEvaluator : IEvaluator
             result.SetNote(note: _localizer.Get("Reconciliation.Bkm.AlreadyCancelledNote"));
             return result;
         }
+        
+        var originalTransactionId = originalResolution.Transaction?.Id;
 
         result.SetNote(note: _localizer.Get("Reconciliation.Bkm.ReversalNotCancelledNote"));
         result.AddAutoOperation(
-            OperationCodes.MarkOriginalTransactionCancelled,
-            _localizer.Get("Reconciliation.Bkm.MarkOriginalCancelledOp"),
-            BkmSnapshotBuilder.Create(context, OperationCodes.MarkOriginalTransactionCancelled, "D7", ("originalTransactionId", originalResolution.Transaction?.Id)));
-        result.AddAutoOperation(
-            OperationCodes.ReverseOriginalTransaction,
+            OperationCodes.RaiseAlert,
             _localizer.Get("Reconciliation.Bkm.ReverseOriginalOp"),
-            BkmSnapshotBuilder.Create(context, OperationCodes.ReverseOriginalTransaction, "D7", ("originalTransactionId", originalResolution.Transaction?.Id)));
+            BkmSnapshotBuilder.Create(context, OperationCodes.RaiseAlert, "D7", ("originalTransactionId", originalTransactionId)));
+        result.AddManualOperation(
+            OperationCodes.CreateManualReview,
+            _localizer.Get("Reconciliation.Bkm.CancelReversalManualReviewOp"),
+            code => BkmSnapshotBuilder.Create(context, code, "D7", ("originalTransactionId", originalTransactionId)),
+            approveCode: OperationCodes.ReverseOriginalTransaction,
+            approveNote: _localizer.Get("Reconciliation.Bkm.MarkOriginalCancelledOp"),
+            rejectCode: OperationCodes.RejectReversalRecord,
+            rejectNote: _localizer.Get("Reconciliation.Bkm.CloseCancelReversalManually"));
         return result;
     }
 
@@ -212,15 +226,24 @@ internal sealed class BkmEvaluator : IEvaluator
 
         if (payifyStatus == PayifyStatus.Missing)
         {
+            if (context.ClearingDetails.Count == 0)
+            {
+                return BuildAwaitingClearingResult(result, context, "AWAIT_CLEARING_EXPIRED_NO_PAYIFY");
+            }
+
             result.SetNote(note: _localizer.Get("Reconciliation.Bkm.ExpiredMissingPayifyNote"));
             result.AddAutoOperation(
-                OperationCodes.CreateTransaction,
-                _localizer.Get("Reconciliation.Bkm.CreateTransactionOp"),
-                BkmSnapshotBuilder.Create(context, OperationCodes.CreateTransaction, "C8"));
-            result.AddAutoOperation(
-                OperationCodes.MoveCreatedTransactionToExpired,
-                _localizer.Get("Reconciliation.Bkm.MoveCreatedToExpiredOp"),
-                BkmSnapshotBuilder.Create(context, OperationCodes.MoveCreatedTransactionToExpired, "C8"));
+                OperationCodes.RaiseAlert,
+                _localizer.Get("Reconciliation.Bkm.ExpiredAccPendingAlertOp"),
+                BkmSnapshotBuilder.Create(context, OperationCodes.RaiseAlert, "C8"));
+            result.AddManualOperation(
+                OperationCodes.CreateManualReview,
+                _localizer.Get("Reconciliation.Bkm.ExpiredAccPendingReviewOp"),
+                code => BkmSnapshotBuilder.Create(context, code, "C8"),
+                approveCode: OperationCodes.CreateTransaction,
+                approveNote: _localizer.Get("Reconciliation.Bkm.CreateTransactionOp"),
+                rejectCode: OperationCodes.RejectUnmatchedFlow,
+                rejectNote: _localizer.Get("Reconciliation.Bkm.CloseRecordManually"));
             return result;
         }
 
@@ -260,15 +283,24 @@ internal sealed class BkmEvaluator : IEvaluator
             return result;
         }
         
-        result.SetNote(note: _localizer.Get("Reconciliation.Bkm.ExpiredSuccessfulNoAccNote"));
+        var hasAuthoritativeClearing = context.ClearingDetails.Any(c =>
+            c.ControlStat is ClearingBkmControlStat.Normal or ClearingBkmControlStat.ProblemToNormal);
+
+        result.SetNote(note: _localizer.Get(hasAuthoritativeClearing
+            ? "Reconciliation.Bkm.ExpiredWithAuthoritativeClearingNote"
+            : "Reconciliation.Bkm.ExpiredSuccessfulNoAccNote"));
         result.AddAutoOperation(
-            OperationCodes.MoveTransactionToExpired,
-            _localizer.Get("Reconciliation.Bkm.MoveToExpiredOp"),
-            BkmSnapshotBuilder.Create(context, OperationCodes.MoveTransactionToExpired, "D2"));
-        result.AddAutoOperation(
-            OperationCodes.ReverseByBalanceEffect,
-            _localizer.Get("Reconciliation.Bkm.ReverseByBalanceOp"),
-            BkmSnapshotBuilder.Create(context, OperationCodes.ReverseByBalanceEffect, "D2"));
+            OperationCodes.RaiseAlert,
+            _localizer.Get("Reconciliation.Bkm.ExpiredAccPendingAlertOp"),
+            BkmSnapshotBuilder.Create(context, OperationCodes.RaiseAlert, "D2"));
+        result.AddManualOperation(
+            OperationCodes.CreateManualReview,
+            _localizer.Get("Reconciliation.Bkm.ExpiredAccPendingReviewOp"),
+            code => BkmSnapshotBuilder.Create(context, code, "D2"),
+            approveCode: OperationCodes.MoveTransactionToExpired,
+            approveNote: _localizer.Get("Reconciliation.Bkm.MoveToExpiredOp"),
+            rejectCode: OperationCodes.RejectUnmatchedFlow,
+            rejectNote: _localizer.Get("Reconciliation.Bkm.CloseRecordManually"));
         return result;
     }
 
@@ -287,20 +319,7 @@ internal sealed class BkmEvaluator : IEvaluator
         
         if (context.ClearingDetails.Count == 0)
         {
-            result.SetNote(note: _localizer.Get("Reconciliation.Bkm.AccNotYetReceivedNote"));
-            result.AddAutoOperation(
-                OperationCodes.RaiseAlert,
-                _localizer.Get("Reconciliation.Bkm.AccMissingAlertOp"),
-                BkmSnapshotBuilder.Create(context, OperationCodes.RaiseAlert, "ACC_MISSING"));
-            result.AddManualOperation(
-                OperationCodes.CreateManualReview,
-                _localizer.Get("Reconciliation.Bkm.AccMissingReviewOp"),
-                code => BkmSnapshotBuilder.Create(context, code, "ACC_MISSING"),
-                approveCode: OperationCodes.RecoverMissingCardRow,
-                approveNote: _localizer.Get("Reconciliation.Bkm.RequeueForReEvaluation"),
-                rejectCode: OperationCodes.RejectUnmatchedFlow,
-                rejectNote: _localizer.Get("Reconciliation.Bkm.CloseRecordManually"));
-            return result;
+            return BuildAwaitingClearingResult(result, context, "AWAIT_CLEARING_SUCCESS");
         }
 
         if (payifyStatus == PayifyStatus.Failed)
@@ -314,10 +333,6 @@ internal sealed class BkmEvaluator : IEvaluator
                 OperationCodes.ConvertTransactionToSuccessful,
                 _localizer.Get("Reconciliation.Bkm.ConvertToSuccessfulOp"),
                 BkmSnapshotBuilder.Create(context, OperationCodes.ConvertTransactionToSuccessful, "D3"));
-            result.AddAutoOperation(
-                OperationCodes.ReverseByBalanceEffect,
-                _localizer.Get("Reconciliation.Bkm.ReverseByBalanceOp"),
-                BkmSnapshotBuilder.Create(context, OperationCodes.ReverseByBalanceEffect, "D3"));
             return result;
         }
 
@@ -387,8 +402,21 @@ internal sealed class BkmEvaluator : IEvaluator
                 BkmSnapshotBuilder.Create(context, OperationCodes.RunShadowBalanceProcess, "D8", ("differenceAmount", difference)));
             return result;
         }
-
+        
+        var overcharge = decimal.Round(latestEmoney.Amount - detail.BillingAmount, 2, MidpointRounding.AwayFromZero);
         result.SetNote(note: _localizer.Get("Reconciliation.Bkm.AmountGreaterNote"));
+        result.AddAutoOperation(
+            OperationCodes.RaiseAlert,
+            _localizer.Get("Reconciliation.Bkm.InsertShadowBalanceOp"),
+            BkmSnapshotBuilder.Create(context, OperationCodes.RaiseAlert, "D8_OVERCHARGE", ("differenceAmount", overcharge)));
+        result.AddManualOperation(
+            OperationCodes.CreateManualReview,
+            _localizer.Get("Reconciliation.Bkm.RunShadowBalanceOp"),
+            code => BkmSnapshotBuilder.Create(context, code, "D8_OVERCHARGE", ("differenceAmount", overcharge)),
+            approveCode: OperationCodes.InsertShadowBalanceEntry,
+            approveNote: _localizer.Get("Reconciliation.Bkm.InsertShadowBalanceOp"),
+            rejectCode: OperationCodes.RejectUnmatchedFlow,
+            rejectNote: _localizer.Get("Reconciliation.Bkm.CloseRecordManually"));
         return result;
     }
 
@@ -437,6 +465,31 @@ internal sealed class BkmEvaluator : IEvaluator
             approveNote: _localizer.Get("Reconciliation.Bkm.CloseCaseManually"),
             rejectCode: OperationCodes.RejectUnmatchedFlow,
             rejectNote: _localizer.Get("Reconciliation.Bkm.CloseCaseManually"));
+        return result;
+    }
+    
+    private EvaluationResult BuildAwaitingClearingResult(
+        EvaluationResult result,
+        BkmEvaluationContext context,
+        string decisionPoint)
+    {
+        result.SetNote(note: _localizer.Get("Reconciliation.Bkm.AwaitingClearingNote"));
+        result.MarkAwaitingClearing(decisionPoint);
+
+        result.AddAutoOperation(
+            OperationCodes.RaiseAlert,
+            _localizer.Get("Reconciliation.Bkm.AwaitingClearingAlertOp"),
+            BkmSnapshotBuilder.Create(context, OperationCodes.RaiseAlert, decisionPoint));
+
+        result.AddManualOperation(
+            OperationCodes.CreateManualReview,
+            _localizer.Get("Reconciliation.Bkm.AwaitingClearingReviewOp"),
+            code => BkmSnapshotBuilder.Create(context, code, decisionPoint),
+            approveCode: OperationCodes.RecoverMissingCardRow,
+            approveNote: _localizer.Get("Reconciliation.Bkm.RequeueAfterClearing"),
+            rejectCode: OperationCodes.RejectUnmatchedFlow,
+            rejectNote: _localizer.Get("Reconciliation.Bkm.CloseRecordManually"));
+
         return result;
     }
 
@@ -536,7 +589,10 @@ internal sealed class BkmEvaluator : IEvaluator
         var candidates = await _dbContext.Set<IngestionFileLine>()
             .AsNoTracking()
             .Where(x => x.CorrelationKey == "OceanTxnGuid"
-                        && x.CorrelationValue == detail.OceanMainTxnGuid.ToString())
+                        && x.CorrelationValue == detail.OceanMainTxnGuid.ToString()
+                        && x.IngestionFile.FileType == FileType.Card
+                        && x.IngestionFile.ContentType == FileContentType.Bkm
+                        && x.LineType == "D")
             .ToListAsync(cancellationToken);
 
         if (candidates.Count == 0)
@@ -550,7 +606,7 @@ internal sealed class BkmEvaluator : IEvaluator
         }
 
         var row = candidates[0];
-        var parsed = DeserializeDetail(row.ParsedData);
+        var parsed = DeserializeDetail(row.ParsedContent);
         var emoneyTransactions = await _emoneyService.GetByCustomerTransactionIdAsync(
             (parsed?.OceanTxnGuid ?? detail.OceanMainTxnGuid).ToString(CultureInfo.InvariantCulture),
             cancellationToken);
@@ -559,40 +615,15 @@ internal sealed class BkmEvaluator : IEvaluator
         return new OriginalTransactionResolution(OriginalTransactionStatus.Found, latestEmoney);
     }
 
-    private async Task<bool> HasAccPendingMatchAsync(
+    private Task<bool> HasAccPendingMatchAsync(
         CardBkmDetail detail,
         BkmEvaluationContext context,
         CancellationToken cancellationToken)
     {
-        if (context.ClearingDetails.Any(c =>
-                c.ControlStat == ClearingBkmControlStat.Problem && IsAccFieldMatch(detail, c)))
-        {
-            return true;
-        }
-        
-        if (context.ClearingDetails.Count > 0)
-        {
-            return false;
-        }
-        
-        var txnGuid = detail.OceanTxnGuid.ToString(CultureInfo.InvariantCulture);
-        var cutoffDate = DateTime.UtcNow.AddDays(-20);
-
-        var clearingParsedDataList = await _dbContext.Set<IngestionFileLine>()
-            .AsNoTracking()
-            .Where(x => x.CorrelationKey == "OceanTxnGuid"
-                        && x.CorrelationValue == txnGuid
-                        && x.IngestionFile.FileType == FileType.Clearing
-                        && x.IngestionFile.ContentType == FileContentType.Bkm
-                        && x.RecordType == "D"
-                        && x.CreateDate >= cutoffDate)
-            .Select(x => x.ParsedData)
-            .ToListAsync(cancellationToken);
-
-        return clearingParsedDataList
-            .Select(DeserializeClearingDetail)
-            .Where(c => c is not null)
-            .Any(c => c!.ControlStat == ClearingBkmControlStat.Problem && IsAccFieldMatch(detail, c!));
+        _ = cancellationToken; 
+        var match = context.ClearingDetails.Any(c =>
+            c.ControlStat == ClearingBkmControlStat.Problem && IsAccFieldMatch(detail, c));
+        return Task.FromResult(match);
     }
     
     private static bool IsAccFieldMatch(CardBkmDetail card, ClearingBkmDetail clearing)
@@ -626,22 +657,6 @@ internal sealed class BkmEvaluator : IEvaluator
         return true;
     }
 
-    private static ClearingBkmDetail? DeserializeClearingDetail(string? parsedData)
-    {
-        if (string.IsNullOrWhiteSpace(parsedData))
-        {
-            return null;
-        }
-
-        try
-        {
-            return JsonSerializer.Deserialize<ClearingBkmDetail>(parsedData, JsonOptions);
-        }
-        catch
-        {
-            return null;
-        }
-    }
 
     private static CardBkmDetail? GetRootCardDetail(BkmEvaluationContext context)
     {
@@ -650,7 +665,7 @@ internal sealed class BkmEvaluator : IEvaluator
             return context.CardDetails[0];
         }
 
-        return DeserializeDetail(context.RootRow.ParsedData);
+        return DeserializeDetail(context.RootRow.ParsedContent);
     }
 
     private static CardBkmDetail? DeserializeDetail(string? parsedData)

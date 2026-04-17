@@ -167,7 +167,7 @@ internal sealed class ExecuteService
 
         return await query
             .OrderBy(x => x.EvaluationId)
-            .ThenBy(x => x.SequenceIndex)
+            .ThenBy(x => x.SequenceNumber)
             .Select(x => x.EvaluationId)
             .Distinct()
             .Take(maxEvaluations)
@@ -235,7 +235,7 @@ internal sealed class ExecuteService
         return await _dbContext.ReconciliationOperations
             .AsTracking()
             .Where(x => x.EvaluationId == evaluationId)
-            .OrderBy(x => x.SequenceIndex)
+            .OrderBy(x => x.SequenceNumber)
             .ToListAsync(cancellationToken);
     }
 
@@ -244,7 +244,7 @@ internal sealed class ExecuteService
         DateTime now,
         ExecutionSelection selection)
     {
-        foreach (var operation in operations.OrderBy(x => x.SequenceIndex))
+        foreach (var operation in operations.OrderBy(x => x.SequenceNumber))
         {
             if (operation.Status is OperationStatus.Completed or OperationStatus.Cancelled or OperationStatus.Failed)
             {
@@ -315,7 +315,7 @@ internal sealed class ExecuteService
         IReadOnlyList<ReconciliationOperation> operations)
     {
         return operations.Any(x =>
-            x.SequenceIndex < operation.SequenceIndex &&
+            x.SequenceNumber < operation.SequenceNumber &&
             x.Status != OperationStatus.Completed &&
             x.Status != OperationStatus.Cancelled &&
             x.Status != OperationStatus.Failed);
@@ -329,19 +329,19 @@ internal sealed class ExecuteService
 
     private static bool IsRootOperation(ReconciliationOperation operation)
     {
-        return operation.SequenceIndex == 0 && !operation.ParentSequenceIndex.HasValue;
+        return operation.SequenceNumber == 0 && !operation.ParentSequenceNumber.HasValue;
     }
 
     private static bool HasCompletedParent(
         ReconciliationOperation operation,
         IReadOnlyList<ReconciliationOperation> operations)
     {
-        if (!operation.ParentSequenceIndex.HasValue)
+        if (!operation.ParentSequenceNumber.HasValue)
         {
             return false;
         }
 
-        var parentOperation = operations.SingleOrDefault(x => x.SequenceIndex == operation.ParentSequenceIndex.Value);
+        var parentOperation = operations.SingleOrDefault(x => x.SequenceNumber == operation.ParentSequenceNumber.Value);
         return parentOperation?.Status == OperationStatus.Completed;
     }
 
@@ -645,7 +645,7 @@ internal sealed class ExecuteService
         ReconciliationReview review)
     {
         var branchOperations = evaluationOperations
-            .Where(x => x.ParentSequenceIndex == gateOperation.SequenceIndex &&
+            .Where(x => x.ParentSequenceNumber == gateOperation.SequenceNumber &&
                         (x.Branch == Branches.Approve || x.Branch == Branches.Reject))
             .ToList();
 
@@ -672,7 +672,7 @@ internal sealed class ExecuteService
                 if (review.ExpirationFlowAction == ReviewExpirationFlowAction.CancelRemaining)
                 {
                     foreach (var operation in evaluationOperations.Where(x =>
-                                 x.SequenceIndex > gateOperation.SequenceIndex &&
+                                 x.SequenceNumber > gateOperation.SequenceNumber &&
                                  x.Status != OperationStatus.Completed &&
                                  x.Status != OperationStatus.Failed))
                     {

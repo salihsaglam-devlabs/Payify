@@ -5,14 +5,14 @@ namespace LinkPara.Card.Domain.Entities.FileIngestion.Persistence;
 
 public class IngestionFileLine : AuditEntity
 {
-    public Guid IngestionFileId { get; set; }
+    public Guid FileId { get; set; }
     public IngestionFile IngestionFile { get; set; }
     public long LineNumber { get; set; }
     public long ByteOffset { get; set; }
     public int ByteLength { get; set; }
-    public string RecordType { get; set; }
-    public string RawData { get; set; }
-    public string ParsedData { get; set; }
+    public string LineType { get; set; }
+    public string RawContent { get; set; }
+    public string ParsedContent { get; set; }
     public FileRowStatus Status { get; set; }
     public string Message { get; set; }
     public int RetryCount { get; set; }

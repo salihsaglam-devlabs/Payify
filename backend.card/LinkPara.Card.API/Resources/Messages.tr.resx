@@ -983,7 +983,10 @@
     <value>Manuel inceleme sonrası vakayı kapat.</value>
   </data>
   <data name="Reconciliation.Bkm.ExpiredSuccessfulNoAccNote" xml:space="preserve">
-    <value>Kart İşlem kaydı SÜRESİ DOLMUŞ, Payify kaydı BAŞARILI ve ACC eşleşmesi yok. İşlemi SÜRESİ DOLMUŞ durumuna taşı ve bakiye etkisini tersine çevir.</value>
+    <value>Kart İşlem kaydı SÜRESİ DOLMUŞ, Payify kaydı BAŞARILI ve ACC eşleşmesi yok. Clearing içeriği scheme tarafının işlemi fonladığına işaret ediyor olabileceği için otomatik reverse yapılmaz; operatör inceleme kapısına alınır.</value>
+  </data>
+  <data name="Reconciliation.Bkm.ExpiredWithAuthoritativeClearingNote" xml:space="preserve">
+    <value>Kart İşlem kaydı SÜRESİ DOLMUŞ, Payify kaydı BAŞARILI ve Clearing scheme tarafından ONAYLANMIŞ (Normal/ProblemToNormal). Scheme işlemi fonladığı için OTOMATİK expire + reverse UYGULANMAZ; operatör onayı ile karar verilir.</value>
   </data>
   <data name="Reconciliation.Bkm.NotSettledNote" xml:space="preserve">
     <value>TxnSettle != Y. Herhangi bir işlem gerekmiyor.</value>
@@ -1098,6 +1101,18 @@
   </data>
   <data name="Reconciliation.Bkm.AccNotYetReceivedNote" xml:space="preserve">
     <value>İşlem BAŞARILI ve settle edilmiş, ancak ACC takas verisi henüz alınmadı. Mutabakat ACC gelişine kadar ertelendi.</value>
+  </data>
+  <data name="Reconciliation.Bkm.AwaitingClearingNote" xml:space="preserve">
+    <value>Clearing verisi henüz alınmadı. İşlem finansal mutabakat dışında tutuluyor; clearing gelişi bekleniyor. Herhangi bir bakiye etkili işlem uygulanmadı.</value>
+  </data>
+  <data name="Reconciliation.Bkm.AwaitingClearingAlertOp" xml:space="preserve">
+    <value>Clearing bekleniyor — clearing gelene kadar otomatik finansal düzeltme uygulanmayacak. Alarm oluşturuldu.</value>
+  </data>
+  <data name="Reconciliation.Bkm.AwaitingClearingReviewOp" xml:space="preserve">
+    <value>Clearing bekleyen kayıt; clearing ingest olduğunda otomatik olarak yeniden değerlendirilecek. Operatör override'ı için manuel inceleme kapısı açık.</value>
+  </data>
+  <data name="Reconciliation.Bkm.RequeueAfterClearing" xml:space="preserve">
+    <value>Clearing geldiğinde yeniden değerlendirme kuyruğuna al.</value>
   </data>
   <data name="Reconciliation.Bkm.AccMissingAlertOp" xml:space="preserve">
     <value>Başarılı settle edilmiş işlem için ACC takas verisi eksik — manuel takip için uyarı oluşturuldu.</value>

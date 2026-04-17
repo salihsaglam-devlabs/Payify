@@ -47,7 +47,7 @@ internal sealed class ContextBuilder : IContextBuilder
             return new Dictionary<Guid, EvaluationContext>();
         }
 
-        var fileIds = rows.Select(x => x.IngestionFileId).Distinct().ToArray();
+        var fileIds = rows.Select(x => x.FileId).Distinct().ToArray();
         var rootFiles = await _dbContext.IngestionFiles
             .AsNoTracking()
             .Where(x => fileIds.Contains(x.Id))
@@ -75,7 +75,7 @@ internal sealed class ContextBuilder : IContextBuilder
                 var rowsByKey = await _dbContext.IngestionFileLines
                     .AsNoTracking()
                     .Include(x => x.IngestionFile)
-                    .Where(x => x.RecordType == "D")
+                    .Where(x => x.LineType == "D")
                     .Where(x => x.CorrelationKey == group.Key && batch.Contains(x.CorrelationValue))
                     .OrderBy(x => x.LineNumber)
                     .ThenBy(x => x.Id)
@@ -113,9 +113,9 @@ internal sealed class ContextBuilder : IContextBuilder
             correlatedGroups.TryGetValue(groupKey, out var rowGroup);
             rowGroup ??= Array.Empty<IngestionFileLine>();
 
-            if (!rootFiles.TryGetValue(row.IngestionFileId, out var rootFile))
+            if (!rootFiles.TryGetValue(row.FileId, out var rootFile))
             {
-                throw new ReconciliationFileNotResolvedException( _localizer.Get("Reconciliation.FileNotResolved", row.IngestionFileId));
+                throw new ReconciliationFileNotResolvedException(_localizer.Get("Reconciliation.FileNotResolved", row.FileId));
             }
 
             var emoneyTransactions = new List<EmoneyCustomerTransactionDto>();
@@ -209,8 +209,8 @@ internal sealed class ContextBuilder : IContextBuilder
         where TDetail : class
     {
         return rows
-            .Where(x => x.IngestionFile.FileType == fileType && x.IngestionFile.ContentType == contentType && string.Equals(x.RecordType, "D", StringComparison.OrdinalIgnoreCase))
-            .Select(x => Deserialize<TDetail>(x.ParsedData))
+            .Where(x => x.IngestionFile.FileType == fileType && x.IngestionFile.ContentType == contentType && string.Equals(x.LineType, "D", StringComparison.OrdinalIgnoreCase))
+            .Select(x => Deserialize<TDetail>(x.ParsedContent))
             .Where(x => x is not null)
             .Cast<TDetail>()
             .ToList();

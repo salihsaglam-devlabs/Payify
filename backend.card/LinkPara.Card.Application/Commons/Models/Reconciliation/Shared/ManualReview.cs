@@ -7,6 +7,8 @@ public class ManualReview
     public Guid OperationId { get; set; }
     public Guid FileLineId { get; set; }
 
+    public string Note { get; set; }
+    
     [MaxLength(200)]
     public string OperationCode { get; set; }
     public string OperationPayload { get; set; }
@@ -29,6 +31,6 @@ public class ManualReview
 public class BranchOperation
 {
     public string Code { get; set; }
-    
+    public string Note { get; set; }
     public string Payload { get; set; }
 }

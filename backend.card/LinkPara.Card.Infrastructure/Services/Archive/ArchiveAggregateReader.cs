@@ -69,12 +69,12 @@ internal sealed class ArchiveAggregateReader
 
         snapshot.Counts.IngestionFileLineCount = await _dbContext.IngestionFileLines
             .AsNoTracking()
-            .Where(x => x.IngestionFileId == ingestionFileId)
+            .Where(x => x.FileId == ingestionFileId)
             .CountAsync(cancellationToken);
 
         foreach (var status in await _dbContext.IngestionFileLines
                      .AsNoTracking()
-                     .Where(x => x.IngestionFileId == ingestionFileId)
+                     .Where(x => x.FileId == ingestionFileId)
                      .Select(x => x.Status.ToString())
                      .Distinct()
                      .ToListAsync(cancellationToken))
@@ -84,7 +84,7 @@ internal sealed class ArchiveAggregateReader
 
         foreach (var status in await _dbContext.IngestionFileLines
                      .AsNoTracking()
-                     .Where(x => x.IngestionFileId == ingestionFileId && x.ReconciliationStatus != null)
+                     .Where(x => x.FileId == ingestionFileId && x.ReconciliationStatus != null)
                      .Select(x => x.ReconciliationStatus!.Value.ToString())
                      .Distinct()
                      .ToListAsync(cancellationToken))
@@ -94,7 +94,7 @@ internal sealed class ArchiveAggregateReader
 
         var fileLineIds = await _dbContext.IngestionFileLines
             .AsNoTracking()
-            .Where(x => x.IngestionFileId == ingestionFileId)
+            .Where(x => x.FileId == ingestionFileId)
             .Select(x => x.Id)
             .ToListAsync(cancellationToken);
 
@@ -106,32 +106,32 @@ internal sealed class ArchiveAggregateReader
 
         snapshot.Counts.IngestionCardVisaDetailCount = await _dbContext.IngestionCardVisaDetails
             .AsNoTracking()
-            .Where(x => fileLineIds.Contains(x.IngestionFileLineId))
+            .Where(x => fileLineIds.Contains(x.FileLineId))
             .CountAsync(cancellationToken);
 
         snapshot.Counts.IngestionCardMscDetailCount = await _dbContext.IngestionCardMscDetails
             .AsNoTracking()
-            .Where(x => fileLineIds.Contains(x.IngestionFileLineId))
+            .Where(x => fileLineIds.Contains(x.FileLineId))
             .CountAsync(cancellationToken);
 
         snapshot.Counts.IngestionCardBkmDetailCount = await _dbContext.IngestionCardBkmDetails
             .AsNoTracking()
-            .Where(x => fileLineIds.Contains(x.IngestionFileLineId))
+            .Where(x => fileLineIds.Contains(x.FileLineId))
             .CountAsync(cancellationToken);
 
         snapshot.Counts.IngestionClearingVisaDetailCount = await _dbContext.IngestionClearingVisaDetails
             .AsNoTracking()
-            .Where(x => fileLineIds.Contains(x.IngestionFileLineId))
+            .Where(x => fileLineIds.Contains(x.FileLineId))
             .CountAsync(cancellationToken);
 
         snapshot.Counts.IngestionClearingMscDetailCount = await _dbContext.IngestionClearingMscDetails
             .AsNoTracking()
-            .Where(x => fileLineIds.Contains(x.IngestionFileLineId))
+            .Where(x => fileLineIds.Contains(x.FileLineId))
             .CountAsync(cancellationToken);
 
         snapshot.Counts.IngestionClearingBkmDetailCount = await _dbContext.IngestionClearingBkmDetails
             .AsNoTracking()
-            .Where(x => fileLineIds.Contains(x.IngestionFileLineId))
+            .Where(x => fileLineIds.Contains(x.FileLineId))
             .CountAsync(cancellationToken);
 
         snapshot.Counts.ReconciliationEvaluationCount = await _dbContext.ReconciliationEvaluations

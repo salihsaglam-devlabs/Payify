@@ -16,31 +16,20 @@ using Serilog.Sinks.Elasticsearch;
 using Serilog.Sinks.RabbitMQ;
 using System.Reflection;
 using LinkPara.Card.API.Helpers.Security;
-using LinkPara.Card.API.Helpers.Swagger;
-using LinkPara.Card.Application.Commons.Models.DatabaseConfiguration;
 using EmitEventFailureHandling = Serilog.Sinks.RabbitMQ.EmitEventFailureHandling;
-using Microsoft.Extensions.Options;
-using Newtonsoft.Json.Converters;
-using Microsoft.EntityFrameworkCore;
-using LinkPara.Card.Infrastructure.Persistence;
 
 var builder = WebApplication.CreateBuilder(args);
 var configuration = builder.Configuration;
 
 builder.Services.AddControllers(options =>
         options.Filters.Add<ApiExceptionFilterAttribute>())
-    .AddFluentValidation(x => x.AutomaticValidationEnabled = false)
-    .AddNewtonsoftJson(options =>
-    { 
-        options.SerializerSettings.Converters.Add(new StringEnumConverter());
-    });
+    .AddFluentValidation(x => x.AutomaticValidationEnabled = false).AddNewtonsoftJson();
 
 builder.Services.AddLogging();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen((options) =>
 {
     options.SwaggerDoc("v1", new OpenApiInfo { Title = "Card API", Version = "v1" });
-    options.SchemaFilter<EnumDescriptionSchemaFilter>();
     options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
     {
         In = ParameterLocation.Header,
@@ -68,7 +57,6 @@ builder.Services.AddSwaggerGen((options) =>
     options.IncludeXmlComments(Path.Combine(AppContext.BaseDirectory, xmlFilename));
 });
 
-builder.Services.AddSwaggerGenNewtonsoftSupport();
 var vaultClient = builder.Services.AddVault(configuration);
 builder.Services.AddApplication(configuration);
 await builder.Services.AddApplicationUser(vaultClient);
@@ -125,49 +113,6 @@ var app = builder.Build();
 
 app.ConfigureLocalization(); // Required for localization
 
-using (var scope = app.Services.CreateScope())
-{
-    try
-    {
-        var databaseOptions = scope.ServiceProvider.GetRequiredService<IOptions<DatabaseOptions>>().Value;
-        var enableAutoMigrate = databaseOptions.EnableAutoMigrate ?? false;
-        if (enableAutoMigrate)
-        {
-            var db = scope.ServiceProvider.GetRequiredService<CardDbContext>();
-            var startupLogger = scope.ServiceProvider.GetService<Microsoft.Extensions.Logging.ILogger<Program>>();
-            await DatabaseInitializer.EnsureMigrationBaselineAsync(scope.ServiceProvider, startupLogger);
-            db.Database.Migrate();
-            try
-            {
-                await DatabaseInitializer.EnsureTablesExistAsync(scope.ServiceProvider, configuration, startupLogger);
-            }
-            catch (Exception ex)
-            {
-                Log.Error(ex, "Error while ensuring tables exist after migration.");
-                throw;
-            }
-
-            try
-            {
-                await DatabaseInitializer.ApplySqlMigrationsAsync(scope.ServiceProvider, startupLogger);
-            }
-            catch (Exception ex)
-            {
-                Log.Error(ex, "Error while applying SQL view migrations.");
-                throw;
-            }
-        }
-        else
-        {
-            Log.Information("Automatic database migration is disabled via configuration (Database:EnableAutoMigrate = false). Skipping migrations at startup.");
-        }
-    }
-    catch (Exception ex)
-    {
-        Log.Error(ex, "An error occurred while attempting to migrate or initialize the database.");
-        throw;
-    }
-}
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {

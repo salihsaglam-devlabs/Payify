@@ -193,19 +193,35 @@ internal sealed class OperationExecutor
     private async Task<OperationHandlerResult> ExecuteReverseOriginalTransactionAsync(ReconciliationOperation operation, CancellationToken cancellationToken)
     {
         var payload = new OperationPayloadAccessor(operation.Payload, _localizer);
-        var request = new
+        var referenceTransactionId = GetRequired<long>(payload, operation, "referenceTransactionId").ToString();
+
+        var cancelRequest = new
         {
-            customerTransactionId = GetRequired<long>(payload, operation, "referenceTransactionId").ToString(),
+            customerTransactionId = referenceTransactionId,
+            targetStatus = "Rejected",
+            isCancelled = true,
+            idempotencyKey = operation.IdempotencyKey + ":cancel",
+            note = operation.Note
+        };
+        var cancelResponse = await _emoneyService.UpdateTransactionStatusAsync(cancelRequest, cancellationToken);
+        if (cancelResponse is null || !cancelResponse.IsSuccessful)
+        {
+            return FromExternalResult("SUCCESS_REVERSE_ORIGINAL_TRANSACTION", "REVERSE_ORIGINAL_TRANSACTION_FAILED", cancelRequest, cancelResponse);
+        }
+
+        var reverseRequest = new
+        {
+            customerTransactionId = referenceTransactionId,
             referenceCustomerTransactionId = GetRequired<long>(payload, operation, "currentTransactionId").ToString(),
             txnEffect = GetRequired<string>(payload, operation, "txnEffect"),
             amount = GetRequired<decimal>(payload, operation, "billingAmount"),
             currencyCode = GetRequired<string>(payload, operation, "currencyCode"),
-            idempotencyKey = operation.IdempotencyKey,
+            idempotencyKey = operation.IdempotencyKey + ":reverse",
             note = operation.Note
         };
 
-        var response = await _emoneyService.ReverseBalanceEffectAsync(request, cancellationToken);
-        return FromExternalResult("SUCCESS_REVERSE_ORIGINAL_TRANSACTION", "REVERSE_ORIGINAL_TRANSACTION_FAILED", request, response);
+        var reverseResponse = await _emoneyService.ReverseBalanceEffectAsync(reverseRequest, cancellationToken);
+        return FromExternalResult("SUCCESS_REVERSE_ORIGINAL_TRANSACTION", "REVERSE_ORIGINAL_TRANSACTION_FAILED", reverseRequest, reverseResponse);
     }
 
     private async Task<OperationHandlerResult> ExecuteCorrectResponseCodeAsync(ReconciliationOperation operation, CancellationToken cancellationToken)

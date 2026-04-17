@@ -58,13 +58,13 @@ namespace LinkPara.Card.Infrastructure.Persistence.Migrations.PostgreSql
                     b.Property<string>("ArchiveEligibilityStatus")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("character varying(50)")
+                        .HasColumnType("text")
                         .HasColumnName("archive_eligibility_status");
 
                     b.Property<string>("ContentType")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("character varying(50)")
+                        .HasColumnType("text")
                         .HasColumnName("content_type");
 
                     b.Property<DateTime>("FileCreatedAt")
@@ -82,13 +82,13 @@ namespace LinkPara.Card.Infrastructure.Persistence.Migrations.PostgreSql
                     b.Property<string>("FileStatus")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("character varying(50)")
+                        .HasColumnType("text")
                         .HasColumnName("file_status");
 
                     b.Property<string>("FileType")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("character varying(50)")
+                        .HasColumnType("text")
                         .HasColumnName("file_type");
 
                     b.Property<bool>("IsArchived")
@@ -188,7 +188,7 @@ namespace LinkPara.Card.Infrastructure.Persistence.Migrations.PostgreSql
                     b.Property<string>("ContentType")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("character varying(50)")
+                        .HasColumnType("text")
                         .HasColumnName("content_type");
 
                     b.Property<string>("FailureReasonsJson")
@@ -202,7 +202,7 @@ namespace LinkPara.Card.Infrastructure.Persistence.Migrations.PostgreSql
                     b.Property<string>("FileType")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("character varying(50)")
+                        .HasColumnType("text")
                         .HasColumnName("file_type");
 
                     b.Property<string>("FilterJson")
@@ -218,18 +218,109 @@ namespace LinkPara.Card.Infrastructure.Persistence.Migrations.PostgreSql
                     b.ToView("vw_archive_run_overview", "reporting");
                 });
 
-            modelBuilder.Entity("LinkPara.Card.Application.Commons.Models.Reporting.Dtos.IngestionDailySummaryDto", b =>
+            modelBuilder.Entity("LinkPara.Card.Application.Commons.Models.Reporting.Dtos.FileReconSummaryDto", b =>
                 {
                     b.Property<string>("ContentType")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("character varying(50)")
+                        .HasColumnType("text")
                         .HasColumnName("content_type");
 
                     b.Property<string>("DataScope")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("character varying(50)")
+                        .HasColumnType("text")
+                        .HasColumnName("data_scope");
+
+                    b.Property<DateTime>("FileCreatedAt")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("file_created_at");
+
+                    b.Property<Guid>("FileId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("file_id");
+
+                    b.Property<string>("FileName")
+                        .HasColumnType("text")
+                        .HasColumnName("file_name");
+
+                    b.Property<string>("FileStatus")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("text")
+                        .HasColumnName("file_status");
+
+                    b.Property<string>("FileType")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("text")
+                        .HasColumnName("file_type");
+
+                    b.Property<decimal>("MatchRatePct")
+                        .HasColumnType("numeric")
+                        .HasColumnName("match_rate_pct");
+
+                    b.Property<decimal?>("MatchedAmount")
+                        .HasColumnType("numeric")
+                        .HasColumnName("matched_amount");
+
+                    b.Property<long>("MatchedLineCount")
+                        .HasColumnType("bigint")
+                        .HasColumnName("matched_line_count");
+
+                    b.Property<long>("ReconFailedCount")
+                        .HasColumnType("bigint")
+                        .HasColumnName("recon_failed_count");
+
+                    b.Property<long>("ReconNotApplicableCount")
+                        .HasColumnType("bigint")
+                        .HasColumnName("recon_not_applicable_count");
+
+                    b.Property<long>("ReconReadyCount")
+                        .HasColumnType("bigint")
+                        .HasColumnName("recon_ready_count");
+
+                    b.Property<long>("ReconSuccessCount")
+                        .HasColumnType("bigint")
+                        .HasColumnName("recon_success_count");
+
+                    b.Property<long>("TotalLineCount")
+                        .HasColumnType("bigint")
+                        .HasColumnName("total_line_count");
+
+                    b.Property<decimal?>("TotalOriginalAmount")
+                        .HasColumnType("numeric")
+                        .HasColumnName("total_original_amount");
+
+                    b.Property<decimal?>("TotalSettlementAmount")
+                        .HasColumnType("numeric")
+                        .HasColumnName("total_settlement_amount");
+
+                    b.Property<decimal?>("UnmatchedAmount")
+                        .HasColumnType("numeric")
+                        .HasColumnName("unmatched_amount");
+
+                    b.Property<long>("UnmatchedLineCount")
+                        .HasColumnType("bigint")
+                        .HasColumnName("unmatched_line_count");
+
+                    b.ToTable((string)null);
+
+                    b.ToView("vw_file_recon_summary", "reporting");
+                });
+
+            modelBuilder.Entity("LinkPara.Card.Application.Commons.Models.Reporting.Dtos.IngestionDailySummaryDto", b =>
+                {
+                    b.Property<string>("ContentType")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("text")
+                        .HasColumnName("content_type");
+
+                    b.Property<string>("DataScope")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("text")
                         .HasColumnName("data_scope");
 
                     b.Property<long?>("ExpectedLineCount")
@@ -251,7 +342,7 @@ namespace LinkPara.Card.Infrastructure.Persistence.Migrations.PostgreSql
                     b.Property<string>("FileType")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("character varying(50)")
+                        .HasColumnType("text")
                         .HasColumnName("file_type");
 
                     b.Property<long?>("ProcessedLineCount")
@@ -288,13 +379,13 @@ namespace LinkPara.Card.Infrastructure.Persistence.Migrations.PostgreSql
                     b.Property<string>("ContentType")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("character varying(50)")
+                        .HasColumnType("text")
                         .HasColumnName("content_type");
 
                     b.Property<string>("DataScope")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("character varying(50)")
+                        .HasColumnType("text")
                         .HasColumnName("data_scope");
 
                     b.Property<long>("DistinctErrorMessageCount")
@@ -324,13 +415,13 @@ namespace LinkPara.Card.Infrastructure.Persistence.Migrations.PostgreSql
                     b.Property<string>("FileStatus")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("character varying(50)")
+                        .HasColumnType("text")
                         .HasColumnName("file_status");
 
                     b.Property<string>("FileType")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("character varying(50)")
+                        .HasColumnType("text")
                         .HasColumnName("file_type");
 
                     b.Property<long>("MaxRetryCount")
@@ -344,13 +435,13 @@ namespace LinkPara.Card.Infrastructure.Persistence.Migrations.PostgreSql
                     b.Property<string>("SeverityLevel")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("character varying(50)")
+                        .HasColumnType("text")
                         .HasColumnName("severity_level");
 
                     b.Property<string>("SourceType")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("character varying(50)")
+                        .HasColumnType("text")
                         .HasColumnName("source_type");
 
                     b.Property<long>("TotalRetryCount")
@@ -387,13 +478,13 @@ namespace LinkPara.Card.Infrastructure.Persistence.Migrations.PostgreSql
                     b.Property<string>("ContentType")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("character varying(50)")
+                        .HasColumnType("text")
                         .HasColumnName("content_type");
 
                     b.Property<string>("DataScope")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("character varying(50)")
+                        .HasColumnType("text")
                         .HasColumnName("data_scope");
 
                     b.Property<long>("DuplicateLineCount")
@@ -431,13 +522,13 @@ namespace LinkPara.Card.Infrastructure.Persistence.Migrations.PostgreSql
                     b.Property<string>("FileStatus")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("character varying(50)")
+                        .HasColumnType("text")
                         .HasColumnName("file_status");
 
                     b.Property<string>("FileType")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("character varying(50)")
+                        .HasColumnType("text")
                         .HasColumnName("file_type");
 
                     b.Property<DateTime?>("FileUpdatedAt")
@@ -487,7 +578,7 @@ namespace LinkPara.Card.Infrastructure.Persistence.Migrations.PostgreSql
                     b.Property<string>("SourceType")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("character varying(50)")
+                        .HasColumnType("text")
                         .HasColumnName("source_type");
 
                     b.Property<long>("SuccessfulLineCount")
@@ -504,13 +595,13 @@ namespace LinkPara.Card.Infrastructure.Persistence.Migrations.PostgreSql
                     b.Property<string>("ContentType")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("character varying(50)")
+                        .HasColumnType("text")
                         .HasColumnName("content_type");
 
                     b.Property<string>("DataScope")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("character varying(50)")
+                        .HasColumnType("text")
                         .HasColumnName("data_scope");
 
                     b.Property<long>("DuplicateConflictCount")
@@ -556,13 +647,13 @@ namespace LinkPara.Card.Infrastructure.Persistence.Migrations.PostgreSql
                     b.Property<string>("FileStatus")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("character varying(50)")
+                        .HasColumnType("text")
                         .HasColumnName("file_status");
 
                     b.Property<string>("FileType")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("character varying(50)")
+                        .HasColumnType("text")
                         .HasColumnName("file_type");
 
                     b.Property<long>("LinesWithRetryCount")
@@ -595,13 +686,13 @@ namespace LinkPara.Card.Infrastructure.Persistence.Migrations.PostgreSql
                     b.Property<string>("ContentType")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("character varying(50)")
+                        .HasColumnType("text")
                         .HasColumnName("content_type");
 
                     b.Property<string>("DataScope")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("character varying(50)")
+                        .HasColumnType("text")
                         .HasColumnName("data_scope");
 
                     b.Property<long>("FailedFileCount")
@@ -619,7 +710,7 @@ namespace LinkPara.Card.Infrastructure.Persistence.Migrations.PostgreSql
                     b.Property<string>("FileType")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("character varying(50)")
+                        .HasColumnType("text")
                         .HasColumnName("file_type");
 
                     b.Property<DateTime>("FirstFileAt")
@@ -647,6 +738,93 @@ namespace LinkPara.Card.Infrastructure.Persistence.Migrations.PostgreSql
                     b.ToView("vw_ingestion_network_matrix", "reporting");
                 });
 
+            modelBuilder.Entity("LinkPara.Card.Application.Commons.Models.Reporting.Dtos.NetworkReconScorecardDto", b =>
+                {
+                    b.Property<decimal?>("AvgCardOriginalAmount")
+                        .HasColumnType("numeric")
+                        .HasColumnName("avg_card_original_amount");
+
+                    b.Property<decimal?>("AvgClearingSourceAmount")
+                        .HasColumnType("numeric")
+                        .HasColumnName("avg_clearing_source_amount");
+
+                    b.Property<string>("DataScope")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("text")
+                        .HasColumnName("data_scope");
+
+                    b.Property<DateTime?>("FirstFileDate")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("first_file_date");
+
+                    b.Property<DateTime?>("LastFileDate")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("last_file_date");
+
+                    b.Property<decimal?>("NetAmountDifference")
+                        .HasColumnType("numeric")
+                        .HasColumnName("net_amount_difference");
+
+                    b.Property<string>("Network")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("text")
+                        .HasColumnName("network");
+
+                    b.Property<decimal>("OverallMatchRatePct")
+                        .HasColumnType("numeric")
+                        .HasColumnName("overall_match_rate_pct");
+
+                    b.Property<long>("ReconFailedLineCount")
+                        .HasColumnType("bigint")
+                        .HasColumnName("recon_failed_line_count");
+
+                    b.Property<long>("ReconPendingLineCount")
+                        .HasColumnType("bigint")
+                        .HasColumnName("recon_pending_line_count");
+
+                    b.Property<long>("ReconSuccessLineCount")
+                        .HasColumnType("bigint")
+                        .HasColumnName("recon_success_line_count");
+
+                    b.Property<decimal>("ReconSuccessRatePct")
+                        .HasColumnType("numeric")
+                        .HasColumnName("recon_success_rate_pct");
+
+                    b.Property<decimal?>("TotalCardAmount")
+                        .HasColumnType("numeric")
+                        .HasColumnName("total_card_amount");
+
+                    b.Property<long>("TotalCardLineCount")
+                        .HasColumnType("bigint")
+                        .HasColumnName("total_card_line_count");
+
+                    b.Property<decimal?>("TotalClearingAmount")
+                        .HasColumnType("numeric")
+                        .HasColumnName("total_clearing_amount");
+
+                    b.Property<long>("TotalClearingLineCount")
+                        .HasColumnType("bigint")
+                        .HasColumnName("total_clearing_line_count");
+
+                    b.Property<long>("TotalFileCount")
+                        .HasColumnType("bigint")
+                        .HasColumnName("total_file_count");
+
+                    b.Property<long>("TotalMatchedCount")
+                        .HasColumnType("bigint")
+                        .HasColumnName("total_matched_count");
+
+                    b.Property<long>("TotalUnmatchedCount")
+                        .HasColumnType("bigint")
+                        .HasColumnName("total_unmatched_count");
+
+                    b.ToTable((string)null);
+
+                    b.ToView("vw_network_recon_scorecard", "reporting");
+                });
+
             modelBuilder.Entity("LinkPara.Card.Application.Commons.Models.Reporting.Dtos.ReconAlertSummaryDto", b =>
                 {
                     b.Property<long>("AlertCount")
@@ -656,7 +834,7 @@ namespace LinkPara.Card.Infrastructure.Persistence.Migrations.PostgreSql
                     b.Property<string>("AlertStatus")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("character varying(50)")
+                        .HasColumnType("text")
                         .HasColumnName("alert_status");
 
                     b.Property<string>("AlertType")
@@ -666,7 +844,7 @@ namespace LinkPara.Card.Infrastructure.Persistence.Migrations.PostgreSql
                     b.Property<string>("DataScope")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("character varying(50)")
+                        .HasColumnType("text")
                         .HasColumnName("data_scope");
 
                     b.Property<long>("DistinctGroupCount")
@@ -707,7 +885,7 @@ namespace LinkPara.Card.Infrastructure.Persistence.Migrations.PostgreSql
                     b.Property<string>("DataScope")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("character varying(50)")
+                        .HasColumnType("text")
                         .HasColumnName("data_scope");
 
                     b.Property<long>("DistinctFileCount")
@@ -729,7 +907,7 @@ namespace LinkPara.Card.Infrastructure.Persistence.Migrations.PostgreSql
                     b.Property<string>("LineStatus")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("character varying(50)")
+                        .HasColumnType("text")
                         .HasColumnName("line_status");
 
                     b.Property<long>("MatchedCount")
@@ -739,7 +917,7 @@ namespace LinkPara.Card.Infrastructure.Persistence.Migrations.PostgreSql
                     b.Property<string>("Network")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("character varying(50)")
+                        .HasColumnType("text")
                         .HasColumnName("network");
 
                     b.Property<int>("OriginalCurrency")
@@ -816,7 +994,7 @@ namespace LinkPara.Card.Infrastructure.Persistence.Migrations.PostgreSql
                     b.Property<string>("DataScope")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("character varying(50)")
+                        .HasColumnType("text")
                         .HasColumnName("data_scope");
 
                     b.Property<long>("DistinctFileCount")
@@ -830,7 +1008,7 @@ namespace LinkPara.Card.Infrastructure.Persistence.Migrations.PostgreSql
                     b.Property<string>("LineStatus")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("character varying(50)")
+                        .HasColumnType("text")
                         .HasColumnName("line_status");
 
                     b.Property<long>("MatchedCount")
@@ -840,7 +1018,7 @@ namespace LinkPara.Card.Infrastructure.Persistence.Migrations.PostgreSql
                     b.Property<string>("Network")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("character varying(50)")
+                        .HasColumnType("text")
                         .HasColumnName("network");
 
                     b.Property<string>("ReconciliationStatus")
@@ -889,7 +1067,7 @@ namespace LinkPara.Card.Infrastructure.Persistence.Migrations.PostgreSql
                     b.Property<string>("DataScope")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("character varying(50)")
+                        .HasColumnType("text")
                         .HasColumnName("data_scope");
 
                     b.Property<string>("IoFlag")
@@ -899,7 +1077,7 @@ namespace LinkPara.Card.Infrastructure.Persistence.Migrations.PostgreSql
                     b.Property<string>("LineStatus")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("character varying(50)")
+                        .HasColumnType("text")
                         .HasColumnName("line_status");
 
                     b.Property<long>("MatchedCount")
@@ -909,7 +1087,7 @@ namespace LinkPara.Card.Infrastructure.Persistence.Migrations.PostgreSql
                     b.Property<string>("Network")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("character varying(50)")
+                        .HasColumnType("text")
                         .HasColumnName("network");
 
                     b.Property<decimal?>("TotalClearingSourceAmount")
@@ -938,7 +1116,7 @@ namespace LinkPara.Card.Infrastructure.Persistence.Migrations.PostgreSql
                     b.Property<string>("DataScope")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("character varying(50)")
+                        .HasColumnType("text")
                         .HasColumnName("data_scope");
 
                     b.Property<long>("DistinctFileCount")
@@ -948,7 +1126,7 @@ namespace LinkPara.Card.Infrastructure.Persistence.Migrations.PostgreSql
                     b.Property<string>("LineStatus")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("character varying(50)")
+                        .HasColumnType("text")
                         .HasColumnName("line_status");
 
                     b.Property<long>("MatchedCount")
@@ -958,7 +1136,7 @@ namespace LinkPara.Card.Infrastructure.Persistence.Migrations.PostgreSql
                     b.Property<string>("Network")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("character varying(50)")
+                        .HasColumnType("text")
                         .HasColumnName("network");
 
                     b.Property<string>("ReconciliationStatus")
@@ -972,7 +1150,7 @@ namespace LinkPara.Card.Infrastructure.Persistence.Migrations.PostgreSql
                     b.Property<string>("Side")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("character varying(50)")
+                        .HasColumnType("text")
                         .HasColumnName("side");
 
                     b.Property<decimal?>("TotalCardBillingAmount")
@@ -1037,7 +1215,7 @@ namespace LinkPara.Card.Infrastructure.Persistence.Migrations.PostgreSql
                     b.Property<string>("DataScope")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("character varying(50)")
+                        .HasColumnType("text")
                         .HasColumnName("data_scope");
 
                     b.Property<long>("FailedAlertCount")
@@ -1110,7 +1288,7 @@ namespace LinkPara.Card.Infrastructure.Persistence.Migrations.PostgreSql
                     b.Property<string>("DataScope")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("character varying(50)")
+                        .HasColumnType("text")
                         .HasColumnName("data_scope");
 
                     b.Property<decimal?>("DebitAmount")
@@ -1124,7 +1302,7 @@ namespace LinkPara.Card.Infrastructure.Persistence.Migrations.PostgreSql
                     b.Property<string>("LineStatus")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("character varying(50)")
+                        .HasColumnType("text")
                         .HasColumnName("line_status");
 
                     b.Property<long>("MatchedCount")
@@ -1134,7 +1312,7 @@ namespace LinkPara.Card.Infrastructure.Persistence.Migrations.PostgreSql
                     b.Property<string>("Network")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("character varying(50)")
+                        .HasColumnType("text")
                         .HasColumnName("network");
 
                     b.Property<int>("OriginalCurrency")
@@ -1178,49 +1356,322 @@ namespace LinkPara.Card.Infrastructure.Persistence.Migrations.PostgreSql
                     b.ToView("vw_recon_financial_summary", "reporting");
                 });
 
+            modelBuilder.Entity("LinkPara.Card.Application.Commons.Models.Reporting.Dtos.ReconGapAnalysisDto", b =>
+                {
+                    b.Property<decimal?>("AmountDifference")
+                        .HasColumnType("numeric")
+                        .HasColumnName("amount_difference");
+
+                    b.Property<long>("CardLineCount")
+                        .HasColumnType("bigint")
+                        .HasColumnName("card_line_count");
+
+                    b.Property<decimal>("CardMatchRatePct")
+                        .HasColumnType("numeric")
+                        .HasColumnName("card_match_rate_pct");
+
+                    b.Property<long>("CardMatchedCount")
+                        .HasColumnType("bigint")
+                        .HasColumnName("card_matched_count");
+
+                    b.Property<decimal?>("CardTotalAmount")
+                        .HasColumnType("numeric")
+                        .HasColumnName("card_total_amount");
+
+                    b.Property<long>("ClearingLineCount")
+                        .HasColumnType("bigint")
+                        .HasColumnName("clearing_line_count");
+
+                    b.Property<decimal>("ClearingMatchRatePct")
+                        .HasColumnType("numeric")
+                        .HasColumnName("clearing_match_rate_pct");
+
+                    b.Property<long>("ClearingMatchedCount")
+                        .HasColumnType("bigint")
+                        .HasColumnName("clearing_matched_count");
+
+                    b.Property<decimal?>("ClearingTotalAmount")
+                        .HasColumnType("numeric")
+                        .HasColumnName("clearing_total_amount");
+
+                    b.Property<string>("DataScope")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("text")
+                        .HasColumnName("data_scope");
+
+                    b.Property<long>("LineCountDifference")
+                        .HasColumnType("bigint")
+                        .HasColumnName("line_count_difference");
+
+                    b.Property<string>("Network")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("text")
+                        .HasColumnName("network");
+
+                    b.Property<DateTime>("ReportDate")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("report_date");
+
+                    b.ToTable((string)null);
+
+                    b.ToView("vw_recon_gap_analysis", "reporting");
+                });
+
             modelBuilder.Entity("LinkPara.Card.Application.Commons.Models.Reporting.Dtos.ReconManualReviewQueueDto", b =>
                 {
+                    b.Property<string>("CardArn")
+                        .HasColumnType("text")
+                        .HasColumnName("card_arn");
+
+                    b.Property<decimal?>("CardBillingAmount")
+                        .HasColumnType("numeric")
+                        .HasColumnName("card_billing_amount");
+
+                    b.Property<string>("CardFinancialType")
+                        .HasColumnType("text")
+                        .HasColumnName("card_financial_type");
+
+                    b.Property<string>("CardIsSuccessfulTxn")
+                        .HasColumnType("text")
+                        .HasColumnName("card_is_successful_txn");
+
+                    b.Property<decimal?>("CardOriginalAmount")
+                        .HasColumnType("numeric")
+                        .HasColumnName("card_original_amount");
+
+                    b.Property<int?>("CardOriginalCurrency")
+                        .HasColumnType("integer")
+                        .HasColumnName("card_original_currency");
+
+                    b.Property<string>("CardResponseCode")
+                        .HasColumnType("text")
+                        .HasColumnName("card_response_code");
+
+                    b.Property<string>("CardRrn")
+                        .HasColumnType("text")
+                        .HasColumnName("card_rrn");
+
+                    b.Property<decimal?>("CardSettlementAmount")
+                        .HasColumnType("numeric")
+                        .HasColumnName("card_settlement_amount");
+
+                    b.Property<int?>("CardTransactionDate")
+                        .HasColumnType("integer")
+                        .HasColumnName("card_transaction_date");
+
+                    b.Property<int?>("CardTransactionTime")
+                        .HasColumnType("integer")
+                        .HasColumnName("card_transaction_time");
+
+                    b.Property<string>("CardTxnEffect")
+                        .HasColumnType("text")
+                        .HasColumnName("card_txn_effect");
+
+                    b.Property<string>("ClearingArn")
+                        .HasColumnType("text")
+                        .HasColumnName("clearing_arn");
+
+                    b.Property<string>("ClearingControlStat")
+                        .HasColumnType("text")
+                        .HasColumnName("clearing_control_stat");
+
+                    b.Property<decimal?>("ClearingDestinationAmount")
+                        .HasColumnType("numeric")
+                        .HasColumnName("clearing_destination_amount");
+
+                    b.Property<string>("ClearingIoDate")
+                        .HasColumnType("text")
+                        .HasColumnName("clearing_io_date");
+
+                    b.Property<string>("ClearingIoFlag")
+                        .HasColumnType("text")
+                        .HasColumnName("clearing_io_flag");
+
+                    b.Property<string>("ClearingRrn")
+                        .HasColumnType("text")
+                        .HasColumnName("clearing_rrn");
+
+                    b.Property<decimal?>("ClearingSourceAmount")
+                        .HasColumnType("numeric")
+                        .HasColumnName("clearing_source_amount");
+
+                    b.Property<int?>("ClearingSourceCurrency")
+                        .HasColumnType("integer")
+                        .HasColumnName("clearing_source_currency");
+
+                    b.Property<int?>("ClearingTxnDate")
+                        .HasColumnType("integer")
+                        .HasColumnName("clearing_txn_date");
+
+                    b.Property<int?>("ClearingTxnTime")
+                        .HasColumnType("integer")
+                        .HasColumnName("clearing_txn_time");
+
+                    b.Property<string>("ClearingTxnType")
+                        .HasColumnType("text")
+                        .HasColumnName("clearing_txn_type");
+
                     b.Property<string>("Comment")
                         .HasColumnType("text")
                         .HasColumnName("comment");
 
+                    b.Property<string>("ContentType")
+                        .HasColumnType("text")
+                        .HasColumnName("content_type");
+
+                    b.Property<string>("CorrelationKey")
+                        .HasColumnType("text")
+                        .HasColumnName("correlation_key");
+
+                    b.Property<string>("CorrelationValue")
+                        .HasColumnType("text")
+                        .HasColumnName("correlation_value");
+
                     b.Property<string>("Decision")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("character varying(50)")
+                        .HasColumnType("text")
                         .HasColumnName("decision");
 
                     b.Property<DateTime?>("DecisionAt")
                         .HasColumnType("timestamp without time zone")
                         .HasColumnName("decision_at");
 
+                    b.Property<string>("EffectiveError")
+                        .HasColumnType("text")
+                        .HasColumnName("effective_error");
+
+                    b.Property<DateTime>("EvaluationCreatedAt")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("evaluation_created_at");
+
                     b.Property<Guid>("EvaluationId")
                         .HasColumnType("uuid")
                         .HasColumnName("evaluation_id");
 
+                    b.Property<string>("EvaluationMessage")
+                        .HasColumnType("text")
+                        .HasColumnName("evaluation_message");
+
+                    b.Property<int>("EvaluationOperationCount")
+                        .HasColumnType("integer")
+                        .HasColumnName("evaluation_operation_count");
+
+                    b.Property<string>("EvaluationStatus")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("text")
+                        .HasColumnName("evaluation_status");
+
                     b.Property<string>("ExpirationAction")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("character varying(50)")
+                        .HasColumnType("text")
                         .HasColumnName("expiration_action");
 
                     b.Property<string>("ExpirationFlowAction")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("character varying(50)")
+                        .HasColumnType("text")
                         .HasColumnName("expiration_flow_action");
 
                     b.Property<DateTime?>("ExpiresAt")
                         .HasColumnType("timestamp without time zone")
                         .HasColumnName("expires_at");
 
+                    b.Property<string>("FileKey")
+                        .HasColumnType("text")
+                        .HasColumnName("file_key");
+
                     b.Property<Guid>("FileLineId")
                         .HasColumnType("uuid")
                         .HasColumnName("file_line_id");
 
+                    b.Property<string>("FileName")
+                        .HasColumnType("text")
+                        .HasColumnName("file_name");
+
+                    b.Property<string>("FileSourceType")
+                        .HasColumnType("text")
+                        .HasColumnName("file_source_type");
+
+                    b.Property<string>("FileStatus")
+                        .HasColumnType("text")
+                        .HasColumnName("file_status");
+
+                    b.Property<string>("FileType")
+                        .HasColumnType("text")
+                        .HasColumnName("file_type");
+
                     b.Property<Guid>("GroupId")
                         .HasColumnType("uuid")
                         .HasColumnName("group_id");
+
+                    b.Property<int?>("LastAttemptNumber")
+                        .HasColumnType("integer")
+                        .HasColumnName("last_attempt_number");
+
+                    b.Property<string>("LastExecutionErrorCode")
+                        .HasColumnType("text")
+                        .HasColumnName("last_execution_error_code");
+
+                    b.Property<string>("LastExecutionErrorMessage")
+                        .HasColumnType("text")
+                        .HasColumnName("last_execution_error_message");
+
+                    b.Property<DateTime?>("LastExecutionFinishedAt")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("last_execution_finished_at");
+
+                    b.Property<Guid?>("LastExecutionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("last_execution_id");
+
+                    b.Property<string>("LastExecutionResultCode")
+                        .HasColumnType("text")
+                        .HasColumnName("last_execution_result_code");
+
+                    b.Property<string>("LastExecutionResultMessage")
+                        .HasColumnType("text")
+                        .HasColumnName("last_execution_result_message");
+
+                    b.Property<DateTime?>("LastExecutionStartedAt")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("last_execution_started_at");
+
+                    b.Property<string>("LastExecutionStatus")
+                        .HasColumnType("text")
+                        .HasColumnName("last_execution_status");
+
+                    b.Property<string>("LineDuplicateStatus")
+                        .HasColumnType("text")
+                        .HasColumnName("line_duplicate_status");
+
+                    b.Property<string>("LineMessage")
+                        .HasColumnType("text")
+                        .HasColumnName("line_message");
+
+                    b.Property<int?>("LineNumber")
+                        .HasColumnType("integer")
+                        .HasColumnName("line_number");
+
+                    b.Property<string>("LineReconciliationStatus")
+                        .HasColumnType("text")
+                        .HasColumnName("line_reconciliation_status");
+
+                    b.Property<string>("LineRecordType")
+                        .HasColumnType("text")
+                        .HasColumnName("line_record_type");
+
+                    b.Property<string>("LineStatus")
+                        .HasColumnType("text")
+                        .HasColumnName("line_status");
+
+                    b.Property<Guid?>("MatchedClearingLineId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("matched_clearing_line_id");
 
                     b.Property<string>("OperationBranch")
                         .HasColumnType("text")
@@ -1230,15 +1681,59 @@ namespace LinkPara.Card.Infrastructure.Persistence.Migrations.PostgreSql
                         .HasColumnType("text")
                         .HasColumnName("operation_code");
 
+                    b.Property<DateTime>("OperationCreatedAt")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("operation_created_at");
+
                     b.Property<Guid>("OperationId")
                         .HasColumnType("uuid")
                         .HasColumnName("operation_id");
 
+                    b.Property<bool>("OperationIsManual")
+                        .HasColumnType("boolean")
+                        .HasColumnName("operation_is_manual");
+
+                    b.Property<string>("OperationLastError")
+                        .HasColumnType("text")
+                        .HasColumnName("operation_last_error");
+
+                    b.Property<DateTime?>("OperationLeaseExpiresAt")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("operation_lease_expires_at");
+
+                    b.Property<string>("OperationLeaseOwner")
+                        .HasColumnType("text")
+                        .HasColumnName("operation_lease_owner");
+
+                    b.Property<int>("OperationMaxRetries")
+                        .HasColumnType("integer")
+                        .HasColumnName("operation_max_retries");
+
+                    b.Property<DateTime?>("OperationNextAttemptAt")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("operation_next_attempt_at");
+
+                    b.Property<string>("OperationNote")
+                        .HasColumnType("text")
+                        .HasColumnName("operation_note");
+
+                    b.Property<string>("OperationPayload")
+                        .HasColumnType("text")
+                        .HasColumnName("operation_payload");
+
+                    b.Property<int>("OperationRetryCount")
+                        .HasColumnType("integer")
+                        .HasColumnName("operation_retry_count");
+
                     b.Property<string>("OperationStatus")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("character varying(50)")
+                        .HasColumnType("text")
                         .HasColumnName("operation_status");
+
+                    b.Property<DateTime?>("OperationUpdatedAt")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("operation_updated_at");
 
                     b.Property<DateTime>("ReviewCreatedAt")
                         .HasColumnType("timestamp without time zone")
@@ -1252,10 +1747,14 @@ namespace LinkPara.Card.Infrastructure.Persistence.Migrations.PostgreSql
                         .HasColumnType("uuid")
                         .HasColumnName("reviewer_id");
 
+                    b.Property<long?>("TotalExecutionCount")
+                        .HasColumnType("bigint")
+                        .HasColumnName("total_execution_count");
+
                     b.Property<string>("UrgencyLevel")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("character varying(50)")
+                        .HasColumnType("text")
                         .HasColumnName("urgency_level");
 
                     b.Property<decimal>("WaitingHours")
@@ -1265,6 +1764,63 @@ namespace LinkPara.Card.Infrastructure.Persistence.Migrations.PostgreSql
                     b.ToTable((string)null);
 
                     b.ToView("vw_recon_manual_review_queue", "reporting");
+                });
+
+            modelBuilder.Entity("LinkPara.Card.Application.Commons.Models.Reporting.Dtos.ReconMatchRateTrendDto", b =>
+                {
+                    b.Property<string>("DataScope")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("text")
+                        .HasColumnName("data_scope");
+
+                    b.Property<decimal>("MatchRatePct")
+                        .HasColumnType("numeric")
+                        .HasColumnName("match_rate_pct");
+
+                    b.Property<decimal?>("MatchedAmount")
+                        .HasColumnType("numeric")
+                        .HasColumnName("matched_amount");
+
+                    b.Property<long>("MatchedCount")
+                        .HasColumnType("bigint")
+                        .HasColumnName("matched_count");
+
+                    b.Property<string>("Network")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("text")
+                        .HasColumnName("network");
+
+                    b.Property<DateTime>("ReportDate")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("report_date");
+
+                    b.Property<string>("Side")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("text")
+                        .HasColumnName("side");
+
+                    b.Property<decimal?>("TotalAmount")
+                        .HasColumnType("numeric")
+                        .HasColumnName("total_amount");
+
+                    b.Property<long>("TotalLineCount")
+                        .HasColumnType("bigint")
+                        .HasColumnName("total_line_count");
+
+                    b.Property<decimal?>("UnmatchedAmount")
+                        .HasColumnType("numeric")
+                        .HasColumnName("unmatched_amount");
+
+                    b.Property<long>("UnmatchedCount")
+                        .HasColumnType("bigint")
+                        .HasColumnName("unmatched_count");
+
+                    b.ToTable((string)null);
+
+                    b.ToView("vw_recon_match_rate_trend", "reporting");
                 });
 
             modelBuilder.Entity("LinkPara.Card.Application.Commons.Models.Reporting.Dtos.ReconOpenItemAgingDto", b =>
@@ -1319,7 +1875,7 @@ namespace LinkPara.Card.Infrastructure.Persistence.Migrations.PostgreSql
                     b.Property<string>("EvaluationStatus")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("character varying(50)")
+                        .HasColumnType("text")
                         .HasColumnName("evaluation_status");
 
                     b.Property<Guid>("FileLineId")
@@ -1369,7 +1925,7 @@ namespace LinkPara.Card.Infrastructure.Persistence.Migrations.PostgreSql
                     b.Property<string>("OperationStatus")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("character varying(50)")
+                        .HasColumnType("text")
                         .HasColumnName("operation_status");
 
                     b.Property<DateTime?>("OperationUpdatedAt")
@@ -1398,7 +1954,7 @@ namespace LinkPara.Card.Infrastructure.Persistence.Migrations.PostgreSql
                     b.Property<string>("DataScope")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("character varying(50)")
+                        .HasColumnType("text")
                         .HasColumnName("data_scope");
 
                     b.Property<string>("IsSuccessfulTxn")
@@ -1412,7 +1968,7 @@ namespace LinkPara.Card.Infrastructure.Persistence.Migrations.PostgreSql
                     b.Property<string>("LineStatus")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("character varying(50)")
+                        .HasColumnType("text")
                         .HasColumnName("line_status");
 
                     b.Property<long>("MatchedCount")
@@ -1422,7 +1978,7 @@ namespace LinkPara.Card.Infrastructure.Persistence.Migrations.PostgreSql
                     b.Property<string>("Network")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("character varying(50)")
+                        .HasColumnType("text")
                         .HasColumnName("network");
 
                     b.Property<string>("ReconciliationStatus")
@@ -1452,6 +2008,47 @@ namespace LinkPara.Card.Infrastructure.Persistence.Migrations.PostgreSql
                     b.ToTable((string)null);
 
                     b.ToView("vw_recon_response_status_analysis", "reporting");
+                });
+
+            modelBuilder.Entity("LinkPara.Card.Application.Commons.Models.Reporting.Dtos.UnmatchedTransactionAgingDto", b =>
+                {
+                    b.Property<string>("AgeBucket")
+                        .HasColumnType("text")
+                        .HasColumnName("age_bucket");
+
+                    b.Property<string>("DataScope")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("text")
+                        .HasColumnName("data_scope");
+
+                    b.Property<string>("Network")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("text")
+                        .HasColumnName("network");
+
+                    b.Property<decimal>("PctOfTotalUnmatched")
+                        .HasColumnType("numeric")
+                        .HasColumnName("pct_of_total_unmatched");
+
+                    b.Property<string>("Side")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("text")
+                        .HasColumnName("side");
+
+                    b.Property<decimal?>("UnmatchedAmount")
+                        .HasColumnType("numeric")
+                        .HasColumnName("unmatched_amount");
+
+                    b.Property<long>("UnmatchedCount")
+                        .HasColumnType("bigint")
+                        .HasColumnName("unmatched_count");
+
+                    b.ToTable((string)null);
+
+                    b.ToView("vw_unmatched_transaction_aging", "reporting");
                 });
 
             modelBuilder.Entity("LinkPara.Card.Domain.Entities.Archive.Persistence.ArchiveIngestionCardBkmDetail", b =>
@@ -1502,11 +2099,11 @@ namespace LinkPara.Card.Infrastructure.Persistence.Migrations.PostgreSql
                     b.Property<decimal>("CardHolderBillingAmount")
                         .HasPrecision(18, 4)
                         .HasColumnType("numeric(18,4)")
-                        .HasColumnName("cardholder_billing_amount");
+                        .HasColumnName("card_holder_billing_amount");
 
                     b.Property<int>("CardHolderBillingCurrency")
                         .HasColumnType("integer")
-                        .HasColumnName("cardholder_billing_currency");
+                        .HasColumnName("card_holder_billing_currency");
 
                     b.Property<string>("CardNo")
                         .HasMaxLength(64)
@@ -1548,15 +2145,15 @@ namespace LinkPara.Card.Infrastructure.Persistence.Migrations.PostgreSql
                         .HasColumnType("integer")
                         .HasColumnName("end_of_day_date");
 
+                    b.Property<Guid>("FileLineId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("file_line_id");
+
                     b.Property<string>("FinancialType")
                         .IsRequired()
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)")
                         .HasColumnName("financial_type");
-
-                    b.Property<Guid>("IngestionFileLineId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("file_line_id");
 
                     b.Property<int>("InstallCount")
                         .HasColumnType("integer")
@@ -1841,11 +2438,11 @@ namespace LinkPara.Card.Infrastructure.Persistence.Migrations.PostgreSql
                     b.Property<decimal>("CardHolderBillingAmount")
                         .HasPrecision(18, 4)
                         .HasColumnType("numeric(18,4)")
-                        .HasColumnName("cardholder_billing_amount");
+                        .HasColumnName("card_holder_billing_amount");
 
                     b.Property<int>("CardHolderBillingCurrency")
                         .HasColumnType("integer")
-                        .HasColumnName("cardholder_billing_currency");
+                        .HasColumnName("card_holder_billing_currency");
 
                     b.Property<string>("CardNo")
                         .HasMaxLength(64)
@@ -1887,15 +2484,15 @@ namespace LinkPara.Card.Infrastructure.Persistence.Migrations.PostgreSql
                         .HasColumnType("integer")
                         .HasColumnName("end_of_day_date");
 
+                    b.Property<Guid>("FileLineId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("file_line_id");
+
                     b.Property<string>("FinancialType")
                         .IsRequired()
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)")
                         .HasColumnName("financial_type");
-
-                    b.Property<Guid>("IngestionFileLineId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("file_line_id");
 
                     b.Property<int>("InstallCount")
                         .HasColumnType("integer")
@@ -2180,11 +2777,11 @@ namespace LinkPara.Card.Infrastructure.Persistence.Migrations.PostgreSql
                     b.Property<decimal>("CardHolderBillingAmount")
                         .HasPrecision(18, 4)
                         .HasColumnType("numeric(18,4)")
-                        .HasColumnName("cardholder_billing_amount");
+                        .HasColumnName("card_holder_billing_amount");
 
                     b.Property<int>("CardHolderBillingCurrency")
                         .HasColumnType("integer")
-                        .HasColumnName("cardholder_billing_currency");
+                        .HasColumnName("card_holder_billing_currency");
 
                     b.Property<string>("CardNo")
                         .HasMaxLength(64)
@@ -2226,15 +2823,15 @@ namespace LinkPara.Card.Infrastructure.Persistence.Migrations.PostgreSql
                         .HasColumnType("integer")
                         .HasColumnName("end_of_day_date");
 
+                    b.Property<Guid>("FileLineId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("file_line_id");
+
                     b.Property<string>("FinancialType")
                         .IsRequired()
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)")
                         .HasColumnName("financial_type");
-
-                    b.Property<Guid>("IngestionFileLineId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("file_line_id");
 
                     b.Property<int>("InstallCount")
                         .HasColumnType("integer")
@@ -2489,8 +3086,7 @@ namespace LinkPara.Card.Infrastructure.Persistence.Migrations.PostgreSql
                         .HasColumnName("card_acceptor_id");
 
                     b.Property<string>("CardDci")
-                        .HasMaxLength(8)
-                        .HasColumnType("character varying(8)")
+                        .HasColumnType("text")
                         .HasColumnName("card_dci");
 
                     b.Property<string>("CardNo")
@@ -2543,14 +3139,14 @@ namespace LinkPara.Card.Infrastructure.Persistence.Migrations.PostgreSql
                         .HasColumnType("character varying(64)")
                         .HasColumnName("file_id");
 
+                    b.Property<Guid>("FileLineId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("file_line_id");
+
                     b.Property<string>("FunctionCode")
                         .HasMaxLength(16)
                         .HasColumnType("character varying(16)")
                         .HasColumnName("function_code");
-
-                    b.Property<Guid>("IngestionFileLineId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("file_line_id");
 
                     b.Property<string>("IoDate")
                         .HasMaxLength(32)
@@ -2698,8 +3294,7 @@ namespace LinkPara.Card.Infrastructure.Persistence.Migrations.PostgreSql
                         .HasColumnName("card_acceptor_id");
 
                     b.Property<string>("CardDci")
-                        .HasMaxLength(8)
-                        .HasColumnType("character varying(8)")
+                        .HasColumnType("text")
                         .HasColumnName("card_dci");
 
                     b.Property<string>("CardNo")
@@ -2752,14 +3347,14 @@ namespace LinkPara.Card.Infrastructure.Persistence.Migrations.PostgreSql
                         .HasColumnType("character varying(64)")
                         .HasColumnName("file_id");
 
+                    b.Property<Guid>("FileLineId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("file_line_id");
+
                     b.Property<string>("FunctionCode")
                         .HasMaxLength(16)
                         .HasColumnType("character varying(16)")
                         .HasColumnName("function_code");
-
-                    b.Property<Guid>("IngestionFileLineId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("file_line_id");
 
                     b.Property<string>("IoDate")
                         .HasMaxLength(32)
@@ -2902,8 +3497,7 @@ namespace LinkPara.Card.Infrastructure.Persistence.Migrations.PostgreSql
                         .HasColumnName("card_acceptor_id");
 
                     b.Property<string>("CardDci")
-                        .HasMaxLength(8)
-                        .HasColumnType("character varying(8)")
+                        .HasColumnType("text")
                         .HasColumnName("card_dci");
 
                     b.Property<string>("CardNo")
@@ -2956,7 +3550,7 @@ namespace LinkPara.Card.Infrastructure.Persistence.Migrations.PostgreSql
                         .HasColumnType("character varying(64)")
                         .HasColumnName("file_id");
 
-                    b.Property<Guid>("IngestionFileLineId")
+                    b.Property<Guid>("FileLineId")
                         .HasColumnType("uuid")
                         .HasColumnName("file_line_id");
 
@@ -3101,13 +3695,13 @@ namespace LinkPara.Card.Infrastructure.Persistence.Migrations.PostgreSql
                         .HasColumnType("character varying(50)")
                         .HasColumnName("created_by");
 
-                    b.Property<long>("ErrorCount")
-                        .HasColumnType("bigint")
-                        .HasColumnName("failed_line_count");
-
-                    b.Property<long>("ExpectedCount")
+                    b.Property<long>("ExpectedLineCount")
                         .HasColumnType("bigint")
                         .HasColumnName("expected_line_count");
+
+                    b.Property<long>("FailedLineCount")
+                        .HasColumnType("bigint")
+                        .HasColumnName("failed_line_count");
 
                     b.Property<string>("FileKey")
                         .IsRequired()
@@ -3121,17 +3715,17 @@ namespace LinkPara.Card.Infrastructure.Persistence.Migrations.PostgreSql
                         .HasColumnType("character varying(256)")
                         .HasColumnName("file_name");
 
+                    b.Property<string>("FilePath")
+                        .IsRequired()
+                        .HasMaxLength(1024)
+                        .HasColumnType("character varying(1024)")
+                        .HasColumnName("file_path");
+
                     b.Property<string>("FileType")
                         .IsRequired()
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)")
                         .HasColumnName("file_type");
-
-                    b.Property<string>("FullPath")
-                        .IsRequired()
-                        .HasMaxLength(1024)
-                        .HasColumnType("character varying(1024)")
-                        .HasColumnName("file_path");
 
                     b.Property<bool>("IsArchived")
                         .HasColumnType("boolean")
@@ -3155,6 +3749,10 @@ namespace LinkPara.Card.Infrastructure.Persistence.Migrations.PostgreSql
                         .HasColumnType("character varying(4000)")
                         .HasColumnName("message");
 
+                    b.Property<long>("ProcessedLineCount")
+                        .HasColumnType("bigint")
+                        .HasColumnName("processed_line_count");
+
                     b.Property<string>("RecordStatus")
                         .IsRequired()
                         .HasMaxLength(50)
@@ -3173,13 +3771,9 @@ namespace LinkPara.Card.Infrastructure.Persistence.Migrations.PostgreSql
                         .HasColumnType("character varying(50)")
                         .HasColumnName("status");
 
-                    b.Property<long>("SuccessCount")
+                    b.Property<long>("SuccessfulLineCount")
                         .HasColumnType("bigint")
                         .HasColumnName("successful_line_count");
-
-                    b.Property<long>("TotalCount")
-                        .HasColumnType("bigint")
-                        .HasColumnName("processed_line_count");
 
                     b.Property<DateTime?>("UpdateDate")
                         .HasColumnType("timestamp without time zone")
@@ -3264,7 +3858,7 @@ namespace LinkPara.Card.Infrastructure.Persistence.Migrations.PostgreSql
                         .HasColumnType("character varying(64)")
                         .HasColumnName("duplicate_status");
 
-                    b.Property<Guid>("IngestionFileId")
+                    b.Property<Guid>("FileId")
                         .HasColumnType("uuid")
                         .HasColumnName("file_id");
 
@@ -3277,6 +3871,11 @@ namespace LinkPara.Card.Infrastructure.Persistence.Migrations.PostgreSql
                         .HasColumnType("bigint")
                         .HasColumnName("line_number");
 
+                    b.Property<string>("LineType")
+                        .HasMaxLength(8)
+                        .HasColumnType("character varying(8)")
+                        .HasColumnName("line_type");
+
                     b.Property<Guid?>("MatchedClearingLineId")
                         .HasColumnType("uuid")
                         .HasColumnName("matched_clearing_line_id");
@@ -3286,17 +3885,16 @@ namespace LinkPara.Card.Infrastructure.Persistence.Migrations.PostgreSql
                         .HasColumnType("character varying(4000)")
                         .HasColumnName("message");
 
-                    b.Property<string>("ParsedData")
+                    b.Property<string>("ParsedContent")
                         .HasColumnType("text")
                         .HasColumnName("parsed_content");
 
-                    b.Property<string>("RawData")
+                    b.Property<string>("RawContent")
                         .HasColumnType("text")
                         .HasColumnName("raw_content");
 
                     b.Property<string>("ReconciliationStatus")
-                        .HasMaxLength(32)
-                        .HasColumnType("character varying(32)")
+                        .HasColumnType("text")
                         .HasColumnName("reconciliation_status");
 
                     b.Property<string>("RecordStatus")
@@ -3304,11 +3902,6 @@ namespace LinkPara.Card.Infrastructure.Persistence.Migrations.PostgreSql
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)")
                         .HasColumnName("record_status");
-
-                    b.Property<string>("RecordType")
-                        .HasMaxLength(8)
-                        .HasColumnType("character varying(8)")
-                        .HasColumnName("line_type");
 
                     b.Property<int>("RetryCount")
                         .HasColumnType("integer")
@@ -3504,10 +4097,6 @@ namespace LinkPara.Card.Infrastructure.Persistence.Migrations.PostgreSql
                         .HasColumnType("character varying(50)")
                         .HasColumnName("created_by");
 
-                    b.Property<int>("CreatedOperationCount")
-                        .HasColumnType("integer")
-                        .HasColumnName("operation_count");
-
                     b.Property<Guid>("FileLineId")
                         .HasColumnType("uuid")
                         .HasColumnName("file_line_id");
@@ -3525,6 +4114,10 @@ namespace LinkPara.Card.Infrastructure.Persistence.Migrations.PostgreSql
                         .HasMaxLength(1000)
                         .HasColumnType("character varying(1000)")
                         .HasColumnName("message");
+
+                    b.Property<int>("OperationCount")
+                        .HasColumnType("integer")
+                        .HasColumnName("operation_count");
 
                     b.Property<string>("RecordStatus")
                         .IsRequired()
@@ -3617,7 +4210,7 @@ namespace LinkPara.Card.Infrastructure.Persistence.Migrations.PostgreSql
 
                     b.Property<int>("MaxRetries")
                         .HasColumnType("integer")
-                        .HasColumnName("max_retry_count");
+                        .HasColumnName("max_retries");
 
                     b.Property<DateTime?>("NextAttemptAt")
                         .HasColumnType("timestamp without time zone")
@@ -3628,7 +4221,7 @@ namespace LinkPara.Card.Infrastructure.Persistence.Migrations.PostgreSql
                         .HasColumnType("character varying(2000)")
                         .HasColumnName("note");
 
-                    b.Property<int?>("ParentSequenceIndex")
+                    b.Property<int?>("ParentSequenceNumber")
                         .HasColumnType("integer")
                         .HasColumnName("parent_sequence_number");
 
@@ -3646,7 +4239,7 @@ namespace LinkPara.Card.Infrastructure.Persistence.Migrations.PostgreSql
                         .HasColumnType("integer")
                         .HasColumnName("retry_count");
 
-                    b.Property<int>("SequenceIndex")
+                    b.Property<int>("SequenceNumber")
                         .HasColumnType("integer")
                         .HasColumnName("sequence_number");
 
@@ -4269,11 +4862,11 @@ namespace LinkPara.Card.Infrastructure.Persistence.Migrations.PostgreSql
                     b.Property<decimal>("CardHolderBillingAmount")
                         .HasPrecision(18, 4)
                         .HasColumnType("numeric(18,4)")
-                        .HasColumnName("cardholder_billing_amount");
+                        .HasColumnName("card_holder_billing_amount");
 
                     b.Property<int>("CardHolderBillingCurrency")
                         .HasColumnType("integer")
-                        .HasColumnName("cardholder_billing_currency");
+                        .HasColumnName("card_holder_billing_currency");
 
                     b.Property<string>("CardNo")
                         .HasMaxLength(64)
@@ -4315,15 +4908,15 @@ namespace LinkPara.Card.Infrastructure.Persistence.Migrations.PostgreSql
                         .HasColumnType("integer")
                         .HasColumnName("end_of_day_date");
 
+                    b.Property<Guid>("FileLineId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("file_line_id");
+
                     b.Property<string>("FinancialType")
                         .IsRequired()
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)")
                         .HasColumnName("financial_type");
-
-                    b.Property<Guid>("IngestionFileLineId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("file_line_id");
 
                     b.Property<int>("InstallCount")
                         .HasColumnType("integer")
@@ -4563,7 +5156,7 @@ namespace LinkPara.Card.Infrastructure.Persistence.Migrations.PostgreSql
                     b.HasIndex("CardNo")
                         .HasDatabaseName("ix_card_bkm_detail_card_no");
 
-                    b.HasIndex("IngestionFileLineId")
+                    b.HasIndex("FileLineId")
                         .IsUnique()
                         .HasDatabaseName("ix_card_bkm_detail_file_line_id");
 
@@ -4624,11 +5217,11 @@ namespace LinkPara.Card.Infrastructure.Persistence.Migrations.PostgreSql
                     b.Property<decimal>("CardHolderBillingAmount")
                         .HasPrecision(18, 4)
                         .HasColumnType("numeric(18,4)")
-                        .HasColumnName("cardholder_billing_amount");
+                        .HasColumnName("card_holder_billing_amount");
 
                     b.Property<int>("CardHolderBillingCurrency")
                         .HasColumnType("integer")
-                        .HasColumnName("cardholder_billing_currency");
+                        .HasColumnName("card_holder_billing_currency");
 
                     b.Property<string>("CardNo")
                         .HasMaxLength(64)
@@ -4670,15 +5263,15 @@ namespace LinkPara.Card.Infrastructure.Persistence.Migrations.PostgreSql
                         .HasColumnType("integer")
                         .HasColumnName("end_of_day_date");
 
+                    b.Property<Guid>("FileLineId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("file_line_id");
+
                     b.Property<string>("FinancialType")
                         .IsRequired()
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)")
                         .HasColumnName("financial_type");
-
-                    b.Property<Guid>("IngestionFileLineId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("file_line_id");
 
                     b.Property<int>("InstallCount")
                         .HasColumnType("integer")
@@ -4918,7 +5511,7 @@ namespace LinkPara.Card.Infrastructure.Persistence.Migrations.PostgreSql
                     b.HasIndex("CardNo")
                         .HasDatabaseName("ix_card_msc_detail_card_no");
 
-                    b.HasIndex("IngestionFileLineId")
+                    b.HasIndex("FileLineId")
                         .IsUnique()
                         .HasDatabaseName("ix_card_msc_detail_file_line_id");
 
@@ -4979,11 +5572,11 @@ namespace LinkPara.Card.Infrastructure.Persistence.Migrations.PostgreSql
                     b.Property<decimal>("CardHolderBillingAmount")
                         .HasPrecision(18, 4)
                         .HasColumnType("numeric(18,4)")
-                        .HasColumnName("cardholder_billing_amount");
+                        .HasColumnName("card_holder_billing_amount");
 
                     b.Property<int>("CardHolderBillingCurrency")
                         .HasColumnType("integer")
-                        .HasColumnName("cardholder_billing_currency");
+                        .HasColumnName("card_holder_billing_currency");
 
                     b.Property<string>("CardNo")
                         .HasMaxLength(64)
@@ -5025,15 +5618,15 @@ namespace LinkPara.Card.Infrastructure.Persistence.Migrations.PostgreSql
                         .HasColumnType("integer")
                         .HasColumnName("end_of_day_date");
 
+                    b.Property<Guid>("FileLineId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("file_line_id");
+
                     b.Property<string>("FinancialType")
                         .IsRequired()
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)")
                         .HasColumnName("financial_type");
-
-                    b.Property<Guid>("IngestionFileLineId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("file_line_id");
 
                     b.Property<int>("InstallCount")
                         .HasColumnType("integer")
@@ -5273,7 +5866,7 @@ namespace LinkPara.Card.Infrastructure.Persistence.Migrations.PostgreSql
                     b.HasIndex("CardNo")
                         .HasDatabaseName("ix_card_visa_detail_card_no");
 
-                    b.HasIndex("IngestionFileLineId")
+                    b.HasIndex("FileLineId")
                         .IsUnique()
                         .HasDatabaseName("ix_card_visa_detail_file_line_id");
 
@@ -5304,8 +5897,7 @@ namespace LinkPara.Card.Infrastructure.Persistence.Migrations.PostgreSql
                         .HasColumnName("card_acceptor_id");
 
                     b.Property<string>("CardDci")
-                        .HasMaxLength(8)
-                        .HasColumnType("character varying(8)")
+                        .HasColumnType("text")
                         .HasColumnName("card_dci");
 
                     b.Property<string>("CardNo")
@@ -5358,14 +5950,14 @@ namespace LinkPara.Card.Infrastructure.Persistence.Migrations.PostgreSql
                         .HasColumnType("character varying(64)")
                         .HasColumnName("file_id");
 
+                    b.Property<Guid>("FileLineId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("file_line_id");
+
                     b.Property<string>("FunctionCode")
                         .HasMaxLength(16)
                         .HasColumnType("character varying(16)")
                         .HasColumnName("function_code");
-
-                    b.Property<Guid>("IngestionFileLineId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("file_line_id");
 
                     b.Property<string>("IoDate")
                         .HasMaxLength(32)
@@ -5488,7 +6080,7 @@ namespace LinkPara.Card.Infrastructure.Persistence.Migrations.PostgreSql
                     b.HasIndex("CardNo")
                         .HasDatabaseName("ix_clearing_bkm_detail_card_no");
 
-                    b.HasIndex("IngestionFileLineId")
+                    b.HasIndex("FileLineId")
                         .IsUnique()
                         .HasDatabaseName("ix_clearing_bkm_detail_file_line_id");
 
@@ -5529,8 +6121,7 @@ namespace LinkPara.Card.Infrastructure.Persistence.Migrations.PostgreSql
                         .HasColumnName("card_acceptor_id");
 
                     b.Property<string>("CardDci")
-                        .HasMaxLength(8)
-                        .HasColumnType("character varying(8)")
+                        .HasColumnType("text")
                         .HasColumnName("card_dci");
 
                     b.Property<string>("CardNo")
@@ -5583,14 +6174,14 @@ namespace LinkPara.Card.Infrastructure.Persistence.Migrations.PostgreSql
                         .HasColumnType("character varying(64)")
                         .HasColumnName("file_id");
 
+                    b.Property<Guid>("FileLineId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("file_line_id");
+
                     b.Property<string>("FunctionCode")
                         .HasMaxLength(16)
                         .HasColumnType("character varying(16)")
                         .HasColumnName("function_code");
-
-                    b.Property<Guid>("IngestionFileLineId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("file_line_id");
 
                     b.Property<string>("IoDate")
                         .HasMaxLength(32)
@@ -5718,7 +6309,7 @@ namespace LinkPara.Card.Infrastructure.Persistence.Migrations.PostgreSql
                     b.HasIndex("CardNo")
                         .HasDatabaseName("ix_clearing_msc_detail_card_no");
 
-                    b.HasIndex("IngestionFileLineId")
+                    b.HasIndex("FileLineId")
                         .IsUnique()
                         .HasDatabaseName("ix_clearing_msc_detail_file_line_id");
 
@@ -5749,8 +6340,7 @@ namespace LinkPara.Card.Infrastructure.Persistence.Migrations.PostgreSql
                         .HasColumnName("card_acceptor_id");
 
                     b.Property<string>("CardDci")
-                        .HasMaxLength(8)
-                        .HasColumnType("character varying(8)")
+                        .HasColumnType("text")
                         .HasColumnName("card_dci");
 
                     b.Property<string>("CardNo")
@@ -5803,7 +6393,7 @@ namespace LinkPara.Card.Infrastructure.Persistence.Migrations.PostgreSql
                         .HasColumnType("character varying(64)")
                         .HasColumnName("file_id");
 
-                    b.Property<Guid>("IngestionFileLineId")
+                    b.Property<Guid>("FileLineId")
                         .HasColumnType("uuid")
                         .HasColumnName("file_line_id");
 
@@ -5928,7 +6518,7 @@ namespace LinkPara.Card.Infrastructure.Persistence.Migrations.PostgreSql
                     b.HasIndex("CardNo")
                         .HasDatabaseName("ix_clearing_visa_detail_card_no");
 
-                    b.HasIndex("IngestionFileLineId")
+                    b.HasIndex("FileLineId")
                         .IsUnique()
                         .HasDatabaseName("ix_clearing_visa_detail_file_line_id");
 
@@ -5964,13 +6554,13 @@ namespace LinkPara.Card.Infrastructure.Persistence.Migrations.PostgreSql
                         .HasColumnType("character varying(50)")
                         .HasColumnName("created_by");
 
-                    b.Property<long>("ErrorCount")
-                        .HasColumnType("bigint")
-                        .HasColumnName("failed_line_count");
-
-                    b.Property<long>("ExpectedCount")
+                    b.Property<long>("ExpectedLineCount")
                         .HasColumnType("bigint")
                         .HasColumnName("expected_line_count");
+
+                    b.Property<long>("FailedLineCount")
+                        .HasColumnType("bigint")
+                        .HasColumnName("failed_line_count");
 
                     b.Property<string>("FileKey")
                         .IsRequired()
@@ -5984,17 +6574,17 @@ namespace LinkPara.Card.Infrastructure.Persistence.Migrations.PostgreSql
                         .HasColumnType("character varying(256)")
                         .HasColumnName("file_name");
 
+                    b.Property<string>("FilePath")
+                        .IsRequired()
+                        .HasMaxLength(1024)
+                        .HasColumnType("character varying(1024)")
+                        .HasColumnName("file_path");
+
                     b.Property<string>("FileType")
                         .IsRequired()
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)")
                         .HasColumnName("file_type");
-
-                    b.Property<string>("FullPath")
-                        .IsRequired()
-                        .HasMaxLength(1024)
-                        .HasColumnType("character varying(1024)")
-                        .HasColumnName("file_path");
 
                     b.Property<bool>("IsArchived")
                         .HasColumnType("boolean")
@@ -6018,6 +6608,10 @@ namespace LinkPara.Card.Infrastructure.Persistence.Migrations.PostgreSql
                         .HasColumnType("character varying(4000)")
                         .HasColumnName("message");
 
+                    b.Property<long>("ProcessedLineCount")
+                        .HasColumnType("bigint")
+                        .HasColumnName("processed_line_count");
+
                     b.Property<string>("RecordStatus")
                         .IsRequired()
                         .HasMaxLength(50)
@@ -6036,13 +6630,9 @@ namespace LinkPara.Card.Infrastructure.Persistence.Migrations.PostgreSql
                         .HasColumnType("character varying(50)")
                         .HasColumnName("status");
 
-                    b.Property<long>("SuccessCount")
+                    b.Property<long>("SuccessfulLineCount")
                         .HasColumnType("bigint")
                         .HasColumnName("successful_line_count");
-
-                    b.Property<long>("TotalCount")
-                        .HasColumnType("bigint")
-                        .HasColumnName("processed_line_count");
 
                     b.Property<DateTime?>("UpdateDate")
                         .HasColumnType("timestamp without time zone")
@@ -6110,7 +6700,7 @@ namespace LinkPara.Card.Infrastructure.Persistence.Migrations.PostgreSql
                         .HasColumnType("character varying(64)")
                         .HasColumnName("duplicate_status");
 
-                    b.Property<Guid>("IngestionFileId")
+                    b.Property<Guid>("FileId")
                         .HasColumnType("uuid")
                         .HasColumnName("file_id");
 
@@ -6123,6 +6713,11 @@ namespace LinkPara.Card.Infrastructure.Persistence.Migrations.PostgreSql
                         .HasColumnType("bigint")
                         .HasColumnName("line_number");
 
+                    b.Property<string>("LineType")
+                        .HasMaxLength(8)
+                        .HasColumnType("character varying(8)")
+                        .HasColumnName("line_type");
+
                     b.Property<Guid?>("MatchedClearingLineId")
                         .HasColumnType("uuid")
                         .HasColumnName("matched_clearing_line_id");
@@ -6132,17 +6727,16 @@ namespace LinkPara.Card.Infrastructure.Persistence.Migrations.PostgreSql
                         .HasColumnType("character varying(4000)")
                         .HasColumnName("message");
 
-                    b.Property<string>("ParsedData")
+                    b.Property<string>("ParsedContent")
                         .HasColumnType("text")
                         .HasColumnName("parsed_content");
 
-                    b.Property<string>("RawData")
+                    b.Property<string>("RawContent")
                         .HasColumnType("text")
                         .HasColumnName("raw_content");
 
                     b.Property<string>("ReconciliationStatus")
-                        .HasMaxLength(32)
-                        .HasColumnType("character varying(32)")
+                        .HasColumnType("text")
                         .HasColumnName("reconciliation_status");
 
                     b.Property<string>("RecordStatus")
@@ -6150,11 +6744,6 @@ namespace LinkPara.Card.Infrastructure.Persistence.Migrations.PostgreSql
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)")
                         .HasColumnName("record_status");
-
-                    b.Property<string>("RecordType")
-                        .HasMaxLength(8)
-                        .HasColumnType("character varying(8)")
-                        .HasColumnName("line_type");
 
                     b.Property<int>("RetryCount")
                         .HasColumnType("integer")
@@ -6188,26 +6777,26 @@ namespace LinkPara.Card.Infrastructure.Persistence.Migrations.PostgreSql
                     b.HasIndex("CorrelationKey", "CorrelationValue")
                         .HasDatabaseName("ix_file_line_correlation_key_correlation_value");
 
-                    b.HasIndex("IngestionFileId", "ByteOffset")
+                    b.HasIndex("FileId", "ByteOffset")
                         .HasDatabaseName("ix_file_line_file_id_byte_offset");
 
-                    b.HasIndex("IngestionFileId", "DuplicateDetectionKey")
+                    b.HasIndex("FileId", "DuplicateDetectionKey")
                         .HasDatabaseName("ix_file_line_file_id_duplicate_detection_key");
 
-                    b.HasIndex("IngestionFileId", "DuplicateStatus")
+                    b.HasIndex("FileId", "DuplicateStatus")
                         .HasDatabaseName("ix_file_line_file_id_duplicate_status");
 
-                    b.HasIndex("IngestionFileId", "LineNumber")
+                    b.HasIndex("FileId", "LineNumber")
                         .IsUnique()
                         .HasDatabaseName("ix_file_line_file_id_line_number");
 
-                    b.HasIndex("IngestionFileId", "Status")
+                    b.HasIndex("FileId", "Status")
                         .HasDatabaseName("ix_file_line_file_id_status");
 
-                    b.HasIndex("IngestionFileId", "RecordType", "Status")
+                    b.HasIndex("FileId", "LineType", "Status")
                         .HasDatabaseName("ix_file_line_file_id_line_type_status");
 
-                    b.HasIndex("IngestionFileId", "RecordType", "ReconciliationStatus", "UpdateDate")
+                    b.HasIndex("FileId", "LineType", "ReconciliationStatus", "UpdateDate")
                         .HasDatabaseName("ix_file_line_file_id_line_type_reconciliation_status_update_da");
 
                     b.ToTable("file_line", "ingestion");
@@ -6326,10 +6915,6 @@ namespace LinkPara.Card.Infrastructure.Persistence.Migrations.PostgreSql
                         .HasColumnType("character varying(50)")
                         .HasColumnName("created_by");
 
-                    b.Property<int>("CreatedOperationCount")
-                        .HasColumnType("integer")
-                        .HasColumnName("operation_count");
-
                     b.Property<Guid>("FileLineId")
                         .HasColumnType("uuid")
                         .HasColumnName("file_line_id");
@@ -6347,6 +6932,10 @@ namespace LinkPara.Card.Infrastructure.Persistence.Migrations.PostgreSql
                         .HasMaxLength(1000)
                         .HasColumnType("character varying(1000)")
                         .HasColumnName("message");
+
+                    b.Property<int>("OperationCount")
+                        .HasColumnType("integer")
+                        .HasColumnName("operation_count");
 
                     b.Property<string>("RecordStatus")
                         .IsRequired()
@@ -6445,7 +7034,7 @@ namespace LinkPara.Card.Infrastructure.Persistence.Migrations.PostgreSql
 
                     b.Property<int>("MaxRetries")
                         .HasColumnType("integer")
-                        .HasColumnName("max_retry_count");
+                        .HasColumnName("max_retries");
 
                     b.Property<DateTime?>("NextAttemptAt")
                         .HasColumnType("timestamp without time zone")
@@ -6456,7 +7045,7 @@ namespace LinkPara.Card.Infrastructure.Persistence.Migrations.PostgreSql
                         .HasColumnType("character varying(2000)")
                         .HasColumnName("note");
 
-                    b.Property<int?>("ParentSequenceIndex")
+                    b.Property<int?>("ParentSequenceNumber")
                         .HasColumnType("integer")
                         .HasColumnName("parent_sequence_number");
 
@@ -6474,7 +7063,7 @@ namespace LinkPara.Card.Infrastructure.Persistence.Migrations.PostgreSql
                         .HasColumnType("integer")
                         .HasColumnName("retry_count");
 
-                    b.Property<int>("SequenceIndex")
+                    b.Property<int>("SequenceNumber")
                         .HasColumnType("integer")
                         .HasColumnName("sequence_number");
 
@@ -6506,10 +7095,10 @@ namespace LinkPara.Card.Infrastructure.Persistence.Migrations.PostgreSql
                     b.HasIndex("Status")
                         .HasDatabaseName("ix_operation_status");
 
-                    b.HasIndex("EvaluationId", "SequenceIndex")
+                    b.HasIndex("EvaluationId", "SequenceNumber")
                         .HasDatabaseName("ix_operation_evaluation_id_sequence_number");
 
-                    b.HasIndex("GroupId", "EvaluationId", "SequenceIndex")
+                    b.HasIndex("GroupId", "EvaluationId", "SequenceNumber")
                         .IsUnique()
                         .HasDatabaseName("ix_operation_group_id_evaluation_id_sequence_index");
 
@@ -6788,81 +7377,81 @@ namespace LinkPara.Card.Infrastructure.Persistence.Migrations.PostgreSql
 
             modelBuilder.Entity("LinkPara.Card.Domain.Entities.FileIngestion.Persistence.IngestionCardBkmDetail", b =>
                 {
-                    b.HasOne("LinkPara.Card.Domain.Entities.FileIngestion.Persistence.IngestionFileLine", "IngestionFileLine")
+                    b.HasOne("LinkPara.Card.Domain.Entities.FileIngestion.Persistence.IngestionFileLine", "FileLine")
                         .WithOne("CardBkmDetail")
-                        .HasForeignKey("LinkPara.Card.Domain.Entities.FileIngestion.Persistence.IngestionCardBkmDetail", "IngestionFileLineId")
+                        .HasForeignKey("LinkPara.Card.Domain.Entities.FileIngestion.Persistence.IngestionCardBkmDetail", "FileLineId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
                         .HasConstraintName("fk_card_bkm_detail_file_line_file_line_id");
 
-                    b.Navigation("IngestionFileLine");
+                    b.Navigation("FileLine");
                 });
 
             modelBuilder.Entity("LinkPara.Card.Domain.Entities.FileIngestion.Persistence.IngestionCardMscDetail", b =>
                 {
-                    b.HasOne("LinkPara.Card.Domain.Entities.FileIngestion.Persistence.IngestionFileLine", "IngestionFileLine")
+                    b.HasOne("LinkPara.Card.Domain.Entities.FileIngestion.Persistence.IngestionFileLine", "FileLine")
                         .WithOne("CardMscDetail")
-                        .HasForeignKey("LinkPara.Card.Domain.Entities.FileIngestion.Persistence.IngestionCardMscDetail", "IngestionFileLineId")
+                        .HasForeignKey("LinkPara.Card.Domain.Entities.FileIngestion.Persistence.IngestionCardMscDetail", "FileLineId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
                         .HasConstraintName("fk_card_msc_detail_file_line_file_line_id");
 
-                    b.Navigation("IngestionFileLine");
+                    b.Navigation("FileLine");
                 });
 
             modelBuilder.Entity("LinkPara.Card.Domain.Entities.FileIngestion.Persistence.IngestionCardVisaDetail", b =>
                 {
-                    b.HasOne("LinkPara.Card.Domain.Entities.FileIngestion.Persistence.IngestionFileLine", "IngestionFileLine")
+                    b.HasOne("LinkPara.Card.Domain.Entities.FileIngestion.Persistence.IngestionFileLine", "FileLine")
                         .WithOne("CardVisaDetail")
-                        .HasForeignKey("LinkPara.Card.Domain.Entities.FileIngestion.Persistence.IngestionCardVisaDetail", "IngestionFileLineId")
+                        .HasForeignKey("LinkPara.Card.Domain.Entities.FileIngestion.Persistence.IngestionCardVisaDetail", "FileLineId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
                         .HasConstraintName("fk_card_visa_detail_file_line_file_line_id");
 
-                    b.Navigation("IngestionFileLine");
+                    b.Navigation("FileLine");
                 });
 
             modelBuilder.Entity("LinkPara.Card.Domain.Entities.FileIngestion.Persistence.IngestionClearingBkmDetail", b =>
                 {
-                    b.HasOne("LinkPara.Card.Domain.Entities.FileIngestion.Persistence.IngestionFileLine", "IngestionFileLine")
+                    b.HasOne("LinkPara.Card.Domain.Entities.FileIngestion.Persistence.IngestionFileLine", "FileLine")
                         .WithOne("ClearingBkmDetail")
-                        .HasForeignKey("LinkPara.Card.Domain.Entities.FileIngestion.Persistence.IngestionClearingBkmDetail", "IngestionFileLineId")
+                        .HasForeignKey("LinkPara.Card.Domain.Entities.FileIngestion.Persistence.IngestionClearingBkmDetail", "FileLineId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
                         .HasConstraintName("fk_clearing_bkm_detail_file_line_file_line_id");
 
-                    b.Navigation("IngestionFileLine");
+                    b.Navigation("FileLine");
                 });
 
             modelBuilder.Entity("LinkPara.Card.Domain.Entities.FileIngestion.Persistence.IngestionClearingMscDetail", b =>
                 {
-                    b.HasOne("LinkPara.Card.Domain.Entities.FileIngestion.Persistence.IngestionFileLine", "IngestionFileLine")
+                    b.HasOne("LinkPara.Card.Domain.Entities.FileIngestion.Persistence.IngestionFileLine", "FileLine")
                         .WithOne("ClearingMscDetail")
-                        .HasForeignKey("LinkPara.Card.Domain.Entities.FileIngestion.Persistence.IngestionClearingMscDetail", "IngestionFileLineId")
+                        .HasForeignKey("LinkPara.Card.Domain.Entities.FileIngestion.Persistence.IngestionClearingMscDetail", "FileLineId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
                         .HasConstraintName("fk_clearing_msc_detail_file_line_file_line_id");
 
-                    b.Navigation("IngestionFileLine");
+                    b.Navigation("FileLine");
                 });
 
             modelBuilder.Entity("LinkPara.Card.Domain.Entities.FileIngestion.Persistence.IngestionClearingVisaDetail", b =>
                 {
-                    b.HasOne("LinkPara.Card.Domain.Entities.FileIngestion.Persistence.IngestionFileLine", "IngestionFileLine")
+                    b.HasOne("LinkPara.Card.Domain.Entities.FileIngestion.Persistence.IngestionFileLine", "FileLine")
                         .WithOne("ClearingVisaDetail")
-                        .HasForeignKey("LinkPara.Card.Domain.Entities.FileIngestion.Persistence.IngestionClearingVisaDetail", "IngestionFileLineId")
+                        .HasForeignKey("LinkPara.Card.Domain.Entities.FileIngestion.Persistence.IngestionClearingVisaDetail", "FileLineId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
                         .HasConstraintName("fk_clearing_visa_detail_file_line_file_line_id");
 
-                    b.Navigation("IngestionFileLine");
+                    b.Navigation("FileLine");
                 });
 
             modelBuilder.Entity("LinkPara.Card.Domain.Entities.FileIngestion.Persistence.IngestionFileLine", b =>
                 {
                     b.HasOne("LinkPara.Card.Domain.Entities.FileIngestion.Persistence.IngestionFile", "IngestionFile")
                         .WithMany()
-                        .HasForeignKey("IngestionFileId")
+                        .HasForeignKey("FileId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
                         .HasConstraintName("fk_file_line_file_file_id");

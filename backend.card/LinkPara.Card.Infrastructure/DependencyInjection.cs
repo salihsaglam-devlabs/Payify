@@ -179,6 +179,7 @@ public static class DependencyInjection
         services.AddScoped<IEvaluator, MscEvaluator>();
         services.AddScoped<EvaluatorResolver>();
         services.AddScoped<IEvaluateService, EvaluateService>();
+        services.AddScoped<IClearingArrivalRequeueService, ClearingArrivalRequeueService>();
         services.AddScoped<OperationExecutor>();
         services.AddScoped<ExecuteService>();
         services.AddScoped<ReviewService>();

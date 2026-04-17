@@ -24,7 +24,7 @@ internal static class VisaSnapshotBuilder
             ("correlationValue", context.CorrelationValue),
             ("reason", reason),
             ("rootRowId", context.RootRow.Id),
-            ("transactionFileId", context.RootRow.IngestionFileId),
+            ("transactionFileId", context.RootRow.FileId),
             ("lineNumber", context.RootRow.LineNumber));
 
         var detail = DeserializeRootCardDetail(context.RootRow);
@@ -86,15 +86,15 @@ internal static class VisaSnapshotBuilder
 
     private static CardVisaDetail? DeserializeRootCardDetail(IngestionFileLine row)
     {
-        if (!string.Equals(row.RecordType, "D", StringComparison.OrdinalIgnoreCase) ||
-            string.IsNullOrWhiteSpace(row.ParsedData))
+        if (!string.Equals(row.LineType, "D", StringComparison.OrdinalIgnoreCase) ||
+            string.IsNullOrWhiteSpace(row.ParsedContent))
         {
             return null;
         }
 
         try
         {
-            return JsonSerializer.Deserialize<CardVisaDetail>(row.ParsedData, JsonOptions);
+            return JsonSerializer.Deserialize<CardVisaDetail>(row.ParsedContent, JsonOptions);
         }
         catch
         {

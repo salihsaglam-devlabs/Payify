@@ -1,6 +1,6 @@
 -- =====================================================================================
 -- REPORTING VIEWS - PostgreSQL Migration
--- Version: V1_0_4
+-- Version: V1_0_4 (UPDATED FOR NEW ARCHIVE SCHEMA)
 -- Purpose: Operational reporting semantic layer for File Ingestion, Reconciliation, Archive
 -- =====================================================================================
 
@@ -20,226 +20,226 @@ END $$;
 -- -------------------------------------------------------------------------------------
 CREATE OR REPLACE VIEW reporting.vw_ingestion_file_overview AS
 SELECT * FROM (
-    -- LIVE
-    SELECT
-        'LIVE' AS data_scope,
-        f.id AS file_id,
-        f.file_key,
-        f.file_name,
-        f.source_type,
-        f.file_type,
-        f.content_type,
-        f.status AS file_status,
-        f.message AS file_message,
-        f.expected_line_count,
-        f.processed_line_count,
-        f.successful_line_count,
-        f.failed_line_count,
-        f.last_processed_line_number,
-        f.last_processed_byte_offset,
-        f.is_archived,
-        f.create_date AS file_created_at,
-        f.update_date AS file_updated_at,
-        CASE
-            WHEN f.processed_line_count > 0
-                THEN ROUND((f.successful_line_count::numeric / f.processed_line_count) * 100, 2)
-            ELSE 0
-            END AS line_success_rate_pct,
-        CASE
-            WHEN f.processed_line_count > 0
-                THEN ROUND((f.failed_line_count::numeric / f.processed_line_count) * 100, 2)
-            ELSE 0
-            END AS line_fail_rate_pct,
-        CASE
-            WHEN f.expected_line_count > 0
-                THEN ROUND((f.processed_line_count::numeric / f.expected_line_count) * 100, 2)
-            ELSE 0
-            END AS completeness_pct,
-        COALESCE(fl.total_line_count, 0) AS actual_line_count,
-        COALESCE(fl.success_line_count, 0) AS actual_success_line_count,
-        COALESCE(fl.failed_line_count, 0) AS actual_failed_line_count,
-        COALESCE(fl.processing_line_count, 0) AS actual_processing_line_count,
-        COALESCE(fl.duplicate_line_count, 0) AS duplicate_line_count,
-        COALESCE(fl.recon_ready_count, 0) AS recon_ready_count,
-        COALESCE(fl.recon_success_count, 0) AS recon_success_count,
-        COALESCE(fl.recon_failed_count, 0) AS recon_failed_count,
-        EXTRACT(EPOCH FROM (COALESCE(f.update_date, f.create_date) - f.create_date))::bigint AS processing_duration_seconds
-    FROM ingestion.file f
-             LEFT JOIN LATERAL (
-        SELECT
-            COUNT(*) AS total_line_count,
-            COUNT(*) FILTER (WHERE line.status = 'Success') AS success_line_count,
-            COUNT(*) FILTER (WHERE line.status = 'Failed') AS failed_line_count,
-            COUNT(*) FILTER (WHERE line.status = 'Processing') AS processing_line_count,
-            COUNT(*) FILTER (WHERE line.duplicate_status IN ('Secondary', 'Conflict')) AS duplicate_line_count,
-            COUNT(*) FILTER (WHERE line.reconciliation_status = 'Ready') AS recon_ready_count,
-            COUNT(*) FILTER (WHERE line.reconciliation_status = 'Success') AS recon_success_count,
-            COUNT(*) FILTER (WHERE line.reconciliation_status = 'Failed') AS recon_failed_count
-        FROM ingestion.file_line line
-        WHERE line.file_id = f.id
-            ) fl ON TRUE
+                  -- LIVE
+                  SELECT
+                      'LIVE' AS data_scope,
+                      f.id AS file_id,
+                      f.file_key,
+                      f.file_name,
+                      f.source_type,
+                      f.file_type,
+                      f.content_type,
+                      f.status AS file_status,
+                      f.message AS file_message,
+                      f.expected_line_count,
+                      f.processed_line_count,
+                      f.successful_line_count,
+                      f.failed_line_count,
+                      f.last_processed_line_number,
+                      f.last_processed_byte_offset,
+                      f.is_archived,
+                      f.create_date AS file_created_at,
+                      f.update_date AS file_updated_at,
+                      CASE
+                          WHEN f.processed_line_count > 0
+                              THEN ROUND((f.successful_line_count::numeric / f.processed_line_count) * 100, 2)
+                          ELSE 0
+                          END AS line_success_rate_pct,
+                      CASE
+                          WHEN f.processed_line_count > 0
+                              THEN ROUND((f.failed_line_count::numeric / f.processed_line_count) * 100, 2)
+                          ELSE 0
+                          END AS line_fail_rate_pct,
+                      CASE
+                          WHEN f.expected_line_count > 0
+                              THEN ROUND((f.processed_line_count::numeric / f.expected_line_count) * 100, 2)
+                          ELSE 0
+                          END AS completeness_pct,
+                      COALESCE(fl.total_line_count, 0) AS actual_line_count,
+                      COALESCE(fl.success_line_count, 0) AS actual_success_line_count,
+                      COALESCE(fl.failed_line_count, 0) AS actual_failed_line_count,
+                      COALESCE(fl.processing_line_count, 0) AS actual_processing_line_count,
+                      COALESCE(fl.duplicate_line_count, 0) AS duplicate_line_count,
+                      COALESCE(fl.recon_ready_count, 0) AS recon_ready_count,
+                      COALESCE(fl.recon_success_count, 0) AS recon_success_count,
+                      COALESCE(fl.recon_failed_count, 0) AS recon_failed_count,
+                      EXTRACT(EPOCH FROM (COALESCE(f.update_date, f.create_date) - f.create_date))::bigint AS processing_duration_seconds
+                  FROM ingestion.file f
+                           LEFT JOIN LATERAL (
+                      SELECT
+                          COUNT(*) AS total_line_count,
+                          COUNT(*) FILTER (WHERE line.status = 'Success') AS success_line_count,
+                          COUNT(*) FILTER (WHERE line.status = 'Failed') AS failed_line_count,
+                          COUNT(*) FILTER (WHERE line.status = 'Processing') AS processing_line_count,
+                          COUNT(*) FILTER (WHERE line.duplicate_status IN ('Secondary', 'Conflict')) AS duplicate_line_count,
+                          COUNT(*) FILTER (WHERE line.reconciliation_status = 'Ready') AS recon_ready_count,
+                          COUNT(*) FILTER (WHERE line.reconciliation_status = 'Success') AS recon_success_count,
+                          COUNT(*) FILTER (WHERE line.reconciliation_status = 'Failed') AS recon_failed_count
+                      FROM ingestion.file_line line
+                      WHERE line.file_id = f.id
+                          ) fl ON TRUE
 
-    UNION ALL
+                  UNION ALL
 
-    -- ARCHIVE
-    SELECT
-        'ARCHIVE' AS data_scope,
-        f.id AS file_id,
-        f.file_key,
-        f.file_name,
-        f.source_type,
-        f.file_type,
-        f.content_type,
-        f.status AS file_status,
-        f.message AS file_message,
-        f.expected_line_count,
-        f.processed_line_count,
-        f.successful_line_count,
-        f.failed_line_count,
-        f.last_processed_line_number,
-        f.last_processed_byte_offset,
-        f.is_archived,
-        f.create_date AS file_created_at,
-        f.update_date AS file_updated_at,
-        CASE
-            WHEN f.processed_line_count > 0
-                THEN ROUND((f.successful_line_count::numeric / f.processed_line_count) * 100, 2)
-            ELSE 0
-            END AS line_success_rate_pct,
-        CASE
-            WHEN f.processed_line_count > 0
-                THEN ROUND((f.failed_line_count::numeric / f.processed_line_count) * 100, 2)
-            ELSE 0
-            END AS line_fail_rate_pct,
-        CASE
-            WHEN f.expected_line_count > 0
-                THEN ROUND((f.processed_line_count::numeric / f.expected_line_count) * 100, 2)
-            ELSE 0
-            END AS completeness_pct,
-        COALESCE(fl.total_line_count, 0) AS actual_line_count,
-        COALESCE(fl.success_line_count, 0) AS actual_success_line_count,
-        COALESCE(fl.failed_line_count, 0) AS actual_failed_line_count,
-        COALESCE(fl.processing_line_count, 0) AS actual_processing_line_count,
-        COALESCE(fl.duplicate_line_count, 0) AS duplicate_line_count,
-        COALESCE(fl.recon_ready_count, 0) AS recon_ready_count,
-        COALESCE(fl.recon_success_count, 0) AS recon_success_count,
-        COALESCE(fl.recon_failed_count, 0) AS recon_failed_count,
-        EXTRACT(EPOCH FROM (COALESCE(f.update_date, f.create_date) - f.create_date))::bigint AS processing_duration_seconds
-    FROM archive.ingestion_file f
-             LEFT JOIN LATERAL (
-        SELECT
-            COUNT(*) AS total_line_count,
-            COUNT(*) FILTER (WHERE line.status = 'Success') AS success_line_count,
-            COUNT(*) FILTER (WHERE line.status = 'Failed') AS failed_line_count,
-            COUNT(*) FILTER (WHERE line.status = 'Processing') AS processing_line_count,
-            COUNT(*) FILTER (WHERE line.duplicate_status IN ('Secondary', 'Conflict')) AS duplicate_line_count,
-            COUNT(*) FILTER (WHERE line.reconciliation_status = 'Ready') AS recon_ready_count,
-            COUNT(*) FILTER (WHERE line.reconciliation_status = 'Success') AS recon_success_count,
-            COUNT(*) FILTER (WHERE line.reconciliation_status = 'Failed') AS recon_failed_count
-        FROM archive.ingestion_file_line line
-        WHERE line.file_id = f.id
-            ) fl ON TRUE
-) combined;
+                  -- ARCHIVE
+                  SELECT
+                      'ARCHIVE' AS data_scope,
+                      f.id AS file_id,
+                      f.file_key,
+                      f.file_name,
+                      f.source_type,
+                      f.file_type,
+                      f.content_type,
+                      f.status AS file_status,
+                      f.message AS file_message,
+                      f.expected_line_count,
+                      f.processed_line_count,
+                      f.successful_line_count,
+                      f.failed_line_count,
+                      f.last_processed_line_number,
+                      f.last_processed_byte_offset,
+                      f.is_archived,
+                      f.create_date AS file_created_at,
+                      f.update_date AS file_updated_at,
+                      CASE
+                          WHEN f.processed_line_count > 0
+                              THEN ROUND((f.successful_line_count::numeric / f.processed_line_count) * 100, 2)
+                          ELSE 0
+                          END AS line_success_rate_pct,
+                      CASE
+                          WHEN f.processed_line_count > 0
+                              THEN ROUND((f.failed_line_count::numeric / f.processed_line_count) * 100, 2)
+                          ELSE 0
+                          END AS line_fail_rate_pct,
+                      CASE
+                          WHEN f.expected_line_count > 0
+                              THEN ROUND((f.processed_line_count::numeric / f.expected_line_count) * 100, 2)
+                          ELSE 0
+                          END AS completeness_pct,
+                      COALESCE(fl.total_line_count, 0) AS actual_line_count,
+                      COALESCE(fl.success_line_count, 0) AS actual_success_line_count,
+                      COALESCE(fl.failed_line_count, 0) AS actual_failed_line_count,
+                      COALESCE(fl.processing_line_count, 0) AS actual_processing_line_count,
+                      COALESCE(fl.duplicate_line_count, 0) AS duplicate_line_count,
+                      COALESCE(fl.recon_ready_count, 0) AS recon_ready_count,
+                      COALESCE(fl.recon_success_count, 0) AS recon_success_count,
+                      COALESCE(fl.recon_failed_count, 0) AS recon_failed_count,
+                      EXTRACT(EPOCH FROM (COALESCE(f.update_date, f.create_date) - f.create_date))::bigint AS processing_duration_seconds
+                  FROM archive.ingestion_file f
+                           LEFT JOIN LATERAL (
+                      SELECT
+                          COUNT(*) AS total_line_count,
+                          COUNT(*) FILTER (WHERE line.status = 'Success') AS success_line_count,
+                          COUNT(*) FILTER (WHERE line.status = 'Failed') AS failed_line_count,
+                          COUNT(*) FILTER (WHERE line.status = 'Processing') AS processing_line_count,
+                          COUNT(*) FILTER (WHERE line.duplicate_status IN ('Secondary', 'Conflict')) AS duplicate_line_count,
+                          COUNT(*) FILTER (WHERE line.reconciliation_status = 'Ready') AS recon_ready_count,
+                          COUNT(*) FILTER (WHERE line.reconciliation_status = 'Success') AS recon_success_count,
+                          COUNT(*) FILTER (WHERE line.reconciliation_status = 'Failed') AS recon_failed_count
+                      FROM archive.ingestion_file_line line
+                      WHERE line.file_id = f.id
+                          ) fl ON TRUE
+              ) combined;
 
 -- -------------------------------------------------------------------------------------
 -- A2. Dosya kalitesi ve duplicate etkisi (LIVE + ARCHIVE)
 -- -------------------------------------------------------------------------------------
 CREATE OR REPLACE VIEW reporting.vw_ingestion_file_quality AS
 SELECT * FROM (
-    -- LIVE
-    SELECT
-        'LIVE' AS data_scope,
-        f.id AS file_id,
-        f.file_name,
-        f.file_type,
-        f.content_type,
-        f.status AS file_status,
-        f.create_date AS file_created_at,
-        COALESCE(x.total_line_count, 0) AS total_line_count,
-        COALESCE(x.success_line_count, 0) AS success_line_count,
-        COALESCE(x.failed_line_count, 0) AS failed_line_count,
-        COALESCE(x.processing_line_count, 0) AS processing_line_count,
-        COALESCE(x.unique_count, 0) AS duplicate_unique_count,
-        COALESCE(x.primary_count, 0) AS duplicate_primary_count,
-        COALESCE(x.secondary_count, 0) AS duplicate_secondary_count,
-        COALESCE(x.conflict_count, 0) AS duplicate_conflict_count,
-        COALESCE(x.total_retry_count, 0) AS total_retry_count,
-        COALESCE(x.lines_with_retry_count, 0) AS lines_with_retry_count,
-        CASE
-            WHEN COALESCE(x.total_line_count, 0) > 0
-                THEN ROUND((x.failed_line_count::numeric / x.total_line_count) * 100, 2)
-            ELSE 0
-            END AS error_rate_pct,
-        CASE
-            WHEN COALESCE(x.total_line_count, 0) > 0
-                THEN ROUND(((COALESCE(x.secondary_count, 0) + COALESCE(x.conflict_count, 0))::numeric / x.total_line_count) * 100, 2)
-            ELSE 0
-            END AS duplicate_impact_pct
-    FROM ingestion.file f
-             LEFT JOIN LATERAL (
-        SELECT
-            COUNT(*) AS total_line_count,
-            COUNT(*) FILTER (WHERE line.status = 'Success') AS success_line_count,
-            COUNT(*) FILTER (WHERE line.status = 'Failed') AS failed_line_count,
-            COUNT(*) FILTER (WHERE line.status = 'Processing') AS processing_line_count,
-            COUNT(*) FILTER (WHERE line.duplicate_status = 'Unique') AS unique_count,
-            COUNT(*) FILTER (WHERE line.duplicate_status = 'Primary') AS primary_count,
-            COUNT(*) FILTER (WHERE line.duplicate_status = 'Secondary') AS secondary_count,
-            COUNT(*) FILTER (WHERE line.duplicate_status = 'Conflict') AS conflict_count,
-            SUM(line.retry_count) AS total_retry_count,
-            COUNT(*) FILTER (WHERE line.retry_count > 0) AS lines_with_retry_count
-        FROM ingestion.file_line line
-        WHERE line.file_id = f.id
-            ) x ON TRUE
+                  -- LIVE
+                  SELECT
+                      'LIVE' AS data_scope,
+                      f.id AS file_id,
+                      f.file_name,
+                      f.file_type,
+                      f.content_type,
+                      f.status AS file_status,
+                      f.create_date AS file_created_at,
+                      COALESCE(x.total_line_count, 0) AS total_line_count,
+                      COALESCE(x.success_line_count, 0) AS success_line_count,
+                      COALESCE(x.failed_line_count, 0) AS failed_line_count,
+                      COALESCE(x.processing_line_count, 0) AS processing_line_count,
+                      COALESCE(x.unique_count, 0) AS duplicate_unique_count,
+                      COALESCE(x.primary_count, 0) AS duplicate_primary_count,
+                      COALESCE(x.secondary_count, 0) AS duplicate_secondary_count,
+                      COALESCE(x.conflict_count, 0) AS duplicate_conflict_count,
+                      COALESCE(x.total_retry_count, 0) AS total_retry_count,
+                      COALESCE(x.lines_with_retry_count, 0) AS lines_with_retry_count,
+                      CASE
+                          WHEN COALESCE(x.total_line_count, 0) > 0
+                              THEN ROUND((x.failed_line_count::numeric / x.total_line_count) * 100, 2)
+                          ELSE 0
+                          END AS error_rate_pct,
+                      CASE
+                          WHEN COALESCE(x.total_line_count, 0) > 0
+                              THEN ROUND(((COALESCE(x.secondary_count, 0) + COALESCE(x.conflict_count, 0))::numeric / x.total_line_count) * 100, 2)
+                          ELSE 0
+                          END AS duplicate_impact_pct
+                  FROM ingestion.file f
+                           LEFT JOIN LATERAL (
+                      SELECT
+                          COUNT(*) AS total_line_count,
+                          COUNT(*) FILTER (WHERE line.status = 'Success') AS success_line_count,
+                          COUNT(*) FILTER (WHERE line.status = 'Failed') AS failed_line_count,
+                          COUNT(*) FILTER (WHERE line.status = 'Processing') AS processing_line_count,
+                          COUNT(*) FILTER (WHERE line.duplicate_status = 'Unique') AS unique_count,
+                          COUNT(*) FILTER (WHERE line.duplicate_status = 'Primary') AS primary_count,
+                          COUNT(*) FILTER (WHERE line.duplicate_status = 'Secondary') AS secondary_count,
+                          COUNT(*) FILTER (WHERE line.duplicate_status = 'Conflict') AS conflict_count,
+                          SUM(line.retry_count) AS total_retry_count,
+                          COUNT(*) FILTER (WHERE line.retry_count > 0) AS lines_with_retry_count
+                      FROM ingestion.file_line line
+                      WHERE line.file_id = f.id
+                          ) x ON TRUE
 
-    UNION ALL
+                  UNION ALL
 
-    -- ARCHIVE
-    SELECT
-        'ARCHIVE' AS data_scope,
-        f.id AS file_id,
-        f.file_name,
-        f.file_type,
-        f.content_type,
-        f.status AS file_status,
-        f.create_date AS file_created_at,
-        COALESCE(x.total_line_count, 0) AS total_line_count,
-        COALESCE(x.success_line_count, 0) AS success_line_count,
-        COALESCE(x.failed_line_count, 0) AS failed_line_count,
-        COALESCE(x.processing_line_count, 0) AS processing_line_count,
-        COALESCE(x.unique_count, 0) AS duplicate_unique_count,
-        COALESCE(x.primary_count, 0) AS duplicate_primary_count,
-        COALESCE(x.secondary_count, 0) AS duplicate_secondary_count,
-        COALESCE(x.conflict_count, 0) AS duplicate_conflict_count,
-        COALESCE(x.total_retry_count, 0) AS total_retry_count,
-        COALESCE(x.lines_with_retry_count, 0) AS lines_with_retry_count,
-        CASE
-            WHEN COALESCE(x.total_line_count, 0) > 0
-                THEN ROUND((x.failed_line_count::numeric / x.total_line_count) * 100, 2)
-            ELSE 0
-            END AS error_rate_pct,
-        CASE
-            WHEN COALESCE(x.total_line_count, 0) > 0
-                THEN ROUND(((COALESCE(x.secondary_count, 0) + COALESCE(x.conflict_count, 0))::numeric / x.total_line_count) * 100, 2)
-            ELSE 0
-            END AS duplicate_impact_pct
-    FROM archive.ingestion_file f
-             LEFT JOIN LATERAL (
-        SELECT
-            COUNT(*) AS total_line_count,
-            COUNT(*) FILTER (WHERE line.status = 'Success') AS success_line_count,
-            COUNT(*) FILTER (WHERE line.status = 'Failed') AS failed_line_count,
-            COUNT(*) FILTER (WHERE line.status = 'Processing') AS processing_line_count,
-            COUNT(*) FILTER (WHERE line.duplicate_status = 'Unique') AS unique_count,
-            COUNT(*) FILTER (WHERE line.duplicate_status = 'Primary') AS primary_count,
-            COUNT(*) FILTER (WHERE line.duplicate_status = 'Secondary') AS secondary_count,
-            COUNT(*) FILTER (WHERE line.duplicate_status = 'Conflict') AS conflict_count,
-            SUM(line.retry_count) AS total_retry_count,
-            COUNT(*) FILTER (WHERE line.retry_count > 0) AS lines_with_retry_count
-        FROM archive.ingestion_file_line line
-        WHERE line.file_id = f.id
-            ) x ON TRUE
-) combined;
+                  -- ARCHIVE
+                  SELECT
+                      'ARCHIVE' AS data_scope,
+                      f.id AS file_id,
+                      f.file_name,
+                      f.file_type,
+                      f.content_type,
+                      f.status AS file_status,
+                      f.create_date AS file_created_at,
+                      COALESCE(x.total_line_count, 0) AS total_line_count,
+                      COALESCE(x.success_line_count, 0) AS success_line_count,
+                      COALESCE(x.failed_line_count, 0) AS failed_line_count,
+                      COALESCE(x.processing_line_count, 0) AS processing_line_count,
+                      COALESCE(x.unique_count, 0) AS duplicate_unique_count,
+                      COALESCE(x.primary_count, 0) AS duplicate_primary_count,
+                      COALESCE(x.secondary_count, 0) AS duplicate_secondary_count,
+                      COALESCE(x.conflict_count, 0) AS duplicate_conflict_count,
+                      COALESCE(x.total_retry_count, 0) AS total_retry_count,
+                      COALESCE(x.lines_with_retry_count, 0) AS lines_with_retry_count,
+                      CASE
+                          WHEN COALESCE(x.total_line_count, 0) > 0
+                              THEN ROUND((x.failed_line_count::numeric / x.total_line_count) * 100, 2)
+                          ELSE 0
+                          END AS error_rate_pct,
+                      CASE
+                          WHEN COALESCE(x.total_line_count, 0) > 0
+                              THEN ROUND(((COALESCE(x.secondary_count, 0) + COALESCE(x.conflict_count, 0))::numeric / x.total_line_count) * 100, 2)
+                          ELSE 0
+                          END AS duplicate_impact_pct
+                  FROM archive.ingestion_file f
+                           LEFT JOIN LATERAL (
+                      SELECT
+                          COUNT(*) AS total_line_count,
+                          COUNT(*) FILTER (WHERE line.status = 'Success') AS success_line_count,
+                          COUNT(*) FILTER (WHERE line.status = 'Failed') AS failed_line_count,
+                          COUNT(*) FILTER (WHERE line.status = 'Processing') AS processing_line_count,
+                          COUNT(*) FILTER (WHERE line.duplicate_status = 'Unique') AS unique_count,
+                          COUNT(*) FILTER (WHERE line.duplicate_status = 'Primary') AS primary_count,
+                          COUNT(*) FILTER (WHERE line.duplicate_status = 'Secondary') AS secondary_count,
+                          COUNT(*) FILTER (WHERE line.duplicate_status = 'Conflict') AS conflict_count,
+                          SUM(line.retry_count) AS total_retry_count,
+                          COUNT(*) FILTER (WHERE line.retry_count > 0) AS lines_with_retry_count
+                      FROM archive.ingestion_file_line line
+                      WHERE line.file_id = f.id
+                          ) x ON TRUE
+              ) combined;
 
 -- -------------------------------------------------------------------------------------
 -- A3. Günlük ingestion trendi (LIVE + ARCHIVE)
@@ -264,42 +264,42 @@ SELECT
         ELSE 0
         END AS processed_line_success_rate_pct
 FROM (
-    -- LIVE
-    SELECT
-        'LIVE' AS data_scope,
-        DATE_TRUNC('day', f.create_date)::date AS report_date,
-        f.content_type,
-        f.file_type,
-        COUNT(*) AS file_count,
-        COUNT(*) FILTER (WHERE f.status = 'Success') AS success_file_count,
-        COUNT(*) FILTER (WHERE f.status = 'Failed') AS failed_file_count,
-        COUNT(*) FILTER (WHERE f.status = 'Processing') AS processing_file_count,
-        SUM(f.expected_line_count) AS expected_line_count,
-        SUM(f.processed_line_count) AS processed_line_count,
-        SUM(f.successful_line_count) AS successful_line_count,
-        SUM(f.failed_line_count) AS failed_line_count
-    FROM ingestion.file f
-    GROUP BY DATE_TRUNC('day', f.create_date)::date, f.content_type, f.file_type
+         -- LIVE
+         SELECT
+             'LIVE' AS data_scope,
+             DATE_TRUNC('day', f.create_date)::date AS report_date,
+             f.content_type,
+             f.file_type,
+             COUNT(*) AS file_count,
+             COUNT(*) FILTER (WHERE f.status = 'Success') AS success_file_count,
+             COUNT(*) FILTER (WHERE f.status = 'Failed') AS failed_file_count,
+             COUNT(*) FILTER (WHERE f.status = 'Processing') AS processing_file_count,
+             SUM(f.expected_line_count) AS expected_line_count,
+             SUM(f.processed_line_count) AS processed_line_count,
+             SUM(f.successful_line_count) AS successful_line_count,
+             SUM(f.failed_line_count) AS failed_line_count
+         FROM ingestion.file f
+         GROUP BY DATE_TRUNC('day', f.create_date)::date, f.content_type, f.file_type
 
-    UNION ALL
+         UNION ALL
 
-    -- ARCHIVE
-    SELECT
-        'ARCHIVE' AS data_scope,
-        DATE_TRUNC('day', f.create_date)::date AS report_date,
-        f.content_type,
-        f.file_type,
-        COUNT(*) AS file_count,
-        COUNT(*) FILTER (WHERE f.status = 'Success') AS success_file_count,
-        COUNT(*) FILTER (WHERE f.status = 'Failed') AS failed_file_count,
-        COUNT(*) FILTER (WHERE f.status = 'Processing') AS processing_file_count,
-        SUM(f.expected_line_count) AS expected_line_count,
-        SUM(f.processed_line_count) AS processed_line_count,
-        SUM(f.successful_line_count) AS successful_line_count,
-        SUM(f.failed_line_count) AS failed_line_count
-    FROM archive.ingestion_file f
-    GROUP BY DATE_TRUNC('day', f.create_date)::date, f.content_type, f.file_type
-) src
+         -- ARCHIVE
+         SELECT
+             'ARCHIVE' AS data_scope,
+             DATE_TRUNC('day', f.create_date)::date AS report_date,
+             f.content_type,
+             f.file_type,
+             COUNT(*) AS file_count,
+             COUNT(*) FILTER (WHERE f.status = 'Success') AS success_file_count,
+             COUNT(*) FILTER (WHERE f.status = 'Failed') AS failed_file_count,
+             COUNT(*) FILTER (WHERE f.status = 'Processing') AS processing_file_count,
+             SUM(f.expected_line_count) AS expected_line_count,
+             SUM(f.processed_line_count) AS processed_line_count,
+             SUM(f.successful_line_count) AS successful_line_count,
+             SUM(f.failed_line_count) AS failed_line_count
+         FROM archive.ingestion_file f
+         GROUP BY DATE_TRUNC('day', f.create_date)::date, f.content_type, f.file_type
+     ) src
 GROUP BY data_scope, report_date, content_type, file_type;
 
 -- -------------------------------------------------------------------------------------
@@ -319,40 +319,40 @@ SELECT
     MIN(first_file_at) AS first_file_at,
     MAX(last_file_at) AS last_file_at
 FROM (
-    -- LIVE
-    SELECT
-        'LIVE' AS data_scope,
-        f.content_type,
-        f.file_type,
-        COUNT(*) AS file_count,
-        COUNT(*) FILTER (WHERE f.status = 'Success') AS success_file_count,
-        COUNT(*) FILTER (WHERE f.status = 'Failed') AS failed_file_count,
-        SUM(f.processed_line_count) AS processed_line_count,
-        SUM(f.successful_line_count) AS successful_line_count,
-        SUM(f.failed_line_count) AS failed_line_count,
-        MIN(f.create_date) AS first_file_at,
-        MAX(f.create_date) AS last_file_at
-    FROM ingestion.file f
-    GROUP BY f.content_type, f.file_type
+         -- LIVE
+         SELECT
+             'LIVE' AS data_scope,
+             f.content_type,
+             f.file_type,
+             COUNT(*) AS file_count,
+             COUNT(*) FILTER (WHERE f.status = 'Success') AS success_file_count,
+             COUNT(*) FILTER (WHERE f.status = 'Failed') AS failed_file_count,
+             SUM(f.processed_line_count) AS processed_line_count,
+             SUM(f.successful_line_count) AS successful_line_count,
+             SUM(f.failed_line_count) AS failed_line_count,
+             MIN(f.create_date) AS first_file_at,
+             MAX(f.create_date) AS last_file_at
+         FROM ingestion.file f
+         GROUP BY f.content_type, f.file_type
 
-    UNION ALL
+         UNION ALL
 
-    -- ARCHIVE
-    SELECT
-        'ARCHIVE' AS data_scope,
-        f.content_type,
-        f.file_type,
-        COUNT(*) AS file_count,
-        COUNT(*) FILTER (WHERE f.status = 'Success') AS success_file_count,
-        COUNT(*) FILTER (WHERE f.status = 'Failed') AS failed_file_count,
-        SUM(f.processed_line_count) AS processed_line_count,
-        SUM(f.successful_line_count) AS successful_line_count,
-        SUM(f.failed_line_count) AS failed_line_count,
-        MIN(f.create_date) AS first_file_at,
-        MAX(f.create_date) AS last_file_at
-    FROM archive.ingestion_file f
-    GROUP BY f.content_type, f.file_type
-) src
+         -- ARCHIVE
+         SELECT
+             'ARCHIVE' AS data_scope,
+             f.content_type,
+             f.file_type,
+             COUNT(*) AS file_count,
+             COUNT(*) FILTER (WHERE f.status = 'Success') AS success_file_count,
+             COUNT(*) FILTER (WHERE f.status = 'Failed') AS failed_file_count,
+             SUM(f.processed_line_count) AS processed_line_count,
+             SUM(f.successful_line_count) AS successful_line_count,
+             SUM(f.failed_line_count) AS failed_line_count,
+             MIN(f.create_date) AS first_file_at,
+             MAX(f.create_date) AS last_file_at
+         FROM archive.ingestion_file f
+         GROUP BY f.content_type, f.file_type
+     ) src
 GROUP BY data_scope, content_type, file_type;
 
 -- -------------------------------------------------------------------------------------
@@ -360,76 +360,76 @@ GROUP BY data_scope, content_type, file_type;
 -- -------------------------------------------------------------------------------------
 CREATE OR REPLACE VIEW reporting.vw_ingestion_exception_hotspots AS
 SELECT * FROM (
-    -- LIVE
-    SELECT
-        'LIVE' AS data_scope,
-        f.id AS file_id,
-        f.file_name,
-        f.source_type,
-        f.file_type,
-        f.content_type,
-        f.status AS file_status,
-        f.message AS file_message,
-        f.create_date AS file_created_at,
-        f.failed_line_count,
-        f.processed_line_count,
-        COALESCE(x.total_retry_count, 0) AS total_retry_count,
-        COALESCE(x.max_retry_count, 0) AS max_retry_count,
-        COALESCE(x.error_message_count, 0) AS distinct_error_message_count,
-        CASE
-            WHEN f.status = 'Failed' THEN 'CRITICAL'
-            WHEN f.processed_line_count > 0 AND (f.failed_line_count::numeric / f.processed_line_count) >= 0.20 THEN 'HIGH'
-            WHEN f.failed_line_count > 0 THEN 'MEDIUM'
-            ELSE 'LOW'
-            END AS severity_level
-    FROM ingestion.file f
-             LEFT JOIN LATERAL (
-        SELECT
-            SUM(line.retry_count) AS total_retry_count,
-            MAX(line.retry_count) AS max_retry_count,
-            COUNT(DISTINCT line.message) FILTER (WHERE line.status = 'Failed') AS error_message_count
-        FROM ingestion.file_line line
-        WHERE line.file_id = f.id
-            ) x ON TRUE
-    WHERE f.status = 'Failed'
-       OR f.failed_line_count > 0
+                  -- LIVE
+                  SELECT
+                      'LIVE' AS data_scope,
+                      f.id AS file_id,
+                      f.file_name,
+                      f.source_type,
+                      f.file_type,
+                      f.content_type,
+                      f.status AS file_status,
+                      f.message AS file_message,
+                      f.create_date AS file_created_at,
+                      f.failed_line_count,
+                      f.processed_line_count,
+                      COALESCE(x.total_retry_count, 0) AS total_retry_count,
+                      COALESCE(x.max_retry_count, 0) AS max_retry_count,
+                      COALESCE(x.error_message_count, 0) AS distinct_error_message_count,
+                      CASE
+                          WHEN f.status = 'Failed' THEN 'CRITICAL'
+                          WHEN f.processed_line_count > 0 AND (f.failed_line_count::numeric / f.processed_line_count) >= 0.20 THEN 'HIGH'
+                          WHEN f.failed_line_count > 0 THEN 'MEDIUM'
+                          ELSE 'LOW'
+                          END AS severity_level
+                  FROM ingestion.file f
+                           LEFT JOIN LATERAL (
+                      SELECT
+                          SUM(line.retry_count) AS total_retry_count,
+                          MAX(line.retry_count) AS max_retry_count,
+                          COUNT(DISTINCT line.message) FILTER (WHERE line.status = 'Failed') AS error_message_count
+                      FROM ingestion.file_line line
+                      WHERE line.file_id = f.id
+                          ) x ON TRUE
+                  WHERE f.status = 'Failed'
+                     OR f.failed_line_count > 0
 
-    UNION ALL
+                  UNION ALL
 
-    -- ARCHIVE
-    SELECT
-        'ARCHIVE' AS data_scope,
-        f.id AS file_id,
-        f.file_name,
-        f.source_type,
-        f.file_type,
-        f.content_type,
-        f.status AS file_status,
-        f.message AS file_message,
-        f.create_date AS file_created_at,
-        f.failed_line_count,
-        f.processed_line_count,
-        COALESCE(x.total_retry_count, 0) AS total_retry_count,
-        COALESCE(x.max_retry_count, 0) AS max_retry_count,
-        COALESCE(x.error_message_count, 0) AS distinct_error_message_count,
-        CASE
-            WHEN f.status = 'Failed' THEN 'CRITICAL'
-            WHEN f.processed_line_count > 0 AND (f.failed_line_count::numeric / f.processed_line_count) >= 0.20 THEN 'HIGH'
-            WHEN f.failed_line_count > 0 THEN 'MEDIUM'
-            ELSE 'LOW'
-            END AS severity_level
-    FROM archive.ingestion_file f
-             LEFT JOIN LATERAL (
-        SELECT
-            SUM(line.retry_count) AS total_retry_count,
-            MAX(line.retry_count) AS max_retry_count,
-            COUNT(DISTINCT line.message) FILTER (WHERE line.status = 'Failed') AS error_message_count
-        FROM archive.ingestion_file_line line
-        WHERE line.file_id = f.id
-            ) x ON TRUE
-    WHERE f.status = 'Failed'
-       OR f.failed_line_count > 0
-) combined;
+                  -- ARCHIVE
+                  SELECT
+                      'ARCHIVE' AS data_scope,
+                      f.id AS file_id,
+                      f.file_name,
+                      f.source_type,
+                      f.file_type,
+                      f.content_type,
+                      f.status AS file_status,
+                      f.message AS file_message,
+                      f.create_date AS file_created_at,
+                      f.failed_line_count,
+                      f.processed_line_count,
+                      COALESCE(x.total_retry_count, 0) AS total_retry_count,
+                      COALESCE(x.max_retry_count, 0) AS max_retry_count,
+                      COALESCE(x.error_message_count, 0) AS distinct_error_message_count,
+                      CASE
+                          WHEN f.status = 'Failed' THEN 'CRITICAL'
+                          WHEN f.processed_line_count > 0 AND (f.failed_line_count::numeric / f.processed_line_count) >= 0.20 THEN 'HIGH'
+                          WHEN f.failed_line_count > 0 THEN 'MEDIUM'
+                          ELSE 'LOW'
+                          END AS severity_level
+                  FROM archive.ingestion_file f
+                           LEFT JOIN LATERAL (
+                      SELECT
+                          SUM(line.retry_count) AS total_retry_count,
+                          MAX(line.retry_count) AS max_retry_count,
+                          COUNT(DISTINCT line.message) FILTER (WHERE line.status = 'Failed') AS error_message_count
+                      FROM archive.ingestion_file_line line
+                      WHERE line.file_id = f.id
+                          ) x ON TRUE
+                  WHERE f.status = 'Failed'
+                     OR f.failed_line_count > 0
+              ) combined;
 
 -- =====================================================================================
 -- B. RECONCILIATION PROCESS
@@ -492,7 +492,7 @@ FROM dates d
          LEFT JOIN (
     SELECT 'LIVE' AS data_scope, DATE_TRUNC('day', create_date)::date AS report_date,
         COUNT(*) AS total_evaluation_count,
-        COUNT(*) FILTER (WHERE status = 'Completed') AS completed_evaluation_count,
+           COUNT(*) FILTER (WHERE status = 'Completed') AS completed_evaluation_count,
         COUNT(*) FILTER (WHERE status = 'Failed') AS failed_evaluation_count
     FROM reconciliation.evaluation
     GROUP BY DATE_TRUNC('day', create_date)::date
@@ -505,7 +505,7 @@ FROM dates d
          LEFT JOIN (
     SELECT 'LIVE' AS data_scope, DATE_TRUNC('day', create_date)::date AS report_date,
         COUNT(*) AS total_operation_count,
-        COUNT(*) FILTER (WHERE status = 'Completed') AS completed_operation_count,
+           COUNT(*) FILTER (WHERE status = 'Completed') AS completed_operation_count,
         COUNT(*) FILTER (WHERE status = 'Failed') AS failed_operation_count,
         COUNT(*) FILTER (WHERE status = 'Blocked') AS blocked_operation_count,
         COUNT(*) FILTER (WHERE status = 'Planned') AS planned_operation_count,
@@ -523,7 +523,7 @@ FROM dates d
          LEFT JOIN (
     SELECT 'LIVE' AS data_scope, DATE_TRUNC('day', started_at)::date AS report_date,
         COUNT(*) AS total_execution_count,
-        COUNT(*) FILTER (WHERE status = 'Completed') AS completed_execution_count,
+           COUNT(*) FILTER (WHERE status = 'Completed') AS completed_execution_count,
         COUNT(*) FILTER (WHERE status = 'Failed') AS failed_execution_count,
         ROUND(AVG(EXTRACT(EPOCH FROM (finished_at - started_at))) FILTER (WHERE finished_at IS NOT NULL), 2) AS avg_execution_duration_seconds
     FROM reconciliation.operation_execution
@@ -563,7 +563,7 @@ FROM dates d
 ) al ON al.report_date = d.report_date AND al.data_scope = d.data_scope;
 
 -- -------------------------------------------------------------------------------------
--- B2. Açık mutabakat işleri
+-- B2. Açık mutabakat işleri (sadece LIVE)
 -- -------------------------------------------------------------------------------------
 CREATE OR REPLACE VIEW reporting.vw_recon_open_items AS
 SELECT
@@ -578,7 +578,7 @@ SELECT
     op.is_manual,
     op.status AS operation_status,
     op.retry_count,
-    op.max_retry_count,
+    op.max_retries AS max_retry_count,
     op.next_attempt_at,
     op.lease_owner,
     op.lease_expires_at,
@@ -593,7 +593,7 @@ FROM reconciliation.operation op
 WHERE op.status IN ('Planned', 'Blocked', 'Executing');
 
 -- -------------------------------------------------------------------------------------
--- B3. Aging dağılımı
+-- B3. Aging dağılımı (sadece LIVE)
 -- -------------------------------------------------------------------------------------
 CREATE OR REPLACE VIEW reporting.vw_recon_open_item_aging AS
 SELECT
@@ -621,7 +621,7 @@ FROM (
 GROUP BY bucket_name;
 
 -- -------------------------------------------------------------------------------------
--- B4. Manuel review kuyruğu (enriched)
+-- B4. Manuel review kuyruğu (sadece LIVE)
 -- -------------------------------------------------------------------------------------
 CREATE OR REPLACE VIEW reporting.vw_recon_manual_review_queue AS
 SELECT
@@ -644,7 +644,7 @@ SELECT
     op.is_manual AS operation_is_manual,
     op.note AS operation_note,
     op.retry_count AS operation_retry_count,
-    op.max_retry_count AS operation_max_retries,
+    op.max_retries AS operation_max_retries,
     op.next_attempt_at AS operation_next_attempt_at,
     op.lease_owner AS operation_lease_owner,
     op.lease_expires_at AS operation_lease_expires_at,
@@ -708,14 +708,14 @@ SELECT
     CASE
         WHEN rv.expires_at IS NOT NULL AND rv.expires_at < NOW() THEN 'EXPIRED'
         WHEN rv.expires_at IS NOT NULL AND rv.expires_at < NOW() + INTERVAL '4 hours' THEN 'EXPIRING_SOON'
-        WHEN EXTRACT(EPOCH FROM (NOW() - rv.create_date)) / 3600 > 24 THEN 'OVERDUE'
-        ELSE 'NORMAL'
-    END AS urgency_level,
+    WHEN EXTRACT(EPOCH FROM (NOW() - rv.create_date)) / 3600 > 24 THEN 'OVERDUE'
+    ELSE 'NORMAL'
+END AS urgency_level,
     CASE
         WHEN le.last_execution_error_message IS NOT NULL THEN le.last_execution_error_message
         WHEN op.last_error IS NOT NULL THEN op.last_error
         ELSE NULL
-    END AS effective_error
+END AS effective_error
 FROM reconciliation.review rv
     JOIN reconciliation.operation op ON op.id = rv.operation_id
     JOIN reconciliation.evaluation ev ON ev.id = rv.evaluation_id
@@ -792,36 +792,36 @@ SELECT
     MIN(first_alert_at) AS first_alert_at,
     MAX(last_alert_at) AS last_alert_at
 FROM (
-    -- LIVE
-    SELECT
-        'LIVE' AS data_scope,
-        alert.severity,
-        alert.alert_type,
-        alert.alert_status,
-        COUNT(*) AS alert_count,
-        COUNT(DISTINCT alert.group_id) AS distinct_group_count,
-        COUNT(DISTINCT alert.operation_id) AS distinct_operation_count,
-        MIN(alert.create_date) AS first_alert_at,
-        MAX(alert.create_date) AS last_alert_at
-    FROM reconciliation.alert alert
-    GROUP BY alert.severity, alert.alert_type, alert.alert_status
+         -- LIVE
+         SELECT
+             'LIVE' AS data_scope,
+             alert.severity,
+             alert.alert_type,
+             alert.alert_status,
+             COUNT(*) AS alert_count,
+             COUNT(DISTINCT alert.group_id) AS distinct_group_count,
+             COUNT(DISTINCT alert.operation_id) AS distinct_operation_count,
+             MIN(alert.create_date) AS first_alert_at,
+             MAX(alert.create_date) AS last_alert_at
+         FROM reconciliation.alert alert
+         GROUP BY alert.severity, alert.alert_type, alert.alert_status
 
-    UNION ALL
+         UNION ALL
 
-    -- ARCHIVE
-    SELECT
-        'ARCHIVE' AS data_scope,
-        alert.severity,
-        alert.alert_type,
-        alert.alert_status,
-        COUNT(*) AS alert_count,
-        COUNT(DISTINCT alert.group_id) AS distinct_group_count,
-        COUNT(DISTINCT alert.operation_id) AS distinct_operation_count,
-        MIN(alert.create_date) AS first_alert_at,
-        MAX(alert.create_date) AS last_alert_at
-    FROM archive.reconciliation_alert alert
-    GROUP BY alert.severity, alert.alert_type, alert.alert_status
-) src
+         -- ARCHIVE
+         SELECT
+             'ARCHIVE' AS data_scope,
+             alert.severity,
+             alert.alert_type,
+             alert.alert_status,
+             COUNT(*) AS alert_count,
+             COUNT(DISTINCT alert.group_id) AS distinct_group_count,
+             COUNT(DISTINCT alert.operation_id) AS distinct_operation_count,
+             MIN(alert.create_date) AS first_alert_at,
+             MAX(alert.create_date) AS last_alert_at
+         FROM archive.reconciliation_alert alert
+         GROUP BY alert.severity, alert.alert_type, alert.alert_status
+     ) src
 GROUP BY data_scope, severity, alert_type, alert_status;
 
 -- =====================================================================================
@@ -958,7 +958,7 @@ GROUP BY
     d.source_currency;
 
 -- -------------------------------------------------------------------------------------
--- C3. ARCHIVE card içerik özeti
+-- C3. ARCHIVE card içerik özeti (UPDATED)
 -- -------------------------------------------------------------------------------------
 CREATE OR REPLACE VIEW reporting.vw_recon_archive_card_content_daily AS
 SELECT
@@ -990,31 +990,32 @@ FROM archive.ingestion_file_line fl
          JOIN archive.ingestion_file f
               ON f.id = fl.file_id
                   AND f.file_type = 'Card'
-         JOIN LATERAL (
-        SELECT
-            cv.financial_type, cv.txn_effect, cv.txn_source, cv.txn_region,
-            cv.terminal_type, cv.channel_code, cv.is_txn_settle, cv.txn_stat,
-            cv.response_code, cv.is_successful_txn,
-            cv.original_currency, cv.original_amount, cv.settlement_amount, cv.billing_amount
-        FROM archive.ingestion_card_visa_detail cv
-        WHERE cv.file_line_id = fl.id AND f.content_type = 'Visa'
-        UNION ALL
-        SELECT
-            cm.financial_type, cm.txn_effect, cm.txn_source, cm.txn_region,
-            cm.terminal_type, cm.channel_code, cm.is_txn_settle, cm.txn_stat,
-            cm.response_code, cm.is_successful_txn,
-            cm.original_currency, cm.original_amount, cm.settlement_amount, cm.billing_amount
-        FROM archive.ingestion_card_msc_detail cm
-        WHERE cm.file_line_id = fl.id AND f.content_type = 'Msc'
-        UNION ALL
-        SELECT
-            cb.financial_type, cb.txn_effect, cb.txn_source, cb.txn_region,
-            cb.terminal_type, cb.channel_code, cb.is_txn_settle, cb.txn_stat,
-            cb.response_code, cb.is_successful_txn,
-            cb.original_currency, cb.original_amount, cb.settlement_amount, cb.billing_amount
-        FROM archive.ingestion_card_bkm_detail cb
-        WHERE cb.file_line_id = fl.id AND f.content_type = 'Bkm'
-            ) d ON TRUE
+         LEFT JOIN LATERAL (
+    SELECT
+        cv.financial_type, cv.txn_effect, cv.txn_source, cv.txn_region,
+        cv.terminal_type, cv.channel_code, cv.is_txn_settle, cv.txn_stat,
+        cv.response_code, cv.is_successful_txn,
+        cv.original_currency, cv.original_amount, cv.settlement_amount, cv.billing_amount
+    FROM archive.ingestion_card_visa_detail cv
+    WHERE cv.id = fl.card_visa_detail_id AND f.content_type = 'Visa'
+    UNION ALL
+    SELECT
+        cm.financial_type, cm.txn_effect, cm.txn_source, cm.txn_region,
+        cm.terminal_type, cm.channel_code, cm.is_txn_settle, cm.txn_stat,
+        cm.response_code, cm.is_successful_txn,
+        cm.original_currency, cm.original_amount, cm.settlement_amount, cm.billing_amount
+    FROM archive.ingestion_card_msc_detail cm
+    WHERE cm.id = fl.card_msc_detail_id AND f.content_type = 'Msc'
+    UNION ALL
+    SELECT
+        cb.financial_type, cb.txn_effect, cb.txn_source, cb.txn_region,
+        cb.terminal_type, cb.channel_code, cb.is_txn_settle, cb.txn_stat,
+        cb.response_code, cb.is_successful_txn,
+        cb.original_currency, cb.original_amount, cb.settlement_amount, cb.billing_amount
+    FROM archive.ingestion_card_bkm_detail cb
+    WHERE cb.id = fl.card_bkm_detail_id AND f.content_type = 'Bkm'
+        ) d ON TRUE
+WHERE d.financial_type IS NOT NULL   -- ensures only lines with actual card detail are counted
 GROUP BY
     DATE_TRUNC('day', f.create_date)::date,
     f.content_type,
@@ -1033,7 +1034,7 @@ GROUP BY
     d.original_currency;
 
 -- -------------------------------------------------------------------------------------
--- C4. ARCHIVE clearing içerik özeti
+-- C4. ARCHIVE clearing içerik özeti (UPDATED)
 -- -------------------------------------------------------------------------------------
 CREATE OR REPLACE VIEW reporting.vw_recon_archive_clearing_content_daily AS
 SELECT
@@ -1057,25 +1058,26 @@ FROM archive.ingestion_file_line fl
          JOIN archive.ingestion_file f
               ON f.id = fl.file_id
                   AND f.file_type = 'Clearing'
-         JOIN LATERAL (
+         LEFT JOIN LATERAL (
     SELECT
         cv.txn_type, cv.io_flag, cv.control_stat,
         cv.source_currency, cv.source_amount, cv.destination_amount
     FROM archive.ingestion_clearing_visa_detail cv
-    WHERE cv.file_line_id = fl.id AND f.content_type = 'Visa'
+    WHERE cv.id = fl.clearing_visa_detail_id AND f.content_type = 'Visa'
     UNION ALL
     SELECT
         cm.txn_type, cm.io_flag, cm.control_stat,
         cm.source_currency, cm.source_amount, cm.destination_amount
     FROM archive.ingestion_clearing_msc_detail cm
-    WHERE cm.file_line_id = fl.id AND f.content_type = 'Msc'
+    WHERE cm.id = fl.clearing_msc_detail_id AND f.content_type = 'Msc'
     UNION ALL
     SELECT
         cb.txn_type, cb.io_flag, cb.control_stat,
         cb.source_currency, cb.source_amount, cb.destination_amount
     FROM archive.ingestion_clearing_bkm_detail cb
-    WHERE cb.file_line_id = fl.id AND f.content_type = 'Bkm'
+    WHERE cb.id = fl.clearing_bkm_detail_id AND f.content_type = 'Bkm'
         ) d ON TRUE
+WHERE d.txn_type IS NOT NULL
 GROUP BY
     DATE_TRUNC('day', f.create_date)::date,
     f.content_type,
@@ -1087,8 +1089,7 @@ GROUP BY
     d.source_currency;
 
 -- -------------------------------------------------------------------------------------
--- C5. Unified günlük reconciliation içerik özeti
--- Bu view başka reporting view'e bağımlı değildir.
+-- C5. Unified günlük reconciliation içerik özeti (UPDATED for archive)
 -- -------------------------------------------------------------------------------------
 CREATE OR REPLACE VIEW reporting.vw_recon_content_daily AS
 SELECT
@@ -1174,7 +1175,7 @@ FROM (
 
          UNION ALL
 
-         -- archive card
+         -- archive card (UPDATED)
          SELECT
              DATE_TRUNC('day', f.create_date)::date,
              'ARCHIVE',
@@ -1186,28 +1187,29 @@ FROM (
              COUNT(DISTINCT fl.file_id),
              SUM(CASE WHEN fl.matched_clearing_line_id IS NOT NULL THEN 1 ELSE 0 END),
              SUM(CASE WHEN fl.matched_clearing_line_id IS NULL THEN 1 ELSE 0 END),
-             SUM(d.original_amount),
-             SUM(d.settlement_amount),
-             SUM(d.billing_amount),
+             SUM(COALESCE(d.original_amount, 0)),
+             SUM(COALESCE(d.settlement_amount, 0)),
+             SUM(COALESCE(d.billing_amount, 0)),
              0::numeric,
              0::numeric
          FROM archive.ingestion_file_line fl
              JOIN archive.ingestion_file f ON f.id = fl.file_id AND f.file_type = 'Card'
-             JOIN LATERAL (
+             LEFT JOIN LATERAL (
              SELECT cv.original_amount, cv.settlement_amount, cv.billing_amount
-             FROM archive.ingestion_card_visa_detail cv WHERE cv.file_line_id = fl.id AND f.content_type = 'Visa'
+             FROM archive.ingestion_card_visa_detail cv WHERE cv.id = fl.card_visa_detail_id AND f.content_type = 'Visa'
              UNION ALL
              SELECT cm.original_amount, cm.settlement_amount, cm.billing_amount
-             FROM archive.ingestion_card_msc_detail cm WHERE cm.file_line_id = fl.id AND f.content_type = 'Msc'
+             FROM archive.ingestion_card_msc_detail cm WHERE cm.id = fl.card_msc_detail_id AND f.content_type = 'Msc'
              UNION ALL
              SELECT cb.original_amount, cb.settlement_amount, cb.billing_amount
-             FROM archive.ingestion_card_bkm_detail cb WHERE cb.file_line_id = fl.id AND f.content_type = 'Bkm'
+             FROM archive.ingestion_card_bkm_detail cb WHERE cb.id = fl.card_bkm_detail_id AND f.content_type = 'Bkm'
              ) d ON TRUE
+         WHERE d.original_amount IS NOT NULL
          GROUP BY DATE_TRUNC('day', f.create_date)::date, f.content_type, fl.status, fl.reconciliation_status
 
          UNION ALL
 
-         -- archive clearing
+         -- archive clearing (UPDATED)
          SELECT
              DATE_TRUNC('day', f.create_date)::date,
              'ARCHIVE',
@@ -1222,20 +1224,21 @@ FROM (
              0::numeric,
              0::numeric,
              0::numeric,
-             SUM(d.source_amount),
-             SUM(d.destination_amount)
+             SUM(COALESCE(d.source_amount, 0)),
+             SUM(COALESCE(d.destination_amount, 0))
          FROM archive.ingestion_file_line fl
              JOIN archive.ingestion_file f ON f.id = fl.file_id AND f.file_type = 'Clearing'
-             JOIN LATERAL (
+             LEFT JOIN LATERAL (
              SELECT cv.source_amount, cv.destination_amount
-             FROM archive.ingestion_clearing_visa_detail cv WHERE cv.file_line_id = fl.id AND f.content_type = 'Visa'
+             FROM archive.ingestion_clearing_visa_detail cv WHERE cv.id = fl.clearing_visa_detail_id AND f.content_type = 'Visa'
              UNION ALL
              SELECT cm.source_amount, cm.destination_amount
-             FROM archive.ingestion_clearing_msc_detail cm WHERE cm.file_line_id = fl.id AND f.content_type = 'Msc'
+             FROM archive.ingestion_clearing_msc_detail cm WHERE cm.id = fl.clearing_msc_detail_id AND f.content_type = 'Msc'
              UNION ALL
              SELECT cb.source_amount, cb.destination_amount
-             FROM archive.ingestion_clearing_bkm_detail cb WHERE cb.file_line_id = fl.id AND f.content_type = 'Bkm'
+             FROM archive.ingestion_clearing_bkm_detail cb WHERE cb.id = fl.clearing_bkm_detail_id AND f.content_type = 'Bkm'
              ) d ON TRUE
+         WHERE d.source_amount IS NOT NULL
          GROUP BY DATE_TRUNC('day', f.create_date)::date, f.content_type, fl.status, fl.reconciliation_status
      ) src
 GROUP BY
@@ -1247,7 +1250,7 @@ GROUP BY
     src.reconciliation_status;
 
 -- -------------------------------------------------------------------------------------
--- C6. Clearing control_stat analizi
+-- C6. Clearing control_stat analizi (UPDATED for archive)
 -- -------------------------------------------------------------------------------------
 CREATE OR REPLACE VIEW reporting.vw_recon_clearing_controlstat_analysis AS
 SELECT
@@ -1266,6 +1269,7 @@ SELECT
         ELSE 0
         END AS unmatched_rate_pct
 FROM (
+         -- LIVE
          SELECT
              'LIVE' AS data_scope,
              f.content_type AS network,
@@ -1292,6 +1296,7 @@ FROM (
 
          UNION ALL
 
+         -- ARCHIVE (UPDATED)
          SELECT
              'ARCHIVE',
              f.content_type,
@@ -1304,16 +1309,17 @@ FROM (
              SUM(CASE WHEN fl.matched_clearing_line_id IS NULL THEN 1 ELSE 0 END)
          FROM archive.ingestion_file_line fl
                   JOIN archive.ingestion_file f ON f.id = fl.file_id AND f.file_type = 'Clearing'
-                  JOIN LATERAL (
+                  LEFT JOIN LATERAL (
              SELECT cv.control_stat, cv.io_flag, cv.source_amount
-             FROM archive.ingestion_clearing_visa_detail cv WHERE cv.file_line_id = fl.id AND f.content_type = 'Visa'
+             FROM archive.ingestion_clearing_visa_detail cv WHERE cv.id = fl.clearing_visa_detail_id AND f.content_type = 'Visa'
              UNION ALL
              SELECT cm.control_stat, cm.io_flag, cm.source_amount
-             FROM archive.ingestion_clearing_msc_detail cm WHERE cm.file_line_id = fl.id AND f.content_type = 'Msc'
+             FROM archive.ingestion_clearing_msc_detail cm WHERE cm.id = fl.clearing_msc_detail_id AND f.content_type = 'Msc'
              UNION ALL
              SELECT cb.control_stat, cb.io_flag, cb.source_amount
-             FROM archive.ingestion_clearing_bkm_detail cb WHERE cb.file_line_id = fl.id AND f.content_type = 'Bkm'
+             FROM archive.ingestion_clearing_bkm_detail cb WHERE cb.id = fl.clearing_bkm_detail_id AND f.content_type = 'Bkm'
                  ) d ON TRUE
+         WHERE d.control_stat IS NOT NULL
          GROUP BY f.content_type, fl.status, d.control_stat, d.io_flag
      ) x
 GROUP BY
@@ -1324,7 +1330,7 @@ GROUP BY
     x.io_flag;
 
 -- -------------------------------------------------------------------------------------
--- C7. Finansal özet
+-- C7. Finansal özet (UPDATED for archive)
 -- -------------------------------------------------------------------------------------
 CREATE OR REPLACE VIEW reporting.vw_recon_financial_summary AS
 SELECT
@@ -1345,6 +1351,7 @@ SELECT
     SUM(x.matched_count) AS matched_count,
     SUM(x.unmatched_count) AS unmatched_count
 FROM (
+         -- LIVE
          SELECT
              'LIVE' AS data_scope,
              f.content_type AS network,
@@ -1378,6 +1385,7 @@ FROM (
 
          UNION ALL
 
+         -- ARCHIVE (UPDATED)
          SELECT
              'ARCHIVE',
              f.content_type,
@@ -1397,16 +1405,17 @@ FROM (
              SUM(CASE WHEN fl.matched_clearing_line_id IS NULL THEN 1 ELSE 0 END)
          FROM archive.ingestion_file_line fl
                   JOIN archive.ingestion_file f ON f.id = fl.file_id AND f.file_type = 'Card'
-                  JOIN LATERAL (
+                  LEFT JOIN LATERAL (
              SELECT cv.financial_type, cv.txn_effect, cv.is_txn_settle, cv.original_currency, cv.original_amount, cv.settlement_amount, cv.billing_amount
-             FROM archive.ingestion_card_visa_detail cv WHERE cv.file_line_id = fl.id AND f.content_type = 'Visa'
+             FROM archive.ingestion_card_visa_detail cv WHERE cv.id = fl.card_visa_detail_id AND f.content_type = 'Visa'
              UNION ALL
              SELECT cm.financial_type, cm.txn_effect, cm.is_txn_settle, cm.original_currency, cm.original_amount, cm.settlement_amount, cm.billing_amount
-             FROM archive.ingestion_card_msc_detail cm WHERE cm.file_line_id = fl.id AND f.content_type = 'Msc'
+             FROM archive.ingestion_card_msc_detail cm WHERE cm.id = fl.card_msc_detail_id AND f.content_type = 'Msc'
              UNION ALL
              SELECT cb.financial_type, cb.txn_effect, cb.is_txn_settle, cb.original_currency, cb.original_amount, cb.settlement_amount, cb.billing_amount
-             FROM archive.ingestion_card_bkm_detail cb WHERE cb.file_line_id = fl.id AND f.content_type = 'Bkm'
+             FROM archive.ingestion_card_bkm_detail cb WHERE cb.id = fl.card_bkm_detail_id AND f.content_type = 'Bkm'
                  ) d ON TRUE
+         WHERE d.financial_type IS NOT NULL
          GROUP BY f.content_type, fl.status, d.financial_type, d.txn_effect, d.original_currency
      ) x
 GROUP BY
@@ -1418,7 +1427,7 @@ GROUP BY
     x.original_currency;
 
 -- -------------------------------------------------------------------------------------
--- C8. Response / txn status analizi
+-- C8. Response / txn status analizi (UPDATED for archive)
 -- -------------------------------------------------------------------------------------
 CREATE OR REPLACE VIEW reporting.vw_recon_response_status_analysis AS
 SELECT
@@ -1435,6 +1444,7 @@ SELECT
     SUM(x.matched_count) AS matched_count,
     SUM(x.unmatched_count) AS unmatched_count
 FROM (
+         -- LIVE
          SELECT
              'LIVE' AS data_scope,
              f.content_type AS network,
@@ -1464,6 +1474,7 @@ FROM (
 
          UNION ALL
 
+         -- ARCHIVE (UPDATED)
          SELECT
              'ARCHIVE',
              f.content_type,
@@ -1479,16 +1490,17 @@ FROM (
              SUM(CASE WHEN fl.matched_clearing_line_id IS NULL THEN 1 ELSE 0 END)
          FROM archive.ingestion_file_line fl
                   JOIN archive.ingestion_file f ON f.id = fl.file_id AND f.file_type = 'Card'
-                  JOIN LATERAL (
+                  LEFT JOIN LATERAL (
              SELECT cv.response_code, cv.txn_stat, cv.is_successful_txn, cv.is_txn_settle, cv.original_amount
-             FROM archive.ingestion_card_visa_detail cv WHERE cv.file_line_id = fl.id AND f.content_type = 'Visa'
+             FROM archive.ingestion_card_visa_detail cv WHERE cv.id = fl.card_visa_detail_id AND f.content_type = 'Visa'
              UNION ALL
              SELECT cm.response_code, cm.txn_stat, cm.is_successful_txn, cm.is_txn_settle, cm.original_amount
-             FROM archive.ingestion_card_msc_detail cm WHERE cm.file_line_id = fl.id AND f.content_type = 'Msc'
+             FROM archive.ingestion_card_msc_detail cm WHERE cm.id = fl.card_msc_detail_id AND f.content_type = 'Msc'
              UNION ALL
              SELECT cb.response_code, cb.txn_stat, cb.is_successful_txn, cb.is_txn_settle, cb.original_amount
-             FROM archive.ingestion_card_bkm_detail cb WHERE cb.file_line_id = fl.id AND f.content_type = 'Bkm'
+             FROM archive.ingestion_card_bkm_detail cb WHERE cb.id = fl.card_bkm_detail_id AND f.content_type = 'Bkm'
                  ) d ON TRUE
+         WHERE d.response_code IS NOT NULL
          GROUP BY f.content_type, fl.status, d.response_code, d.txn_stat, d.is_successful_txn, d.is_txn_settle, fl.reconciliation_status
      ) x
 GROUP BY
@@ -1593,91 +1605,91 @@ SELECT
 -- =====================================================================================
 
 -- -------------------------------------------------------------------------------------
--- E1. Dosya bazlı mutabakat özeti (LIVE + ARCHIVE)
+-- E1. Dosya bazlı mutabakat özeti (UPDATED for archive)
 -- -------------------------------------------------------------------------------------
 CREATE OR REPLACE VIEW reporting.vw_file_recon_summary AS
 SELECT * FROM (
-    SELECT
-        f.id AS file_id, f.file_name, f.file_type, f.content_type, f.status AS file_status,
-        f.create_date AS file_created_at, 'LIVE' AS data_scope,
-        COALESCE(fl.total_line_count, 0) AS total_line_count,
-        COALESCE(fl.matched_line_count, 0) AS matched_line_count,
-        COALESCE(fl.unmatched_line_count, 0) AS unmatched_line_count,
-        CASE WHEN COALESCE(fl.total_line_count, 0) > 0
-            THEN ROUND((fl.matched_line_count::numeric / fl.total_line_count) * 100, 2) ELSE 0 END AS match_rate_pct,
-        COALESCE(fl.total_original_amount, 0) AS total_original_amount,
-        COALESCE(fl.matched_amount, 0) AS matched_amount,
-        COALESCE(fl.unmatched_amount, 0) AS unmatched_amount,
-        COALESCE(fl.total_settlement_amount, 0) AS total_settlement_amount,
-        COALESCE(fl.recon_ready_count, 0) AS recon_ready_count,
-        COALESCE(fl.recon_success_count, 0) AS recon_success_count,
-        COALESCE(fl.recon_failed_count, 0) AS recon_failed_count,
-        COALESCE(fl.recon_not_applicable_count, 0) AS recon_not_applicable_count
-    FROM ingestion.file f
-    LEFT JOIN LATERAL (
-        SELECT
-            COUNT(*) AS total_line_count,
-            SUM(CASE WHEN line.matched_clearing_line_id IS NOT NULL THEN 1 ELSE 0 END) AS matched_line_count,
-            SUM(CASE WHEN line.matched_clearing_line_id IS NULL THEN 1 ELSE 0 END) AS unmatched_line_count,
-            SUM(COALESCE(d.amt, 0)) AS total_original_amount,
-            SUM(CASE WHEN line.matched_clearing_line_id IS NOT NULL THEN COALESCE(d.amt, 0) ELSE 0 END) AS matched_amount,
-            SUM(CASE WHEN line.matched_clearing_line_id IS NULL THEN COALESCE(d.amt, 0) ELSE 0 END) AS unmatched_amount,
-            SUM(COALESCE(d.sett, 0)) AS total_settlement_amount,
-            COUNT(*) FILTER (WHERE line.reconciliation_status = 'Ready') AS recon_ready_count,
-            COUNT(*) FILTER (WHERE line.reconciliation_status = 'Success') AS recon_success_count,
-            COUNT(*) FILTER (WHERE line.reconciliation_status = 'Failed') AS recon_failed_count,
-            COUNT(*) FILTER (WHERE line.reconciliation_status IS NULL) AS recon_not_applicable_count
-        FROM ingestion.file_line line
-        LEFT JOIN LATERAL (
-            SELECT cv.original_amount AS amt, cv.settlement_amount AS sett FROM ingestion.card_visa_detail cv WHERE cv.file_line_id = line.id AND f.content_type = 'Visa' AND f.file_type = 'Card'
-            UNION ALL SELECT cm.original_amount, cm.settlement_amount FROM ingestion.card_msc_detail cm WHERE cm.file_line_id = line.id AND f.content_type = 'Msc' AND f.file_type = 'Card'
-            UNION ALL SELECT cb.original_amount, cb.settlement_amount FROM ingestion.card_bkm_detail cb WHERE cb.file_line_id = line.id AND f.content_type = 'Bkm' AND f.file_type = 'Card'
-            UNION ALL SELECT cv.source_amount, 0 FROM ingestion.clearing_visa_detail cv WHERE cv.file_line_id = line.id AND f.content_type = 'Visa' AND f.file_type = 'Clearing'
-            UNION ALL SELECT cm.source_amount, 0 FROM ingestion.clearing_msc_detail cm WHERE cm.file_line_id = line.id AND f.content_type = 'Msc' AND f.file_type = 'Clearing'
-            UNION ALL SELECT cb.source_amount, 0 FROM ingestion.clearing_bkm_detail cb WHERE cb.file_line_id = line.id AND f.content_type = 'Bkm' AND f.file_type = 'Clearing'
-        ) d ON TRUE
-        WHERE line.file_id = f.id
-    ) fl ON TRUE
+                  SELECT
+                      f.id AS file_id, f.file_name, f.file_type, f.content_type, f.status AS file_status,
+                      f.create_date AS file_created_at, 'LIVE' AS data_scope,
+                      COALESCE(fl.total_line_count, 0) AS total_line_count,
+                      COALESCE(fl.matched_line_count, 0) AS matched_line_count,
+                      COALESCE(fl.unmatched_line_count, 0) AS unmatched_line_count,
+                      CASE WHEN COALESCE(fl.total_line_count, 0) > 0
+                               THEN ROUND((fl.matched_line_count::numeric / fl.total_line_count) * 100, 2) ELSE 0 END AS match_rate_pct,
+                      COALESCE(fl.total_original_amount, 0) AS total_original_amount,
+                      COALESCE(fl.matched_amount, 0) AS matched_amount,
+                      COALESCE(fl.unmatched_amount, 0) AS unmatched_amount,
+                      COALESCE(fl.total_settlement_amount, 0) AS total_settlement_amount,
+                      COALESCE(fl.recon_ready_count, 0) AS recon_ready_count,
+                      COALESCE(fl.recon_success_count, 0) AS recon_success_count,
+                      COALESCE(fl.recon_failed_count, 0) AS recon_failed_count,
+                      COALESCE(fl.recon_not_applicable_count, 0) AS recon_not_applicable_count
+                  FROM ingestion.file f
+                           LEFT JOIN LATERAL (
+                      SELECT
+                          COUNT(*) AS total_line_count,
+                          SUM(CASE WHEN line.matched_clearing_line_id IS NOT NULL THEN 1 ELSE 0 END) AS matched_line_count,
+                          SUM(CASE WHEN line.matched_clearing_line_id IS NULL THEN 1 ELSE 0 END) AS unmatched_line_count,
+                          SUM(COALESCE(d.amt, 0)) AS total_original_amount,
+                          SUM(CASE WHEN line.matched_clearing_line_id IS NOT NULL THEN COALESCE(d.amt, 0) ELSE 0 END) AS matched_amount,
+                          SUM(CASE WHEN line.matched_clearing_line_id IS NULL THEN COALESCE(d.amt, 0) ELSE 0 END) AS unmatched_amount,
+                          SUM(COALESCE(d.sett, 0)) AS total_settlement_amount,
+                          COUNT(*) FILTER (WHERE line.reconciliation_status = 'Ready') AS recon_ready_count,
+                          COUNT(*) FILTER (WHERE line.reconciliation_status = 'Success') AS recon_success_count,
+                          COUNT(*) FILTER (WHERE line.reconciliation_status = 'Failed') AS recon_failed_count,
+                          COUNT(*) FILTER (WHERE line.reconciliation_status IS NULL) AS recon_not_applicable_count
+                      FROM ingestion.file_line line
+                               LEFT JOIN LATERAL (
+                          SELECT cv.original_amount AS amt, cv.settlement_amount AS sett FROM ingestion.card_visa_detail cv WHERE cv.file_line_id = line.id AND f.content_type = 'Visa' AND f.file_type = 'Card'
+                          UNION ALL SELECT cm.original_amount, cm.settlement_amount FROM ingestion.card_msc_detail cm WHERE cm.file_line_id = line.id AND f.content_type = 'Msc' AND f.file_type = 'Card'
+                          UNION ALL SELECT cb.original_amount, cb.settlement_amount FROM ingestion.card_bkm_detail cb WHERE cb.file_line_id = line.id AND f.content_type = 'Bkm' AND f.file_type = 'Card'
+                          UNION ALL SELECT cv.source_amount, 0 FROM ingestion.clearing_visa_detail cv WHERE cv.file_line_id = line.id AND f.content_type = 'Visa' AND f.file_type = 'Clearing'
+                          UNION ALL SELECT cm.source_amount, 0 FROM ingestion.clearing_msc_detail cm WHERE cm.file_line_id = line.id AND f.content_type = 'Msc' AND f.file_type = 'Clearing'
+                          UNION ALL SELECT cb.source_amount, 0 FROM ingestion.clearing_bkm_detail cb WHERE cb.file_line_id = line.id AND f.content_type = 'Bkm' AND f.file_type = 'Clearing'
+                              ) d ON TRUE
+                      WHERE line.file_id = f.id
+                          ) fl ON TRUE
 
-    UNION ALL
+                  UNION ALL
 
-    SELECT
-        f.id, f.file_name, f.file_type, f.content_type, f.status,
-        f.create_date, 'ARCHIVE',
-        COALESCE(fl.total_line_count, 0), COALESCE(fl.matched_line_count, 0), COALESCE(fl.unmatched_line_count, 0),
-        CASE WHEN COALESCE(fl.total_line_count, 0) > 0 THEN ROUND((fl.matched_line_count::numeric / fl.total_line_count) * 100, 2) ELSE 0 END,
-        COALESCE(fl.total_original_amount, 0), COALESCE(fl.matched_amount, 0), COALESCE(fl.unmatched_amount, 0),
-        COALESCE(fl.total_settlement_amount, 0),
-        COALESCE(fl.recon_ready_count, 0), COALESCE(fl.recon_success_count, 0), COALESCE(fl.recon_failed_count, 0), COALESCE(fl.recon_not_applicable_count, 0)
-    FROM archive.ingestion_file f
-    LEFT JOIN LATERAL (
-        SELECT
-            COUNT(*) AS total_line_count,
-            SUM(CASE WHEN line.matched_clearing_line_id IS NOT NULL THEN 1 ELSE 0 END) AS matched_line_count,
-            SUM(CASE WHEN line.matched_clearing_line_id IS NULL THEN 1 ELSE 0 END) AS unmatched_line_count,
-            SUM(COALESCE(d.amt, 0)) AS total_original_amount,
-            SUM(CASE WHEN line.matched_clearing_line_id IS NOT NULL THEN COALESCE(d.amt, 0) ELSE 0 END) AS matched_amount,
-            SUM(CASE WHEN line.matched_clearing_line_id IS NULL THEN COALESCE(d.amt, 0) ELSE 0 END) AS unmatched_amount,
-            SUM(COALESCE(d.sett, 0)) AS total_settlement_amount,
-            COUNT(*) FILTER (WHERE line.reconciliation_status = 'Ready') AS recon_ready_count,
-            COUNT(*) FILTER (WHERE line.reconciliation_status = 'Success') AS recon_success_count,
-            COUNT(*) FILTER (WHERE line.reconciliation_status = 'Failed') AS recon_failed_count,
-            COUNT(*) FILTER (WHERE line.reconciliation_status IS NULL) AS recon_not_applicable_count
-        FROM archive.ingestion_file_line line
-        LEFT JOIN LATERAL (
-            SELECT cv.original_amount AS amt, cv.settlement_amount AS sett FROM archive.ingestion_card_visa_detail cv WHERE cv.file_line_id = line.id AND f.content_type = 'Visa' AND f.file_type = 'Card'
-            UNION ALL SELECT cm.original_amount, cm.settlement_amount FROM archive.ingestion_card_msc_detail cm WHERE cm.file_line_id = line.id AND f.content_type = 'Msc' AND f.file_type = 'Card'
-            UNION ALL SELECT cb.original_amount, cb.settlement_amount FROM archive.ingestion_card_bkm_detail cb WHERE cb.file_line_id = line.id AND f.content_type = 'Bkm' AND f.file_type = 'Card'
-            UNION ALL SELECT cv.source_amount, 0 FROM archive.ingestion_clearing_visa_detail cv WHERE cv.file_line_id = line.id AND f.content_type = 'Visa' AND f.file_type = 'Clearing'
-            UNION ALL SELECT cm.source_amount, 0 FROM archive.ingestion_clearing_msc_detail cm WHERE cm.file_line_id = line.id AND f.content_type = 'Msc' AND f.file_type = 'Clearing'
-            UNION ALL SELECT cb.source_amount, 0 FROM archive.ingestion_clearing_bkm_detail cb WHERE cb.file_line_id = line.id AND f.content_type = 'Bkm' AND f.file_type = 'Clearing'
-        ) d ON TRUE
-        WHERE line.file_id = f.id
-    ) fl ON TRUE
-) combined;
+                  SELECT
+                      f.id, f.file_name, f.file_type, f.content_type, f.status,
+                      f.create_date, 'ARCHIVE',
+                      COALESCE(fl.total_line_count, 0), COALESCE(fl.matched_line_count, 0), COALESCE(fl.unmatched_line_count, 0),
+                      CASE WHEN COALESCE(fl.total_line_count, 0) > 0 THEN ROUND((fl.matched_line_count::numeric / fl.total_line_count) * 100, 2) ELSE 0 END,
+                      COALESCE(fl.total_original_amount, 0), COALESCE(fl.matched_amount, 0), COALESCE(fl.unmatched_amount, 0),
+                      COALESCE(fl.total_settlement_amount, 0),
+                      COALESCE(fl.recon_ready_count, 0), COALESCE(fl.recon_success_count, 0), COALESCE(fl.recon_failed_count, 0), COALESCE(fl.recon_not_applicable_count, 0)
+                  FROM archive.ingestion_file f
+                           LEFT JOIN LATERAL (
+                      SELECT
+                          COUNT(*) AS total_line_count,
+                          SUM(CASE WHEN line.matched_clearing_line_id IS NOT NULL THEN 1 ELSE 0 END) AS matched_line_count,
+                          SUM(CASE WHEN line.matched_clearing_line_id IS NULL THEN 1 ELSE 0 END) AS unmatched_line_count,
+                          SUM(COALESCE(d.amt, 0)) AS total_original_amount,
+                          SUM(CASE WHEN line.matched_clearing_line_id IS NOT NULL THEN COALESCE(d.amt, 0) ELSE 0 END) AS matched_amount,
+                          SUM(CASE WHEN line.matched_clearing_line_id IS NULL THEN COALESCE(d.amt, 0) ELSE 0 END) AS unmatched_amount,
+                          SUM(COALESCE(d.sett, 0)) AS total_settlement_amount,
+                          COUNT(*) FILTER (WHERE line.reconciliation_status = 'Ready') AS recon_ready_count,
+                          COUNT(*) FILTER (WHERE line.reconciliation_status = 'Success') AS recon_success_count,
+                          COUNT(*) FILTER (WHERE line.reconciliation_status = 'Failed') AS recon_failed_count,
+                          COUNT(*) FILTER (WHERE line.reconciliation_status IS NULL) AS recon_not_applicable_count
+                      FROM archive.ingestion_file_line line
+                               LEFT JOIN LATERAL (
+                          SELECT cv.original_amount AS amt, cv.settlement_amount AS sett FROM archive.ingestion_card_visa_detail cv WHERE cv.id = line.card_visa_detail_id AND f.content_type = 'Visa' AND f.file_type = 'Card'
+                          UNION ALL SELECT cm.original_amount, cm.settlement_amount FROM archive.ingestion_card_msc_detail cm WHERE cm.id = line.card_msc_detail_id AND f.content_type = 'Msc' AND f.file_type = 'Card'
+                          UNION ALL SELECT cb.original_amount, cb.settlement_amount FROM archive.ingestion_card_bkm_detail cb WHERE cb.id = line.card_bkm_detail_id AND f.content_type = 'Bkm' AND f.file_type = 'Card'
+                          UNION ALL SELECT cv.source_amount, 0 FROM archive.ingestion_clearing_visa_detail cv WHERE cv.id = line.clearing_visa_detail_id AND f.content_type = 'Visa' AND f.file_type = 'Clearing'
+                          UNION ALL SELECT cm.source_amount, 0 FROM archive.ingestion_clearing_msc_detail cm WHERE cm.id = line.clearing_msc_detail_id AND f.content_type = 'Msc' AND f.file_type = 'Clearing'
+                          UNION ALL SELECT cb.source_amount, 0 FROM archive.ingestion_clearing_bkm_detail cb WHERE cb.id = line.clearing_bkm_detail_id AND f.content_type = 'Bkm' AND f.file_type = 'Clearing'
+                              ) d ON TRUE
+                      WHERE line.file_id = f.id
+                          ) fl ON TRUE
+              ) combined;
 
 -- -------------------------------------------------------------------------------------
--- E2. Günlük eşleşme oranı trendi (LIVE + ARCHIVE)
+-- E2. Günlük eşleşme oranı trendi (UPDATED for archive)
 -- -------------------------------------------------------------------------------------
 CREATE OR REPLACE VIEW reporting.vw_recon_match_rate_trend AS
 SELECT
@@ -1690,58 +1702,60 @@ SELECT
     SUM(src.matched_amount) AS matched_amount,
     SUM(src.unmatched_amount) AS unmatched_amount
 FROM (
-    SELECT DATE_TRUNC('day', f.create_date)::date AS report_date, 'LIVE' AS data_scope, f.content_type AS network, 'Card' AS side,
-        COUNT(*) AS total_line_count,
-        SUM(CASE WHEN fl.matched_clearing_line_id IS NOT NULL THEN 1 ELSE 0 END) AS matched_count,
-        SUM(CASE WHEN fl.matched_clearing_line_id IS NULL THEN 1 ELSE 0 END) AS unmatched_count,
-        SUM(d.original_amount) AS total_amount,
-        SUM(CASE WHEN fl.matched_clearing_line_id IS NOT NULL THEN d.original_amount ELSE 0 END) AS matched_amount,
-        SUM(CASE WHEN fl.matched_clearing_line_id IS NULL THEN d.original_amount ELSE 0 END) AS unmatched_amount
-    FROM ingestion.file_line fl JOIN ingestion.file f ON f.id = fl.file_id AND f.file_type = 'Card'
-    JOIN LATERAL (
-        SELECT cv.original_amount FROM ingestion.card_visa_detail cv WHERE cv.file_line_id = fl.id AND f.content_type = 'Visa'
-        UNION ALL SELECT cm.original_amount FROM ingestion.card_msc_detail cm WHERE cm.file_line_id = fl.id AND f.content_type = 'Msc'
-        UNION ALL SELECT cb.original_amount FROM ingestion.card_bkm_detail cb WHERE cb.file_line_id = fl.id AND f.content_type = 'Bkm'
-    ) d ON TRUE
-    GROUP BY DATE_TRUNC('day', f.create_date)::date, f.content_type
-    UNION ALL
-    SELECT DATE_TRUNC('day', f.create_date)::date, 'LIVE', f.content_type, 'Clearing',
-        COUNT(*), SUM(CASE WHEN fl.matched_clearing_line_id IS NOT NULL THEN 1 ELSE 0 END), SUM(CASE WHEN fl.matched_clearing_line_id IS NULL THEN 1 ELSE 0 END),
-        SUM(d.source_amount), SUM(CASE WHEN fl.matched_clearing_line_id IS NOT NULL THEN d.source_amount ELSE 0 END), SUM(CASE WHEN fl.matched_clearing_line_id IS NULL THEN d.source_amount ELSE 0 END)
-    FROM ingestion.file_line fl JOIN ingestion.file f ON f.id = fl.file_id AND f.file_type = 'Clearing'
-    JOIN LATERAL (
-        SELECT cv.source_amount FROM ingestion.clearing_visa_detail cv WHERE cv.file_line_id = fl.id AND f.content_type = 'Visa'
-        UNION ALL SELECT cm.source_amount FROM ingestion.clearing_msc_detail cm WHERE cm.file_line_id = fl.id AND f.content_type = 'Msc'
-        UNION ALL SELECT cb.source_amount FROM ingestion.clearing_bkm_detail cb WHERE cb.file_line_id = fl.id AND f.content_type = 'Bkm'
-    ) d ON TRUE
-    GROUP BY DATE_TRUNC('day', f.create_date)::date, f.content_type
-    UNION ALL
-    SELECT DATE_TRUNC('day', f.create_date)::date, 'ARCHIVE', f.content_type, 'Card',
-        COUNT(*), SUM(CASE WHEN fl.matched_clearing_line_id IS NOT NULL THEN 1 ELSE 0 END), SUM(CASE WHEN fl.matched_clearing_line_id IS NULL THEN 1 ELSE 0 END),
-        SUM(d.original_amount), SUM(CASE WHEN fl.matched_clearing_line_id IS NOT NULL THEN d.original_amount ELSE 0 END), SUM(CASE WHEN fl.matched_clearing_line_id IS NULL THEN d.original_amount ELSE 0 END)
-    FROM archive.ingestion_file_line fl JOIN archive.ingestion_file f ON f.id = fl.file_id AND f.file_type = 'Card'
-    JOIN LATERAL (
-        SELECT cv.original_amount FROM archive.ingestion_card_visa_detail cv WHERE cv.file_line_id = fl.id AND f.content_type = 'Visa'
-        UNION ALL SELECT cm.original_amount FROM archive.ingestion_card_msc_detail cm WHERE cm.file_line_id = fl.id AND f.content_type = 'Msc'
-        UNION ALL SELECT cb.original_amount FROM archive.ingestion_card_bkm_detail cb WHERE cb.file_line_id = fl.id AND f.content_type = 'Bkm'
-    ) d ON TRUE
-    GROUP BY DATE_TRUNC('day', f.create_date)::date, f.content_type
-    UNION ALL
-    SELECT DATE_TRUNC('day', f.create_date)::date, 'ARCHIVE', f.content_type, 'Clearing',
-        COUNT(*), SUM(CASE WHEN fl.matched_clearing_line_id IS NOT NULL THEN 1 ELSE 0 END), SUM(CASE WHEN fl.matched_clearing_line_id IS NULL THEN 1 ELSE 0 END),
-        SUM(d.source_amount), SUM(CASE WHEN fl.matched_clearing_line_id IS NOT NULL THEN d.source_amount ELSE 0 END), SUM(CASE WHEN fl.matched_clearing_line_id IS NULL THEN d.source_amount ELSE 0 END)
-    FROM archive.ingestion_file_line fl JOIN archive.ingestion_file f ON f.id = fl.file_id AND f.file_type = 'Clearing'
-    JOIN LATERAL (
-        SELECT cv.source_amount FROM archive.ingestion_clearing_visa_detail cv WHERE cv.file_line_id = fl.id AND f.content_type = 'Visa'
-        UNION ALL SELECT cm.source_amount FROM archive.ingestion_clearing_msc_detail cm WHERE cm.file_line_id = fl.id AND f.content_type = 'Msc'
-        UNION ALL SELECT cb.source_amount FROM archive.ingestion_clearing_bkm_detail cb WHERE cb.file_line_id = fl.id AND f.content_type = 'Bkm'
-    ) d ON TRUE
-    GROUP BY DATE_TRUNC('day', f.create_date)::date, f.content_type
-) src
+         SELECT DATE_TRUNC('day', f.create_date)::date AS report_date, 'LIVE' AS data_scope, f.content_type AS network, 'Card' AS side,
+                COUNT(*) AS total_line_count,
+                SUM(CASE WHEN fl.matched_clearing_line_id IS NOT NULL THEN 1 ELSE 0 END) AS matched_count,
+                SUM(CASE WHEN fl.matched_clearing_line_id IS NULL THEN 1 ELSE 0 END) AS unmatched_count,
+                SUM(d.original_amount) AS total_amount,
+                SUM(CASE WHEN fl.matched_clearing_line_id IS NOT NULL THEN d.original_amount ELSE 0 END) AS matched_amount,
+                SUM(CASE WHEN fl.matched_clearing_line_id IS NULL THEN d.original_amount ELSE 0 END) AS unmatched_amount
+         FROM ingestion.file_line fl JOIN ingestion.file f ON f.id = fl.file_id AND f.file_type = 'Card'
+                                     JOIN LATERAL (
+             SELECT cv.original_amount FROM ingestion.card_visa_detail cv WHERE cv.file_line_id = fl.id AND f.content_type = 'Visa'
+             UNION ALL SELECT cm.original_amount FROM ingestion.card_msc_detail cm WHERE cm.file_line_id = fl.id AND f.content_type = 'Msc'
+             UNION ALL SELECT cb.original_amount FROM ingestion.card_bkm_detail cb WHERE cb.file_line_id = fl.id AND f.content_type = 'Bkm'
+                 ) d ON TRUE
+         GROUP BY DATE_TRUNC('day', f.create_date)::date, f.content_type
+         UNION ALL
+         SELECT DATE_TRUNC('day', f.create_date)::date, 'LIVE', f.content_type, 'Clearing',
+             COUNT(*), SUM(CASE WHEN fl.matched_clearing_line_id IS NOT NULL THEN 1 ELSE 0 END), SUM(CASE WHEN fl.matched_clearing_line_id IS NULL THEN 1 ELSE 0 END),
+             SUM(d.source_amount), SUM(CASE WHEN fl.matched_clearing_line_id IS NOT NULL THEN d.source_amount ELSE 0 END), SUM(CASE WHEN fl.matched_clearing_line_id IS NULL THEN d.source_amount ELSE 0 END)
+         FROM ingestion.file_line fl JOIN ingestion.file f ON f.id = fl.file_id AND f.file_type = 'Clearing'
+             JOIN LATERAL (
+             SELECT cv.source_amount FROM ingestion.clearing_visa_detail cv WHERE cv.file_line_id = fl.id AND f.content_type = 'Visa'
+             UNION ALL SELECT cm.source_amount FROM ingestion.clearing_msc_detail cm WHERE cm.file_line_id = fl.id AND f.content_type = 'Msc'
+             UNION ALL SELECT cb.source_amount FROM ingestion.clearing_bkm_detail cb WHERE cb.file_line_id = fl.id AND f.content_type = 'Bkm'
+             ) d ON TRUE
+         GROUP BY DATE_TRUNC('day', f.create_date)::date, f.content_type
+         UNION ALL
+         SELECT DATE_TRUNC('day', f.create_date)::date, 'ARCHIVE', f.content_type, 'Card',
+             COUNT(*), SUM(CASE WHEN fl.matched_clearing_line_id IS NOT NULL THEN 1 ELSE 0 END), SUM(CASE WHEN fl.matched_clearing_line_id IS NULL THEN 1 ELSE 0 END),
+             SUM(COALESCE(d.original_amount, 0)), SUM(CASE WHEN fl.matched_clearing_line_id IS NOT NULL THEN COALESCE(d.original_amount, 0) ELSE 0 END), SUM(CASE WHEN fl.matched_clearing_line_id IS NULL THEN COALESCE(d.original_amount, 0) ELSE 0 END)
+         FROM archive.ingestion_file_line fl JOIN archive.ingestion_file f ON f.id = fl.file_id AND f.file_type = 'Card'
+             LEFT JOIN LATERAL (
+             SELECT cv.original_amount FROM archive.ingestion_card_visa_detail cv WHERE cv.id = fl.card_visa_detail_id AND f.content_type = 'Visa'
+             UNION ALL SELECT cm.original_amount FROM archive.ingestion_card_msc_detail cm WHERE cm.id = fl.card_msc_detail_id AND f.content_type = 'Msc'
+             UNION ALL SELECT cb.original_amount FROM archive.ingestion_card_bkm_detail cb WHERE cb.id = fl.card_bkm_detail_id AND f.content_type = 'Bkm'
+             ) d ON TRUE
+         WHERE d.original_amount IS NOT NULL
+         GROUP BY DATE_TRUNC('day', f.create_date)::date, f.content_type
+         UNION ALL
+         SELECT DATE_TRUNC('day', f.create_date)::date, 'ARCHIVE', f.content_type, 'Clearing',
+             COUNT(*), SUM(CASE WHEN fl.matched_clearing_line_id IS NOT NULL THEN 1 ELSE 0 END), SUM(CASE WHEN fl.matched_clearing_line_id IS NULL THEN 1 ELSE 0 END),
+             SUM(COALESCE(d.source_amount, 0)), SUM(CASE WHEN fl.matched_clearing_line_id IS NOT NULL THEN COALESCE(d.source_amount, 0) ELSE 0 END), SUM(CASE WHEN fl.matched_clearing_line_id IS NULL THEN COALESCE(d.source_amount, 0) ELSE 0 END)
+         FROM archive.ingestion_file_line fl JOIN archive.ingestion_file f ON f.id = fl.file_id AND f.file_type = 'Clearing'
+             LEFT JOIN LATERAL (
+             SELECT cv.source_amount FROM archive.ingestion_clearing_visa_detail cv WHERE cv.id = fl.clearing_visa_detail_id AND f.content_type = 'Visa'
+             UNION ALL SELECT cm.source_amount FROM archive.ingestion_clearing_msc_detail cm WHERE cm.id = fl.clearing_msc_detail_id AND f.content_type = 'Msc'
+             UNION ALL SELECT cb.source_amount FROM archive.ingestion_clearing_bkm_detail cb WHERE cb.id = fl.clearing_bkm_detail_id AND f.content_type = 'Bkm'
+             ) d ON TRUE
+         WHERE d.source_amount IS NOT NULL
+         GROUP BY DATE_TRUNC('day', f.create_date)::date, f.content_type
+     ) src
 GROUP BY src.report_date, src.data_scope, src.network, src.side;
 
 -- -------------------------------------------------------------------------------------
--- E3. Card vs Clearing fark analizi (LIVE + ARCHIVE)
+-- E3. Card vs Clearing fark analizi (UPDATED for archive)
 -- -------------------------------------------------------------------------------------
 CREATE OR REPLACE VIEW reporting.vw_recon_gap_analysis AS
 SELECT
@@ -1759,56 +1773,68 @@ SELECT
     CASE WHEN COALESCE(c.card_line_count, 0) > 0 THEN ROUND((c.card_matched_count::numeric / c.card_line_count) * 100, 2) ELSE 0 END AS card_match_rate_pct,
     CASE WHEN COALESCE(cl.clearing_line_count, 0) > 0 THEN ROUND((cl.clearing_matched_count::numeric / cl.clearing_line_count) * 100, 2) ELSE 0 END AS clearing_match_rate_pct
 FROM (
+         SELECT DATE_TRUNC('day', f.create_date)::date AS report_date, src.ds AS data_scope, f.content_type AS network,
+                COUNT(*) AS card_line_count,
+                SUM(CASE WHEN fl.matched_clearing_line_id IS NOT NULL THEN 1 ELSE 0 END) AS card_matched_count,
+                SUM(d.original_amount) AS card_total_amount
+         FROM (SELECT 'LIVE' AS ds UNION ALL SELECT 'ARCHIVE') src
+                  CROSS JOIN LATERAL (
+             SELECT fl2.id, fl2.file_id, fl2.matched_clearing_line_id FROM ingestion.file_line fl2 WHERE src.ds = 'LIVE'
+             UNION ALL SELECT fl2.id, fl2.file_id, fl2.matched_clearing_line_id FROM archive.ingestion_file_line fl2 WHERE src.ds = 'ARCHIVE'
+                 ) fl
+                  CROSS JOIN LATERAL (
+             SELECT f2.create_date, f2.content_type FROM ingestion.file f2 WHERE src.ds = 'LIVE' AND f2.id = fl.file_id AND f2.file_type = 'Card'
+             UNION ALL SELECT f2.create_date, f2.content_type FROM archive.ingestion_file f2 WHERE src.ds = 'ARCHIVE' AND f2.id = fl.file_id AND f2.file_type = 'Card'
+                 ) f
+                  JOIN LATERAL (
+             SELECT cv.original_amount FROM ingestion.card_visa_detail cv WHERE cv.file_line_id = fl.id AND f.content_type = 'Visa' AND src.ds = 'LIVE'
+             UNION ALL SELECT cm.original_amount FROM ingestion.card_msc_detail cm WHERE cm.file_line_id = fl.id AND f.content_type = 'Msc' AND src.ds = 'LIVE'
+             UNION ALL SELECT cb.original_amount FROM ingestion.card_bkm_detail cb WHERE cb.file_line_id = fl.id AND f.content_type = 'Bkm' AND src.ds = 'LIVE'
+             UNION ALL
+             SELECT cv.original_amount FROM archive.ingestion_card_visa_detail cv, archive.ingestion_file_line aifl
+             WHERE aifl.id = fl.id AND cv.id = aifl.card_visa_detail_id AND f.content_type = 'Visa' AND src.ds = 'ARCHIVE'
+             UNION ALL
+             SELECT cm.original_amount FROM archive.ingestion_card_msc_detail cm, archive.ingestion_file_line aifl
+             WHERE aifl.id = fl.id AND cm.id = aifl.card_msc_detail_id AND f.content_type = 'Msc' AND src.ds = 'ARCHIVE'
+             UNION ALL
+             SELECT cb.original_amount FROM archive.ingestion_card_bkm_detail cb, archive.ingestion_file_line aifl
+             WHERE aifl.id = fl.id AND cb.id = aifl.card_bkm_detail_id AND f.content_type = 'Bkm' AND src.ds = 'ARCHIVE'
+                 ) d ON TRUE
+         GROUP BY DATE_TRUNC('day', f.create_date)::date, src.ds, f.content_type
+     ) c
+         FULL OUTER JOIN (
     SELECT DATE_TRUNC('day', f.create_date)::date AS report_date, src.ds AS data_scope, f.content_type AS network,
-        COUNT(*) AS card_line_count,
-        SUM(CASE WHEN fl.matched_clearing_line_id IS NOT NULL THEN 1 ELSE 0 END) AS card_matched_count,
-        SUM(d.original_amount) AS card_total_amount
+           COUNT(*) AS clearing_line_count,
+           SUM(CASE WHEN fl.matched_clearing_line_id IS NOT NULL THEN 1 ELSE 0 END) AS clearing_matched_count,
+           SUM(d.source_amount) AS clearing_total_amount
     FROM (SELECT 'LIVE' AS ds UNION ALL SELECT 'ARCHIVE') src
-    CROSS JOIN LATERAL (
+             CROSS JOIN LATERAL (
         SELECT fl2.id, fl2.file_id, fl2.matched_clearing_line_id FROM ingestion.file_line fl2 WHERE src.ds = 'LIVE'
         UNION ALL SELECT fl2.id, fl2.file_id, fl2.matched_clearing_line_id FROM archive.ingestion_file_line fl2 WHERE src.ds = 'ARCHIVE'
-    ) fl
-    CROSS JOIN LATERAL (
-        SELECT f2.create_date, f2.content_type FROM ingestion.file f2 WHERE src.ds = 'LIVE' AND f2.id = fl.file_id AND f2.file_type = 'Card'
-        UNION ALL SELECT f2.create_date, f2.content_type FROM archive.ingestion_file f2 WHERE src.ds = 'ARCHIVE' AND f2.id = fl.file_id AND f2.file_type = 'Card'
-    ) f
-    JOIN LATERAL (
-        SELECT cv.original_amount FROM ingestion.card_visa_detail cv WHERE cv.file_line_id = fl.id AND f.content_type = 'Visa' AND src.ds = 'LIVE'
-        UNION ALL SELECT cm.original_amount FROM ingestion.card_msc_detail cm WHERE cm.file_line_id = fl.id AND f.content_type = 'Msc' AND src.ds = 'LIVE'
-        UNION ALL SELECT cb.original_amount FROM ingestion.card_bkm_detail cb WHERE cb.file_line_id = fl.id AND f.content_type = 'Bkm' AND src.ds = 'LIVE'
-        UNION ALL SELECT cv.original_amount FROM archive.ingestion_card_visa_detail cv WHERE cv.file_line_id = fl.id AND f.content_type = 'Visa' AND src.ds = 'ARCHIVE'
-        UNION ALL SELECT cm.original_amount FROM archive.ingestion_card_msc_detail cm WHERE cm.file_line_id = fl.id AND f.content_type = 'Msc' AND src.ds = 'ARCHIVE'
-        UNION ALL SELECT cb.original_amount FROM archive.ingestion_card_bkm_detail cb WHERE cb.file_line_id = fl.id AND f.content_type = 'Bkm' AND src.ds = 'ARCHIVE'
-    ) d ON TRUE
-    GROUP BY DATE_TRUNC('day', f.create_date)::date, src.ds, f.content_type
-) c
-FULL OUTER JOIN (
-    SELECT DATE_TRUNC('day', f.create_date)::date AS report_date, src.ds AS data_scope, f.content_type AS network,
-        COUNT(*) AS clearing_line_count,
-        SUM(CASE WHEN fl.matched_clearing_line_id IS NOT NULL THEN 1 ELSE 0 END) AS clearing_matched_count,
-        SUM(d.source_amount) AS clearing_total_amount
-    FROM (SELECT 'LIVE' AS ds UNION ALL SELECT 'ARCHIVE') src
-    CROSS JOIN LATERAL (
-        SELECT fl2.id, fl2.file_id, fl2.matched_clearing_line_id FROM ingestion.file_line fl2 WHERE src.ds = 'LIVE'
-        UNION ALL SELECT fl2.id, fl2.file_id, fl2.matched_clearing_line_id FROM archive.ingestion_file_line fl2 WHERE src.ds = 'ARCHIVE'
-    ) fl
-    CROSS JOIN LATERAL (
+            ) fl
+             CROSS JOIN LATERAL (
         SELECT f2.create_date, f2.content_type FROM ingestion.file f2 WHERE src.ds = 'LIVE' AND f2.id = fl.file_id AND f2.file_type = 'Clearing'
         UNION ALL SELECT f2.create_date, f2.content_type FROM archive.ingestion_file f2 WHERE src.ds = 'ARCHIVE' AND f2.id = fl.file_id AND f2.file_type = 'Clearing'
-    ) f
-    JOIN LATERAL (
+            ) f
+             JOIN LATERAL (
         SELECT cv.source_amount FROM ingestion.clearing_visa_detail cv WHERE cv.file_line_id = fl.id AND f.content_type = 'Visa' AND src.ds = 'LIVE'
         UNION ALL SELECT cm.source_amount FROM ingestion.clearing_msc_detail cm WHERE cm.file_line_id = fl.id AND f.content_type = 'Msc' AND src.ds = 'LIVE'
         UNION ALL SELECT cb.source_amount FROM ingestion.clearing_bkm_detail cb WHERE cb.file_line_id = fl.id AND f.content_type = 'Bkm' AND src.ds = 'LIVE'
-        UNION ALL SELECT cv.source_amount FROM archive.ingestion_clearing_visa_detail cv WHERE cv.file_line_id = fl.id AND f.content_type = 'Visa' AND src.ds = 'ARCHIVE'
-        UNION ALL SELECT cm.source_amount FROM archive.ingestion_clearing_msc_detail cm WHERE cm.file_line_id = fl.id AND f.content_type = 'Msc' AND src.ds = 'ARCHIVE'
-        UNION ALL SELECT cb.source_amount FROM archive.ingestion_clearing_bkm_detail cb WHERE cb.file_line_id = fl.id AND f.content_type = 'Bkm' AND src.ds = 'ARCHIVE'
-    ) d ON TRUE
+        UNION ALL
+        SELECT cv.source_amount FROM archive.ingestion_clearing_visa_detail cv, archive.ingestion_file_line aifl
+        WHERE aifl.id = fl.id AND cv.id = aifl.clearing_visa_detail_id AND f.content_type = 'Visa' AND src.ds = 'ARCHIVE'
+        UNION ALL
+        SELECT cm.source_amount FROM archive.ingestion_clearing_msc_detail cm, archive.ingestion_file_line aifl
+        WHERE aifl.id = fl.id AND cm.id = aifl.clearing_msc_detail_id AND f.content_type = 'Msc' AND src.ds = 'ARCHIVE'
+        UNION ALL
+        SELECT cb.source_amount FROM archive.ingestion_clearing_bkm_detail cb, archive.ingestion_file_line aifl
+        WHERE aifl.id = fl.id AND cb.id = aifl.clearing_bkm_detail_id AND f.content_type = 'Bkm' AND src.ds = 'ARCHIVE'
+            ) d ON TRUE
     GROUP BY DATE_TRUNC('day', f.create_date)::date, src.ds, f.content_type
 ) cl ON c.report_date = cl.report_date AND c.data_scope = cl.data_scope AND c.network = cl.network;
 
 -- -------------------------------------------------------------------------------------
--- E4. Eşleşmemiş işlem yaş dağılımı (LIVE + ARCHIVE)
+-- E4. Eşleşmemiş işlem yaş dağılımı (UPDATED for archive)
 -- -------------------------------------------------------------------------------------
 CREATE OR REPLACE VIEW reporting.vw_unmatched_transaction_aging AS
 SELECT
@@ -1824,83 +1850,83 @@ SELECT
         ELSE 0
         END AS pct_of_total_unmatched
 FROM (
-    SELECT
-        CASE
-            WHEN EXTRACT(EPOCH FROM (NOW() - f.create_date)) / 86400 < 1 THEN '0-1d'
-            WHEN EXTRACT(EPOCH FROM (NOW() - f.create_date)) / 86400 < 3 THEN '1-3d'
-            WHEN EXTRACT(EPOCH FROM (NOW() - f.create_date)) / 86400 < 7 THEN '3-7d'
-            WHEN EXTRACT(EPOCH FROM (NOW() - f.create_date)) / 86400 < 14 THEN '7-14d'
-            WHEN EXTRACT(EPOCH FROM (NOW() - f.create_date)) / 86400 < 30 THEN '14-30d'
-            ELSE '30d+'
-        END AS age_bucket,
-        'LIVE' AS data_scope,
-        f.content_type AS network,
-        f.file_type AS side,
-        COUNT(*) AS unmatched_count,
-        SUM(COALESCE(d.amount, 0)) AS unmatched_amount
-    FROM ingestion.file_line fl
-    JOIN ingestion.file f ON f.id = fl.file_id
-    LEFT JOIN LATERAL (
-        SELECT cv.original_amount AS amount FROM ingestion.card_visa_detail cv WHERE cv.file_line_id = fl.id AND f.content_type = 'Visa' AND f.file_type = 'Card'
-        UNION ALL
-        SELECT cm.original_amount FROM ingestion.card_msc_detail cm WHERE cm.file_line_id = fl.id AND f.content_type = 'Msc' AND f.file_type = 'Card'
-        UNION ALL
-        SELECT cb.original_amount FROM ingestion.card_bkm_detail cb WHERE cb.file_line_id = fl.id AND f.content_type = 'Bkm' AND f.file_type = 'Card'
-        UNION ALL
-        SELECT cv.source_amount FROM ingestion.clearing_visa_detail cv WHERE cv.file_line_id = fl.id AND f.content_type = 'Visa' AND f.file_type = 'Clearing'
-        UNION ALL
-        SELECT cm.source_amount FROM ingestion.clearing_msc_detail cm WHERE cm.file_line_id = fl.id AND f.content_type = 'Msc' AND f.file_type = 'Clearing'
-        UNION ALL
-        SELECT cb.source_amount FROM ingestion.clearing_bkm_detail cb WHERE cb.file_line_id = fl.id AND f.content_type = 'Bkm' AND f.file_type = 'Clearing'
-    ) d ON TRUE
-    WHERE fl.matched_clearing_line_id IS NULL
-    GROUP BY age_bucket, f.content_type, f.file_type
+         SELECT
+             CASE
+                 WHEN EXTRACT(EPOCH FROM (NOW() - f.create_date)) / 86400 < 1 THEN '0-1d'
+                 WHEN EXTRACT(EPOCH FROM (NOW() - f.create_date)) / 86400 < 3 THEN '1-3d'
+                 WHEN EXTRACT(EPOCH FROM (NOW() - f.create_date)) / 86400 < 7 THEN '3-7d'
+                 WHEN EXTRACT(EPOCH FROM (NOW() - f.create_date)) / 86400 < 14 THEN '7-14d'
+                 WHEN EXTRACT(EPOCH FROM (NOW() - f.create_date)) / 86400 < 30 THEN '14-30d'
+                 ELSE '30d+'
+                 END AS age_bucket,
+             'LIVE' AS data_scope,
+             f.content_type AS network,
+             f.file_type AS side,
+             COUNT(*) AS unmatched_count,
+             SUM(COALESCE(d.amount, 0)) AS unmatched_amount
+         FROM ingestion.file_line fl
+                  JOIN ingestion.file f ON f.id = fl.file_id
+                  LEFT JOIN LATERAL (
+             SELECT cv.original_amount AS amount FROM ingestion.card_visa_detail cv WHERE cv.file_line_id = fl.id AND f.content_type = 'Visa' AND f.file_type = 'Card'
+             UNION ALL
+             SELECT cm.original_amount FROM ingestion.card_msc_detail cm WHERE cm.file_line_id = fl.id AND f.content_type = 'Msc' AND f.file_type = 'Card'
+             UNION ALL
+             SELECT cb.original_amount FROM ingestion.card_bkm_detail cb WHERE cb.file_line_id = fl.id AND f.content_type = 'Bkm' AND f.file_type = 'Card'
+             UNION ALL
+             SELECT cv.source_amount FROM ingestion.clearing_visa_detail cv WHERE cv.file_line_id = fl.id AND f.content_type = 'Visa' AND f.file_type = 'Clearing'
+             UNION ALL
+             SELECT cm.source_amount FROM ingestion.clearing_msc_detail cm WHERE cm.file_line_id = fl.id AND f.content_type = 'Msc' AND f.file_type = 'Clearing'
+             UNION ALL
+             SELECT cb.source_amount FROM ingestion.clearing_bkm_detail cb WHERE cb.file_line_id = fl.id AND f.content_type = 'Bkm' AND f.file_type = 'Clearing'
+                 ) d ON TRUE
+         WHERE fl.matched_clearing_line_id IS NULL
+         GROUP BY age_bucket, f.content_type, f.file_type
 
-    UNION ALL
+         UNION ALL
 
-    SELECT
-        CASE
-            WHEN EXTRACT(EPOCH FROM (NOW() - f.create_date)) / 86400 < 1 THEN '0-1d'
-            WHEN EXTRACT(EPOCH FROM (NOW() - f.create_date)) / 86400 < 3 THEN '1-3d'
-            WHEN EXTRACT(EPOCH FROM (NOW() - f.create_date)) / 86400 < 7 THEN '3-7d'
-            WHEN EXTRACT(EPOCH FROM (NOW() - f.create_date)) / 86400 < 14 THEN '7-14d'
-            WHEN EXTRACT(EPOCH FROM (NOW() - f.create_date)) / 86400 < 30 THEN '14-30d'
-            ELSE '30d+'
-        END AS age_bucket,
-        'ARCHIVE',
-        f.content_type,
-        f.file_type,
-        COUNT(*),
-        SUM(COALESCE(d.amount, 0))
-    FROM archive.ingestion_file_line fl
-    JOIN archive.ingestion_file f ON f.id = fl.file_id
-    LEFT JOIN LATERAL (
-        SELECT cv.original_amount AS amount FROM archive.ingestion_card_visa_detail cv WHERE cv.file_line_id = fl.id AND f.content_type = 'Visa' AND f.file_type = 'Card'
-        UNION ALL
-        SELECT cm.original_amount FROM archive.ingestion_card_msc_detail cm WHERE cm.file_line_id = fl.id AND f.content_type = 'Msc' AND f.file_type = 'Card'
-        UNION ALL
-        SELECT cb.original_amount FROM archive.ingestion_card_bkm_detail cb WHERE cb.file_line_id = fl.id AND f.content_type = 'Bkm' AND f.file_type = 'Card'
-        UNION ALL
-        SELECT cv.source_amount FROM archive.ingestion_clearing_visa_detail cv WHERE cv.file_line_id = fl.id AND f.content_type = 'Visa' AND f.file_type = 'Clearing'
-        UNION ALL
-        SELECT cm.source_amount FROM archive.ingestion_clearing_msc_detail cm WHERE cm.file_line_id = fl.id AND f.content_type = 'Msc' AND f.file_type = 'Clearing'
-        UNION ALL
-        SELECT cb.source_amount FROM archive.ingestion_clearing_bkm_detail cb WHERE cb.file_line_id = fl.id AND f.content_type = 'Bkm' AND f.file_type = 'Clearing'
-    ) d ON TRUE
-    WHERE fl.matched_clearing_line_id IS NULL
-    GROUP BY age_bucket, f.content_type, f.file_type
-) x
-CROSS JOIN (
+         SELECT
+             CASE
+                 WHEN EXTRACT(EPOCH FROM (NOW() - f.create_date)) / 86400 < 1 THEN '0-1d'
+                 WHEN EXTRACT(EPOCH FROM (NOW() - f.create_date)) / 86400 < 3 THEN '1-3d'
+                 WHEN EXTRACT(EPOCH FROM (NOW() - f.create_date)) / 86400 < 7 THEN '3-7d'
+                 WHEN EXTRACT(EPOCH FROM (NOW() - f.create_date)) / 86400 < 14 THEN '7-14d'
+                 WHEN EXTRACT(EPOCH FROM (NOW() - f.create_date)) / 86400 < 30 THEN '14-30d'
+                 ELSE '30d+'
+                 END AS age_bucket,
+             'ARCHIVE',
+             f.content_type,
+             f.file_type,
+             COUNT(*),
+             SUM(COALESCE(d.amount, 0))
+         FROM archive.ingestion_file_line fl
+                  JOIN archive.ingestion_file f ON f.id = fl.file_id
+                  LEFT JOIN LATERAL (
+             SELECT cv.original_amount AS amount FROM archive.ingestion_card_visa_detail cv WHERE cv.id = fl.card_visa_detail_id AND f.content_type = 'Visa' AND f.file_type = 'Card'
+             UNION ALL
+             SELECT cm.original_amount FROM archive.ingestion_card_msc_detail cm WHERE cm.id = fl.card_msc_detail_id AND f.content_type = 'Msc' AND f.file_type = 'Card'
+             UNION ALL
+             SELECT cb.original_amount FROM archive.ingestion_card_bkm_detail cb WHERE cb.id = fl.card_bkm_detail_id AND f.content_type = 'Bkm' AND f.file_type = 'Card'
+             UNION ALL
+             SELECT cv.source_amount FROM archive.ingestion_clearing_visa_detail cv WHERE cv.id = fl.clearing_visa_detail_id AND f.content_type = 'Visa' AND f.file_type = 'Clearing'
+             UNION ALL
+             SELECT cm.source_amount FROM archive.ingestion_clearing_msc_detail cm WHERE cm.id = fl.clearing_msc_detail_id AND f.content_type = 'Msc' AND f.file_type = 'Clearing'
+             UNION ALL
+             SELECT cb.source_amount FROM archive.ingestion_clearing_bkm_detail cb WHERE cb.id = fl.clearing_bkm_detail_id AND f.content_type = 'Bkm' AND f.file_type = 'Clearing'
+                 ) d ON TRUE
+         WHERE fl.matched_clearing_line_id IS NULL
+         GROUP BY age_bucket, f.content_type, f.file_type
+     ) x
+         CROSS JOIN (
     SELECT COUNT(*) AS total_unmatched
     FROM (
-        SELECT 1 FROM ingestion.file_line WHERE matched_clearing_line_id IS NULL
-        UNION ALL
-        SELECT 1 FROM archive.ingestion_file_line WHERE matched_clearing_line_id IS NULL
-    ) u
+             SELECT 1 FROM ingestion.file_line WHERE matched_clearing_line_id IS NULL
+             UNION ALL
+             SELECT 1 FROM archive.ingestion_file_line WHERE matched_clearing_line_id IS NULL
+         ) u
 ) t;
 
 -- -------------------------------------------------------------------------------------
--- E5. Network bazlı mutabakat skorkartı (LIVE + ARCHIVE)
+-- E5. Network bazlı mutabakat skorkartı (UPDATED for archive)
 -- -------------------------------------------------------------------------------------
 CREATE OR REPLACE VIEW reporting.vw_network_recon_scorecard AS
 SELECT
@@ -1932,65 +1958,71 @@ SELECT
     x.first_file_date,
     x.last_file_date
 FROM (
-    SELECT
-        ds.data_scope,
-        f.content_type AS network,
-        COUNT(DISTINCT f.id) AS total_file_count,
-        SUM(CASE WHEN f.file_type = 'Card' THEN lc.line_count ELSE 0 END) AS total_card_line_count,
-        SUM(CASE WHEN f.file_type = 'Clearing' THEN lc.line_count ELSE 0 END) AS total_clearing_line_count,
-        SUM(lc.matched_count) AS total_matched_count,
-        SUM(lc.unmatched_count) AS total_unmatched_count,
-        SUM(CASE WHEN f.file_type = 'Card' THEN lc.total_amount ELSE 0 END) AS total_card_amount,
-        SUM(CASE WHEN f.file_type = 'Clearing' THEN lc.total_amount ELSE 0 END) AS total_clearing_amount,
-        CASE WHEN SUM(CASE WHEN f.file_type = 'Card' THEN lc.line_count ELSE 0 END) > 0
-            THEN ROUND(SUM(CASE WHEN f.file_type = 'Card' THEN lc.total_amount ELSE 0 END)::numeric / SUM(CASE WHEN f.file_type = 'Card' THEN lc.line_count ELSE 0 END), 2)
-            ELSE 0 END AS avg_card_original_amount,
-        CASE WHEN SUM(CASE WHEN f.file_type = 'Clearing' THEN lc.line_count ELSE 0 END) > 0
-            THEN ROUND(SUM(CASE WHEN f.file_type = 'Clearing' THEN lc.total_amount ELSE 0 END)::numeric / SUM(CASE WHEN f.file_type = 'Clearing' THEN lc.line_count ELSE 0 END), 2)
-            ELSE 0 END AS avg_clearing_source_amount,
-        SUM(lc.recon_success_count) AS recon_success_line_count,
-        SUM(lc.recon_failed_count) AS recon_failed_line_count,
-        SUM(lc.recon_pending_count) AS recon_pending_line_count,
-        MIN(f.create_date) AS first_file_date,
-        MAX(f.create_date) AS last_file_date
-    FROM (SELECT 'LIVE' AS data_scope UNION ALL SELECT 'ARCHIVE') ds
-    CROSS JOIN LATERAL (
-        SELECT f2.id, f2.content_type, f2.file_type, f2.create_date
-        FROM ingestion.file f2 WHERE ds.data_scope = 'LIVE'
-        UNION ALL
-        SELECT f2.id, f2.content_type, f2.file_type, f2.create_date
-        FROM archive.ingestion_file f2 WHERE ds.data_scope = 'ARCHIVE'
-    ) f
-    CROSS JOIN LATERAL (
-        SELECT
-            COUNT(*) AS line_count,
-            SUM(CASE WHEN fl.matched_clearing_line_id IS NOT NULL THEN 1 ELSE 0 END) AS matched_count,
-            SUM(CASE WHEN fl.matched_clearing_line_id IS NULL THEN 1 ELSE 0 END) AS unmatched_count,
-            COUNT(*) FILTER (WHERE fl.reconciliation_status = 'Success') AS recon_success_count,
-            COUNT(*) FILTER (WHERE fl.reconciliation_status = 'Failed') AS recon_failed_count,
-            COUNT(*) FILTER (WHERE fl.reconciliation_status IN ('Ready', 'Processing')) AS recon_pending_count,
-            SUM(COALESCE(
-                (SELECT cv.original_amount FROM ingestion.card_visa_detail cv WHERE cv.file_line_id = fl.id AND f.content_type = 'Visa' AND f.file_type = 'Card' AND ds.data_scope = 'LIVE' LIMIT 1),
+         SELECT
+             ds.data_scope,
+             f.content_type AS network,
+             COUNT(DISTINCT f.id) AS total_file_count,
+             SUM(CASE WHEN f.file_type = 'Card' THEN lc.line_count ELSE 0 END) AS total_card_line_count,
+             SUM(CASE WHEN f.file_type = 'Clearing' THEN lc.line_count ELSE 0 END) AS total_clearing_line_count,
+             SUM(lc.matched_count) AS total_matched_count,
+             SUM(lc.unmatched_count) AS total_unmatched_count,
+             SUM(CASE WHEN f.file_type = 'Card' THEN lc.total_amount ELSE 0 END) AS total_card_amount,
+             SUM(CASE WHEN f.file_type = 'Clearing' THEN lc.total_amount ELSE 0 END) AS total_clearing_amount,
+             CASE WHEN SUM(CASE WHEN f.file_type = 'Card' THEN lc.line_count ELSE 0 END) > 0
+                      THEN ROUND(SUM(CASE WHEN f.file_type = 'Card' THEN lc.total_amount ELSE 0 END)::numeric / SUM(CASE WHEN f.file_type = 'Card' THEN lc.line_count ELSE 0 END), 2)
+                  ELSE 0 END AS avg_card_original_amount,
+             CASE WHEN SUM(CASE WHEN f.file_type = 'Clearing' THEN lc.line_count ELSE 0 END) > 0
+                      THEN ROUND(SUM(CASE WHEN f.file_type = 'Clearing' THEN lc.total_amount ELSE 0 END)::numeric / SUM(CASE WHEN f.file_type = 'Clearing' THEN lc.line_count ELSE 0 END), 2)
+                  ELSE 0 END AS avg_clearing_source_amount,
+             SUM(lc.recon_success_count) AS recon_success_line_count,
+             SUM(lc.recon_failed_count) AS recon_failed_line_count,
+             SUM(lc.recon_pending_count) AS recon_pending_line_count,
+             MIN(f.create_date) AS first_file_date,
+             MAX(f.create_date) AS last_file_date
+         FROM (SELECT 'LIVE' AS data_scope UNION ALL SELECT 'ARCHIVE') ds
+                  CROSS JOIN LATERAL (
+             SELECT f2.id, f2.content_type, f2.file_type, f2.create_date
+             FROM ingestion.file f2 WHERE ds.data_scope = 'LIVE'
+             UNION ALL
+             SELECT f2.id, f2.content_type, f2.file_type, f2.create_date
+             FROM archive.ingestion_file f2 WHERE ds.data_scope = 'ARCHIVE'
+                 ) f
+                  CROSS JOIN LATERAL (
+             SELECT
+                 COUNT(*) AS line_count,
+                 SUM(CASE WHEN fl.matched_clearing_line_id IS NOT NULL THEN 1 ELSE 0 END) AS matched_count,
+                 SUM(CASE WHEN fl.matched_clearing_line_id IS NULL THEN 1 ELSE 0 END) AS unmatched_count,
+                 COUNT(*) FILTER (WHERE fl.reconciliation_status = 'Success') AS recon_success_count,
+                 COUNT(*) FILTER (WHERE fl.reconciliation_status = 'Failed') AS recon_failed_count,
+                 COUNT(*) FILTER (WHERE fl.reconciliation_status IN ('Ready', 'Processing')) AS recon_pending_count,
+                 SUM(COALESCE(
+                         (SELECT cv.original_amount FROM ingestion.card_visa_detail cv WHERE cv.file_line_id = fl.id AND f.content_type = 'Visa' AND f.file_type = 'Card' AND ds.data_scope = 'LIVE' LIMIT 1),
                 (SELECT cm.original_amount FROM ingestion.card_msc_detail cm WHERE cm.file_line_id = fl.id AND f.content_type = 'Msc' AND f.file_type = 'Card' AND ds.data_scope = 'LIVE' LIMIT 1),
                 (SELECT cb.original_amount FROM ingestion.card_bkm_detail cb WHERE cb.file_line_id = fl.id AND f.content_type = 'Bkm' AND f.file_type = 'Card' AND ds.data_scope = 'LIVE' LIMIT 1),
                 (SELECT cv.source_amount FROM ingestion.clearing_visa_detail cv WHERE cv.file_line_id = fl.id AND f.content_type = 'Visa' AND f.file_type = 'Clearing' AND ds.data_scope = 'LIVE' LIMIT 1),
                 (SELECT cm.source_amount FROM ingestion.clearing_msc_detail cm WHERE cm.file_line_id = fl.id AND f.content_type = 'Msc' AND f.file_type = 'Clearing' AND ds.data_scope = 'LIVE' LIMIT 1),
                 (SELECT cb.source_amount FROM ingestion.clearing_bkm_detail cb WHERE cb.file_line_id = fl.id AND f.content_type = 'Bkm' AND f.file_type = 'Clearing' AND ds.data_scope = 'LIVE' LIMIT 1),
-                (SELECT cv.original_amount FROM archive.ingestion_card_visa_detail cv WHERE cv.file_line_id = fl.id AND f.content_type = 'Visa' AND f.file_type = 'Card' AND ds.data_scope = 'ARCHIVE' LIMIT 1),
-                (SELECT cm.original_amount FROM archive.ingestion_card_msc_detail cm WHERE cm.file_line_id = fl.id AND f.content_type = 'Msc' AND f.file_type = 'Card' AND ds.data_scope = 'ARCHIVE' LIMIT 1),
-                (SELECT cb.original_amount FROM archive.ingestion_card_bkm_detail cb WHERE cb.file_line_id = fl.id AND f.content_type = 'Bkm' AND f.file_type = 'Card' AND ds.data_scope = 'ARCHIVE' LIMIT 1),
-                (SELECT cv.source_amount FROM archive.ingestion_clearing_visa_detail cv WHERE cv.file_line_id = fl.id AND f.content_type = 'Visa' AND f.file_type = 'Clearing' AND ds.data_scope = 'ARCHIVE' LIMIT 1),
-                (SELECT cm.source_amount FROM archive.ingestion_clearing_msc_detail cm WHERE cm.file_line_id = fl.id AND f.content_type = 'Msc' AND f.file_type = 'Clearing' AND ds.data_scope = 'ARCHIVE' LIMIT 1),
-                (SELECT cb.source_amount FROM archive.ingestion_clearing_bkm_detail cb WHERE cb.file_line_id = fl.id AND f.content_type = 'Bkm' AND f.file_type = 'Clearing' AND ds.data_scope = 'ARCHIVE' LIMIT 1),
+                (SELECT cv.original_amount FROM archive.ingestion_card_visa_detail cv, archive.ingestion_file_line aifl 
+                    WHERE aifl.id = fl.id AND cv.id = aifl.card_visa_detail_id AND f.content_type = 'Visa' AND f.file_type = 'Card' AND ds.data_scope = 'ARCHIVE' LIMIT 1),
+                (SELECT cm.original_amount FROM archive.ingestion_card_msc_detail cm, archive.ingestion_file_line aifl 
+                    WHERE aifl.id = fl.id AND cm.id = aifl.card_msc_detail_id AND f.content_type = 'Msc' AND f.file_type = 'Card' AND ds.data_scope = 'ARCHIVE' LIMIT 1),
+                (SELECT cb.original_amount FROM archive.ingestion_card_bkm_detail cb, archive.ingestion_file_line aifl 
+                    WHERE aifl.id = fl.id AND cb.id = aifl.card_bkm_detail_id AND f.content_type = 'Bkm' AND f.file_type = 'Card' AND ds.data_scope = 'ARCHIVE' LIMIT 1),
+                (SELECT cv.source_amount FROM archive.ingestion_clearing_visa_detail cv, archive.ingestion_file_line aifl 
+                    WHERE aifl.id = fl.id AND cv.id = aifl.clearing_visa_detail_id AND f.content_type = 'Visa' AND f.file_type = 'Clearing' AND ds.data_scope = 'ARCHIVE' LIMIT 1),
+                (SELECT cm.source_amount FROM archive.ingestion_clearing_msc_detail cm, archive.ingestion_file_line aifl 
+                    WHERE aifl.id = fl.id AND cm.id = aifl.clearing_msc_detail_id AND f.content_type = 'Msc' AND f.file_type = 'Clearing' AND ds.data_scope = 'ARCHIVE' LIMIT 1),
+                (SELECT cb.source_amount FROM archive.ingestion_clearing_bkm_detail cb, archive.ingestion_file_line aifl 
+                    WHERE aifl.id = fl.id AND cb.id = aifl.clearing_bkm_detail_id AND f.content_type = 'Bkm' AND f.file_type = 'Clearing' AND ds.data_scope = 'ARCHIVE' LIMIT 1),
                 0
             )) AS total_amount
-        FROM (
-            SELECT fl2.id, fl2.matched_clearing_line_id, fl2.reconciliation_status
-            FROM ingestion.file_line fl2 WHERE fl2.file_id = f.id AND ds.data_scope = 'LIVE'
-            UNION ALL
-            SELECT fl2.id, fl2.matched_clearing_line_id, fl2.reconciliation_status
-            FROM archive.ingestion_file_line fl2 WHERE fl2.file_id = f.id AND ds.data_scope = 'ARCHIVE'
-        ) fl
-    ) lc
-    GROUP BY ds.data_scope, f.content_type
-) x;
+             FROM (
+                      SELECT fl2.id, fl2.matched_clearing_line_id, fl2.reconciliation_status
+                      FROM ingestion.file_line fl2 WHERE fl2.file_id = f.id AND ds.data_scope = 'LIVE'
+                      UNION ALL
+                      SELECT fl2.id, fl2.matched_clearing_line_id, fl2.reconciliation_status
+                      FROM archive.ingestion_file_line fl2 WHERE fl2.file_id = f.id AND ds.data_scope = 'ARCHIVE'
+                  ) fl
+                 ) lc
+         GROUP BY ds.data_scope, f.content_type
+     ) x;

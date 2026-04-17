@@ -13,7 +13,7 @@ public class ArchiveIngestionClearingBkmDetailConfiguration : IEntityTypeConfigu
 
         IngestionClearingBkmDetailConfiguration.ConfigureColumns(builder);
 
-        builder.Ignore(x => x.IngestionFileLine);
+        builder.Ignore(x => x.FileLine);
     }
 }
 

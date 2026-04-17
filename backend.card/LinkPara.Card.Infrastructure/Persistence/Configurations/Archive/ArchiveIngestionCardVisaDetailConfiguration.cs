@@ -13,7 +13,7 @@ public class ArchiveIngestionCardVisaDetailConfiguration : IEntityTypeConfigurat
 
         IngestionCardVisaDetailConfiguration.ConfigureColumns(builder);
 
-        builder.Ignore(x => x.IngestionFileLine);
+        builder.Ignore(x => x.FileLine);
     }
 }
 

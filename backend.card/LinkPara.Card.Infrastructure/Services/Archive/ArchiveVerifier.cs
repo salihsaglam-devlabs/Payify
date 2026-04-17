@@ -24,13 +24,13 @@ internal sealed class ArchiveVerifier
     {
         var fileLineIdQuery = _dbContext.IngestionFileLines
             .AsNoTracking()
-            .Where(x => x.IngestionFileId == ingestionFileId)
+            .Where(x => x.FileId == ingestionFileId)
             .Select(x => x.Id);
 
         var counts = new ArchiveAggregateCounts
         {
             IngestionFileCount = await _dbContext.IngestionFiles.CountAsync(x => x.Id == ingestionFileId, cancellationToken),
-            IngestionFileLineCount = await _dbContext.IngestionFileLines.CountAsync(x => x.IngestionFileId == ingestionFileId, cancellationToken)
+            IngestionFileLineCount = await _dbContext.IngestionFileLines.CountAsync(x => x.FileId == ingestionFileId, cancellationToken)
         };
 
         if (counts.IngestionFileLineCount == 0)
@@ -38,12 +38,12 @@ internal sealed class ArchiveVerifier
             return counts;
         }
 
-        counts.IngestionCardVisaDetailCount = await _dbContext.IngestionCardVisaDetails.CountAsync(x => fileLineIdQuery.Contains(x.IngestionFileLineId), cancellationToken);
-        counts.IngestionCardMscDetailCount = await _dbContext.IngestionCardMscDetails.CountAsync(x => fileLineIdQuery.Contains(x.IngestionFileLineId), cancellationToken);
-        counts.IngestionCardBkmDetailCount = await _dbContext.IngestionCardBkmDetails.CountAsync(x => fileLineIdQuery.Contains(x.IngestionFileLineId), cancellationToken);
-        counts.IngestionClearingVisaDetailCount = await _dbContext.IngestionClearingVisaDetails.CountAsync(x => fileLineIdQuery.Contains(x.IngestionFileLineId), cancellationToken);
-        counts.IngestionClearingMscDetailCount = await _dbContext.IngestionClearingMscDetails.CountAsync(x => fileLineIdQuery.Contains(x.IngestionFileLineId), cancellationToken);
-        counts.IngestionClearingBkmDetailCount = await _dbContext.IngestionClearingBkmDetails.CountAsync(x => fileLineIdQuery.Contains(x.IngestionFileLineId), cancellationToken);
+        counts.IngestionCardVisaDetailCount = await _dbContext.IngestionCardVisaDetails.CountAsync(x => fileLineIdQuery.Contains(x.FileLineId), cancellationToken);
+        counts.IngestionCardMscDetailCount = await _dbContext.IngestionCardMscDetails.CountAsync(x => fileLineIdQuery.Contains(x.FileLineId), cancellationToken);
+        counts.IngestionCardBkmDetailCount = await _dbContext.IngestionCardBkmDetails.CountAsync(x => fileLineIdQuery.Contains(x.FileLineId), cancellationToken);
+        counts.IngestionClearingVisaDetailCount = await _dbContext.IngestionClearingVisaDetails.CountAsync(x => fileLineIdQuery.Contains(x.FileLineId), cancellationToken);
+        counts.IngestionClearingMscDetailCount = await _dbContext.IngestionClearingMscDetails.CountAsync(x => fileLineIdQuery.Contains(x.FileLineId), cancellationToken);
+        counts.IngestionClearingBkmDetailCount = await _dbContext.IngestionClearingBkmDetails.CountAsync(x => fileLineIdQuery.Contains(x.FileLineId), cancellationToken);
 
         counts.ReconciliationEvaluationCount = await _dbContext.ReconciliationEvaluations.CountAsync(x => fileLineIdQuery.Contains(x.FileLineId), cancellationToken);
         counts.ReconciliationOperationCount = await _dbContext.ReconciliationOperations.CountAsync(x => fileLineIdQuery.Contains(x.FileLineId), cancellationToken);
@@ -57,7 +57,7 @@ internal sealed class ArchiveVerifier
     {
         var archiveFileLineIdQuery = _dbContext.ArchiveIngestionFileLines
             .AsNoTracking()
-            .Where(x => x.IngestionFileId == ingestionFileId)
+            .Where(x => x.FileId == ingestionFileId)
             .Select(x => x.Id);
 
         var counts = new ArchiveAggregateCounts
@@ -65,7 +65,7 @@ internal sealed class ArchiveVerifier
             IngestionFileCount = await _dbContext.ArchiveIngestionFiles
                 .CountAsync(x => x.Id == ingestionFileId, cancellationToken),
             IngestionFileLineCount = await _dbContext.ArchiveIngestionFileLines
-                .CountAsync(x => x.IngestionFileId == ingestionFileId, cancellationToken)
+                .CountAsync(x => x.FileId == ingestionFileId, cancellationToken)
         };
 
         if (counts.IngestionFileLineCount == 0)
@@ -74,17 +74,17 @@ internal sealed class ArchiveVerifier
         }
 
         counts.IngestionCardVisaDetailCount = await _dbContext.ArchiveIngestionCardVisaDetails
-            .CountAsync(x => archiveFileLineIdQuery.Contains(x.IngestionFileLineId), cancellationToken);
+            .CountAsync(x => archiveFileLineIdQuery.Contains(x.FileLineId), cancellationToken);
         counts.IngestionCardMscDetailCount = await _dbContext.ArchiveIngestionCardMscDetails
-            .CountAsync(x => archiveFileLineIdQuery.Contains(x.IngestionFileLineId), cancellationToken);
+            .CountAsync(x => archiveFileLineIdQuery.Contains(x.FileLineId), cancellationToken);
         counts.IngestionCardBkmDetailCount = await _dbContext.ArchiveIngestionCardBkmDetails
-            .CountAsync(x => archiveFileLineIdQuery.Contains(x.IngestionFileLineId), cancellationToken);
+            .CountAsync(x => archiveFileLineIdQuery.Contains(x.FileLineId), cancellationToken);
         counts.IngestionClearingVisaDetailCount = await _dbContext.ArchiveIngestionClearingVisaDetails
-            .CountAsync(x => archiveFileLineIdQuery.Contains(x.IngestionFileLineId), cancellationToken);
+            .CountAsync(x => archiveFileLineIdQuery.Contains(x.FileLineId), cancellationToken);
         counts.IngestionClearingMscDetailCount = await _dbContext.ArchiveIngestionClearingMscDetails
-            .CountAsync(x => archiveFileLineIdQuery.Contains(x.IngestionFileLineId), cancellationToken);
+            .CountAsync(x => archiveFileLineIdQuery.Contains(x.FileLineId), cancellationToken);
         counts.IngestionClearingBkmDetailCount = await _dbContext.ArchiveIngestionClearingBkmDetails
-            .CountAsync(x => archiveFileLineIdQuery.Contains(x.IngestionFileLineId), cancellationToken);
+            .CountAsync(x => archiveFileLineIdQuery.Contains(x.FileLineId), cancellationToken);
 
         counts.ReconciliationEvaluationCount = await _dbContext.ArchiveReconciliationEvaluations
             .CountAsync(x => archiveFileLineIdQuery.Contains(x.FileLineId), cancellationToken);

@@ -32,6 +32,7 @@ using LinkPara.SharedModels.Exceptions;
 using IngestionFileLineEntity = LinkPara.Card.Domain.Entities.FileIngestion.Persistence.IngestionFileLine;
 using IngestionFileEntity = LinkPara.Card.Domain.Entities.FileIngestion.Persistence.IngestionFile;
 using LinkPara.Card.Domain.Entities.FileIngestion.Persistence;
+using LinkPara.Card.Infrastructure.Services.Reconciliation.Evaluate.Core;
 
 namespace LinkPara.Card.Infrastructure.Services.FileIngestion.Orchestration;
 
@@ -49,6 +50,7 @@ public class FileIngestionOrchestrator : IFileIngestionService
     private readonly IIngestionErrorMapper _ingestionErrorMapper;
     private readonly ILogger<FileIngestionOrchestrator> _logger;
     private readonly IStringLocalizer _localizer;
+    private readonly IClearingArrivalRequeueService _clearingArrivalRequeueService;
 
     public FileIngestionOrchestrator(
         CardDbContext dbContext,
@@ -61,7 +63,8 @@ public class FileIngestionOrchestrator : IFileIngestionService
         IServiceScopeFactory serviceScopeFactory,
         IIngestionErrorMapper ingestionErrorMapper,
         ILogger<FileIngestionOrchestrator> logger,
-        Func<LinkPara.Card.Application.Commons.Localization.LocalizerResource, IStringLocalizer> localizerFactory)
+        Func<LinkPara.Card.Application.Commons.Localization.LocalizerResource, IStringLocalizer> localizerFactory,
+        IClearingArrivalRequeueService clearingArrivalRequeueService)
     {
         _dbContext = dbContext;
         _auditStampService = auditStampService;
@@ -74,6 +77,7 @@ public class FileIngestionOrchestrator : IFileIngestionService
         _ingestionErrorMapper = ingestionErrorMapper;
         _logger = logger;
         _localizer = localizerFactory(LinkPara.Card.Application.Commons.Localization.LocalizerResource.Messages);
+        _clearingArrivalRequeueService = clearingArrivalRequeueService;
     }
 
     public async Task<List<FileIngestionResponse>> IngestAsync(
@@ -497,13 +501,13 @@ public class FileIngestionOrchestrator : IFileIngestionService
         {
             FileKey = fileKey,
             FileName = file.Name,
-            FullPath = file.FullPath,
+            FilePath = file.FullPath,
             SourceType = sourceType,
             FileType = fileType,
             ContentType = fileContentType,
             Status = FileStatus.Processing,
             Message = _localizer.Get("FileIngestion.ImportStarted"),
-            ExpectedCount = GetFooterTxnCount(footerRecord.TypedModel),
+            ExpectedLineCount = GetFooterTxnCount(footerRecord.TypedModel),
             IsArchived = false
         };
 
@@ -601,7 +605,7 @@ public class FileIngestionOrchestrator : IFileIngestionService
                         progress.LastProcessedLineNumber = lineReadResult.LineNumber;
                         progress.LastProcessedByteOffset = lineReadResult.NextByteOffset;
 
-                        if (row.RecordType == "D")
+                        if (row.LineType == "D")
                         {
                             progress.TotalCount++;
                             if (row.Status == FileRowStatus.Success)
@@ -849,15 +853,15 @@ public class FileIngestionOrchestrator : IFileIngestionService
         List<IngestionErrorDetail> errors,
         CancellationToken cancellationToken)
     {
-        if (file.ExpectedCount <= file.TotalCount)
+        if (file.ExpectedLineCount <= file.ProcessedLineCount)
             return;
 
         var batch = new List<IngestionFileLineEntity>(GetBatchSize());
         var progress = new ProcessingProgress
         {
-            TotalCount = file.TotalCount,
-            SuccessCount = file.SuccessCount,
-            ErrorCount = file.ErrorCount,
+            TotalCount = file.ProcessedLineCount,
+            SuccessCount = file.SuccessfulLineCount,
+            ErrorCount = file.FailedLineCount,
             LastProcessedLineNumber = file.LastProcessedLineNumber,
             LastProcessedByteOffset = file.LastProcessedByteOffset
         };
@@ -897,7 +901,7 @@ public class FileIngestionOrchestrator : IFileIngestionService
                     progress.LastProcessedLineNumber = lineReadResult.LineNumber;
                     progress.LastProcessedByteOffset = lineReadResult.NextByteOffset;
 
-                    if (row.RecordType == "D")
+                    if (row.LineType == "D")
                     {
                         progress.TotalCount++;
                         if (row.Status == FileRowStatus.Success)
@@ -946,7 +950,7 @@ public class FileIngestionOrchestrator : IFileIngestionService
             {
                 var failedRows = await _dbContext.IngestionFileLines
                     .AsTracking()
-                    .Where(x => x.IngestionFileId == transactionFileId && x.Status == FileRowStatus.Failed)
+                    .Where(x => x.FileId == transactionFileId && x.Status == FileRowStatus.Failed)
                     .Where(x => x.RetryCount < GetFailedRowMaxRetryCount())
                     .OrderBy(x => x.LineNumber)
                     .Take(GetRetryBatchSize())
@@ -972,9 +976,9 @@ public class FileIngestionOrchestrator : IFileIngestionService
                         var parsed = _fixedWidthRecordParser.Parse(rawLine, parsingRule);
                         parsed.ParsedDataModel = _parsedRecordModelMapper.Create(profileKey, parsed);
 
-                        row.RawData = rawLine;
-                        row.RecordType = parsed.RecordType;
-                        row.ParsedData = JsonSerializer.Serialize(parsed.ParsedDataModel);
+                        row.RawContent = rawLine;
+                        row.LineType = parsed.RecordType;
+                        row.ParsedContent = JsonSerializer.Serialize(parsed.ParsedDataModel);
                         row.Status = FileRowStatus.Success;
                         row.RetryCount += 1;
                         row.Message = _localizer.Get("FileIngestion.ReprocessedSuccessfully");
@@ -1005,7 +1009,7 @@ public class FileIngestionOrchestrator : IFileIngestionService
 
             var exhaustedRows = await _dbContext.IngestionFileLines
                 .AsNoTracking()
-                .Where(x => x.IngestionFileId == transactionFileId && x.Status == FileRowStatus.Failed)
+                .Where(x => x.FileId == transactionFileId && x.Status == FileRowStatus.Failed)
                 .Where(x => x.RetryCount >= GetFailedRowMaxRetryCount())
                 .OrderBy(x => x.LineNumber)
                 .Select(x => new { x.LineNumber, x.Message })
@@ -1233,7 +1237,7 @@ public class FileIngestionOrchestrator : IFileIngestionService
 
         var detailMetrics = await _dbContext.IngestionFileLines
             .AsNoTracking()
-            .Where(x => x.IngestionFileId == transactionFileId && x.RecordType == "D")
+            .Where(x => x.FileId == transactionFileId && x.LineType == "D")
             .GroupBy(x => 1)
             .Select(group => new
             {
@@ -1333,7 +1337,7 @@ public class FileIngestionOrchestrator : IFileIngestionService
         {
             var detail = ExtractTypedDetail(row);
             if (detail is null) continue;
-            ((IIngestionTypedDetail)detail).IngestionFileLineId = row.Id;
+            ((IIngestionTypedDetail)detail).FileLineId = row.Id;
             details.Add(detail);
         }
 
@@ -1508,13 +1512,13 @@ public class FileIngestionOrchestrator : IFileIngestionService
             propertyNames =
             [
                 nameof(IngestionFileLineEntity.Id),
-                nameof(IngestionFileLineEntity.IngestionFileId),
+                nameof(IngestionFileLineEntity.FileId),
                 nameof(IngestionFileLineEntity.LineNumber),
                 nameof(IngestionFileLineEntity.ByteOffset),
                 nameof(IngestionFileLineEntity.ByteLength),
-                nameof(IngestionFileLineEntity.RecordType),
-                nameof(IngestionFileLineEntity.RawData),
-                nameof(IngestionFileLineEntity.ParsedData),
+                nameof(IngestionFileLineEntity.LineType),
+                nameof(IngestionFileLineEntity.RawContent),
+                nameof(IngestionFileLineEntity.ParsedContent),
                 nameof(IngestionFileLineEntity.Status),
                 nameof(IngestionFileLineEntity.Message),
                 nameof(IngestionFileLineEntity.RetryCount),
@@ -1539,16 +1543,16 @@ public class FileIngestionOrchestrator : IFileIngestionService
                 nameof(IngestionFileEntity.Id),
                 nameof(IngestionFileEntity.FileKey),
                 nameof(IngestionFileEntity.FileName),
-                nameof(IngestionFileEntity.FullPath),
+                nameof(IngestionFileEntity.FilePath),
                 nameof(IngestionFileEntity.SourceType),
                 nameof(IngestionFileEntity.FileType),
                 nameof(IngestionFileEntity.ContentType),
                 nameof(IngestionFileEntity.Status),
                 nameof(IngestionFileEntity.Message),
-                nameof(IngestionFileEntity.ExpectedCount),
-                nameof(IngestionFileEntity.TotalCount),
-                nameof(IngestionFileEntity.SuccessCount),
-                nameof(IngestionFileEntity.ErrorCount),
+                nameof(IngestionFileEntity.ExpectedLineCount),
+                nameof(IngestionFileEntity.ProcessedLineCount),
+                nameof(IngestionFileEntity.SuccessfulLineCount),
+                nameof(IngestionFileEntity.FailedLineCount),
                 nameof(IngestionFileEntity.LastProcessedLineNumber),
                 nameof(IngestionFileEntity.LastProcessedByteOffset),
                 nameof(IngestionFileEntity.IsArchived),
@@ -1635,13 +1639,13 @@ public class FileIngestionOrchestrator : IFileIngestionService
 
             var entity = new IngestionFileLineEntity
             {
-                IngestionFileId = transactionFileId,
+                FileId = transactionFileId,
                 LineNumber = lineReadResult.LineNumber,
                 ByteOffset = lineReadResult.ByteOffset,
                 ByteLength = lineReadResult.ByteLength,
-                RecordType = parsed.RecordType,
-                RawData = lineReadResult.Line,
-                ParsedData = JsonSerializer.Serialize(parsed.ParsedDataModel),
+                LineType = parsed.RecordType,
+                RawContent = lineReadResult.Line,
+                ParsedContent = JsonSerializer.Serialize(parsed.ParsedDataModel),
                 Status = FileRowStatus.Success,
                 Message = _localizer.Get("FileIngestion.ParsedAndPersistedSuccessfully"),
                 RetryCount = 0
@@ -1655,12 +1659,12 @@ public class FileIngestionOrchestrator : IFileIngestionService
         {
             return new IngestionFileLineEntity
             {
-                IngestionFileId = transactionFileId,
+                FileId = transactionFileId,
                 LineNumber = lineReadResult.LineNumber,
                 ByteOffset = lineReadResult.ByteOffset,
                 ByteLength = lineReadResult.ByteLength,
-                RecordType = recordType,
-                RawData = lineReadResult.Line,
+                LineType = recordType,
+                RawContent = lineReadResult.Line,
                 Status = FileRowStatus.Failed,
                 Message = ExceptionDetailHelper.BuildDetailMessage(ex, 2000),
                 RetryCount = 0,
@@ -1675,7 +1679,7 @@ public class FileIngestionOrchestrator : IFileIngestionService
         FileType fileType,
         object parsedDataModel)
     {
-        if (!string.Equals(row.RecordType, "D", StringComparison.OrdinalIgnoreCase))
+        if (!string.Equals(row.LineType, "D", StringComparison.OrdinalIgnoreCase))
             return;
 
         if (TryGetLongValue(parsedDataModel, "OceanTxnGuid", out var oceanTxnGuid) && oceanTxnGuid > 0)
@@ -1759,7 +1763,7 @@ public class FileIngestionOrchestrator : IFileIngestionService
 
         var metrics = await _dbContext.IngestionFileLines
             .AsNoTracking()
-            .Where(x => x.IngestionFileId == transactionFileId && x.RecordType == "D")
+            .Where(x => x.FileId == transactionFileId && x.LineType == "D")
             .GroupBy(x => 1)
             .Select(group => new
             {
@@ -1779,10 +1783,10 @@ public class FileIngestionOrchestrator : IFileIngestionService
 
         var messages = new List<string>();
 
-        if (file.ExpectedCount != totalCount)
+        if (file.ExpectedLineCount != totalCount)
         {
             messages.Add(
-                _localizer.Get("FileIngestion.ExpectedCountMismatch", file.ExpectedCount, totalCount));
+                _localizer.Get("FileIngestion.ExpectedCountMismatch", file.ExpectedLineCount, totalCount));
         }
 
         if (errorCount > 0)
@@ -1795,7 +1799,7 @@ public class FileIngestionOrchestrator : IFileIngestionService
                 : _localizer.Get("FileIngestion.FileImportedNotArchived", archiveErrorMessage));
         }
 
-        var status = file.ExpectedCount == totalCount && errorCount == 0 && file.IsArchived
+        var status = file.ExpectedLineCount == totalCount && errorCount == 0 && file.IsArchived
             ? FileStatus.Success
             : FileStatus.Failed;
 
@@ -1809,9 +1813,9 @@ public class FileIngestionOrchestrator : IFileIngestionService
             .Where(x => x.Id == transactionFileId)
             .ExecuteUpdateAsync(
                 setters => setters
-                    .SetProperty(x => x.TotalCount, totalCount)
-                    .SetProperty(x => x.SuccessCount, successCount)
-                    .SetProperty(x => x.ErrorCount, errorCount)
+                    .SetProperty(x => x.ProcessedLineCount, totalCount)
+                    .SetProperty(x => x.SuccessfulLineCount, successCount)
+                    .SetProperty(x => x.FailedLineCount, errorCount)
                     .SetProperty(x => x.Status, status)
                     .SetProperty(x => x.Message, message)
                     .SetProperty(x => x.UpdateDate, auditStamp.Timestamp)
@@ -1819,6 +1823,31 @@ public class FileIngestionOrchestrator : IFileIngestionService
                 cancellationToken);
 
         _dbContext.ChangeTracker.Clear();
+        
+        if (file.FileType == FileType.Clearing && status == FileStatus.Success)
+        {
+            try
+            {
+                var requeued = await _clearingArrivalRequeueService
+                    .RequeueAwaitingCardRowsAsync(transactionFileId, cancellationToken);
+
+                if (requeued > 0)
+                {
+                    _logger.LogInformation(
+                        "Clearing arrival requeued {Count} awaiting-clearing rows for file {FileId}.",
+                        requeued, transactionFileId);
+                }
+            }
+            catch (Exception ex)
+            {
+                // Requeue başarısızlığı dosyanın Success marklanmasını geri almaz;
+                // ancak monitoring/alert için loglanmalıdır. Bir sonraki clearing
+                // ingestion ya da scheduled re-evaluation bu satırları yakalar.
+                _logger.LogError(ex,
+                    "Failed to requeue awaiting-clearing rows for clearing file {FileId}.",
+                    transactionFileId);
+            }
+        }
     }
 
     private async Task ApplyDuplicateOutcomesAsync(
@@ -1834,8 +1863,8 @@ public class FileIngestionOrchestrator : IFileIngestionService
 
         var auditStamp = _auditStampService.CreateStamp();
         await _dbContext.IngestionFileLines
-            .Where(x => x.IngestionFileId == transactionFileId &&
-                        x.RecordType == "D" &&
+            .Where(x => x.FileId == transactionFileId &&
+                        x.LineType == "D" &&
                         x.Status == FileRowStatus.Success)
             .ExecuteUpdateAsync(update => update
                     .SetProperty(x => x.DuplicateStatus, (string?)null)
@@ -1864,8 +1893,8 @@ public class FileIngestionOrchestrator : IFileIngestionService
 
         var uniqueStatus = DuplicateStatus.Unique.ToString();
         await _dbContext.IngestionFileLines
-            .Where(x => x.IngestionFileId == transactionFileId &&
-                        x.RecordType == "D" &&
+            .Where(x => x.FileId == transactionFileId &&
+                        x.LineType == "D" &&
                         x.Status == FileRowStatus.Success &&
                         x.DuplicateStatus == null)
             .ExecuteUpdateAsync(update => update
@@ -1893,8 +1922,8 @@ public class FileIngestionOrchestrator : IFileIngestionService
         {
             var clearingLines = await _dbContext.IngestionFileLines
                 .AsNoTracking()
-                .Where(x => x.IngestionFileId == transactionFileId
-                            && x.RecordType == "D"
+                .Where(x => x.FileId == transactionFileId
+                            && x.LineType == "D"
                             && x.Status == FileRowStatus.Success
                             && x.CorrelationKey != null
                             && x.CorrelationValue != null)
@@ -1906,7 +1935,7 @@ public class FileIngestionOrchestrator : IFileIngestionService
                 await _dbContext.IngestionFileLines
                     .Where(x => x.CorrelationKey == clearingLine.CorrelationKey
                                 && x.CorrelationValue == clearingLine.CorrelationValue
-                                && x.RecordType == "D"
+                                && x.LineType == "D"
                                 && x.IngestionFile.FileType == FileType.Card)
                     .ExecuteUpdateAsync(update => update
                             .SetProperty(x => x.MatchedClearingLineId, clearingLine.Id)
@@ -1919,8 +1948,8 @@ public class FileIngestionOrchestrator : IFileIngestionService
         {
             var cardLines = await _dbContext.IngestionFileLines
                 .AsNoTracking()
-                .Where(x => x.IngestionFileId == transactionFileId
-                            && x.RecordType == "D"
+                .Where(x => x.FileId == transactionFileId
+                            && x.LineType == "D"
                             && x.Status == FileRowStatus.Success
                             && x.CorrelationKey != null
                             && x.CorrelationValue != null)
@@ -1933,7 +1962,7 @@ public class FileIngestionOrchestrator : IFileIngestionService
                     .AsNoTracking()
                     .Where(x => x.CorrelationKey == cardLine.CorrelationKey
                                 && x.CorrelationValue == cardLine.CorrelationValue
-                                && x.RecordType == "D"
+                                && x.LineType == "D"
                                 && x.IngestionFile.FileType == FileType.Clearing)
                     .OrderByDescending(x => x.CreateDate)
                     .Select(x => (Guid?)x.Id)
@@ -1961,8 +1990,8 @@ public class FileIngestionOrchestrator : IFileIngestionService
     {
         var duplicateKeys = await _dbContext.IngestionFileLines
             .AsNoTracking()
-            .Where(x => x.IngestionFileId == transactionFileId &&
-                        x.RecordType == "D" &&
+            .Where(x => x.FileId == transactionFileId &&
+                        x.LineType == "D" &&
                         x.Status == FileRowStatus.Success &&
                         x.DuplicateDetectionKey != null)
             .GroupBy(x => x.DuplicateDetectionKey!)
@@ -1979,8 +2008,8 @@ public class FileIngestionOrchestrator : IFileIngestionService
         foreach (var batch in Batch(duplicateKeys.ToArray(), QueryBatchSize))
         {
             var batchRows = await _dbContext.IngestionFileLines
-                .Where(x => x.IngestionFileId == transactionFileId &&
-                            x.RecordType == "D" &&
+                .Where(x => x.FileId == transactionFileId &&
+                            x.LineType == "D" &&
                             x.Status == FileRowStatus.Success &&
                             batch.Contains(x.DuplicateDetectionKey!))
                 .OrderBy(x => x.LineNumber)
@@ -2004,8 +2033,8 @@ public class FileIngestionOrchestrator : IFileIngestionService
         {
             var rows = group.ToList();
             var primary = rows[0];
-            var primarySignature = BuildCardDuplicateSignature(primary.ParsedData);
-            var allEquivalent = rows.All(x => CardDuplicateSignatureEquals(primarySignature, BuildCardDuplicateSignature(x.ParsedData)));
+            var primarySignature = BuildCardDuplicateSignature(primary.ParsedContent);
+            var allEquivalent = rows.All(x => CardDuplicateSignatureEquals(primarySignature, BuildCardDuplicateSignature(x.ParsedContent)));
 
             if (allEquivalent)
             {
@@ -2031,8 +2060,8 @@ public class FileIngestionOrchestrator : IFileIngestionService
         {
             var rows = group.ToList();
             var primary = rows[0];
-            var primaryPayload = primary.ParsedData;
-            var allEquivalent = rows.All(x => string.Equals(x.ParsedData, primaryPayload, StringComparison.Ordinal));
+            var primaryPayload = primary.ParsedContent;
+            var allEquivalent = rows.All(x => string.Equals(x.ParsedContent, primaryPayload, StringComparison.Ordinal));
 
             if (allEquivalent)
             {
@@ -2435,10 +2464,10 @@ public class FileIngestionOrchestrator : IFileIngestionService
     }
 
     private static bool RequiresArchiveOnlyRecovery(IngestionFileEntity file)
-        => file.ExpectedCount == file.TotalCount && file.ErrorCount == 0 && !file.IsArchived;
+        => file.ExpectedLineCount == file.ProcessedLineCount && file.FailedLineCount == 0 && !file.IsArchived;
 
     private static bool RequiresFullRecovery(IngestionFileEntity file)
-        => file.ExpectedCount != file.TotalCount || file.ErrorCount > 0;
+        => file.ExpectedLineCount != file.ProcessedLineCount || file.FailedLineCount > 0;
 
     private FileSourceType ResolveTargetSourceType()
     {
@@ -2836,9 +2865,9 @@ public class FileIngestionOrchestrator : IFileIngestionService
             FileName = file.FileName,
             Status = file.Status,
             Message = file.Message,
-            TotalCount = file.TotalCount,
-            SuccessCount = file.SuccessCount,
-            ErrorCount = file.ErrorCount
+            TotalCount = file.ProcessedLineCount,
+            SuccessCount = file.SuccessfulLineCount,
+            ErrorCount = file.FailedLineCount
         };
     }
 

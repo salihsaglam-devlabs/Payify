@@ -1,8 +1,7 @@
-using System.ComponentModel;
-using System.Text.Json;
-using System.Text.Json.Serialization;
 using LinkPara.Scheduler.API.Commons.Entities;
 using LinkPara.Scheduler.API.Commons.Interfaces;
+using LinkPara.Scheduler.API.Jobs.Card.FileIngestionAndReconciliation.Enums;
+using LinkPara.Scheduler.API.Jobs.Card.FileIngestionAndReconciliation.Models;
 using LinkPara.SystemUser;
 using MassTransit;
 
@@ -13,197 +12,9 @@ public static class CardFileIngestionAndReconciliationEndpointNames
     public const string SerialQueue = "queue:Card.FileIngestionAndReconciliation.SerialQueue";
 }
 
-#region ENUMS
-
-public enum JobRequestType
-{
-    [Description("Ingest file request.")]
-    IngestFile = 1,
-
-    [Description("Evaluate request.")]
-    Evaluate = 2,
-
-    [Description("Execute request.")]
-    Execute = 3
-}
-
-public enum FileSourceType
-{
-    [Description("Files are listed and read from remote sources (FTP/SFTP, etc.).")]
-    Remote = 1,
-
-    [Description("Local filesystem. If FilePath is provided, read directly from that path; if empty, list and read files from default path/profile in configuration.")]
-    Local = 2
-}
-
-public enum FileType
-{
-    [Description("Card transaction file.")]
-    Card = 1,
-
-    [Description("Clearing/reconciliation file.")]
-    Clearing = 2
-}
-
-public enum FileContentType
-{
-    [Description("File content in BKM format.")]
-    Bkm = 1,
-
-    [Description("File content in Mastercard (MSC) format.")]
-    Msc = 2,
-
-    [Description("File content in VISA format.")]
-    Visa = 3
-}
-
-public enum FileIngestionAndReconciliationTemplate
-{
-    IngestRemoteCardBkm,
-    IngestRemoteCardMsc,
-    IngestRemoteCardVisa,
-
-    IngestRemoteClearingBkm,
-    IngestRemoteClearingMsc,
-    IngestRemoteClearingVisa,
-
-    IngestLocalCardBkm,
-    IngestLocalCardMsc,
-    IngestLocalCardVisa,
-
-    IngestLocalClearingBkm,
-    IngestLocalClearingMsc,
-    IngestLocalClearingVisa,
-
-    EvaluateDefault,
-    ExecuteDefault
-}
-
-#endregion
-
-#region REQUEST MODELS
-
-public class FileIngestionAndReconciliationJobRequest
-{
-    [JsonConverter(typeof(FlexibleEnumJsonConverter<JobRequestType>))]
-    public JobRequestType Type { get; set; }
-    public string InitiatedByUserId { get; init; }
-    public FileIngestionRequest IngestionRequest { get; init; }
-    public EvaluateRequest EvaluateRequest { get; init; }
-    public ExecuteRequest ExecuteRequest { get; init; }
-}
-
-public class FileIngestionRequest
-{
-    [JsonConverter(typeof(FlexibleEnumJsonConverter<FileSourceType>))]
-    public FileSourceType FileSourceType { get; set; }
-
-    [JsonConverter(typeof(FlexibleEnumJsonConverter<FileType>))]
-    public FileType FileType { get; set; }
-
-    [JsonConverter(typeof(FlexibleEnumJsonConverter<FileContentType>))]
-    public FileContentType FileContentType { get; set; }
-
-    public string FilePath { get; set; }
-}
-
-public class EvaluateRequest
-{
-    public Guid[] IngestionFileIds { get; set; } = Array.Empty<Guid>();
-    public EvaluateOptions Options { get; set; }
-}
-
-public class EvaluateOptions
-{
-    public int? ChunkSize { get; set; }
-    public int? ClaimTimeoutSeconds { get; set; }
-    public int? ClaimRetryCount { get; set; }
-    public int? OperationMaxRetries { get; set; }
-}
-
-public class ExecuteRequest
-{
-    public Guid[] GroupIds { get; set; } = Array.Empty<Guid>();
-    public Guid[] EvaluationIds { get; set; } = Array.Empty<Guid>();
-    public Guid[] OperationIds { get; set; } = Array.Empty<Guid>();
-    public ExecuteOptions Options { get; set; }
-}
-
-public class ExecuteOptions
-{
-    public int? MaxEvaluations { get; set; }
-    public int? LeaseSeconds { get; set; }
-}
-
-public sealed class FlexibleEnumJsonConverter<TEnum> : JsonConverter<TEnum>
-    where TEnum : struct, Enum
-{
-    public override TEnum Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
-    {
-        if (reader.TokenType == JsonTokenType.String)
-        {
-            var rawValue = reader.GetString();
-
-            if (string.IsNullOrWhiteSpace(rawValue))
-                throw new JsonException($"Empty value is not valid for enum {typeof(TEnum).Name}.");
-
-            if (Enum.TryParse<TEnum>(rawValue, ignoreCase: true, out var enumValue))
-                return enumValue;
-
-            if (int.TryParse(rawValue, out var numericValue) &&
-                Enum.IsDefined(typeof(TEnum), numericValue))
-            {
-                return (TEnum)Enum.ToObject(typeof(TEnum), numericValue);
-            }
-
-            throw new JsonException($"Value '{rawValue}' is not valid for enum {typeof(TEnum).Name}.");
-        }
-
-        if (reader.TokenType == JsonTokenType.Number)
-        {
-            if (reader.TryGetInt32(out var numericValue) &&
-                Enum.IsDefined(typeof(TEnum), numericValue))
-            {
-                return (TEnum)Enum.ToObject(typeof(TEnum), numericValue);
-            }
-
-            throw new JsonException($"Numeric value is not valid for enum {typeof(TEnum).Name}.");
-        }
-
-        throw new JsonException($"Token type '{reader.TokenType}' is not valid for enum {typeof(TEnum).Name}.");
-    }
-
-    public override void Write(Utf8JsonWriter writer, TEnum value, JsonSerializerOptions options)
-    {
-        if (FileIngestionAndReconciliationPayloadFactory.UseStringEnums)
-        {
-            writer.WriteStringValue(value.ToString());
-            return;
-        }
-
-        writer.WriteNumberValue(Convert.ToInt32(value));
-    }
-}
-
-#endregion
-
-#region FACTORY
-
 public static class FileIngestionAndReconciliationPayloadFactory
 {
     private const string DefaultLocalPath = "/Users/base/Documents/Files";
-
-    /// <summary>
-    /// false => enum values numeric gönderilir
-    /// true  => enum values string gönderilir
-    /// default kapalıdır
-    /// </summary>
-    public static bool UseStringEnums { get; private set; }
-
-    public static void SetUseStringEnums(bool useStringEnums)
-    {
-        UseStringEnums = useStringEnums;
-    }
 
     private static readonly Dictionary<FileIngestionAndReconciliationTemplate, Func<string, FileIngestionAndReconciliationJobRequest>> Templates = new()
     {
@@ -330,30 +141,12 @@ public static class FileIngestionAndReconciliationPayloadFactory
         return factory(initiatedByUserId);
     }
 
-    public static FileIngestionAndReconciliationJobRequest Create(
-        FileIngestionAndReconciliationTemplate template,
-        string initiatedByUserId,
-        bool useStringEnums)
-    {
-        var current = UseStringEnums;
-
-        try
-        {
-            SetUseStringEnums(useStringEnums);
-            return Create(template, initiatedByUserId);
-        }
-        finally
-        {
-            SetUseStringEnums(current);
-        }
-    }
-
     private static FileIngestionAndReconciliationJobRequest CreateIngestRequest(
         string initiatedByUserId,
         FileSourceType fileSourceType,
         FileType fileType,
         FileContentType fileContentType,
-        string filePath = null)
+        string? filePath = null)
     {
         return new FileIngestionAndReconciliationJobRequest
         {
@@ -369,10 +162,6 @@ public static class FileIngestionAndReconciliationPayloadFactory
         };
     }
 }
-
-#endregion
-
-#region BASE JOBS
 
 public abstract class FileIngestionAndReconciliationJobBase : IJobTrigger
 {
@@ -401,22 +190,6 @@ public abstract class FileIngestionAndReconciliationJobBase : IJobTrigger
         await endpoint.Send(request, cancellationToken);
     }
 
-    protected async Task SendAsync(
-        FileIngestionAndReconciliationTemplate template,
-        bool useStringEnums,
-        CancellationToken cancellationToken)
-    {
-        var endpoint = await _bus.GetSendEndpoint(
-            new Uri(CardFileIngestionAndReconciliationEndpointNames.SerialQueue));
-
-        var request = FileIngestionAndReconciliationPayloadFactory.Create(
-            template,
-            _applicationUserService.ApplicationUserId.ToString(),
-            useStringEnums);
-
-        await endpoint.Send(request, cancellationToken);
-    }
-
     public abstract Task TriggerAsync(CronJob job);
 }
 
@@ -439,15 +212,6 @@ public abstract class FileIngestionAndReconciliationPipelineJobBase : FileIngest
         await SendAsync(FileIngestionAndReconciliationTemplate.EvaluateDefault, cts.Token);
         await SendAsync(FileIngestionAndReconciliationTemplate.ExecuteDefault, cts.Token);
     }
-
-    public async Task TriggerAsync(CronJob job, bool useStringEnums)
-    {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
-
-        await SendAsync(ImportTemplate, useStringEnums, cts.Token);
-        await SendAsync(FileIngestionAndReconciliationTemplate.EvaluateDefault, useStringEnums, cts.Token);
-        await SendAsync(FileIngestionAndReconciliationTemplate.ExecuteDefault, useStringEnums, cts.Token);
-    }
 }
 
 public abstract class FileIngestionAndReconciliationSingleStepJobBase : FileIngestionAndReconciliationJobBase
@@ -467,145 +231,4 @@ public abstract class FileIngestionAndReconciliationSingleStepJobBase : FileInge
 
         await SendAsync(StepTemplate, cts.Token);
     }
-
-    public async Task TriggerAsync(CronJob job, bool useStringEnums)
-    {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
-
-        await SendAsync(StepTemplate, useStringEnums, cts.Token);
-    }
 }
-
-#endregion
-
-#region REMOTE CARD
-
-public class RemoteCardBkmJob : FileIngestionAndReconciliationPipelineJobBase
-{
-    public RemoteCardBkmJob(IBus bus, IApplicationUserService applicationUserService) : base(bus, applicationUserService) { }
-
-    protected override FileIngestionAndReconciliationTemplate ImportTemplate =>
-        FileIngestionAndReconciliationTemplate.IngestRemoteCardBkm;
-}
-
-public class RemoteCardMscJob : FileIngestionAndReconciliationPipelineJobBase
-{
-    public RemoteCardMscJob(IBus bus, IApplicationUserService applicationUserService) : base(bus, applicationUserService) { }
-
-    protected override FileIngestionAndReconciliationTemplate ImportTemplate =>
-        FileIngestionAndReconciliationTemplate.IngestRemoteCardMsc;
-}
-
-public class RemoteCardVisaJob : FileIngestionAndReconciliationPipelineJobBase
-{
-    public RemoteCardVisaJob(IBus bus, IApplicationUserService applicationUserService) : base(bus, applicationUserService) { }
-
-    protected override FileIngestionAndReconciliationTemplate ImportTemplate =>
-        FileIngestionAndReconciliationTemplate.IngestRemoteCardVisa;
-}
-
-#endregion
-
-#region REMOTE CLEARING
-
-public class RemoteClearingBkmJob : FileIngestionAndReconciliationPipelineJobBase
-{
-    public RemoteClearingBkmJob(IBus bus, IApplicationUserService applicationUserService) : base(bus, applicationUserService) { }
-
-    protected override FileIngestionAndReconciliationTemplate ImportTemplate =>
-        FileIngestionAndReconciliationTemplate.IngestRemoteClearingBkm;
-}
-
-public class RemoteClearingMscJob : FileIngestionAndReconciliationPipelineJobBase
-{
-    public RemoteClearingMscJob(IBus bus, IApplicationUserService applicationUserService) : base(bus, applicationUserService) { }
-
-    protected override FileIngestionAndReconciliationTemplate ImportTemplate =>
-        FileIngestionAndReconciliationTemplate.IngestRemoteClearingMsc;
-}
-
-public class RemoteClearingVisaJob : FileIngestionAndReconciliationPipelineJobBase
-{
-    public RemoteClearingVisaJob(IBus bus, IApplicationUserService applicationUserService) : base(bus, applicationUserService) { }
-
-    protected override FileIngestionAndReconciliationTemplate ImportTemplate =>
-        FileIngestionAndReconciliationTemplate.IngestRemoteClearingVisa;
-}
-
-#endregion
-
-#region LOCAL CARD
-
-public class LocalCardBkmJob : FileIngestionAndReconciliationPipelineJobBase
-{
-    public LocalCardBkmJob(IBus bus, IApplicationUserService applicationUserService) : base(bus, applicationUserService) { }
-
-    protected override FileIngestionAndReconciliationTemplate ImportTemplate =>
-        FileIngestionAndReconciliationTemplate.IngestLocalCardBkm;
-}
-
-public class LocalCardMscJob : FileIngestionAndReconciliationPipelineJobBase
-{
-    public LocalCardMscJob(IBus bus, IApplicationUserService applicationUserService) : base(bus, applicationUserService) { }
-
-    protected override FileIngestionAndReconciliationTemplate ImportTemplate =>
-        FileIngestionAndReconciliationTemplate.IngestLocalCardMsc;
-}
-
-public class LocalCardVisaJob : FileIngestionAndReconciliationPipelineJobBase
-{
-    public LocalCardVisaJob(IBus bus, IApplicationUserService applicationUserService) : base(bus, applicationUserService) { }
-
-    protected override FileIngestionAndReconciliationTemplate ImportTemplate =>
-        FileIngestionAndReconciliationTemplate.IngestLocalCardVisa;
-}
-
-#endregion
-
-#region LOCAL CLEARING
-
-public class LocalClearingBkmJob : FileIngestionAndReconciliationPipelineJobBase
-{
-    public LocalClearingBkmJob(IBus bus, IApplicationUserService applicationUserService) : base(bus, applicationUserService) { }
-
-    protected override FileIngestionAndReconciliationTemplate ImportTemplate =>
-        FileIngestionAndReconciliationTemplate.IngestLocalClearingBkm;
-}
-
-public class LocalClearingMscJob : FileIngestionAndReconciliationPipelineJobBase
-{
-    public LocalClearingMscJob(IBus bus, IApplicationUserService applicationUserService) : base(bus, applicationUserService) { }
-
-    protected override FileIngestionAndReconciliationTemplate ImportTemplate =>
-        FileIngestionAndReconciliationTemplate.IngestLocalClearingMsc;
-}
-
-public class LocalClearingVisaJob : FileIngestionAndReconciliationPipelineJobBase
-{
-    public LocalClearingVisaJob(IBus bus, IApplicationUserService applicationUserService) : base(bus, applicationUserService) { }
-
-    protected override FileIngestionAndReconciliationTemplate ImportTemplate =>
-        FileIngestionAndReconciliationTemplate.IngestLocalClearingVisa;
-}
-
-#endregion
-
-#region SYSTEM
-
-public class EvaluateDefaultJob : FileIngestionAndReconciliationSingleStepJobBase
-{
-    public EvaluateDefaultJob(IBus bus, IApplicationUserService applicationUserService) : base(bus, applicationUserService) { }
-
-    protected override FileIngestionAndReconciliationTemplate StepTemplate =>
-        FileIngestionAndReconciliationTemplate.EvaluateDefault;
-}
-
-public class ExecuteDefaultJob : FileIngestionAndReconciliationSingleStepJobBase
-{
-    public ExecuteDefaultJob(IBus bus, IApplicationUserService applicationUserService) : base(bus, applicationUserService) { }
-
-    protected override FileIngestionAndReconciliationTemplate StepTemplate =>
-        FileIngestionAndReconciliationTemplate.ExecuteDefault;
-}
-
-#endregion

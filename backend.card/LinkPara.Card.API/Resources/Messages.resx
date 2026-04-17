@@ -1103,6 +1103,18 @@
   <data name="Reconciliation.Bkm.AccNotYetReceivedNote" xml:space="preserve">
     <value>The transaction is SUCCESSFUL and settled, but ACC clearing data has not yet been received. Reconciliation deferred pending ACC arrival.</value>
   </data>
+  <data name="Reconciliation.Bkm.AwaitingClearingNote" xml:space="preserve">
+    <value>Clearing data not yet received. Transaction kept OUT of financial reconciliation; waiting for clearing arrival. No balance-affecting operation performed.</value>
+  </data>
+  <data name="Reconciliation.Bkm.AwaitingClearingAlertOp" xml:space="preserve">
+    <value>Awaiting clearing — no automatic financial correction will be applied until clearing arrives. Alert raised.</value>
+  </data>
+  <data name="Reconciliation.Bkm.AwaitingClearingReviewOp" xml:space="preserve">
+    <value>Record pending clearing; will be re-evaluated automatically once clearing is ingested. Manual review gate available for operator override.</value>
+  </data>
+  <data name="Reconciliation.Bkm.RequeueAfterClearing" xml:space="preserve">
+    <value>Re-queue for evaluation once clearing arrives.</value>
+  </data>
   <data name="Reconciliation.Bkm.AccMissingAlertOp" xml:space="preserve">
     <value>ACC clearing data missing for successful settled transaction — alert raised for manual tracking.</value>
   </data>

@@ -4,7 +4,6 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace LinkPara.Card.Infrastructure.Persistence.Configurations.Reporting;
 
-#region A. File Ingestion
 
 public class IngestionFileOverviewViewConfiguration : IEntityTypeConfiguration<IngestionFileOverviewDto>
 {
@@ -72,9 +71,7 @@ public class IngestionExceptionHotspotViewConfiguration : IEntityTypeConfigurati
     }
 }
 
-#endregion
 
-#region B. Reconciliation Process
 
 public class ReconDailyOverviewViewConfiguration : IEntityTypeConfiguration<ReconDailyOverviewDto>
 {
@@ -151,9 +148,7 @@ public class ReconAlertSummaryViewConfiguration : IEntityTypeConfiguration<Recon
     }
 }
 
-#endregion
 
-#region C. Reconciliation Content + Financial
 
 public class ReconCardContentDailyViewConfiguration : IEntityTypeConfiguration<ReconCardContentDailyDto>
 {
@@ -238,9 +233,7 @@ public class ReconResponseStatusAnalysisViewConfiguration : IEntityTypeConfigura
     }
 }
 
-#endregion
 
-#region D. Archive
 
 public class ArchiveRunOverviewViewConfiguration : IEntityTypeConfiguration<ArchiveRunOverviewDto>
 {
@@ -284,9 +277,7 @@ public class ArchiveRetentionSnapshotViewConfiguration : IEntityTypeConfiguratio
     }
 }
 
-#endregion
 
-#region E. Advanced Reconciliation Reports
 
 public class FileReconSummaryViewConfiguration : IEntityTypeConfiguration<FileReconSummaryDto>
 {
@@ -347,5 +338,4 @@ public class NetworkReconScorecardViewConfiguration : IEntityTypeConfiguration<N
     }
 }
 
-#endregion
 

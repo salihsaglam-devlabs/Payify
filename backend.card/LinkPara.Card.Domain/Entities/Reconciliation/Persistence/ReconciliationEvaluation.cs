@@ -17,6 +17,6 @@ namespace LinkPara.Card.Domain.Entities.Reconciliation.Persistence
 
         public string Message { get; set; }
 
-        public int CreatedOperationCount { get; set; }
+        public int OperationCount { get; set; }
     }
 }

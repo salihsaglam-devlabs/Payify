@@ -7,7 +7,7 @@ public class IngestionDetailEntityMapper : IIngestionDetailEntityMapper
 {
     public void AttachTypedDetail(IngestionFileLine row, string profileKey, object parsedDataModel)
     {
-        if (!string.Equals(row.RecordType, "D", StringComparison.OrdinalIgnoreCase))
+        if (!string.Equals(row.LineType, "D", StringComparison.OrdinalIgnoreCase))
             return;
 
         switch (profileKey)

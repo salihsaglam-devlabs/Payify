@@ -134,7 +134,7 @@ internal sealed class EvaluateService : IEvaluateService
         return await _dbContext.IngestionFileLines
             .AsNoTracking()
             .Where(x => x.ReconciliationStatus == ReconciliationStatus.Ready)
-            .Select(x => x.IngestionFileId)
+            .Select(x => x.FileId)
             .Distinct()
             .ToArrayAsync(cancellationToken);
     }
@@ -180,8 +180,8 @@ internal sealed class EvaluateService : IEvaluateService
 
             var candidateIds = await _dbContext.IngestionFileLines
                 .AsNoTracking()
-                .Where(x => x.IngestionFileId == transactionFileId)
-                .Where(x => x.RecordType == "D")
+                .Where(x => x.FileId == transactionFileId)
+                .Where(x => x.LineType == "D")
                 .Where(x =>
                     x.ReconciliationStatus == ReconciliationStatus.Ready ||
                     (x.ReconciliationStatus == ReconciliationStatus.Processing &&
@@ -247,10 +247,10 @@ internal sealed class EvaluateService : IEvaluateService
             GroupId = groupId,
             Status = EvaluationStatus.Completed,
             Message = result.Note,
-            CreatedOperationCount = orderedOperations.Count
+            OperationCount = orderedOperations.Count
         };
         
-        var operations = BuildOperations(row.Id, evaluation.Id, groupId, orderedOperations);
+        var operations = BuildOperations(row, evaluation.Id, groupId, orderedOperations);
 
         var reviews = BuildReviews(operations, orderedOperations, row.Id, evaluation.Id, groupId);
         _auditStampService.StampForCreate(evaluation);
@@ -299,10 +299,43 @@ internal sealed class EvaluateService : IEvaluateService
                 await _dbContext.SaveChangesAsync(cancellationToken);
             }, cancellationToken);
 
-            foreach (var noteGroup in items.GroupBy(x => x.Result.Note))
+            foreach (var statusGroup in items.GroupBy(x => x.Result.IsAwaitingClearing))
             {
-                var ids = noteGroup.Select(x => x.Row.Id).ToList();
-                await MarkRowsBatchAsync(ids, ReconciliationStatus.Success, noteGroup.Key, cancellationToken);
+
+                IReadOnlySet<Guid> redirectToReadyRowIds = new HashSet<Guid>();
+                if (statusGroup.Key)
+                {
+                    redirectToReadyRowIds = await ResolveRowsWithLateArrivingClearingAsync(
+                        statusGroup.Select(x => x.Row).ToList(),
+                        cancellationToken);
+                }
+
+                foreach (var noteGroup in statusGroup.GroupBy(x => x.Result.Note))
+                {
+                    if (statusGroup.Key && redirectToReadyRowIds.Count > 0)
+                    {
+                        var redirectIds = noteGroup
+                            .Where(x => redirectToReadyRowIds.Contains(x.Row.Id))
+                            .Select(x => x.Row.Id).ToList();
+                        var stayIds = noteGroup
+                            .Where(x => !redirectToReadyRowIds.Contains(x.Row.Id))
+                            .Select(x => x.Row.Id).ToList();
+
+                        if (redirectIds.Count > 0)
+                            await MarkRowsBatchAsync(redirectIds, ReconciliationStatus.Ready,
+                                $"Late-arriving clearing detected at finalize; requeued to re-evaluate.", cancellationToken);
+                        if (stayIds.Count > 0)
+                            await MarkRowsBatchAsync(stayIds, ReconciliationStatus.AwaitingClearing, noteGroup.Key, cancellationToken);
+                    }
+                    else
+                    {
+                        var targetStatus = statusGroup.Key
+                            ? ReconciliationStatus.AwaitingClearing
+                            : ReconciliationStatus.Success;
+                        var ids = noteGroup.Select(x => x.Row.Id).ToList();
+                        await MarkRowsBatchAsync(ids, targetStatus, noteGroup.Key, cancellationToken);
+                    }
+                }
             }
 
             return batch.Sum(x => x.Operations.Count);
@@ -321,12 +354,12 @@ internal sealed class EvaluateService : IEvaluateService
 
                     if (alreadyPersisted)
                     {
-                        await MarkRowAsync(item.Row.Id, ReconciliationStatus.Success, item.Result.Note, cancellationToken);
+                        await MarkRowAsync(item.Row.Id, ResolveTargetStatus(item.Result), item.Result.Note, cancellationToken);
                         continue;
                     }
 
                     createdOperationCount += await PersistEvaluationAsync(item.Row, item.Result, groupId, cancellationToken);
-                    await MarkRowAsync(item.Row.Id, ReconciliationStatus.Success, item.Result.Note, cancellationToken);
+                    await MarkRowAsync(item.Row.Id, ResolveTargetStatus(item.Result), item.Result.Note, cancellationToken);
                 }
                 catch (Exception ex)
                 {
@@ -342,6 +375,55 @@ internal sealed class EvaluateService : IEvaluateService
         }
     }
 
+    private async Task<IReadOnlySet<Guid>> ResolveRowsWithLateArrivingClearingAsync(
+        IReadOnlyList<IngestionFileLine> rows,
+        CancellationToken cancellationToken)
+    {
+        var correlations = rows
+            .Where(r => !string.IsNullOrWhiteSpace(r.CorrelationKey) && !string.IsNullOrWhiteSpace(r.CorrelationValue))
+            .GroupBy(r => r.CorrelationKey!)
+            .ToDictionary(g => g.Key, g => g.Select(r => r.CorrelationValue!).Distinct().ToArray());
+
+        if (correlations.Count == 0)
+        {
+            return new HashSet<Guid>();
+        }
+
+        var matchedValues = new HashSet<(string Key, string Value)>();
+        foreach (var pair in correlations)
+        {
+            var key = pair.Key;
+            var values = pair.Value;
+            var found = await _dbContext.IngestionFileLines
+                .AsNoTracking()
+                .Where(x => x.LineType == "D"
+                            && x.CorrelationKey == key
+                            && values.Contains(x.CorrelationValue)
+                            && x.IngestionFile.FileType == FileType.Clearing
+                            && x.IngestionFile.Status == FileStatus.Success)
+                .Select(x => x.CorrelationValue!)
+                .Distinct()
+                .ToListAsync(cancellationToken);
+
+            foreach (var v in found)
+            {
+                matchedValues.Add((key, v));
+            }
+        }
+
+        if (matchedValues.Count == 0)
+        {
+            return new HashSet<Guid>();
+        }
+
+        return rows
+            .Where(r => r.CorrelationKey is not null
+                        && r.CorrelationValue is not null
+                        && matchedValues.Contains((r.CorrelationKey!, r.CorrelationValue!)))
+            .Select(r => r.Id)
+            .ToHashSet();
+    }
+
     private PersistedEvaluation CreatePersistedEvaluation(
         IngestionFileLine row,
         EvaluationResult result,
@@ -355,10 +437,10 @@ internal sealed class EvaluateService : IEvaluateService
             GroupId = groupId,
             Status = EvaluationStatus.Completed,
             Message = result.Note,
-            CreatedOperationCount = orderedOperations.Count
+            OperationCount = orderedOperations.Count
         };
 
-        var operations = BuildOperations(row.Id, evaluation.Id, groupId, orderedOperations);
+        var operations = BuildOperations(row, evaluation.Id, groupId, orderedOperations);
         var reviews = BuildReviews(operations, orderedOperations, row.Id, evaluation.Id, groupId);
 
         _auditStampService.StampForCreate(evaluation);
@@ -379,7 +461,7 @@ internal sealed class EvaluateService : IEvaluateService
             .Where(x => x.IsManual)
             .Select(x =>
             {
-                var definition = orderedOperations[x.SequenceIndex];
+                var definition = orderedOperations[x.SequenceNumber];
                 return new ReconciliationReview
                 {
                     Id = Guid.NewGuid(),
@@ -397,7 +479,7 @@ internal sealed class EvaluateService : IEvaluateService
     }
 
     private List<ReconciliationOperation> BuildOperations(
-        Guid transactionFileDataId,
+        IngestionFileLine row,
         Guid evaluationId,
         Guid groupId,
         IReadOnlyList<EvaluationOperation> orderedOperations)
@@ -406,17 +488,17 @@ internal sealed class EvaluateService : IEvaluateService
         foreach (var operation in orderedOperations)
         {
             var sequence = operations.Count;
-            var parentSequenceIndex = ResolveParentSequenceIndex(operation, operations);
+            var parentSequenceNumber = ResolveParentSequenceIndex(operation, operations);
             var status = sequence == 0 ? OperationStatus.Planned : OperationStatus.Blocked;
 
             operations.Add(new ReconciliationOperation
             {
                 Id = Guid.NewGuid(),
-                FileLineId = transactionFileDataId,
+                FileLineId = row.Id,
                 EvaluationId = evaluationId,
                 GroupId = groupId,
-                SequenceIndex = sequence,
-                ParentSequenceIndex = parentSequenceIndex,
+                SequenceNumber = sequence,
+                ParentSequenceNumber = parentSequenceNumber,
                 Code = operation.Code,
                 Note = operation.Note,
                 Payload = JsonSerializer.Serialize(operation.Payload),
@@ -425,40 +507,62 @@ internal sealed class EvaluateService : IEvaluateService
                 Status = status,
                 RetryCount = 0,
                 MaxRetries = _options.Evaluate.OperationMaxRetries!.Value,
-                IdempotencyKey = ResolveIdempotencyKey(transactionFileDataId, sequence, operation)
+                IdempotencyKey = ResolveIdempotencyKey(row, operation)
             });
         }
 
         return operations;
     }
-    
+
 
     private static string ResolveIdempotencyKey(
-        Guid fileLineId,
-        int sequenceIndex,
+        IngestionFileLine row,
         EvaluationOperation operation)
     {
-        var prefix = $"{operation.Code}:{fileLineId:N}:{sequenceIndex}";
-        var correlationValue = GetPayloadValue(operation.Payload, operation.Code, "correlationValue");
-        if (!string.IsNullOrWhiteSpace(correlationValue))
+        var code = operation.Code;
+        var branch = operation.Branch;
+        var payload = operation.Payload;
+
+        var transactionKey =
+            GetPayloadValue(payload, code, "currentTransactionId")
+            ?? GetPayloadValue(payload, code, "correlationValue")
+            ?? row.CorrelationValue?.Trim();
+
+        if (string.IsNullOrWhiteSpace(transactionKey))
         {
-            var differenceAmount = GetPayloadValue(operation.Payload, operation.Code, "differenceAmount");
-            if (!string.IsNullOrWhiteSpace(differenceAmount))
-            {
-                return $"{prefix}:{correlationValue}:{differenceAmount}";
-            }
-
-            var originalTransactionId = GetPayloadValue(operation.Payload, operation.Code, "originalTransactionId");
-            if (!string.IsNullOrWhiteSpace(originalTransactionId))
-            {
-                return $"{prefix}:{originalTransactionId}";
-            }
-
-            return $"{prefix}:{correlationValue}:{operation.Branch}";
+            transactionKey = $"LINE:{row.Id:N}";
         }
 
-        return $"{prefix}:{operation.Branch}";
+        var parts = new List<string> { "TXN", code, branch, transactionKey };
+
+        var referenceTransactionId = GetPayloadValue(payload, code, "referenceTransactionId");
+        if (!string.IsNullOrWhiteSpace(referenceTransactionId)
+            && !string.Equals(referenceTransactionId, transactionKey, StringComparison.Ordinal))
+        {
+            parts.Add($"ref:{referenceTransactionId}");
+        }
+
+        var differenceAmount = GetPayloadValue(payload, code, "differenceAmount");
+        if (!string.IsNullOrWhiteSpace(differenceAmount))
+        {
+            parts.Add($"diff:{differenceAmount}");
+        }
+
+        var originalTransactionId = GetPayloadValue(payload, code, "originalTransactionId");
+        if (!string.IsNullOrWhiteSpace(originalTransactionId)
+            && !string.Equals(originalTransactionId, transactionKey, StringComparison.Ordinal)
+            && !string.Equals(originalTransactionId, referenceTransactionId, StringComparison.Ordinal))
+        {
+            parts.Add($"orig:{originalTransactionId}");
+        }
+
+        return string.Join(":", parts);
     }
+
+    private static ReconciliationStatus ResolveTargetStatus(EvaluationResult result)
+        => result.IsAwaitingClearing
+            ? ReconciliationStatus.AwaitingClearing
+            : ReconciliationStatus.Success;
 
     private int? ResolveParentSequenceIndex(
         EvaluationOperation operation,
@@ -474,12 +578,12 @@ internal sealed class EvaluateService : IEvaluateService
             return FindRequiredManualGateSequence(operations);
         }
 
-        return operations[^1].SequenceIndex;
+        return operations[^1].SequenceNumber;
     }
 
     private int FindRequiredManualGateSequence(IReadOnlyList<ReconciliationOperation> operations)
     {
-        var manualGateSequence = operations.LastOrDefault(x => x.IsManual)?.SequenceIndex;
+        var manualGateSequence = operations.LastOrDefault(x => x.IsManual)?.SequenceNumber;
         if (manualGateSequence.HasValue) return manualGateSequence.Value;
         throw new ReconciliationBranchRequiresManualGateException(_localizer.Get("Reconciliation.BranchRequiresManualGate"));
     }
@@ -523,7 +627,7 @@ internal sealed class EvaluateService : IEvaluateService
             FileLineId = rowId,
             Status = EvaluationStatus.Failed,
             Message = error,
-            CreatedOperationCount = 0
+            OperationCount = 0
         };
 
         var alert = new ReconciliationAlert
@@ -572,7 +676,7 @@ internal sealed class EvaluateService : IEvaluateService
                 FileLineId = row.Id,
                 Status = EvaluationStatus.Failed,
                 Message = exceptionDetail,
-                CreatedOperationCount = 0
+                OperationCount = 0
             };
 
             alerts.Add(new ReconciliationAlert

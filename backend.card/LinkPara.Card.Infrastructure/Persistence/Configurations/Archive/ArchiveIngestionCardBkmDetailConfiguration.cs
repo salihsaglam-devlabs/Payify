@@ -13,7 +13,7 @@ public class ArchiveIngestionCardBkmDetailConfiguration : IEntityTypeConfigurati
 
         IngestionCardBkmDetailConfiguration.ConfigureColumns(builder);
 
-        builder.Ignore(x => x.IngestionFileLine);
+        builder.Ignore(x => x.FileLine);
     }
 }
 

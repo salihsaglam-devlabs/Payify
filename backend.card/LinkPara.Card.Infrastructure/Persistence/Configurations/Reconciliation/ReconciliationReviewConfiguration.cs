@@ -29,16 +29,16 @@ public class ReconciliationReviewConfiguration : IEntityTypeConfiguration<Reconc
 
     internal static void ConfigureColumns<T>(EntityTypeBuilder<T> builder) where T : ReconciliationReview
     {
-        builder.Property(x => x.FileLineId).HasColumnName("file_line_id");
-        builder.Property(x => x.GroupId).HasColumnName("group_id");
-        builder.Property(x => x.EvaluationId).HasColumnName("evaluation_id");
-        builder.Property(x => x.OperationId).HasColumnName("operation_id");
-        builder.Property(x => x.ReviewerId).HasColumnName("reviewer_id");
-        builder.Property(x => x.Decision).HasColumnName("decision").HasConversion<string>().HasMaxLength(32).IsRequired();
-        builder.Property(x => x.Comment).HasColumnName("comment").HasMaxLength(2000);
-        builder.Property(x => x.DecisionAt).HasColumnName("decision_at");
-        builder.Property(x => x.ExpiresAt).HasColumnName("expires_at");
-        builder.Property(x => x.ExpirationAction).HasColumnName("expiration_action").HasConversion<string>().HasMaxLength(32).IsRequired();
-        builder.Property(x => x.ExpirationFlowAction).HasColumnName("expiration_flow_action").HasConversion<string>().HasMaxLength(32).IsRequired();
+        builder.Property(x => x.FileLineId);
+        builder.Property(x => x.GroupId);
+        builder.Property(x => x.EvaluationId);
+        builder.Property(x => x.OperationId);
+        builder.Property(x => x.ReviewerId);
+        builder.Property(x => x.Decision).HasConversion<string>().IsRequired();
+        builder.Property(x => x.Comment).HasMaxLength(2000);
+        builder.Property(x => x.DecisionAt);
+        builder.Property(x => x.ExpiresAt);
+        builder.Property(x => x.ExpirationAction).HasConversion<string>().IsRequired();
+        builder.Property(x => x.ExpirationFlowAction).HasConversion<string>().IsRequired();
     }
 }

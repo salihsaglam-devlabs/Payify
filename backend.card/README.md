@@ -40,6 +40,8 @@
 18. [Sözlük](#18-sözlük)
 19. [Parametre & Konfigürasyon Rehberi](#19-parametre--konfigürasyon-rehberi)
 20. [Consumer Yapısı, Tetikleyiciler ve Alert/Notification Mekanizması](#20-consumer-yapısı-tetikleyiciler-ve-alertnotification-mekanizması)
+21. [DuplicateStatus — Unique / Primary / Secondary / Conflict](#21-duplicatestatus--unique--primary--secondary--conflict)
+22. [Raporlama Referans Kılavuzu](#22-raporlama-referans-kılavuzu)
 
 ---
 
@@ -566,6 +568,7 @@ Davranış, response ve validator: Body endpoint (4.3) ile aynı.
 | `ReconciliationOperations` | INSERT |
 | `ReconciliationReviews` | INSERT (sadece manuel) |
 | `ReconciliationAlerts` | INSERT (sadece hata) |
+| `IngestionFile` | UPDATE: `LastProcessedLineNumber`, `LastProcessedByteOffset` |
 
 #### Senaryolar
 
@@ -741,7 +744,7 @@ Davranış, response ve validator: Body endpoint (4.3) ile aynı.
 4. Güncellenen satır yoksa:
 - Review hiç yok → `Result="NotFound"`
 - Review var ama Pending değil → `Result="Invalid"` (REVIEW_ALREADY_FINALIZED)
-5. Review güncellendiyse: `ReconciliationOperation.NextAttemptAt=now`, `LeaseExpiresAt=null`
+5. Review güncellenidiyse: `ReconciliationOperation.NextAttemptAt=now`, `LeaseExpiresAt=null`
 6. Operation güncellenemezse (terminal) → `Result="Invalid"` (REVIEW_OPERATION_NOT_REQUEUEABLE)
 7. Transaction commit
 
@@ -890,7 +893,7 @@ Tüm reporting endpoint'leri:
 | Alan | Kaynak | Uyarı |
 |------|--------|-------|
 | `LineSuccessRatePct` | file tablosu sayaçları | `actual_success_line_count` (file_line sayımı) ile farklı olabilir |
-| `CompletenessPct` | `processed/expected` | expected=0 → null/0 döner; "%0 tamamlandı" demek değil |
+| `CompletenessPct` | `processed/expected` | expected=0 → null/0 döner; "başarılı" değil, "henüz güncellenmedi" |
 | `ProcessingDurationSeconds` | `update_date - create_date` | update_date yoksa 0 döner; "hızlı" değil, "henüz güncellenmedi" |
 | `DataScope` | 'LIVE'/'ARCHIVE' | DataScope filtresiz sorguda aynı dosya iki kez görünebilir |
 | `ReconReadyCount` | reconciliation_status=Ready | — |
@@ -909,7 +912,7 @@ Tüm reporting endpoint'leri:
 
 | Alan | Kaynak | Uyarı |
 |------|--------|-------|
-| `ErrorRatePct` | file_line COUNT (A2 view) | D1'deki `LineFailRatePct` file tablosu sayacından → farklı sonuç verebilir |
+| `ErrorRatePct` | `vw_ingestion_file_quality` | D1'deki `LineFailRatePct` file tablosu sayacından → farklı sonuç verebilir |
 | `DuplicateImpactPct` | (Secondary+Conflict)/total | Primary dahil değil; "sorunlu duplicate oranı" |
 | `DuplicatePrimaryCount` | duplicate_status=Primary | İşleme alınan kopya |
 | `TotalRetryCount` | tüm satırların retry toplamı | `LinesWithRetryCount` ile karıştırılmamalı |
@@ -1365,7 +1368,7 @@ Bucket'lar: `0-1 days`, `1-3 days`, `3-7 days`, `7-30 days`, `30+ days`
 |-------|--------|
 | Planned(0) | Çalıştırılmaya hazır |
 | Blocked(1) | Bağımlılık veya manuel karar bekleniyor (genellikle hata değil) |
-| Executing(2) | Şu an çalışıyor (lease aktif) |
+| Executing(2 | Şu an çalışıyor (lease aktif) |
 | Completed(3) | Başarıyla tamamlandı |
 | Failed(4) | Başarısız (retry mümkün olabilir) |
 | Cancelled(5) | İptal edildi (Reject sonrası) |
@@ -1482,12 +1485,12 @@ Pending → Processing → Consumed
 4. **Saklama süresi (Retention):** Varsayılan 90 gün (`RetentionDays`). Son güncelleme en az 72 saat önce (`MinLastUpdateAgeHours`).
 5. **Manuel review SLA:** `ExpiresAt` yaklaşan review'lar `EXPIRING_SOON`, geçenleri `EXPIRED`. Expire olursa `ExpirationAction` (Cancel/Approve/Reject) otomatik uygulanır.
 6. **Reject yorumu zorunlu:** `Reject` endpoint'inde `Comment` zorunlu (NotEmpty), `Approve`'da opsiyonel.
-7. **Archive geri döndürülemez:** `Archive/Run` commit sonrası canlı veriler silinir. Geri yükleme manuel yapılmalıdır.
+7. **Archive geri dönülemez:** `Archive/Run` commit sonrası canlı veriler silinir. Geri yükleme manuel yapılmalıdır.
 8. **Auto Archive:** `AutoArchiveAfterExecute=true` ise Execute sonrası uygun dosyalar otomatik arşivlenir (fire-and-forget, Task.Run).
 
 ### Teknik Kurallar
 
-1. **HTTP 200 yeterli değildir:** `ErrorCount` ve `Errors` her zaman kontrol edilmeli.
+1. **HTTP 200 yeterli değildir:** `ErrorCount` ve `Errors` her zaman kontrol edilmelidir.
 2. **Evaluate idempotent değil ama güvenli:** Aynı dosya tekrar evaluate edilse sadece `Ready` satırlar hedeflenir. Stale claim → timeout sonrası başka çağrı devralır.
 3. **Execute lease ile concurrent güvenli:** Birden fazla worker aynı anda Execute çağırabilir; lease çakışmasında biri bekler.
 4. **Claim mekanizması (Evaluate):** `Serializable` isolation. Stale claim: `ClaimTimeoutSeconds` sonra başka çağrı devralabilir.
@@ -1498,7 +1501,7 @@ Pending → Processing → Consumed
 9. **Count verification (Archive/Run):** ARCHIVE_COPY ve LIVE_DELETE sonrası sayı eşleşme kontrolü; mismatch → transaction rollback.
 10. **ContinueOnError (Archive):** Varsayılan `false` — ilk hatada durur. `true` ile hatalıyı atlar ama hatalı dosyalar manuel kontrol edilmeli.
 11. **Alert e-posta:** `AlertOptions.Enabled` ve `ToEmails` konfigürasyonuna bağlı. Alıcı listesi boşsa alert'ler gönderilmez ama `Pending` kalır.
-12. **Raporlama view tabanlı:** Performans sorunlarında view optimizasyonu veritabanı katmanında yapılmalı.
+12. **Raporları tek başına yorumlamak:** Özellikle `MatchRateTrend` tek başına okunursa yanlış aksiyon.
 
 ---
 
@@ -1515,7 +1518,7 @@ Pending → Processing → Consumed
 | FileIngestion | `FileSourceType` | `FileSourceType` | Evet | Remote/Local — dosya kaynağını belirler |
 | FileIngestion | `FileType` | `FileType` | Evet | Card/Clearing — yanlış → detay tablosu hatalı |
 | FileIngestion | `FileContentType` | `FileContentType` | Evet | Bkm/Msc/Visa — yanlış → parser bozulur |
-| FileIngestion | `FilePath` | `string` | Koşullu | Local ise zorunlu, Remote ise boş |
+| FileIngestion | `FilePath` | `string` | Koşullu | Local ise zorunlu, Remote ise boş/null | Remote ise config default | Local'de boş → validator reddeder |
 | Evaluate | `IngestionFileIds` | `Guid[]` | Hayır | Boş = tüm Ready satırlar; geniş boş çağrı büyük batch |
 | Evaluate | `Options.ChunkSize` | `int?` | Hayır | 100–10.000; trafike göre ayarla |
 | Execute | `GroupIds` | `Guid[]` | Hayır | EvaluationRunId ile eşleşmeli |
@@ -1562,14 +1565,14 @@ Pending → Processing → Consumed
 | Ingestion/ExceptionHotspots | "En riskli dosyalar?" | Operasyon, teknik | `SeverityLevel`, `FailedLineCount`, `DistinctErrorMessageCount` | HIGH/CRITICAL yoğunluğu | Düşük hacimli kritik hatayı önemsiz saymak |
 | Reconciliation/DailyOverview | "Mutabakat günlük performansı?" | Yönetim, operasyon | `OperationSuccessRatePct`, `FailedOperationCount`, `PendingAlertCount` | Başarı düşerken alert artışı | Sadece toplam operation sayısına bakmak |
 | Reconciliation/OpenItems | "Hangi işler açık?" | Operasyon | `OperationStatus`, `Branch`, `IsManual` | Blocked+Planned birikmesi | Açık iş yaşını dikkate almamak |
-| Reconciliation/OpenItemAging | "Açık işler ne kadar yaşlandı?" | Operasyon, yönetim | `AgeBucket`, `ItemCount` | Yaşlı bucket büyümesi | Sadece adete bakıp yaş etkisini yok saymak |
+| Reconciliation/OpenItemAging | "Açık işler ne kadar yaşlandı?" | Operasyon, yönetim | `AgeBucket`, `ItemCount` | Yaşlı bucket büyümesi | Sadece adete bakıp kritikliği kaçırmak |
 | Reconciliation/ManualReviewQueue | "Manuel onay kuyruğu ne durumda?" | Operasyon, analist | `UrgencyLevel`, `ExpiresAt`, `OperationCode` | EXPIRED/EXPIRING_SOON artışı | Sırf adede bakıp kritikliği kaçırmak |
-| Reconciliation/AlertSummary | "Alert yükü nerede yoğun?" | Operasyon, teknik | `AlertType`, `AlertStatus`, `Severity` | Pending/Failed yığılması | Info ve Error alert'i aynı ağırlıkta yorumlamak |
+| Reconciliation/AlertSummary | "Alert'ler nerede yoğun?" | Operasyon, teknik | `AlertType`, `AlertStatus`, `Severity` | Pending/Failed yığılması | Info ve Error alert'i aynı ağırlıkta yorumlamak |
 | Reconciliation/LiveCardContentDaily | "Canlı kart akışı durumu?" | Analist, yönetim | `TxnCount`, `Amount`, `Network` | Ani hacim/tutar kırılması | Sezon etkisini hesaba katmamak |
 | Reconciliation/ArchiveCardContentDaily | "Arşiv kart geçmişi trendi?" | Analist | `TxnCount`, `Amount`, `ReportDate` | Tarihsel trendde keskin sapma | Live ve archive kıyasını aynı pencerede yapmamak |
 | Reconciliation/LiveClearingContentDaily | "Canlı clearing dengeli mi?" | Operasyon, analist | `TxnCount`, `Amount`, `Network` | Card tarafıyla korelasyon bozulması | Tek taraf ile kesin karar vermek |
-| Reconciliation/ContentDaily | "Card/Clearing birleşik görünüm?" | Yönetim, analist | `DataScope`, `Side`, `Amount` | Side bazında kalıcı fark | Side filtresi olmadan karar vermek |
-| Reconciliation/ClearingControlStatAnalysis | "Clearing kontrol statüleri?" | Operasyon, teknik | `ControlStat`, `Count`, `Network` | Problemli statüde yoğunlaşma | Statü anlamını bilmeden aksiyon almak |
+| Reconciliation/ContentDaily | "Card ve Clearing birleşik görünüm?" | Yönetim, analist | `DataScope`, `Side`, `Amount` | Side bazında kalıcı fark | Side filtresi olmadan karar vermek |
+| Reconciliation/ClearingControlStatAnalysis | "Clearing kontrol statüleri sorunlu mu?" | Operasyon, teknik | `ControlStat`, `Count`, `Network` | Problemli statüde yoğunlaşma | Statü anlamını bilmeden aksiyon almak |
 | Reconciliation/FinancialSummary | "Finansal özet ne durumda?" | Yönetim, finans | `FinancialType`, `TxnEffect`, `Amount` | Beklenmeyen effect yönü | Para birimi normalize etmeden kıyaslamak |
 | Reconciliation/ResponseStatusAnalysis | "Response code sorunu var mı?" | Teknik, operasyon | `ResponseCode`, `ReconciliationStatus`, `Count` | Başarısız kod yoğunluğu | Geçici dış servis sorununu kalıcı rule hatası sanmak |
 | Archive/RunOverview | "Arşiv koşuları nasıl?" | Operasyon, yönetim | `ArchiveStatus`, `ArchivedCount`, `FailedCount` | Failed run zinciri | Tek başarılı koşuyla sürdürülebilirlik varsaymak |
@@ -1578,8 +1581,8 @@ Pending → Processing → Consumed
 | Archive/RetentionSnapshot | "Canlı/arşiv dağılımı?" | Yönetim, teknik | `ActiveFileCount`, `ArchivedFileCount` | Active tarafta birikim | Yeni dosya etkisini hesaba katmadan alarm üretmek |
 | Advanced/FileReconSummary | "Dosya bazında match performansı?" | Analist, operasyon | `MatchRatePct`, `MatchedCount`, `UnmatchedCount` | Match oranında kalıcı düşüş | Tek dosya ile bütün network değerlendirmesi |
 | Advanced/MatchRateTrend | "Eşleşme oranı iyileşiyor mu?" | Yönetim, analist | `MatchRatePct`, `Date`, `Network` | Trend aşağı kırılım | Gecikmeli eşleşme etkisini hesaba katmamak |
-| Advanced/GapAnalysis | "Card-Clearing farkı nerede büyüyor?" | Operasyon, analist | `LineCountDifference`, `AmountDifference`, `Network` | Farkların eşik üstü kalması | Kur/fx/zaman farkını kayıp sanmak |
-| Advanced/UnmatchedTransactionAging | "Eşleşmeyenler ne kadar yaşlı?" | Operasyon | `AgeBucket`, `UnmatchedCount`, `Side` | Yaşlı eşleşmeyen artışı | Yeni ile eskiyi aynı ele almak |
+| Advanced/GapAnalysis | "Card ve Clearing arasında fark mı büyüyor?" | Operasyon, analist | `LineCountDifference`, `AmountDifference`, `Network` | Farkların eşik üstü kalması | Kur/fx/zaman farkını kayıp sanmak |
+| Advanced/UnmatchedTransactionAging | "Eşleşmeyenler ne kadar süredir bekliyor?" | Operasyon | `AgeBucket`, `UnmatchedCount`, `Side` | Yaşlı eşleşmeyen artışı | Yeni ile eskiyi aynı ele almak |
 | Advanced/NetworkScorecard | "Ağ bazında kalite skoru?" | Yönetim, operasyon | `OverallMatchRatePct`, `ReconSuccessRatePct` | Skor sürekli düşüşte | Score bileşenlerini görmeden tek metrikle karar |
 
 ### Rapor Seçim Rehberi
@@ -1702,7 +1705,7 @@ Binlerce dosya tek seferde → uzun süre, timeout riski.
 
 ### Genel Teknik Hatalar
 
-1. Sadece HTTP 200'e bakmak — `ErrorCount` ve `Errors` kontrol edilmeli.
+1. Sadece HTTP 200'e bakmak — `ErrorCount` ve `Errors` kontrol edilmelidir.
 2. `Blocked` durumu hata sanmak — çoğunlukla manuel karar veya sıra bekleme.
 3. Pending review SLA takibi yapmamak — expire sonrası otomatik kararlar istenmeyen branch'i açabilir.
 4. Raporları tek başına yorumlamak — özellikle `MatchRateTrend` tek başına okunursa yanlış aksiyon.
@@ -1831,8 +1834,19 @@ ReconcilStatus:  Ready → Processing → Success | Failed
 EvalStatus:      Pending → Evaluating → Planned → Completed | Failed
 OperationStatus: Planned → Executing → Completed | Failed
                  Blocked → (Approve) → Planned | (Reject) → Cancelled
-ReviewDecision:  Pending → Approved | Rejected | Cancelled
-AlertStatus:     Pending → Processing → Consumed | Failed | Ignored
+         └─ (Expire)  ──→ (ExpirationAction'a göre)
+```
+
+### DuplicateStatus Akış Diyagramı
+
+```
+DuplicateStatus:   null / Unique → normal akış
+                     |
+                     ├─ Primary  → RaiseAlert(C2) üret, akışa devam et
+                     |
+                     └─ Secondary → RaiseAlert(C2) üret, ERKEN ÇIK
+                     |
+                     └─ Conflict  → RaiseAlert(C2) üret, ERKEN ÇIK
 ```
 
 ---
@@ -1852,7 +1866,7 @@ AlertStatus:     Pending → Processing → Consumed | Failed | Ignored
 | `DuplicateImpactPct` | `vw_ingestion_file_quality` | `ROUND(((secondary + conflict) / total_line_count) * 100, 2)` |
 | `MatchRatePct` | `vw_file_recon_summary` | `ROUND((matched_line_count / total_line_count) * 100, 2)` — matched: `matched_clearing_line_id IS NOT NULL` |
 | `MatchRatePct` | `vw_recon_match_rate_trend` | Günlük GROUP BY; `ROUND((SUM(matched_count) / SUM(total_line_count)) * 100, 2)` |
-| `OverallMatchRatePct` | `vw_network_recon_scorecard` | `ROUND((total_matched_count / (card_lines + clearing_lines)) * 100, 2)` — **pay: sadece card tarafının matched sayısı; payda: her iki tarafın toplamı** → teorik maksimum ~%50 |
+| `OverallMatchRatePct` | `vw_network_recon_scorecard` | `ROUND((total_matched_count / (card_lines + clearing_lines)) * 100, 2)` | **pay: sadece card tarafının matched sayısı; payda: her iki tarafın toplamı** → teorik maksimum ~%50 |
 | `CardMatchRatePct` | `vw_recon_gap_analysis` | `ROUND((card_matched_count / card_line_count) * 100, 2)` |
 | `ClearingMatchRatePct` | `vw_recon_gap_analysis` | `ROUND((clearing_matched_count / clearing_line_count) * 100, 2)` |
 
@@ -2086,973 +2100,1345 @@ Detail tabloları için subquery: `WHERE file_line_id IN (SELECT id FROM ingesti
 
 ---
 
-### 16.7 Notification E-posta Şablonu
+## 21. DuplicateStatus — Unique / Primary / Secondary / Conflict
 
-`NotificationEmailService`, MassTransit `IBus` üzerinden `exchange:Notification.SendEmail` exchange'ine `SendEmail` mesajı gönderir:
+### 21.1 Nedir ve Nerede Kullanılır?
 
-```csharp
-new SendEmail {
-    TemplateName = templateName,          // örn. "ReconciliationAlertTemplate"
-    DynamicTemplateData = { key: value }, // şablona aktarılan değişkenler
-    ToEmail = toEmail
-}
-```
+`DuplicateStatus`, **FileIngestion** adımında aynı dosya içinde (veya farklı dosyalarda) aynı işlem anahtarına sahip birden fazla satır tespit edildiğinde `IngestionFileLine.DuplicateStatus` alanına yazılan etiket değeridir.
 
-**Şablon sistemi harici bir notification servisinde** (muhtemelen SendGrid veya benzeri) yönetilir. `TemplateName` sabiti olarak `"ReconciliationAlertTemplate"` verilir; içerik `backend.card` reposunda tanımlı değildir. `DynamicTemplateData` sözlüğündeki key-value çiftleri şablon motoru tarafından yer tutucularla eşleştirilir.
-
-Gönderim akışı:
-```
-ReconciliationService
-  → INotificationEmailService.SendEmailAsync(templateName, data, toEmail)
-    → IBus.GetSendEndpoint("exchange:Notification.SendEmail")
-      → SendEmail command (MassTransit message bus)
-        → [Harici Notification Microservice]
-```
-
-`AlertOptions.ToEmails` listesi boşsa döngü çalışmaz; herhangi bir mesaj bus'a gönderilmez.
+Bu etiket, **Evaluate** adımında `BkmEvaluator` (ve diğer evaluator'lar) tarafından okunarak satırın mutabakat akışına sokulup sokulmayacağına karar verilir.
 
 ---
 
-### 16.8 SearchQueryParams Tam Yapısı
+### 21.2 Değerler ve Anlamları
 
-`SearchQueryParams`, `LinkPara.SharedModels.Pagination` NuGet paketinde tanımlıdır. `ReportingService.PaginateAsync` içindeki kullanımdan çıkarılan gerçek alan isimleri:
-
-```csharp
-paging.Page      // int — 1'den başlar; <1 gelirse Math.Max ile 1'e çekilir
-paging.Size      // int — sayfa boyutu; Math.Clamp(1, 1000) aralığına sıkıştırılır
-paging.OrderBy   // string? — sıralama kolonu adı (PaginatedList'e aktarılır)
-paging.SortBy    // string? — sıralama yönü ("asc"/"desc") (PaginatedList'e aktarılır)
-```
-
-`PaginatedList<T>` constructor parametreleri: `(items, total, page, pageSize, orderBy, sortBy)`.
-
-`skip = (page - 1) * pageSize` hesabıyla EF Core `Skip/Take` uygulanır. `OrderBy`/`SortBy` ReportingService tarafından dinamik sıralama için **kullanılmaz** — her sorgu kendi sabit `OrderBy` ifadesine sahiptir (örn. `OrderByDescending(x => x.FileCreatedAt)`). Bu alanlar yalnızca istemciye metadata olarak iletilir.
-
-> **Not:** `SearchTerm` alanı `docs/temp/1.md` notu ile listelenmiştir ancak `ReportingService` içinde bu alana başvuru yoktur; filtreleme yalnızca tip-güvenli parametrelerle (ContentType, FileType vb.) yapılır.
+| Değer | Kod | Açıklama |
+|-------|-----|----------|
+| `Unique` | `1` | Satırın yinelenen karşılığı yoktur. Normal akışa devam eder. |
+| `Primary` | `2` | Aynı `DuplicateDetectionKey`'e sahip birden fazla satır bulunmuş, **tüm kopyalar birbiriyle özdeş** (aynı imza) ve bu satır **birincil (işlenecek)** kopyadır. Normal akışa devam eder; Secondary'ler silinmiş sayılır. |
+| `Secondary` | `3` | Özdeş kopya grubunda **birincil olmayan (atlanacak)** satır. `ReconciliationStatus=Failed` olarak işaretlenir, mutabakat akışına girmez. |
+| `Conflict` | `4` | Aynı `DuplicateDetectionKey`'e sahip satırlar bulunmuş, **ancak içerikleri birbirinden farklı** (imzalar eşleşmiyor). Tüm satırlar `ReconciliationStatus=Failed` olarak işaretlenir ve `RaiseAlert` operasyonu tetiklenir. Manuel inceleme gerekir. |
 
 ---
 
-### 16.9 Options Merge Mantığı
+### 21.3 Tespit Adımı — FileIngestion (Orchestrator)
 
-**Konfigürasyon katmanı** (`FileIngestionOptions`) ve **request parametreleri** (`FileIngestionRequest`) iki ayrı katmandadır; runtime merge yoktur.
+Tespit işlemi dosya ingestion'ının **parse+insert aşaması tamamlandıktan sonra** çalışır:
 
-`ProcessingOptions.ValidateAndApplyDefaults()` startup'ta bir kez çağrılır:
-
-```csharp
-BatchSize              ??= 50_000   // null ise default, config değerini geçmez
-RetryBatchSize         ??= 10_000
-FailedRowMaxRetryCount ??= 3
-UseBulkInsert          ??= true
-EnableParallelProcessing??= true
-MaxDegreeOfParallelism ??= 8
+```
+FileIngestionOrchestrator
+    │
+    ├─ LoadDuplicateRowsAsync()
+    │   → DuplicateDetectionKey'e göre GROUP BY → Count > 1 olan anahtarları bul
+    │   → İlgili satırları LineNumber/Id sırasıyla yükle
+    │
+    ├─ ApplyCardDuplicateOutcomes()   (Card profilleri için)
+    │   veya
+    │   ApplyClearingDuplicateOutcomes() (Clearing profilleri için)
+    │
+    └─ DB'ye güncelle (DuplicateStatus, DuplicateGroupId, ReconciliationStatus)
 ```
 
-`??=` operatörü sayesinde **null-coalescing atama** uygulanır: Vault/appsettings'ten gelen değer korunur; sadece yoksa default atanır. Sonradan override yoktur.
+#### DuplicateDetectionKey Nedir?
 
-`FileIngestionRequest` (tek seferlik istek), profil seçimi için `FileType` + `FileContentType` + `FileSourceType` + `FilePath` taşır; `ProcessingOptions` değerlerini override edemez. Dolayısıyla **merge** değil, **startup-time default fill** mekanizması mevcuttur.
-
-`ProfileOptions` konfigürasyondan (Vault) doğrudan okunur; request içinde profile override yoktur. Hangi profilin kullanılacağı `BuildProfileKey(fileType, fileContentType)` → `"Card_Bkm"`, `"Clearing_Visa"` vb. composite key ile belirlenir.
+Her `IngestionFileLine` kaydı ingestion sırasında bir **`DuplicateDetectionKey`** (string) ile etiketlenir. Bu anahtar, satırın kimliğini tekil olarak tanımlayan birleşik bir değerdir (örn. OceanTxnGuid veya RRN+ARN kombinasyonu). Aynı dosya içinde bu anahtar birden fazla satırda görünüyorsa satırlar "duplicate grup" olarak değerlendirilir.
 
 ---
 
-## 17. Operasyonel Öneriler
+### 21.4 Özdeş Duplikat (Equivalent) — Primary / Secondary Atama
 
-1. **Her zaman `ErrorCount` kontrol edin.** HTTP 200 dönmesi işlemin hatasız olduğunu garanti etmez.
+**Koşul:** Aynı `DuplicateDetectionKey`'e sahip tüm satırlar **imza bakımından özdeş**.
 
-2. **Evaluate çağrıları idempotent değildir** ama claim mekanizması concurrent güvenlik sağlar. Aynı dosya tekrar evaluate edildiğinde sadece `Ready` satırlar hedeflenir.
-
-3. **Execute çağrıları lease mekanizması ile concurrent güvenlidir.** Birden fazla worker aynı anda Execute çağırabilir.
-
-4. **Manuel review SLA takibi yapın.** `ExpiresAt` yaklaşan review'lar `ManualReviewQueue` raporunda `EXPIRING_SOON` görünür. Expire sonrası otomatik kararlar istenmeyen branch'i açabilir.
-
-5. **Arşivlemeden önce Preview yapın.** `Archive/Run` geri dönüşü zor bir işlemdir.
-
-6. **`ContinueOnError=false` (varsayılan) ilk hatada durur.** Toplu arşiv işlemlerinde `true` kullanılabilir; hatalı dosyalar manuel kontrol edilmeli.
-
-7. **Raporlama verileri view tabanlıdır.** Performans sorunlarında view optimizasyonu veritabanı katmanında yapılmalıdır.
-
-8. **Alert e-postaları `AlertOptions.Enabled` ve `ToEmails` konfigürasyonuna bağlıdır.** Alıcı listesi boşsa alert'ler gönderilmez ama `Pending` kalır.
-
-9. **Raporları tek başına yorumlama.** Özellikle `MatchRateTrend`, `GapAnalysis`, `NetworkScorecard` birlikte okunmalıdır.
-
-10. **`OverallMatchRatePct` (NetworkScorecard) matematiksel sınırlama var.** Paydada card+clearing toplamı kullanılıyor; eşleşme tek taraflı olduğundan oran pratikte %50 bandında kalabilir. Bu bir hesaplama tasarım sorunudur.
-
----
-
-## 18. Sözlük
-
-| Terim | Açıklama |
-|-------|----------|
-| **Ingestion** | Dosya sisteme alma işlemi |
-| **File Line** | Dosyadaki tek bir satır/kayıt |
-| **Card File** | Kart işlem dosyası (harcama, çekim, iade vb.) |
-| **Clearing File** | Takas/hesaplaşma dosyası |
-| **Content Type / Network** | Bkm, Msc (Mastercard), Visa — dosya formatı |
-| **Evaluate** | Satırları değerlendirme, eşleştirme ve operasyon planlama |
-| **Operation** | Yapılması planlanan tek bir aksiyon |
-| **Execute** | Operasyonları gerçekleştirme |
-| **Review** | Manuel onay/red süreci |
-| **Alert** | Sistemin ürettiği uyarı |
-| **Archive** | Tamamlanan verileri arşiv şemasına taşıma |
-| **Matched** | Kart satırının clearing karşılığının bulunması (`matched_clearing_line_id != null`) |
-| **Unmatched** | Clearing karşılığı bulunamayan kart satırı |
-| **DataScope** | Live (aktif tablo) veya Archive (arşiv tablosu) |
-| **Side** | Card tarafı veya Clearing tarafı (raporlarda) |
-| **ControlStat** | Clearing kayıtlarının kontrol durumu (network'e özgü) |
-| **Correlation Key** | Eşleştirme anahtarı (RRN, ARN vb.) |
-| **Branch Operation** | Approve/Reject sonrası tetiklenen yan operasyon |
-| **Lease** | Bir operasyonu işleyen worker'ın geçici kilidi |
-| **Claim** | Evaluate sırasında satırın başka worker'larca alınmaması için sahiplik işareti |
-| **Retry** | Geçici hatalarda işlemin tekrar planlanması |
-| **Chunk** | Evaluate'de bir seferde işlenen satır grubu |
-| **Idempotency Key** | Aynı işlemin iki kez uygulanmasını önleyen benzersiz anahtar |
-| **Terminal Status** | İşlemin tamamlandığını gösteren nihai durum (başka geçiş yok) |
-| **LIVE Data** | `ingestion.*` ve `reconciliation.*` şemalarındaki aktif veri |
-| **ARCHIVE Data** | `archive.*` şemasındaki arşivlenmiş veri |
-| **EvaluationRunId / GroupId** | Bir Evaluate çalışmasının tüm satırları için ortak kimlik |
-| **ExpirationAction** | Review süresi dolunca otomatik alınacak karar (Cancel/Approve/Reject) |
-| **AutoArchiveAfterExecute** | Execute başarısı sonrası otomatik arşivleme tetikleyici konfigürasyonu |
-
----
-
-*Bu doküman `backend.card` repository kaynak kodu ve `V1_0_4__ReportingViews.sql` SQL view dosyasının analizine dayanmaktadır. Kapsam dışı: PaycoreCard, PaycoreCustomer, PaycoreDebitAuthorization, PaycoreParameters, CustomerWalletCard controller'ları.*
-
----
-
-## 19. Parametre & Konfigürasyon Rehberi
-
-> **Kapsam:** FileIngestion · Reconciliation · Archive · Reporting  
-> **Konfigürasyon kaynağı:** HashiCorp Vault → `appsettings.{env}.json` → ortam değişkenleri (öncelik sırasıyla)
-
-### 19.1 Genel Yapı ve Yükleme Mekanizması
-
-```
-Vault Secret
-    └─ FileIngestion      → FileIngestionOptions  (SectionName = "FileIngestion")
-    └─ Reconciliation     → ReconciliationOptions (SectionName = "Reconciliation")
-    └─ Archive            → ArchiveOptions        (SectionName = "Archive")
-    └─ AppConfig          → AppConfigOptions      (SectionName = "AppConfig")
-```
-
-- Vault değerleri uygulama başlangıcında okunur ve ilgili `*Options` sınıfına bağlanır.
-- Her options sınıfı `ValidateAndApplyDefaults()` çağırarak eksik değerleri **built-in default** ile doldurur; geçersiz değerlerde başlatma aşamasında istisna fırlatır ve uygulama **ayağa kalkmaz**.
-- `null` bırakılan alanlar default değerle çalışır; **zorla `null` göndermek yerine alanı hiç koymamak** tercih edilmelidir.
-
----
-
-### 19.2 FileIngestion (`vault_fileingestion.json`)
-
-**C# sınıfı:** `FileIngestionOptions` · **Section:** `"FileIngestion"`
-
-#### 19.2.1 Connections (Bağlantılar)
-
-Dosya kaynağı (`Source`) ve arşiv hedefi (`Target`) bağlantı ayarlarını içerir. Her iki endpoint de **zorunlu**dur; eksikse uygulama başlamaz.
-
-```jsonc
-{
-  "Connections": {
-    "Source": { /* EndpointOptions */ },
-    "Target": { /* EndpointOptions */ }
-  }
-}
-```
-
-**EndpointOptions**
-
-| Alan | Tip | Zorunlu | Açıklama |
-|------|-----|---------|----------|
-| `Protocol` | `string` | **Evet** | Aktif protokol: `"Ftp"` \| `"Sftp"` \| `"Local"` |
-| `Ftp` | obje | Hayır | FTP bağlantı detayları |
-| `Sftp` | obje | Hayır | SFTP bağlantı detayları |
-| `Local` | obje | Hayır | Yerel dizin konfigürasyonu |
-
-> Yalnızca `Protocol` ile belirtilen bölüm doğrulanır; diğerleri yok sayılır.
-
-**SFTP Konfigürasyonu**
-
-| Alan | Tip | Default | Kural | Açıklama |
-|------|-----|---------|-------|----------|
-| `Host` | `string` | — | Zorunlu | SFTP sunucu IP veya hostname |
-| `Port` | `int` | `22` | > 0 | Port numarası |
-| `Username` | `string` | — | Zorunlu | Kullanıcı adı |
-| `Password` | `string` | — | — | Şifre |
-| `PrivateKeyPath` | `string` | `""` | — | SSH private key dosya yolu |
-| `PrivateKeyPassphrase` | `string` | `""` | — | Private key şifresi |
-| `KnownHostFingerprint` | `string` | `""` | — | Sunucu parmak izi doğrulaması |
-| `TimeoutSeconds` | `int` | `300` | > 0 | Bağlantı timeout (saniye) |
-| `OperationTimeoutSeconds` | `int` | `600` | > 0 | Transfer operasyon timeout (saniye) |
-| `RetryCount` | `int` | `3` | ≥ 0 | Yeniden deneme sayısı |
-| `RetryDelaySeconds` | `int` | `10` | ≥ 0 | Denemeler arası bekleme (saniye) |
-| `Paths` | `dict<string,string>` | — | — | Profil adı → uzak dizin eşlemesi |
-
-**Paths anahtarları:** `CardBkm`, `CardMsc`, `CardVisa`, `ClearingBkm`, `ClearingMsc`, `ClearingVisa`
-
-**FTP Konfigürasyonu**
-
-| Alan | Tip | Default | Kural | Açıklama |
-|------|-----|---------|-------|----------|
-| `Host` | `string` | — | Zorunlu | FTP sunucu adresi |
-| `Port` | `int` | `21` | > 0 | Port numarası |
-| `Username` / `Password` | `string` | — | — | Kimlik bilgileri |
-| `UsePassive` | `bool` | `true` | — | Pasif mod |
-| `TimeoutSeconds` | `int` | `300` | > 0 | Timeout (saniye) |
-| `RetryCount` | `int` | `3` | ≥ 0 | Yeniden deneme sayısı |
-| `RetryDelaySeconds` | `int` | `10` | ≥ 0 | Bekleme (saniye) |
-| `Paths` | `dict<string,string>` | — | — | Profil adı → dizin eşlemesi |
-
-**Local Konfigürasyonu** (geliştirme/test ortamı için)
-
-```json
-"Local": {
-  "Paths": {
-    "CardBkm": {
-      "Current": "/override/path",
-      "Defaults": {
-        "Linux":   "/turkonay/PROD/PTS2TURKONAY/PAYCORE_REPORTS",
-        "MacOS":   "/Users/shared/turkonay/PROD/PTS2TURKONAY/PAYCORE_REPORTS",
-        "Windows": "\\\\turkonay\\\\PROD\\\\PTS2TURKONAY\\\\PAYCORE_REPORTS"
-      }
-    }
-  }
-}
-```
-
-`Current` boş bırakılırsa çalışan OS'a göre `Defaults` içindeki yol kullanılır.
-
-#### 19.2.2 Processing (İşleme)
-
-| Alan | Tip | Default | Kural | Açıklama |
-|------|-----|---------|-------|----------|
-| `BatchSize` | `int` | `50000` | > 0 | DB'ye tek seferde yazılacak satır sayısı |
-| `RetryBatchSize` | `int` | `10000` | > 0 | Başarısız batch'lerin retry boyutu |
-| `FailedRowMaxRetryCount` | `int` | `3` | ≥ 0 | Bir satır için maksimum retry sayısı |
-| `UseBulkInsert` | `bool` | `true` | — | `true` → EFCore BulkInsert; `false` → standart INSERT |
-| `EnableParallelProcessing` | `bool` | `true` | — | Paralel satır işleme |
-| `MaxDegreeOfParallelism` | `int` | `8` | > 0 | Maksimum paralel iş parçacığı; CPU çekirdek sayısını aşmaması önerilir |
-
-> **Performans ipucu:** Bellek baskısı varsa `BatchSize` düşürülmeli, `RetryBatchSize` ise `BatchSize`'ın ~yarısı olarak bırakılmalıdır.
-
-#### 19.2.3 Profiles (Profiller)
-
-Her profil bir dosya türünü tanımlar. Anahtar: `CardBkm`, `CardMsc`, `CardVisa`, `ClearingBkm`, `ClearingMsc`, `ClearingVisa`.
-
-| Alan | Tip | Açıklama |
-|------|-----|----------|
-| `Pattern` | `string (regex)` | Dosya adı doğrulama deseni. Eşleşmeyen dosyalar atlanır. |
-| `DefaultEncoding` | `string` | Dosya okuma karakter kodlaması (`"UTF-8"`, `"ISO-8859-9"` vb.) |
-| `FileExtensions` | `string[]` | İşlenecek uzantılar (`[".txt", ".dat"]`) |
-| `SourceDateSubfolderFormat` | `string` | Tarih bazlı alt klasör formatı — yalnızca Clearing profilleri (`"yyMMdd"`) |
-
-**Pattern Örnekleri**
-
-| Profil | Pattern | Örnek dosya adı |
-|--------|---------|----------------|
-| CardBkm / CardMsc / CardVisa | `^CARD_TRANSACTIONS_\d{8}_\d+$` | `CARD_TRANSACTIONS_20240101_001` |
-| ClearingBkm | `^BKMACC\d{8}\d+$` | `BKMACC2024010101` |
-| ClearingMsc | `^MSCACC\d{8}\d+$` | `MSCACC2024010101` |
-| ClearingVisa | `^VISAACC\d{8}\d+$` | `VISAACC2024010101` |
-
-**ParsingOptions**
+**Kart profilleri için imza karşılaştırması** (`CardDuplicateSignature`):
 
 | Alan | Açıklama |
 |------|----------|
-| `DetailLength` | Detay (D) satırının beklenen karakter uzunluğu |
-| `HeaderPrefix` | Header satırını belirleyen ilk karakter (`"H"`) |
-| `FooterPrefix` | Footer satırını belirleyen ilk karakter (`"F"`) |
-| `TreatFirstLineAsHeader` | `true` → ilk satır prefix kontrolü olmaksızın header kabul edilir |
-| `Records` | Kayıt tipi (`H`/`D`/`F`) → alan tanımları (her alan `Start` + `Length` ile sabit-uzunluklu satırdan okunur) |
+| `CardNo` | Kart numarası |
+| `Otc` | Orijinal işlem kodu |
+| `Ots` | Orijinal işlem tipi |
+| `CardHolderBillingAmount` | Kart sahibi fatura tutarı |
 
-**Kart Profilleri (D kaydı) — Temel Alanlar**
+Bu dört alan tüm kopyalarda aynıysa → **özdeş duplikat**.
 
-| Alan | Start | Length | Açıklama |
-|------|-------|--------|----------|
-| `TransactionDate` | 1 | 8 | İşlem tarihi (YYYYMMDD) |
-| `TransactionTime` | 9 | 9 | İşlem saati |
-| `CardNo` | 34 | 19 | Kart numarası (maskelenmiş) |
-| `OceanTxnGuid` | 53 | 16 | OCEAN işlem GUID |
-| `RRN` | 101 | 12 | Retrieval Reference Number |
-| `ARN` | 113 | 11 | Acquirer Reference Number |
-| `OriginalAmount` | 427 | 19 | Orijinal tutar |
-| `SettlementAmount` | 449 | 19 | Takas tutarı |
-| `BillingAmount` | 493 | 19 | Fatura tutarı |
-| `MerchantName` | 280 | 25 | Üye işyeri adı |
-| `MerchantId` | 339 | 15 | Üye işyeri kimliği |
-| `TerminalId` | 331 | 8 | Terminal kimliği |
-| `ResponseCode` | 369 | 2 | Yanıt kodu |
-| `IsSuccessfulTxn` | 371 | 1 | Başarılı mı? |
+**Clearing profilleri için:** `ParsedData` (tüm JSON) birebir eşleşiyorsa → özdeş duplikat.
 
-*(Tüm 60+ alan için `docs/temp/Parametre_Konfigurasyon_Rehberi.md` bölüm 2.3'e bakınız.)*
-
-**Clearing Profilleri Özet**
-
-| Profil | DetailLength | Ek Alanlar |
-|--------|-------------|------------|
-| ClearingBkm | 331 | `ClrNo`, `Arn`, `Rrn`, `IoDate`, `IoFlag`, `FunctionCode`, `ProcessCode`, `ControlStat`, `DisputeCode`, `SourceAmount`, `DestinationAmount`, `ReimbursementAmount`, `CardAcceptorId`, `FileId` |
-| ClearingMsc | 347 | ClearingBkm + `ReversalIndicator`, `AncillaryTransactionCode`, `AncillaryTransactionAmount` |
-| ClearingVisa | 321 | ClearingBkm – `FunctionCode`/`ProcessCode` + `TC`, `UsageCode` |
-
----
-
-### 19.3 Reconciliation (`vault_reconciliation.json`)
-
-**C# sınıfı:** `ReconciliationOptions` · **Section:** `"Reconciliation"`
-
-#### Consumer
-
-| Alan | Tip | Default | Açıklama |
-|------|-----|---------|----------|
-| `RespondToContext` | `bool` | `false` | `true` → MassTransit consumer mesajın tüketildiğini context'e bildirir; dead-letter queue yönetimini etkiler |
-
-#### Alert (E-posta Bildirimi)
-
-| Alan | Tip | Default | Kural | Açıklama |
-|------|-----|---------|-------|----------|
-| `Enabled` | `bool` | `true` | — | `false` → bildirim tamamen devre dışı |
-| `TemplateName` | `string` | `"ReconciliationAlertTemplate"` | — | DB'deki şablon adı |
-| `ToEmails` | `string[]` | `[]` | — | Alıcı e-posta adresleri |
-| `BatchSize` | `int` | `10000000` | > 0 | E-postaya dahil edilecek maksimum satır sayısı |
-| `IncludeFailed` | `bool` | `true` | — | Başarısız kayıtları bildirime dahil et |
-
-#### Evaluate (Değerlendirme)
-
-| Alan | Tip | Default | Kural | Açıklama |
-|------|-----|---------|-------|----------|
-| `ChunkSize` | `int` | `50000` | > 0 | Tek seferde yüklenen kayıt sayısı |
-| `ClaimTimeoutSeconds` | `int` | `1800` | > 0 | Claim kilidinin maksimum süresi (saniye). Bu süre dolmadan aynı kayıt başka worker tarafından işlenmez. |
-| `ClaimRetryCount` | `int` | `5` | > 0 | Claim alınamazsa yeniden deneme sayısı |
-| `OperationMaxRetries` | `int` | `5` | ≥ 0 | Başarısız operasyon için maksimum retry |
-
-> **Kritik:** Dağıtık ortamlarda `ClaimTimeoutSeconds`, beklenen en uzun işlem süresinden büyük olmalıdır; aksi halde aynı kayıt iki kez işlenebilir.
-
-#### Execute (Yürütme)
-
-| Alan | Tip | Default | Kural | Açıklama |
-|------|-----|---------|-------|----------|
-| `MaxEvaluations` | `int` | `500000` | > 0 | Tek execute tetiklemesinde işlenecek maksimum kayıt sayısı |
-| `LeaseSeconds` | `int` | `900` | > 0 | Execute kilitinin süresi (saniye); başka instance'ın aynı işi almasını önler |
-
----
-
-### 19.4 Archive (`vault_archive.json`)
-
-**C# sınıfı:** `ArchiveOptions` · **Section:** `"Archive"`
-
-#### Genel
-
-| Alan | Tip | Default | Açıklama |
-|------|-----|---------|----------|
-| `Enabled` | `bool` | `true` | `false` → arşivleme tamamen devre dışı; endpoint'ler 200 döner ama işlem yapmaz |
-| `AutoArchiveAfterExecute` | `bool` | `false` | `true` → reconciliation execute bittikten sonra otomatik arşivleme tetiklenir |
-
-#### Defaults (API Override Edilmeyenler)
-
-| Alan | Tip | Default | Kural | Açıklama |
-|------|-----|---------|-------|----------|
-| `PreviewLimit` | `int` | `5000` | > 0 | `/archive/preview` endpoint maksimum kayıt sayısı |
-| `MaxRunCount` | `int` | `50000` | > 0 | Tek archive çalışmasında işlenecek maksimum kayıt |
-| `ContinueOnError` | `bool` | `false` | — | `true` → hata olan dosya atlanır, sonrakine devam edilir |
-| `UseConfiguredBeforeDateOnly` | `bool` | `false` | — | `true` → API'den gelen `beforeDate` yok sayılır, yalnızca `RetentionDays` kullanılır |
-| `DefaultBeforeDateStrategy` | `string` | `"RetentionDays"` | — | `"RetentionDays"` veya `"MinLastUpdateAge"` |
-| `MaxRetryPerFile` | `int` | `1` | ≥ 0 | Dosya başına hata retry sayısı |
-| `RetryDelaySeconds` | `int` | `2` | ≥ 0 | Retry bekleme süresi (saniye) |
-
-#### Rules (Arşivleme Kuralları)
-
-| Alan | Tip | Default | Kural | Açıklama |
-|------|-----|---------|-------|----------|
-| `RetentionDays` | `int` | `90` | ≥ 0 | Son güncellemeden bu yana geçmesi gereken minimum gün. `0` = tüm terminal statülü kayıtlar aday |
-| `MinLastUpdateAgeHours` | `int` | `72` | ≥ 0 | Son güncellemeden bu yana geçmesi gereken minimum saat. `RetentionDays`'e ek güvenlik katmanı. |
-| `RetentionOnlyMode` | `bool` | `false` | — | `true` → soft delete (işaretleme), `false` → fiziksel silme |
-
-> **⚠️ Uyarı:** `RetentionOnlyMode: false` + `RetentionDays: 0` kombinasyonu tüm terminal statülü kayıtları fiziksel olarak siler.
-
-#### TerminalStatuses
-
-Arşivlemeye uygun sayılacak statüler. Yalnızca bu listedeki statüdeki kayıtlar arşivlenir.
-
-```json
-"TerminalStatuses": {
-  "IngestionFile":                   ["Success", "Failed"],
-  "IngestionFileLine":               ["Success", "Failed"],
-  "IngestionFileLineReconciliation": ["Success", "Failed"],
-  "ReconciliationEvaluation":        ["Completed", "Failed"],
-  "ReconciliationOperation":         ["Completed", "Failed", "Cancelled"],
-  "ReconciliationOperationExecution":["Completed", "Failed", "Skipped"],
-  "ReconciliationReview":            ["Approved", "Rejected", "Cancelled"],
-  "ReconciliationAlert":             ["Consumed", "Failed", "Ignored"]
-}
-```
-
-> **İpucu:** `InProgress` / `Processing` statüsü eklenmesi henüz tamamlanmamış işlemleri siler. Bu listeye yalnızca **gerçekten terminal (nihai)** statüler eklenmelidir.
-
----
-
-### 19.5 Uygulama Genel Konfigürasyonu (`vault_app_config.json`)
-
-**C# sınıfı:** `AppConfigOptions` · **Section:** `"AppConfig"`
-
-| Alan | Tip | Default | Açıklama |
-|------|-----|---------|----------|
-| `AuthBypass.Enabled` | `bool` | `false` | `true` → `Controllers` listesindeki controller'lar için JWT doğrulaması atlanır. **Üretimde `false` olmalıdır.** |
-| `AuthBypass.Controllers` | `string[]` | `[]` | Bypass uygulanacak controller isimleri |
-| `Database.EnableAutoMigrate` | `bool` | `true` | `true` → uygulama başlangıcında bekleyen EF migration'lar otomatik uygulanır |
-
----
-
-### 19.6 Reporting
-
-Reporting modülü için ayrı bir Vault konfigürasyon dosyası **bulunmamaktadır**. Davranış API sorgu parametreleri ile kontrol edilir.
-
-**Sayfalama Parametreleri** (tüm raporlama endpoint'lerinde geçerli):
-
-| Parametre | Tip | Default | Açıklama |
-|-----------|-----|---------|----------|
-| `Page` | `int` | `1` | Sayfa numarası (1'den başlar) |
-| `Size` | `int` | `20` | Sayfa başı kayıt sayısı |
-| `SortBy` | `string` | — | Sıralama alanı adı |
-| `SortDesc` | `bool` | `false` | `true` → azalan sıralama |
-
-**Raporlama Kategorileri:**
-
-| Endpoint Grubu | Açıklama |
-|---------------|----------|
-| `/reporting/ingestion` | Dosya yükleme özet ve detay raporları |
-| `/reporting/recon-process` | Mutabakat süreç istatistikleri |
-| `/reporting/recon-content` | Mutabakat içerik detayları (eşleşen/eşleşmeyen) |
-| `/reporting/recon-advanced` | İleri seviye mutabakat analizleri |
-| `/reporting/archive` | Arşivleme geçmişi ve özet |
-
-Raporlama sorguları DB view'larına `DbContext.Set<T>()` ile erişir; view tanımları migration dosyalarında bulunur, ayrı konfigürasyon gerektirmez.
-
----
-
-### 19.7 Doğrulama Kuralları Özeti
-
-| Bölüm | Alan | Kural | Hata Sınıfı |
-|-------|------|-------|-------------|
-| FileIngestion | `Connections` | Zorunlu | `FileIngestionConfigConnectionsMissingException` |
-| FileIngestion | `Profiles` | Zorunlu | `FileIngestionConfigProfilesMissingException` |
-| FileIngestion | `Connections.Source` | Zorunlu | `FileIngestionConfigSourceMissingException` |
-| FileIngestion | `Connections.Target` | Zorunlu | `FileIngestionConfigTargetMissingException` |
-| FileIngestion | `Connections.*.Protocol` | Zorunlu, boş olamaz | `FileIngestionConfigProtocolMissingException` |
-| Processing | `BatchSize` | > 0 | `FileIngestionProcessingBatchSizeInvalidException` |
-| Processing | `RetryBatchSize` | > 0 | `FileIngestionProcessingRetryBatchSizeInvalidException` |
-| Processing | `MaxDegreeOfParallelism` | > 0 | `FileIngestionProcessingMaxParallelismInvalidException` |
-| SFTP | `TimeoutSeconds` | > 0 | `FileIngestionSftpTimeoutInvalidException` |
-| SFTP | `OperationTimeoutSeconds` | > 0 | `FileIngestionSftpOperationTimeoutInvalidException` |
-| SFTP | `RetryCount` | ≥ 0 | `FileIngestionSftpRetryCountInvalidException` |
-| FTP | `TimeoutSeconds` | > 0 | `FileIngestionFtpTimeoutInvalidException` |
-| Reconciliation.Evaluate | `ChunkSize` | > 0 | `ReconciliationEvaluateChunkSizeInvalidException` |
-| Reconciliation.Evaluate | `ClaimTimeoutSeconds` | > 0 | `ReconciliationEvaluateClaimTimeoutInvalidException` |
-| Reconciliation.Evaluate | `ClaimRetryCount` | > 0 | `ReconciliationEvaluateClaimRetryInvalidException` |
-| Reconciliation.Evaluate | `OperationMaxRetries` | ≥ 0 | `ReconciliationEvaluateOperationMaxRetriesInvalidException` |
-| Reconciliation.Execute | `MaxEvaluations` | > 0 | `ReconciliationExecuteMaxEvaluationsInvalidException` |
-| Reconciliation.Execute | `LeaseSeconds` | > 0 | `ReconciliationExecuteLeaseSecondsInvalidException` |
-| Reconciliation.Alert | `BatchSize` | > 0 | `ReconciliationAlertBatchSizeInvalidException` |
-| Archive.Defaults | `PreviewLimit` | > 0 | `ArchivePreviewLimitInvalidException` |
-| Archive.Defaults | `MaxRunCount` | > 0 | `ArchiveMaxRunCountInvalidException` |
-| Archive.Defaults | `MaxRetryPerFile` | ≥ 0 | `ArchiveMaxRetryPerFileInvalidException` |
-| Archive.Defaults | `RetryDelaySeconds` | ≥ 0 | `ArchiveRetryDelaySecondsInvalidException` |
-| Archive.Rules | `RetentionDays` | ≥ 0 | `ArchiveRetentionDaysInvalidException` |
-| Archive.Rules | `MinLastUpdateAgeHours` | ≥ 0 | `ArchiveMinUpdateAgeInvalidException` |
-
-> Detaylı açıklamalar ve tam alan haritaları için: `docs/temp/Parametre_Konfigurasyon_Rehberi.md`
-
----
-
-## 20. Consumer Yapısı, Tetikleyiciler ve Alert/Notification Mekanizması
-
-### 20.1 Genel Mimari — Üç Tetikleme Katmanı
-
-Sistem **üç** farklı tetikleme yoluna sahiptir:
+**Yapılan işlem:**
 
 ```
-┌──────────────────────────────────────────────────────────────────────┐
-│                      Tetikleme Katmanları                            │
-│                                                                      │
-│  1) Scheduler (Otomatik — Hangfire Cron)                             │
-│     backend.scheduler → JobSchedulerService                          │
-│     → CronJob kaydından IJobTrigger.TriggerAsync()                   │
-│     → MassTransit IBus → RabbitMQ SerialQueue                        │
-│                                                                      │
-│  2) MassTransit Consumer (Asenkron)                                  │
-│     RabbitMQ: Card.FileIngestionAndReconciliation.SerialQueue        │
-│     → FileIngestionAndReconciliationConsumer                         │
-│     → MediatR Command Pipeline                                       │
-│                                                                      │
-│  3) HTTP API (Senkron, manuel tetikleme)                             │
-│     POST /FileIngestion, /Reconciliation/Evaluate, /Execute vb.      │
-│     → MediatR Command Pipeline (aynı pipeline)                       │
-└──────────────────────────────────────────────────────────────────────┘
-```
+rows[0]       → DuplicateStatus = Primary,    ReconciliationStatus = Ready (işlenir)
+rows[1..n]    → DuplicateStatus = Secondary,  ReconciliationStatus = Failed (işlenmez)
 
-Tüm yollar sonuçta aynı **MediatR command/query pipeline**'ını çalıştırır.
-
----
-
-### 20.2 Scheduler Katmanı (backend.scheduler — Hangfire)
-
-#### 20.2.1 Genel Yapı
-
-`backend.scheduler` bağımsız bir .NET servis projesidir. **Hangfire** kullanarak cron job'ları zamanlar; her tetiklemede ilgili `IJobTrigger.TriggerAsync()` çağrılır.
-
-```
-Hangfire (Cron tetikleyici)
-    │
-    ▼
-JobSchedulerService.ScheduleAsync()
-    │
-    ├─ DB'den tüm CronJob kayıtları yüklenir
-    ├─ RecordStatus=Active olmayanlar → RecurringJob.RemoveIfExists()
-    └─ Active olanlar:
-         ├─ CronJobType=QueueMessage → JobFactory() → IJobTrigger → RecurringJob.AddOrUpdate()
-         └─ CronJobType=Http → IJobHttpInvoker → RecurringJob.AddOrUpdate()
-```
-
-**JobFactory mekanizması:** `JobFactory(cronJob.Name, cronJob.Module)` çağrısı, `Type.GetType("LinkPara.Scheduler.API.Jobs.{Module}.{Name}")` ile ilgili job sınıfını reflection ile bulur ve DI container'dan inject ederek örnek oluşturur.
-
-Tüm Card job'ları için → `LinkPara.Scheduler.API.Jobs.Card.FileIngestionAndReconciliation.<JobAdı>`
-
-**Saat dilimi:** Tüm cron ifadeleri **Turkey Standard Time (UTC+3)** olarak değerlendirilir.
-
-#### 20.2.2 CronJob Veri Modeli (`core.cron_job` tablosu)
-
-| Alan | Tip | Açıklama |
-|------|-----|----------|
-| `Id` | `uuid` | Birincil anahtar |
-| `Name` | `string` | Job sınıf adıyla birebir eşleşmeli (örn. `RemoteCardBkmJob`) |
-| `CronExpression` | `string` | Standart cron formatı (`dakika saat gün ay haftaGünü`) |
-| `Description` | `string` | İnsan okunabilir açıklama |
-| `Module` | `string` | Namespace modül adı (örn. `Card`) |
-| `CronJobType` | `enum` | `QueueMessage` → MassTransit kuyruğu; `Http` → HTTP çağrısı |
-| `HttpType` | `enum` | `None`, `Get`, `Post` vb. (yalnızca Http tipinde geçerli) |
-| `Uri` | `string?` | Http tipinde hedef URL |
-| `RecordStatus` | `enum` | `Active` → zamanlanır; diğerleri → kaldırılır |
-
-#### 20.2.3 Card Job Sınıf Hiyerarşisi
-
-```
-IJobTrigger
-└── FileIngestionAndReconciliationJobBase (abstract)
-        ├── FileIngestionAndReconciliationPipelineJobBase (abstract)
-        │    │  TriggerAsync() → 3 mesaj sırayla kuyruğa atar:
-        │    │    1. IngestFile (ilgili template)
-        │    │    2. EvaluateDefault
-        │    │    3. ExecuteDefault
-        │    │
-        │    ├── RemoteCardBkmJob
-        │    ├── RemoteCardMscJob
-        │    ├── RemoteCardVisaJob
-        │    ├── RemoteClearingBkmJob
-        │    ├── RemoteClearingMscJob
-        │    ├── RemoteClearingVisaJob
-        │    ├── LocalCardBkmJob
-        │    ├── LocalCardMscJob
-        │    ├── LocalCardVisaJob
-        │    ├── LocalClearingBkmJob
-        │    ├── LocalClearingMscJob
-        │    └── LocalClearingVisaJob
-        │
-        └── FileIngestionAndReconciliationSingleStepJobBase (abstract)
-             │  TriggerAsync() → tek mesaj kuyruğa atar
-             │
-             ├── EvaluateDefaultJob
-             └── ExecuteDefaultJob
-```
-
-> **Pipeline job'ları** (Remote/Local …) tek bir Hangfire tetiklemesinde **üç mesajı** sırayla kuyruğa ekler: `IngestFile → Evaluate → Execute`. Kuyruğun serial yapısı (`PrefetchCount=1`, `ConcurrentMessageLimit=1`) bu üç adımın sıralı işlenmesini garantiler.
-
-#### 20.2.4 Aktif Zamanlamalar (Üretim)
-
-| Job Adı | Cron | Saat (TR) | Açıklama |
-|---------|------|-----------|----------|
-| `RemoteCardBkmJob` | `15 1 * * *` | 01:15 | BKM kart dosyası → Ingest + Evaluate + Execute |
-| `RemoteCardVisaJob` | `45 15 * * *` | 15:45 | Visa kart dosyası → Ingest + Evaluate + Execute |
-| `RemoteCardMscJob` | `45 19 * * *` | 19:45 | MSC kart dosyası → Ingest + Evaluate + Execute |
-| `RemoteClearingBkmJob` | `15 16 * * *` | 16:15 | BKM takas dosyası → Ingest + Evaluate + Execute |
-| `RemoteClearingVisaJob` | `45 15 * * *` | 15:45 | Visa takas dosyası → Ingest + Evaluate + Execute |
-| `RemoteClearingMscJob` | `45 19 * * *` | 19:45 | MSC takas dosyası → Ingest + Evaluate + Execute |
-| `EvaluateDefaultJob` | `15 23 * * *` | 23:15 | Gün sonu kontrol Evaluate |
-| `ExecuteDefaultJob` | `15 0 * * *` | 00:15 | Gün sonu kontrol Execute |
-
-> **Devre dışı Local Job'lar:** `LocalCard*` ve `LocalClearing*` job kayıtları migration dosyasında `IF 1=2 THEN` bloğu içinde tanımlıdır — yani **hiçbir zaman çalıştırılmaz**. Yalnızca local geliştirme/test için elle aktive edilmelidir.
-
-#### 20.2.5 Mesaj Payload Fabrikası (`FileIngestionAndReconciliationPayloadFactory`)
-
-Her job template için hazır payload üretir:
-
-| Template | Type | FileSourceType | FileType | FileContentType |
-|----------|------|---------------|----------|----------------|
-| `IngestRemoteCardBkm` | IngestFile | Remote | Card | Bkm |
-| `IngestRemoteCardMsc` | IngestFile | Remote | Card | Msc |
-| `IngestRemoteCardVisa` | IngestFile | Remote | Card | Visa |
-| `IngestRemoteClearingBkm` | IngestFile | Remote | Clearing | Bkm |
-| `IngestRemoteClearingMsc` | IngestFile | Remote | Clearing | Msc |
-| `IngestRemoteClearingVisa` | IngestFile | Remote | Clearing | Visa |
-| `IngestLocalCard*` | IngestFile | Local | Card | Bkm/Msc/Visa |
-| `IngestLocalClearing*` | IngestFile | Local | Clearing | Bkm/Msc/Visa |
-| `EvaluateDefault` | Evaluate | — | — | — |
-| `ExecuteDefault` | Execute | — | — | — |
-
-`EvaluateDefault` için üretilen payload:
-```json
-{
-  "Type": 2,
-  "InitiatedByUserId": "<scheduler-app-user-id>",
-  "EvaluateRequest": {
-    "IngestionFileIds": [],
-    "Options": {
-      "ChunkSize": 50000,
-      "ClaimTimeoutSeconds": 1800,
-      "ClaimRetryCount": 5,
-      "OperationMaxRetries": 5
-    }
-  }
-}
-```
-
-`ExecuteDefault` için:
-```json
-{
-  "Type": 3,
-  "InitiatedByUserId": "<scheduler-app-user-id>",
-  "ExecuteRequest": {
-    "GroupIds": [],
-    "EvaluationIds": [],
-    "OperationIds": [],
-    "Options": {
-      "MaxEvaluations": 500000,
-      "LeaseSeconds": 900
-    }
-  }
-}
-```
-
-**`UseStringEnums`:** `false` (default) → enum değerleri **integer** olarak gönderilir. `true` → string. `FlexibleEnumJsonConverter` her ikisini de kabul eder.
-
-**`InitiatedByUserId`:** Scheduler'ın Application User kimliği (`IApplicationUserService.ApplicationUserId`) otomatik eklenir. Bu sayede tüm audit kayıtları scheduler kullanıcısına atanır.
-
-**Zaman aşımı:** Her job tetiklemesinde `CancellationTokenSource(30 saniye)` kullanılır. 30 saniye içinde kuyruk mesajı gönderilmezse işlem iptal edilir (kuyruğa yazma hatası).
-
----
-
-### 20.3 MassTransit Consumer — `FileIngestionAndReconciliationConsumer`
-
-**Sınıf:** `LinkPara.Card.Infrastructure.Consumers.FileIngestionAndReconciliation.FileIngestionAndReconciliationConsumer`  
-**Arayüz:** `IConsumer<FileIngestionAndReconciliationJobRequest>` (MassTransit)
-
-#### Kuyruk Konfigürasyonu
-
-| Parametre | Değer | Açıklama |
-|-----------|-------|----------|
-| **Kuyruk adı** | `Card.FileIngestionAndReconciliation.SerialQueue` | RabbitMQ queue adı |
-| **PrefetchCount** | `1` | Aynı anda en fazla 1 mesaj alınır |
-| **ConcurrentMessageLimit** | `1` | Aynı anda en fazla 1 mesaj işlenir |
-| **x-single-active-consumer** | `true` | Birden fazla instance varsa yalnızca biri aktif tüketir |
-| **Deserializer** | `UseRawJsonDeserializer` | Ham JSON gövde; standart MassTransit zarf formatı kullanılmaz |
-
-> **Kritik tasarım:** `PrefetchCount=1` + `ConcurrentMessageLimit=1` + `x-single-active-consumer=true` kombinasyonu, Scheduler'ın kuyruğa koyduğu IngestFile → Evaluate → Execute mesajlarının **kesinlikle sıralı ve tekil** işlenmesini garantiler. Birden fazla pod çalışsa bile yalnızca bir pod bu kuyruktan mesaj alır.
-
-#### İş Tipi Yönlendirmesi
-
-```
-Type = IngestFile  →  FileIngestionCommand    → FileIngestionOrchestrator
-Type = Evaluate    →  EvaluateCommand         → EvaluateService
-Type = Execute     →  ExecuteCommand          → ExecuteService
-Type = (bilinmeyen) → Hata yanıtı (IsSuccess=false)
-```
-
-#### Mesaj Yapısı
-
-```json
-{
-  "Type": 1,
-  "InitiatedByUserId": "user-id",
-  "IngestionRequest": {
-    "FileSourceType": 1,
-    "FileType": 1,
-    "FileContentType": 1,
-    "FilePath": null
-  },
-  "EvaluateRequest": null,
-  "ExecuteRequest": null
-}
-```
-
-| Alan | Açıklama |
-|------|----------|
-| `Type` | İş tipi: `1=IngestFile`, `2=Evaluate`, `3=Execute`. String veya integer kabul edilir. |
-| `InitiatedByUserId` | Audit için kullanıcı kimliği. Boşsa header'lardan okunur (`InitiatedByUserId`, `UserId`, `user-id`, `x-user-id`). |
-| `IngestionRequest` | `Type=IngestFile` için zorunlu. `FilePath` boşsa Vault konfigürasyonundaki profil yolu kullanılır. |
-| `EvaluateRequest` | `Type=Evaluate` için opsiyonel; `null` gelirse defaults uygulanır. `IngestionFileIds=[]` → tüm bekleyen satırlar. |
-| `ExecuteRequest` | `Type=Execute` için opsiyonel; `null` gelirse defaults uygulanır. `GroupIds/EvaluationIds/OperationIds=[]` → tüm bekleyen operasyonlar. |
-
-#### Yanıt Yapısı
-
-```json
-{
-  "Type": 1,
-  "IsSuccess": true,
-  "ErrorMessage": "",
-  "IngestionResponses": [{ "FileId": "guid", ... }],
-  "EvaluateResponse": null,
-  "ExecuteResponse": null
-}
-```
-
-**`IsSuccess` başarı koşulları:**
-
-| Tip | Koşul |
-|-----|-------|
-| `IngestFile` | `responses.Count > 0 && responses.All(x => x.FileId != Guid.Empty)` |
-| `Evaluate` | `response.EvaluationRunId != Guid.Empty` |
-| `Execute` | `response.TotalAttempted >= 0` |
-
-#### `RespondToContext` Davranışı
-
-`Reconciliation.Consumer.RespondToContext`:
-- `false` (default) → fire-and-forget, yanıt gönderilmez.
-- `true` → `context.RespondAsync(response)` çağrılır; publisher yanıtı bekleyebilir.
-
-#### Audit Kullanıcısı Yönetimi
-
-Consumer her mesajda mevcut `AuditUserId`'yi saklar → mesajdaki/header'daki userId set eder → `finally` bloğunda eski değeri geri yükler. Tüm DB kayıtları doğru kullanıcıya atanır.
-
-#### Hata Yönetimi
-
-Unhandled exception → MassTransit'e yayılır → `x-single-active-consumer` nedeniyle DLQ'ya (dead-letter queue) taşınır, yeniden kuyruğa alınmaz.
-
----
-
-### 20.4 HTTP API Tetikleyicileri (Senkron, Manuel)
-
-| Endpoint | Method | Policy | Tetiklenen Komut |
-|----------|--------|--------|-----------------|
-| `POST /FileIngestion/{fileType}/{sourceType}` | HTTP | `ReadAll` | `FileIngestionCommand` |
-| `POST /FileIngestion` (body) | HTTP | `ReadAll` | `FileIngestionCommand` |
-| `POST /Reconciliation/Evaluate` | HTTP | `Create` | `EvaluateCommand` |
-| `POST /Reconciliation/Operations/Execute` | HTTP | `Create` | `ExecuteCommand` |
-| `POST /Reconciliation/Reviews/Approve` | HTTP | `Update` | `ApproveCommand` |
-| `POST /Reconciliation/Reviews/Reject` | HTTP | `Update` | `RejectCommand` |
-| `GET /Reconciliation/Reviews/Pending` | HTTP | `ReadAll` | `GetPendingReviewsQuery` |
-| `GET /Reconciliation/Alerts` | HTTP | `ReadAll` | `GetAlertsQuery` |
-| `POST /Archive/Preview` | HTTP | `ReadAll` | `PreviewArchiveQuery` |
-| `POST /Archive/Run` | HTTP | `Delete` | `RunArchiveCommand` |
-
----
-
-### 20.5 Tam Tetikleme Akışı (Scheduler'dan Sonuca)
-
-```
-[Hangfire Cron — Turkey Standard Time]
-   Örn: 01:15 → RemoteCardBkmJob tetiklenir
-           │
-           ▼
-   FileIngestionAndReconciliationPipelineJobBase.TriggerAsync()
-           │
-           ├─ [1] SendAsync(IngestRemoteCardBkm)
-           │       → MassTransit IBus → queue:Card...SerialQueue
-           │
-           ├─ [2] SendAsync(EvaluateDefault)
-           │       → MassTransit IBus → queue:Card...SerialQueue
-           │
-           └─ [3] SendAsync(ExecuteDefault)
-                   → MassTransit IBus → queue:Card...SerialQueue
-
-[RabbitMQ: Card.FileIngestionAndReconciliation.SerialQueue]
-   PrefetchCount=1, x-single-active-consumer=true
-           │
-           ▼ (mesaj 1)
-   FileIngestionAndReconciliationConsumer → IngestFile
-           → FileIngestionOrchestrator
-               → SFTP'den dosya listele/indir
-               → Parse (fixed-width, profil konfigürasyonuna göre)
-               → DB'ye bulk insert (IngestionFile, IngestionFileLine)
-               → FileId döndür
-           │
-           ▼ (mesaj 2)
-   FileIngestionAndReconciliationConsumer → Evaluate
-           → EvaluatorResolver.Resolve(contentType) → BkmEvaluator / VisaEvaluator / MscEvaluator
-           → Her satır için ContextBuilder → eşleşme sorgusu
-           → Operasyon üret → ReconciliationOperation kayıtları
-           → Uyuşmazlık/hata → ReconciliationAlert (Pending) oluştur
-           │
-           ▼ (mesaj 3)
-   FileIngestionAndReconciliationConsumer → Execute
-           → OperationExecutor: Her operasyona Lease kilidi al
-           → Operasyonu yürüt → ReconciliationOperationExecution kaydı
-           → MaxRetries aşıldıysa → ReconciliationAlert (Pending) oluştur
-           → AutoArchiveAfterExecute=true ise → ArchiveService tetikle
+Tüm satırlar aynı DuplicateGroupId'yi paylaşır.
 ```
 
 ---
 
-### 20.6 Alert Oluşturma Mekanizması
+### 21.5 Çakışmalı Duplikat (Conflicting) — Conflict Atama
 
-Alert kayıtları (`reconciliation.reconciliation_alert` tablosu) otomatik üretilir:
+**Koşul:** Aynı `DuplicateDetectionKey`'e sahip satırlar var, ancak **imzaları birbirinden farklı** (kart tutarları veya işlem kodları uyuşmuyor / clearing JSON içerikleri farklı).
 
-- **Evaluate** → Uyuşmazlık, hata veya dikkat gerektiren durumda `ReconciliationAlert` → `Pending` statüsüyle oluşturulur.
-- **Execute** → Bir operasyon `MaxRetries` sayısını aştığında yeni bir `Alert` → `Pending` oluşturulur.
-
-#### Alert Statü Geçişleri
+**Yapılan işlem:**
 
 ```
-Pending ────────────────────────────────────────────┐
-   │                                                 │
-   │  AlertService.ExecuteAsync() alır               │
-   ▼                                                 │
-Processing ── e-posta başarılı ──▶ Consumed          │
-   │                                                 │
-   └── e-posta hatası ──────────▶ Failed ────────────┘
-                                  (sonraki çalışmada tekrar alınır)
+rows[0..n]    → DuplicateStatus = Conflict,   ReconciliationStatus = Failed (tümü işlenmez)
 
-Ignored  ← Manuel "yoksay" işlemi
-```
-
-| Statü | Açıklama |
-|-------|----------|
-| `Pending` | Gönderilmeyi bekliyor |
-| `Processing` | `AlertService` tarafından kilitlendi, gönderim devam ediyor |
-| `Consumed` | E-posta başarıyla gönderildi |
-| `Failed` | Gönderim başarısız; `Message` alanına `" | <hata>"` eklenerek biriktirildi |
-| `Ignored` | Manuel yoksayıldı |
-
----
-
-### 20.7 AlertService — Çalışma Mekanizması
-
-**Tetiklenme:** `GET /Reconciliation/Alerts` endpoint'i veya iç servis çağrısıyla.
-
-#### Adım Adım Akış
-
-```
-AlertService.ExecuteAsync()
-│
-├─ 1. Alert.Enabled=false → dur
-│
-├─ 2. ToEmails boşsa uyarı logla ve dur
-│
-├─ 3. DB: Pending (+ IncludeFailed=true ise Failed) alertler
-│      → OrderBy CreateDate, Take(BatchSize)
-│
-├─ 4. Toplu yükle: Evaluation, Operation, OperationExecution
-│      (N+1 sorgu yok — tek sorgu + gruplama)
-│
-└─ 5. Her alert için:
-       ├─ TryMarkAsProcessingAsync()  ← Optimistic Lock
-       │   WHERE Id=? AND Status IN (Pending/Failed)
-       │   rows=0 → başka worker aldı → atla
-       │
-       ├─ BuildTemplateData() → şablon değişkenleri
-       │
-       ├─ NotificationEmailService.SendEmailAsync()
-       │   → IBus → exchange:Notification.SendEmail
-       │
-       ├─ MarkAsConsumedAsync()  (başarı)
-       └─ MarkAsFailedAsync()   (hata — mesaj biriktirilir)
-```
-
-**Optimistic Lock:** `TryMarkAsProcessingAsync()` birden fazla AlertService instance'ının aynı alert'i iki kez göndermesini önler:
-```sql
-UPDATE reconciliation_alert
-SET alert_status = 'Processing'
-WHERE id = ? AND alert_status IN ('Pending', 'Failed')
--- rows=0 ise başka instance aldı, atla
+Tüm satırlar aynı DuplicateGroupId'yi paylaşır.
 ```
 
 ---
 
-### 20.8 NotificationEmailService — E-posta Gönderimi
+### 21.6 Evaluate Adımında DuplicateStatus'un Etkisi
 
-```
-AlertService
-    └─ NotificationEmailService.SendEmailAsync(templateName, templateData, toEmail)
-           └─ MassTransit IBus → exchange: Notification.SendEmail
-                  └─ Notification Mikro Servisi
-                         └─ E-posta Provider (SMTP / SendGrid vb.)
-```
+`BkmEvaluator.TryHandleDuplicateRow()` her satırı evaluate etmeden önce bu alanı kontrol eder:
 
-**`toEmail`:** Birden fazla alıcı `"mail1@x.com;mail2@x.com"` formatında birleştirilir.
+| DuplicateStatus | Evaluate Davranışı | Sonuç |
+|----------------|-------------------|-------|
+| `null` / `Unique` | Duplicate kontrolü geçildi → normal akış devam eder | — |
+| `Primary` | Uyarı alert'i üretilir (`C2`) ama satır **evaluate akışına devam eder** (return false) | RaiseAlert + akış sürer |
+| `Secondary` | Uyarı alert'i üretilir (`C2`) ve satır **durdurulur** (return true) | RaiseAlert + erken çıkış |
+| `Conflict` | Uyarı alert'i üretilir (`C2`) ve satır **durdurulur** (return true) | RaiseAlert + erken çıkış |
 
-#### E-posta Şablonu Değişkenleri
-
-| Değişken | Kaynak | Açıklama |
-|----------|--------|----------|
-| `emailsubject` | Lokalizasyon | Konu başlığı |
-| `alerttype` | `ReconciliationAlert.AlertType` | Uyarı tipi |
-| `alertseverity` | `ReconciliationAlert.Severity` | Önem derecesi |
-| `raisedat` | Anlık zaman | Oluşturulma zamanı |
-| `summary` | Hesaplanan | `AlertType | Severity | EvaluationStatus | OperationCode | Execution` özeti |
-| `evaluationstatus` | `ReconciliationEvaluation.Status` | Değerlendirme durumu |
-| `evaluationmessage` | `ReconciliationEvaluation.Message` | Mesaj |
-| `operationcode` | `ReconciliationOperation.Code` | Operasyon kodu |
-| `operationstatus` | `ReconciliationOperation.Status` | Operasyon durumu |
-| `lastexecutionstatus` | Son `OperationExecution.Status` | Son yürütme durumu |
-| `lastresultcode` | Son execution `ResultCode` | Sonuç kodu |
-| `lasterrormessage` | Son execution `ErrorMessage` | Hata mesajı |
-| `detailmessage` | Hesaplanan | Alert + Evaluation + Operation + Execution geçmişinin tam metni |
-
-**`detailmessage`** sırasıyla şunları içerir:
-1. Alert: Id, AlertType, Severity, GroupId, FileLineId, Message
-2. Evaluation: Id, Status, Message, CreatedOperationCount
-3. Operation: Code, Status, Note, Branch, LeaseOwner, RetryCount, MaxRetries, NextAttemptAt, LastError
-4. Son Execution: AttemptNumber, Status, StartedAt, FinishedAt, ResultCode, ErrorCode, RequestPayload (max 1000 karakter), ResponsePayload (max 1000 karakter)
-5. Tüm Execution geçmişi (attempt numarasına göre sıralı)
+> **Primary neden devam eder?** Özdeş kopyalar durumunda birincil satır gerçek ve geçerli işlemi temsil eder; Secondary'ler zaten `Failed` olarak işaretlenmiştir. Primary'nin mutabakat akışını tamamlaması beklenir — ancak operasyon ekibi bir uyarı alır.
 
 ---
 
-### 20.9 Alert Veri Modeli
+### 21.7 Özet Yaşam Döngüsü
 
 ```
-ReconciliationAlert
-├── Id (Guid)
-├── FileLineId (Guid)       — hangi ingestion satırı için üretildi
-├── GroupId (Guid)          — Evaluate çalışma grubu kimliği
-├── EvaluationId (Guid)     — ilgili değerlendirme
-├── OperationId (Guid)      — ilgili operasyon (Empty ise operasyon yok)
-├── AlertType (string)      — uyarı tipi
-├── Severity (string)       — önem derecesi
-├── Message (string)        — açıklama / birikmiş hata geçmişi
-├── AlertStatus (enum)      — Pending | Processing | Consumed | Failed | Ignored
-├── CreateDate
-└── UpdateDate / LastModifiedBy (audit)
+[FileIngestion — parse sonrası]
+         │
+         ├─ DuplicateDetectionKey grupları analiz edilir
+         │
+         ├─ Grup tüm kopya → özdeş imza
+         │       ├─ rows[0]   → DuplicateStatus=Primary,    ReconciliationStatus=Ready
+         │       └─ rows[1..] → DuplicateStatus=Secondary,  ReconciliationStatus=Failed
+         │
+         └─ Grup içinde farklı imza var
+                 └─ rows[*]   → DuplicateStatus=Conflict,   ReconciliationStatus=Failed
+
+[Evaluate — BkmEvaluator.TryHandleDuplicateRow()]
+         │
+         ├─ Unique / null   → geç (kontrol yok)
+         ├─ Primary         → RaiseAlert(C2) üret, akışa devam et
+         ├─ Secondary       → RaiseAlert(C2) üret, ERKEN ÇIK
+         └─ Conflict        → RaiseAlert(C2) üret, ERKEN ÇIK
+
+[Alert işleme]
+         └─ AlertService → e-posta bildirimi (Pending → Consumed)
 ```
+
+
 
 ---
 
-### 20.10 EventBus (RabbitMQ) Konfigürasyonu
+## 22. Raporlama Referans Kilavuzu
 
-Her iki proje de (`backend.card` ve `backend.scheduler`) aynı Vault secret'ından RabbitMQ bağlantı bilgisini okur:
+> Bu bolumun tam icerigi: [`docs/REPORTING_REFERENCE.md`](docs/REPORTING_REFERENCE.md)
 
-```json
-// Vault: SharedSecrets / EventBusSettings
-{
-  "Host": "rabbitmq.internal",
-  "Username": "card-service",
-  "Password": "secret"
-}
-```
 
-Yerel geliştirme için `appsettings.Development.json`:
-```json
-{
-  "LocalConfiguration": {
-    "IsEnabled": true,
-    "EventBusSettings": {
-      "Host": "localhost",
-      "Username": "guest",
-      "Password": "guest"
-    }
-  }
-}
-```
+> **Hedef kitle:** Raporları yorumlayacak ekip üyeleri (finans, operasyon, ürün)  
+> **Güncelleme tarihi:** Nisan 2026  
+> **Kaynak:** `reporting` şemasındaki view'lar — her rapor bir veritabanı view'ına dayalıdır ve salt okunurdur.
 
-#### Hangfire Depolama
+---
 
-Hangfire job durumları aynı Scheduler DB'sinde `core` şemasında tutulur.
+### İçindekiler
 
-| DB | Schema | Açıklama |
-|----|--------|----------|
-| PostgreSQL | `core` | `PostgreSqlStorageOptions.SchemaName = "core"` |
-| MSSQL | `Core` | `SqlServerStorageOptions.SchemaName = "Core"` |
+- [Genel Kavramlar](#genel-kavramlar)
+- [A. File Ingestion Raporları](#a-file-ingestion-raporları)
+  - [A1. Ingestion File Overview](#a1-ingestion-file-overview)
+  - [A2. Ingestion File Quality](#a2-ingestion-file-quality)
+  - [A3. Ingestion Daily Summary](#a3-ingestion-daily-summary)
+  - [A4. Ingestion Network Matrix](#a4-ingestion-network-matrix)
+  - [A5. Ingestion Exception Hotspots](#a5-ingestion-exception-hotspots)
+- [B. Reconciliation Process Raporları](#b-reconciliation-process-raporları)
+  - [B1. Recon Daily Overview](#b1-recon-daily-overview)
+  - [B2. Recon Open Items](#b2-recon-open-items)
+  - [B3. Recon Open Item Aging](#b3-recon-open-item-aging)
+  - [B4. Recon Manual Review Queue](#b4-recon-manual-review-queue)
+  - [B5. Recon Alert Summary](#b5-recon-alert-summary)
+- [C. Reconciliation Content & Financial Raporları](#c-reconciliation-content--financial-raporları)
+  - [C1. Recon Live Card Content Daily](#c1-recon-live-card-content-daily)
+  - [C2. Recon Live Clearing Content Daily](#c2-recon-live-clearing-content-daily)
+  - [C3. Recon Archive Card Content Daily](#c3-recon-archive-card-content-daily)
+  - [C4. Recon Archive Clearing Content Daily](#c4-recon-archive-clearing-content-daily)
+  - [C5. Recon Content Daily](#c5-recon-content-daily)
+  - [C6. Recon Clearing ControlStat Analysis](#c6-recon-clearing-controlstat-analysis)
+  - [C7. Recon Financial Summary](#c7-recon-financial-summary)
+  - [C8. Recon Response Status Analysis](#c8-recon-response-status-analysis)
+- [D. Archive Raporları](#d-archive-raporları)
+  - [D1. Archive Run Overview](#d1-archive-run-overview)
+  - [D2. Archive Eligibility](#d2-archive-eligibility)
+  - [D3. Archive Backlog Trend](#d3-archive-backlog-trend)
+  - [D4. Archive Retention Snapshot](#d4-archive-retention-snapshot)
+- [E. Advanced Reconciliation Raporları](#e-advanced-reconciliation-raporları)
+  - [E1. File Recon Summary](#e1-file-recon-summary)
+  - [E2. Recon Match Rate Trend](#e2-recon-match-rate-trend)
+  - [E3. Recon Gap Analysis](#e3-recon-gap-analysis)
+  - [E4. Unmatched Transaction Aging](#e4-unmatched-transaction-aging)
+  - [E5. Network Recon Scorecard](#e5-network-recon-scorecard)
+- [Filtre Referansı](#filtre-referansı)
+
+---
+
+### Genel Kavramlar
+
+Bu bölüm, raporların tamamında ortak olarak geçen terim ve değerleri açıklar.
+
+#### DataScope
+Verinin hangi ortama ait olduğunu gösterir.
+
+| Değer | Anlamı |
+|---|---|
+| `Live` | Canlı (production) ortam verileri |
+| `Archive` | Arşivlenmiş veriler |
+
+#### FileContentType / Network
+Ödeme ağını ifade eder.
+
+| Değer | Anlamı |
+|---|---|
+| `Visa` | Visa kartı / clearing dosyaları |
+| `Mastercard` | Mastercard (MSC) dosyaları |
+| `Bkm` | BKM (Troy) dosyaları |
+
+#### FileType
+Dosyanın tipini belirtir.
+
+| Değer | Anlamı |
+|---|---|
+| `Card` | Kart tarafı (issuer/banka) dosyası |
+| `Clearing` | Ağ tarafı (network/clearing) dosyası |
+
+#### FileStatus
+Bir ingestion dosyasının işlem durumu.
+
+| Değer | Anlamı |
+|---|---|
+| `Pending` | Kuyruğa alındı, henüz işlenmedi |
+| `Processing` | Aktif olarak işleniyor |
+| `Completed` | Tüm satırlar başarıyla işlendi |
+| `Failed` | İşlem hatası oluştu |
+| `PartiallyCompleted` | Kısmi tamamlama (bazı satırlar hatalı) |
+
+#### ReconciliationStatus
+Bir satırın mutabakat sonucu.
+
+| Değer | Anlamı |
+|---|---|
+| `Ready` | Mutabakat için hazır |
+| `Matched` | Eşleşme sağlandı ✅ |
+| `Failed` | Eşleşme kurulamadı ❌ |
+| `NotApplicable` | Bu satır için mutabakat uygulanmaz |
+
+#### ReconSide
+Mutabakat tarafını belirtir.
+
+| Değer | Anlamı |
+|---|---|
+| `Card` | Kart (issuer) tarafı satırları |
+| `Clearing` | Clearing (network) tarafı satırları |
+
+#### SeverityLevel (Hata Şiddeti)
+Exception hotspot raporunda kullanılır.
+
+| Değer | Anlamı |
+|---|---|
+| `Low` | Düşük hata oranı (< %5) |
+| `Medium` | Orta hata oranı (%5–%25) |
+| `High` | Yüksek hata oranı (> %25) |
+
+#### UrgencyLevel (Manuel İnceleme Aciliyeti)
+Manuel review queue raporunda kullanılır.
+
+| Değer | Anlamı |
+|---|---|
+| `Low` | Düşük aciliyet |
+| `Medium` | Orta aciliyet |
+| `High` | Yüksek, bugün çözülmeli |
+| `Critical` | Kritik, acil müdahale gerektirir |
+
+#### AlertStatus
+Bir uyarının durumu.
+
+| Değer | Anlamı |
+|---|---|
+| `Pending` | Henüz işlenmedi |
+| `Resolved` | Çözüldü |
+| `Failed` | Uyarı iletimi başarısız |
+
+#### DuplicateStatus
+Bir satırın tekrar durumu.
+
+| Değer | Anlamı |
+|---|---|
+| `Unique` | Tekil satır, duplikat yok |
+| `Primary` | Özdeş kopya var, bu geçerli kayıt |
+| `Secondary` | Özdeş kopya var, bu atılan kopyası |
+| `Conflict` | Aynı anahtar için farklı içerikli kayıtlar var |
+
+---
+
+### A. File Ingestion Raporları
+
+Bu raporlar, sisteme yüklenen dosyaların alım (ingestion) sürecine ilişkin operasyonel ve kalite metriklerini gösterir.
+
+---
+
+#### A1. Ingestion File Overview
+
+**View:** `reporting.vw_ingestion_file_overview`
+
+**Amaç:** Sisteme alınan her dosyanın detaylı durumunu, satır bazında başarı/hata oranlarını ve mutabakat hazırlık metriklerini tek tek gösterir. Bu rapor, bir dosyanın sağlığını anlık olarak değerlendirmek için kullanılır.
+
+**Ne zaman bakılır?**
+- Bir dosyanın neden tamamlanmadığını anlamak istediğinizde
+- Günlük operasyonel kontrol sırasında
+- Yüksek hata oranına sahip dosyaları tespit etmek için
+
+**Filtreler:** `DataScope`, `ContentType` (ağ), `FileType`, `FileStatus`, `DateFrom`, `DateTo`
+
+**Kolonlar:**
+
+| Kolon | Açıklama |
+|---|---|
+| `FileId` | Dosyanın benzersiz sistem kimliği (UUID) |
+| `FileKey` | Depolama/blob key'i — dosyanın sistemdeki benzersiz yolu |
+| `FileName` | Dosyanın orijinal adı |
+| `SourceType` | Dosyanın nereden geldiği (SFTP, API, Manual vb.) |
+| `FileType` | `Card` veya `Clearing` |
+| `ContentType` | Ağ: Visa / Mastercard / Bkm |
+| `FileStatus` | Dosyanın mevcut işlem durumu |
+| `FileMessage` | Varsa hata veya bilgi mesajı |
+| `ExpectedLineCount` | Dosya başlığında belirtilen beklenen satır sayısı |
+| `ProcessedLineCount` | Şimdiye kadar parse edilerek işleme alınan satır sayısı |
+| `SuccessfulLineCount` | Başarıyla tamamlanan satır sayısı |
+| `FailedLineCount` | Hata ile sonuçlanan satır sayısı |
+| `LastProcessedLineNumber` | En son işlenen satırın numarası |
+| `LastProcessedByteOffset` | En son okunan byte konumu (yeniden başlatma için kullanılır) |
+| `IsArchived` | Dosya arşivlendi mi? (`true`/`false`) |
+| `FileCreatedAt` | Dosyanın sisteme alındığı zaman damgası |
+| `FileUpdatedAt` | Son güncelleme zamanı |
+| `LineSuccessRatePct` | `SuccessfulLineCount / ProcessedLineCount × 100` |
+| `LineFailRatePct` | `FailedLineCount / ProcessedLineCount × 100` |
+| `CompletenessPct` | `ProcessedLineCount / ExpectedLineCount × 100` — dosyanın ne kadarı işlendi |
+| `ActualLineCount` | Veritabanında kayıtlı gerçek satır sayısı |
+| `ActualSuccessLineCount` | DB'deki başarılı satır sayısı |
+| `ActualFailedLineCount` | DB'deki hatalı satır sayısı |
+| `ActualProcessingLineCount` | DB'de hâlâ işleniyor olan satır sayısı |
+| `DuplicateLineCount` | Duplikat tespit edilen satır sayısı (Primary + Secondary + Conflict) |
+| `ReconReadyCount` | Mutabakat için hazır satır sayısı |
+| `ReconSuccessCount` | Mutabakatı başarıyla tamamlanan satır sayısı |
+| `ReconFailedCount` | Mutabakatı başarısız satır sayısı |
+| `ProcessingDurationSeconds` | Dosyanın işlenme süresi (saniye) |
+| `DataScope` | `Live` veya `Archive` |
+
+**Nasıl yorumlanır?**
+- `CompletenessPct < 100` → Dosya henüz tam işlenmemiş veya yarıda kesmişse incelenmeli
+- `LineFailRatePct > 5` → Kalite sorunu, kaynak dosyada veri problemi olabilir
+- `DuplicateLineCount > 0` → Yükleme sırasında duplikat satır gelmiş, `A2` raporuna bakılmalı
+- `ReconFailedCount > 0` → Bu dosyanın bir kısmı mutabakata girmemiş, `B2`/`B4` raporlarına bakılmalı
+
+---
+
+#### A2. Ingestion File Quality
+
+**View:** `reporting.vw_ingestion_file_quality`
+
+**Amaç:** Her dosyanın veri kalitesini ölçer; duplikat dağılımı, hata oranı ve yeniden deneme metriklerini ortaya koyar. `A1`'in kalite odaklı özet versiyonudur.
+
+**Ne zaman bakılır?**
+- Kaynak sistemde (ağ tarafında) veri kalitesini değerlendirirken
+- Duplikat problemi olan dosyaları tespit ederken
+- Aylık kalite raporlaması sırasında
+
+**Filtreler:** `DataScope`, `ContentType`, `FileType`, `FileStatus`, `DateFrom`, `DateTo`
+
+**Kolonlar:**
+
+| Kolon | Açıklama |
+|---|---|
+| `FileId` | Dosya kimliği |
+| `FileName` | Dosya adı |
+| `FileType` | Dosya tipi |
+| `ContentType` | Ağ |
+| `FileStatus` | Durum |
+| `FileCreatedAt` | Alım zamanı |
+| `TotalLineCount` | Toplam satır sayısı |
+| `SuccessLineCount` | Başarılı satır sayısı |
+| `FailedLineCount` | Hatalı satır sayısı |
+| `ProcessingLineCount` | İşlenmekte olan satır sayısı |
+| `DuplicateUniqueCount` | Duplikat olmayan (tekil) satır sayısı |
+| `DuplicatePrimaryCount` | Duplikat var, ama bu geçerli kopya olan satır sayısı |
+| `DuplicateSecondaryCount` | Duplikat var, atılan kopya sayısı — **bunlar mutabakata girmez** |
+| `DuplicateConflictCount` | Aynı anahtar, farklı içerik — **hepsi başarısız, manuel inceleme gerekir** |
+| `TotalRetryCount` | Tüm satırlardaki toplam yeniden deneme sayısı |
+| `LinesWithRetryCount` | En az 1 kez yeniden denenen satır sayısı |
+| `ErrorRatePct` | `FailedLineCount / TotalLineCount × 100` |
+| `DuplicateImpactPct` | `(Secondary + Conflict) / TotalLineCount × 100` — kaliteye olumsuz etkiyen duplikat oranı |
+| `DataScope` | Live / Archive |
+
+**Nasıl yorumlanır?**
+- `DuplicateConflictCount > 0` → Kritik! Kaynak sistemde aynı anahtara farklı tutar gelmiş
+- `DuplicateImpactPct > 10` → %10'dan fazla duplikat, kaynak sistemle görüşülmeli
+- `TotalRetryCount` yüksekse → Geçici hatalar veya altyapı sorunu var
+
+---
+
+#### A3. Ingestion Daily Summary
+
+**View:** `reporting.vw_ingestion_daily_summary`
+
+**Amaç:** Günlük bazda dosya yükleme hacmini ve başarı oranlarını özetler. Trend analizi için uygundur.
+
+**Ne zaman bakılır?**
+- Her sabah günlük kontrol rutinovunda
+- Haftalık / aylık operasyonel raporlama sırasında
+- İş yükü trendini analiz ederken
+
+**Filtreler:** `DataScope`, `ContentType`, `FileType`, `DateFrom`, `DateTo`
+
+**Kolonlar:**
+
+| Kolon | Açıklama |
+|---|---|
+| `ReportDate` | Raporun ait olduğu tarih |
+| `ContentType` | Ağ (Visa/MSC/BKM) |
+| `FileType` | Kart / Clearing |
+| `FileCount` | O gün alınan toplam dosya sayısı |
+| `SuccessFileCount` | Başarıyla tamamlanan dosya sayısı |
+| `FailedFileCount` | Hata veren dosya sayısı |
+| `ProcessingFileCount` | Hâlâ işlenmekte olan dosya sayısı |
+| `ExpectedLineCount` | O günkü dosyaların toplam beklenen satır sayısı |
+| `ProcessedLineCount` | İşlenen toplam satır sayısı |
+| `SuccessfulLineCount` | Başarılı toplam satır sayısı |
+| `FailedLineCount` | Hatalı toplam satır sayısı |
+| `ProcessedLineSuccessRatePct` | `SuccessfulLineCount / ProcessedLineCount × 100` |
+| `DataScope` | Live / Archive |
+
+**Nasıl yorumlanır?**
+- `FailedFileCount > 0` → Hatalı dosyalar `A1`'de detaylı incelenmeli
+- `ProcessedLineSuccessRatePct < 95` → Kritik eşik, köken analizi yapılmalı
+- `ProcessingFileCount` gün sonunda sıfırlanmıyorsa → Takılan bir process var
+
+---
+
+#### A4. Ingestion Network Matrix
+
+**View:** `reporting.vw_ingestion_network_matrix`
+
+**Amaç:** Her ağ ve dosya tipi kombinasyonu için kümülatif dosya ve satır istatistiklerini gösterir. "Hangi ağdan ne kadar veri gelmiş?" sorusunu yanıtlar.
+
+**Ne zaman bakılır?**
+- Ağ bazında iş yükü dağılımını görmek istediğinizde
+- Yeni bir ağ bağlantısının ilk verilerini doğrularken
+- Kurumsal raporlama için ağ bazlı özet gerektiğinde
+
+**Filtreler:** `DataScope`
+
+**Kolonlar:**
+
+| Kolon | Açıklama |
+|---|---|
+| `ContentType` | Ağ (Visa/MSC/BKM) |
+| `FileType` | Kart / Clearing |
+| `FileCount` | Toplam dosya sayısı |
+| `SuccessFileCount` | Başarılı dosya sayısı |
+| `FailedFileCount` | Hatalı dosya sayısı |
+| `ProcessedLineCount` | Toplam işlenen satır sayısı |
+| `SuccessfulLineCount` | Toplam başarılı satır sayısı |
+| `FailedLineCount` | Toplam hatalı satır sayısı |
+| `FirstFileAt` | Bu ağ/tip kombinasyonunun ilk dosya alım zamanı |
+| `LastFileAt` | En son dosya alım zamanı |
+| `DataScope` | Live / Archive |
+
+---
+
+#### A5. Ingestion Exception Hotspots
+
+**View:** `reporting.vw_ingestion_exception_hotspots`
+
+**Amaç:** En fazla hata üreten dosyaları öne çıkarır. Hata yoğunluğuna göre sıralı liste sunar; kritik dosyaların hızla tespit edilmesini sağlar.
+
+**Ne zaman bakılır?**
+- Olağandışı hata artışı alarm geldiğinde
+- Hangi dosyaların sistemi zorladığını anlamak için
+- SLA ihlali riskini değerlendirirken
+
+**Filtreler:** `DataScope`, `ContentType`, `FileType`, `SeverityLevel`, `DateFrom`, `DateTo`
+
+**Kolonlar:**
+
+| Kolon | Açıklama |
+|---|---|
+| `FileId` | Dosya kimliği |
+| `FileName` | Dosya adı |
+| `SourceType` | Kaynak tip |
+| `FileType` | Kart / Clearing |
+| `ContentType` | Ağ |
+| `FileStatus` | Dosya durumu |
+| `FileMessage` | Hata mesajı |
+| `FileCreatedAt` | Alım zamanı |
+| `FailedLineCount` | Hatalı satır sayısı |
+| `ProcessedLineCount` | İşlenen satır sayısı |
+| `TotalRetryCount` | Tüm hatalı satırların toplam yeniden deneme sayısı |
+| `MaxRetryCount` | En fazla denenen satırın deneme sayısı |
+| `DistinctErrorMessageCount` | Kaç farklı hata mesajı türü var |
+| `SeverityLevel` | Otomatik hesaplanan hata şiddeti (`Low`/`Medium`/`High`) |
+| `DataScope` | Live / Archive |
+
+**Nasıl yorumlanır?**
+- `SeverityLevel = High` + `DistinctErrorMessageCount > 5` → Çok farklı hata tipi var, sistemik bir problem olabilir
+- `MaxRetryCount` yüksekse → Belirli satırlar sürekli başarısız oluyor, veri problemi
+
+---
+
+### B. Reconciliation Process Raporları
+
+Bu raporlar, mutabakat motorunun çalışma durumunu, açık kalemleri ve alert yönetimini gösterir.
+
+---
+
+#### B1. Recon Daily Overview
+
+**View:** `reporting.vw_recon_daily_overview`
+
+**Amaç:** Mutabakat motorunun günlük performansını tek bir özet satırla sunar. Evaluation, operation ve execution katmanlarının tamamını kapsar.
+
+**Ne zaman bakılır?**
+- Her sabah operasyonel durum kontrolü için
+- Haftalık yönetim raporlaması için
+- Performans trendini izlemek için
+
+**Filtreler:** `DataScope`, `DateFrom`, `DateTo`
+
+**Kolonlar:**
+
+| Kolon | Açıklama |
+|---|---|
+| `ReportDate` | Tarihi |
+| `TotalEvaluationCount` | O gün başlatılan toplam evaluation sayısı |
+| `CompletedEvaluationCount` | Tamamlanan evaluation sayısı |
+| `FailedEvaluationCount` | Başarısız evaluation sayısı |
+| `TotalOperationCount` | Toplam operation sayısı |
+| `CompletedOperationCount` | Tamamlanan operation sayısı |
+| `FailedOperationCount` | Başarısız operation sayısı |
+| `BlockedOperationCount` | Bloklanmış (beklemede) operation sayısı |
+| `PlannedOperationCount` | Planlanmış (henüz başlamamış) operation sayısı |
+| `ManualOperationCount` | Manuel müdahale gerektiren operation sayısı |
+| `TotalExecutionCount` | Toplam execution (çalıştırma girişimi) sayısı |
+| `CompletedExecutionCount` | Başarılı execution sayısı |
+| `FailedExecutionCount` | Başarısız execution sayısı |
+| `AvgExecutionDurationSeconds` | Ortalama execution süresi (saniye) |
+| `PendingReviewCount` | Karar bekleyen manuel review sayısı |
+| `ApprovedReviewCount` | Onaylanan review sayısı |
+| `RejectedReviewCount` | Reddedilen review sayısı |
+| `PendingAlertCount` | Çözüme kavuşmamış alert sayısı |
+| `FailedAlertCount` | İletim başarısız olan alert sayısı |
+| `OperationSuccessRatePct` | `CompletedOperationCount / TotalOperationCount × 100` |
+| `DataScope` | Live / Archive |
+
+**Nasıl yorumlanır?**
+- `OperationSuccessRatePct < 90` → Kritik, `B2` ve `B4` raporlarına derhal bakılmalı
+- `BlockedOperationCount > 0` → Bloklanmış kalemler `B2`'de incelenmeli
+- `PendingReviewCount` artıyorsa → Manuel review ekibi kapasitesi yetersiz
+
+---
+
+#### B2. Recon Open Items
+
+**View:** `reporting.vw_recon_open_items`
+
+**Amaç:** Mutabakat sürecinde tamamlanmamış (açık) operation kalemlerini listeler. Her kayıt, çözüm bekleyen bir operation'ı temsil eder.
+
+**Ne zaman bakılır?**
+- Günlük açık kalem takibinde
+- SLA ihlali riskini değerlendirirken
+- Hangi kalemlerin müdahale gerektirdiğini belirlemek için
+
+**Filtreler:** `OperationStatus`, `Branch`, `IsManual`
+
+**Kolonlar:**
+
+| Kolon | Açıklama |
+|---|---|
+| `OperationId` | Operation'ın benzersiz kimliği |
+| `FileLineId` | Bu operation'a konu olan dosya satırının kimliği |
+| `EvaluationId` | Bu satırın bağlı olduğu evaluation kimliği |
+| `GroupId` | Gruplama kimliği (eşleşen Card-Clearing çifti) |
+| `SequenceNumber` | Operation'ın grup içindeki sıra numarası |
+| `ParentSequenceNumber` | Varsa, üst operation'ın sıra numarası |
+| `OperationCode` | Operation tipi kodu (ör. `MATCH_CARD_CLEARING`) |
+| `Branch` | Hangi işlem koluna ait (ör. `VISA_CARD_LIVE`) |
+| `IsManual` | `true` → Manuel olarak oluşturulmuş |
+| `OperationStatus` | Mevcut durum (`Planned`, `Executing`, `Blocked`, `Completed`, `Failed`) |
+| `RetryCount` | Şimdiye kadar deneme sayısı |
+| `MaxRetryCount` | İzin verilen maksimum deneme sayısı |
+| `NextAttemptAt` | Sonraki otomatik deneme zamanı |
+| `LeaseOwner` | Şu an bu operation'ı işleyen worker kimliği |
+| `LeaseExpiresAt` | Worker kilidinin sona erme zamanı |
+| `LastError` | Son hata mesajı |
+| `OperationCreatedAt` | Operation'ın oluşturulma zamanı |
+| `OperationUpdatedAt` | Son güncelleme zamanı |
+| `EvaluationStatus` | Bağlı evaluation'ın durumu |
+| `EvaluationOperationCount` | Bu evaluation altında kaç operation var |
+| `AgeHours` | Operation'ın kaç saattir açık olduğu |
+
+**Nasıl yorumlanır?**
+- `AgeHours > 24` → SLA ihlali riski, acil müdahale gerekebilir
+- `OperationStatus = Blocked` → Manuel müdahale veya sistem hatası, `B4`'e bakılmalı
+- `RetryCount = MaxRetryCount` → Otomatik yeniden deneme kalmadı, manuel review gerekli
+- `LeaseOwner` dolu ama `LeaseExpiresAt` geçmiş → Worker takılmış, lease temizlenmeli
+
+---
+
+#### B3. Recon Open Item Aging
+
+**View:** `reporting.vw_recon_open_item_aging`
+
+**Amaç:** Açık kalemleri yaşlarına göre gruplandırır (aging buckets). Kaç kalemin ne kadar süredir çözümsüz kaldığını gösterir.
+
+**Ne zaman bakılır?**
+- Haftalık SLA raporlamasında
+- Eski (stale) açık kalemlerin temizlenmesi gerekip gerekmediğini değerlendirirken
+
+**Filtreler:** Yok (anlık snapshot)
+
+**Kolonlar:**
+
+| Kolon | Açıklama |
+|---|---|
+| `BucketName` | Yaş aralığı etiketi — ör. `0-1h`, `1-6h`, `6-24h`, `1-3d`, `3-7d`, `7d+` |
+| `ItemCount` | Bu yaş grubundaki toplam açık kalem sayısı |
+| `PlannedCount` | Bu gruptaki `Planned` durumundaki kalemler |
+| `BlockedCount` | Bu gruptaki `Blocked` durumundaki kalemler |
+| `ExecutingCount` | Bu gruptaki `Executing` durumundaki kalemler |
+| `ManualCount` | Bu gruptaki manuel kalemler |
+
+**Nasıl yorumlanır?**
+- `7d+` bucket'ında kalem varsa → Kritik, bu kalemler için kök neden analizi yapılmalı
+- `BlockedCount` yoğunsa → Sistem seviyesinde bir blokaj var
+
+---
+
+#### B4. Recon Manual Review Queue
+
+**View:** `reporting.vw_recon_manual_review_queue`
+
+**Amaç:** Manuel inceleme bekleyen kalemleri tüm bağlamıyla (review, operation, evaluation, execution, dosya ve satır bilgisi) tek bir görünümde sunar. Bu rapor, manuel review yapacak analistler için ana çalışma ekranıdır.
+
+**Ne zaman bakılır?**
+- Günlük manuel review çalışmasında
+- Acil kalem belirleme ve önceliklendirmede
+
+**Filtreler:** `UrgencyLevel`, `OperationBranch`
+
+**Kolonlar:**
+
+*Review Bilgisi*
+
+| Kolon | Açıklama |
+|---|---|
+| `ReviewId` | Review kaydının benzersiz kimliği |
+| `Decision` | Analistin kararı: `Pending`, `Approved`, `Rejected` |
+| `Comment` | Analistin yorumu |
+| `DecisionAt` | Karar verilen zaman |
+| `ExpiresAt` | Review'un son karar tarihi |
+| `ExpirationAction` | Süre dolunca ne olacak: `AutoApprove`, `AutoReject`, `Hold` |
+| `ExpirationFlowAction` | Süre dolunca akış yönlendirmesi |
+| `ReviewCreatedAt` | Review'un oluşturulma zamanı |
+
+*Operation Bilgisi*
+
+| Kolon | Açıklama |
+|---|---|
+| `OperationCode` | Operation tipi |
+| `OperationBranch` | İşlem kolu |
+| `OperationStatus` | Operation'ın mevcut durumu |
+| `OperationIsManual` | Manuel mi? |
+| `OperationNote` | Operation notu |
+| `OperationRetryCount` | Deneme sayısı |
+| `OperationMaxRetries` | Max deneme limiti |
+| `OperationNextAttemptAt` | Sonraki deneme zamanı |
+| `OperationLeaseOwner` | Aktif worker |
+| `OperationLeaseExpiresAt` | Kilit sona erme zamanı |
+| `OperationLastError` | Son hata |
+| `OperationPayload` | Operation'ın taşıdığı veri (JSON) |
+| `OperationCreatedAt` | Oluşturulma zamanı |
+
+*Evaluation Bilgisi*
+
+| Kolon | Açıklama |
+|---|---|
+| `EvaluationStatus` | Evaluation sonucu |
+| `EvaluationMessage` | Evaluation açıklama mesajı |
+| `EvaluationOperationCount` | Bu evaluation altındaki operation sayısı |
+| `EvaluationCreatedAt` | Evaluation oluşturulma zamanı |
+
+*Son Execution Bilgisi*
+
+| Kolon | Açıklama |
+|---|---|
+| `LastExecutionId` | Son execution kimliği |
+| `LastAttemptNumber` | Son deneme numarası |
+| `LastExecutionStatus` | Son execution durumu |
+| `LastExecutionStartedAt` | Başlangıç zamanı |
+| `LastExecutionFinishedAt` | Bitiş zamanı |
+| `LastExecutionResultCode` | Sonuç kodu |
+| `LastExecutionResultMessage` | Sonuç mesajı |
+| `LastExecutionErrorCode` | Hata kodu |
+| `LastExecutionErrorMessage` | Hata açıklaması |
+| `TotalExecutionCount` | Toplam execution denemesi |
+
+*Dosya Bilgisi*
+
+| Kolon | Açıklama |
+|---|---|
+| `FileName` | Dosya adı |
+| `FileKey` | Dosya yolu |
+| `FileSourceType` | Kaynak tip |
+| `FileType` | Kart / Clearing |
+| `ContentType` | Ağ |
+| `FileStatus` | Dosya durumu |
+
+*Satır Bilgisi*
+
+| Kolon | Açıklama |
+|---|---|
+| `LineNumber` | Dosya içindeki satır numarası |
+| `LineRecordType` | Satır kayıt tipi (header/detail/trailer) |
+| `LineStatus` | Satır işlem durumu |
+| `LineReconciliationStatus` | Satırın mutabakat sonucu |
+| `MatchedClearingLineId` | Eşleşilen clearing satırının ID'si |
+| `CorrelationKey` | Eşleşme anahtarının tipi |
+| `CorrelationValue` | Eşleşme anahtar değeri |
+| `LineDuplicateStatus` | Duplikat durumu |
+| `LineMessage` | Satır mesajı/hatası |
+
+*Kart Satırı Verileri (Card side)*
+
+| Kolon | Açıklama |
+|---|---|
+| `CardTransactionDate` | İşlem tarihi (YYYYMMDD integer) |
+| `CardTransactionTime` | İşlem saati (HHMMSS integer) |
+| `CardOriginalAmount` | İşlemin orijinal tutarı |
+| `CardOriginalCurrency` | ISO 4217 para birimi kodu (integer, ör. 949 = TRY) |
+| `CardSettlementAmount` | Takas tutarı |
+| `CardBillingAmount` | Kart sahibine yansıtılan tutar |
+| `CardFinancialType` | Finansal işlem tipi |
+| `CardTxnEffect` | İşlemin etkisi (Debit/Credit) |
+| `CardResponseCode` | Kart yanıt kodu |
+| `CardIsSuccessfulTxn` | İşlem başarılı mı? |
+| `CardRrn` | Retrieval Reference Number |
+| `CardArn` | Acquirer Reference Number |
+
+*Clearing Satırı Verileri (Clearing side)*
+
+| Kolon | Açıklama |
+|---|---|
+| `ClearingTxnDate` | Clearing işlem tarihi |
+| `ClearingTxnTime` | Clearing işlem saati |
+| `ClearingIoDate` | Interchange/settlement tarihi |
+| `ClearingSourceAmount` | Kaynak para birimi tutarı |
+| `ClearingSourceCurrency` | Kaynak para birimi kodu |
+| `ClearingDestinationAmount` | Hedef para birimi tutarı |
+| `ClearingTxnType` | İşlem tipi |
+| `ClearingIoFlag` | I/O yönü bayrağı |
+| `ClearingControlStat` | Control status kodu |
+| `ClearingRrn` | Clearing RRN |
+| `ClearingArn` | Clearing ARN |
+
+*Özet*
+
+| Kolon | Açıklama |
+|---|---|
+| `WaitingHours` | Review'un kaç saattir beklendiği |
+| `UrgencyLevel` | Otomatik hesaplanan aciliyet (`Low`/`Medium`/`High`/`Critical`) |
+| `EffectiveError` | Görüntülenmesi önerilen etkin hata mesajı |
+
+---
+
+#### B5. Recon Alert Summary
+
+**View:** `reporting.vw_recon_alert_summary`
+
+**Amaç:** Mutabakat sistemi tarafından üretilen alert'lerin kategorik özetini sunar. Alert türü, şiddeti ve duruma göre gruplanmış sayımlar gösterilir.
+
+**Ne zaman bakılır?**
+- Sistem sağlığı günlük kontrolünde
+- Tekrarlayan alert paternlerini tespit ederken
+- Alert yönetimi KPI raporlamasında
+
+**Filtreler:** `DataScope`, `Severity`, `AlertType`, `AlertStatus`
+
+**Kolonlar:**
+
+| Kolon | Açıklama |
+|---|---|
+| `Severity` | Alert şiddeti (`Low`, `Medium`, `High`, `Critical`) |
+| `AlertType` | Alert kodu/türü (ör. `C2`, `AMOUNT_MISMATCH`) |
+| `AlertStatus` | `Pending`, `Resolved`, `Failed` |
+| `AlertCount` | Bu kombinasyondaki toplam alert sayısı |
+| `DistinctGroupCount` | Kaç farklı grup etkilenmiş |
+| `DistinctOperationCount` | Kaç farklı operation etkilenmiş |
+| `FirstAlertAt` | Bu türde ilk alert zamanı |
+| `LastAlertAt` | En son alert zamanı |
+| `DataScope` | Live / Archive |
+
+**Nasıl yorumlanır?**
+- `AlertType = C2` → Duplikat kaynaklı uyarı (Primary satırlar için)
+- `AlertStatus = Pending` yüksekse → Alert işleme pipeline'ı takılmış
+- `LastAlertAt` yakın zamansa ve `AlertStatus = Pending` → Acil müdahale gerekebilir
+
+---
+
+### C. Reconciliation Content & Financial Raporları
+
+Bu raporlar, Card ve Clearing taraflarının işlem içeriklerine ve finansal metriklerine odaklanır.
+
+---
+
+#### C1. Recon Live Card Content Daily
+
+**View:** `reporting.vw_recon_live_card_content_daily`
+
+**Amaç:** Canlı ortamdaki kart tarafı (issuer) satırlarını günlük bazda gruplandırarak işlem tipine, para birimine ve mutabakat durumuna göre özetler.
+
+**Filtreler:** `Network`, `DateFrom`, `DateTo`
+
+**Kolonlar:**
+
+| Kolon | Açıklama |
+|---|---|
+| `ReportDate` | Tarih |
+| `DataScope` | Live / Archive |
+| `Network` | Visa / MSC / BKM |
+| `LineStatus` | Satır işlem durumu |
+| `ReconciliationStatus` | Mutabakat durumu |
+| `FinancialType` | Finansal işlem tipi (Purchase, Refund, vb.) |
+| `TxnEffect` | Debit / Credit |
+| `TxnSource` | İşlem kaynağı |
+| `TxnRegion` | İşlem bölgesi (Domestic/International) |
+| `TerminalType` | Terminal tipi (POS, ATM, E-commerce) |
+| `ChannelCode` | Kanal kodu |
+| `IsTxnSettle` | Takas tamamlandı mı? |
+| `TxnStat` | İşlem durum kodu |
+| `ResponseCode` | Yanıt kodu |
+| `IsSuccessfulTxn` | Başarılı işlem mi? |
+| `OriginalCurrency` | Para birimi kodu (ISO 4217 integer) |
+| `TransactionCount` | Bu gruba ait işlem sayısı |
+| `DistinctFileCount` | Kaç farklı dosyadan geldiği |
+| `TotalCardOriginalAmount` | Toplam orijinal tutar |
+| `TotalCardSettlementAmount` | Toplam takas tutarı |
+| `TotalCardBillingAmount` | Toplam fatura tutarı |
+| `AvgCardOriginalAmount` | Ortalama orijinal tutar |
+| `MatchedCount` | Eşleşen satır sayısı |
+| `UnmatchedCount` | Eşleşemeyen satır sayısı |
+
+---
+
+#### C2. Recon Live Clearing Content Daily
+
+**View:** `reporting.vw_recon_live_clearing_content_daily`
+
+**Amaç:** Canlı ortamdaki clearing (ağ) tarafı satırlarını günlük bazda işlem tipi ve para birimine göre özetler.
+
+**Filtreler:** `Network`, `DateFrom`, `DateTo`
+
+**Kolonlar:**
+
+| Kolon | Açıklama |
+|---|---|
+| `ReportDate` | Tarih |
+| `DataScope` | Live / Archive |
+| `Network` | Visa / MSC / BKM |
+| `LineStatus` | Satır işlem durumu |
+| `ReconciliationStatus` | Mutabakat durumu |
+| `TxnType` | Clearing işlem tipi |
+| `IoFlag` | I = Incoming (gelen), O = Outgoing (giden) |
+| `ControlStat` | Ağın control status kodu |
+| `SourceCurrency` | Para birimi kodu |
+| `TransactionCount` | İşlem sayısı |
+| `DistinctFileCount` | Kaç farklı dosyadan |
+| `TotalClearingSourceAmount` | Toplam kaynak tutar |
+| `TotalClearingDestinationAmount` | Toplam hedef tutar |
+| `AvgClearingSourceAmount` | Ortalama kaynak tutar |
+| `MatchedCount` | Eşleşen satır sayısı |
+| `UnmatchedCount` | Eşleşemeyen satır sayısı |
+
+---
+
+#### C3. Recon Archive Card Content Daily
+
+**View:** `reporting.vw_recon_live_card_content_daily` (archive scope)
+
+**Amaç:** Arşivlenmiş dönemlere ait kart tarafı satırlarının aynı içerik analizini sunar. `C1` ile yapı aynıdır, DataScope `Archive` olarak döner.
+
+> Kolon açıklamaları için bkz. [C1](#c1-recon-live-card-content-daily)
+
+---
+
+#### C4. Recon Archive Clearing Content Daily
+
+**View:** `reporting.vw_recon_live_clearing_content_daily` (archive scope)
+
+**Amaç:** Arşivlenmiş dönemlere ait clearing tarafı satırlarının içerik analizini sunar. `C2` ile yapı aynıdır.
+
+> Kolon açıklamaları için bkz. [C2](#c2-recon-live-clearing-content-daily)
+
+---
+
+#### C5. Recon Content Daily
+
+**View:** `reporting.vw_recon_content_daily`
+
+**Amaç:** Kart ve Clearing taraflarını tek bir görünümde birleştirir. `Side` kolonu ile hangi tarafın verisi olduğu ayrıştırılır. İki tarafın karşılaştırmalı analizine olanak tanır.
+
+**Filtreler:** `DataScope`, `Network`, `Side`, `DateFrom`, `DateTo`
+
+**Kolonlar:**
+
+| Kolon | Açıklama |
+|---|---|
+| `ReportDate` | Tarih |
+| `DataScope` | Live / Archive |
+| `Network` | Ağ |
+| `Side` | `Card` veya `Clearing` |
+| `LineStatus` | Satır durumu |
+| `ReconciliationStatus` | Mutabakat durumu |
+| `TransactionCount` | İşlem sayısı |
+| `DistinctFileCount` | Farklı dosya sayısı |
+| `MatchedCount` | Eşleşen sayısı |
+| `UnmatchedCount` | Eşleşemeyen sayısı |
+| `TotalCardOriginalAmount` | Toplam kart orijinal tutar (Card side için) |
+| `TotalCardSettlementAmount` | Toplam kart takas tutarı |
+| `TotalCardBillingAmount` | Toplam kart fatura tutarı |
+| `TotalClearingSourceAmount` | Toplam clearing kaynak tutarı |
+| `TotalClearingDestinationAmount` | Toplam clearing hedef tutarı |
+
+**Nasıl yorumlanır?**
+- `Side = Card` ve `Side = Clearing` satırlarını aynı gün/ağ için karşılaştırın
+- `MatchedCount` her iki tarafta da eşit olmalı (bire bir eşleşme)
+- Tutar farkı varsa finansal uzlaştırma gerekebilir
+
+---
+
+#### C6. Recon Clearing ControlStat Analysis
+
+**View:** `reporting.vw_recon_clearing_controlstat_analysis`
+
+**Amaç:** Clearing dosyalarındaki `ControlStat` (control status) kodlarına göre işlemleri gruplayarak hangi ControlStat değerlerinin yüksek eşleşememe oranına yol açtığını ortaya koyar.
+
+**Filtreler:** `DataScope`, `Network`
+
+**Kolonlar:**
+
+| Kolon | Açıklama |
+|---|---|
+| `DataScope` | Live / Archive |
+| `Network` | Ağ |
+| `LineStatus` | Satır durumu |
+| `ControlStat` | Clearing ağının control status kodu |
+| `IoFlag` | I (gelen) / O (giden) |
+| `TransactionCount` | Bu kombinasyondaki işlem sayısı |
+| `TotalClearingSourceAmount` | Toplam tutar |
+| `MatchedCount` | Eşleşen sayısı |
+| `UnmatchedCount` | Eşleşemeyen sayısı |
+| `UnmatchedRatePct` | `UnmatchedCount / TransactionCount × 100` |
+
+**Nasıl yorumlanır?**
+- `UnmatchedRatePct` yüksek olan `ControlStat` kodları → O kod için eşleşme kuralı gözden geçirilmeli
+- Ağa özgü belirli ControlStat değerleri her ağda farklı anlam taşır
+
+---
+
+#### C7. Recon Financial Summary
+
+**View:** `reporting.vw_recon_financial_summary`
+
+**Amaç:** Finansal işlem tipine (`FinancialType`) ve işlem etkisine (`TxnEffect`) göre toplam tutarları ve eşleşme durumlarını özetler. Muhasebe mutabakatı için temel rapordur.
+
+**Filtreler:** `DataScope`, `Network`, `FinancialType`, `TxnEffect`, `OriginalCurrency`
+
+**Kolonlar:**
+
+| Kolon | Açıklama |
+|---|---|
+| `DataScope` | Live / Archive |
+| `Network` | Ağ |
+| `LineStatus` | Satır durumu |
+| `FinancialType` | Purchase, Refund, Chargeback, vb. |
+| `TxnEffect` | `Debit` veya `Credit` |
+| `OriginalCurrency` | Para birimi kodu (integer) |
+| `TransactionCount` | İşlem sayısı |
+| `TotalCardOriginalAmount` | Toplam orijinal tutar |
+| `TotalCardSettlementAmount` | Toplam takas tutarı |
+| `TotalCardBillingAmount` | Toplam fatura tutarı |
+| `SettledCount` | Takas tamamlanan işlem sayısı |
+| `UnsettledCount` | Henüz takas tamamlanmamış işlem sayısı |
+| `DebitAmount` | Toplam borç tutarı |
+| `CreditAmount` | Toplam alacak tutarı |
+| `MatchedCount` | Mutabık işlem sayısı |
+| `UnmatchedCount` | Mutabık olmayan işlem sayısı |
+
+**Nasıl yorumlanır?**
+- `DebitAmount - CreditAmount` → Net pozisyon; sıfıra yakın olması beklenir
+- `UnsettledCount > 0` → Takası bekleyen işlemler var, muhasebe etkisi olabilir
+- `UnmatchedCount` yüksekse → Tutarsız tutarlar veya eksik clearing verisi
+
+---
+
+#### C8. Recon Response Status Analysis
+
+**View:** `reporting.vw_recon_response_status_analysis`
+
+**Amaç:** Kart tarafındaki yanıt kodlarına (`ResponseCode`) ve işlem durumlarına göre mutabakat başarısını analiz eder. Hangi yanıt kodu tiplerinin eşleşememe sorununa yol açtığını gösterir.
+
+**Filtreler:** `DataScope`, `Network`, `ReconciliationStatus`
+
+**Kolonlar:**
+
+| Kolon | Açıklama |
+|---|---|
+| `DataScope` | Live / Archive |
+| `Network` | Ağ |
+| `LineStatus` | Satır durumu |
+| `ResponseCode` | Kart yanıt kodu (ör. `00` = Approved, `05` = Do Not Honor) |
+| `TxnStat` | İşlem durumu kodu |
+| `IsSuccessfulTxn` | Başarılı işlem mi? (`Y`/`N`) |
+| `IsTxnSettle` | Takas tamamlandı mı? |
+| `ReconciliationStatus` | Mutabakat sonucu |
+| `TransactionCount` | İşlem sayısı |
+| `TotalCardOriginalAmount` | Toplam tutar |
+| `MatchedCount` | Eşleşen sayısı |
+| `UnmatchedCount` | Eşleşemeyen sayısı |
+
+**Nasıl yorumlanır?**
+- `IsSuccessfulTxn = Y` ama `ReconciliationStatus = Failed` → Onaylanan işlem eşleşememiş, öncelikli incelenmeli
+- `ResponseCode = 00` ve yüksek `UnmatchedCount` → Onaylı işlemlerde clearing verisi eksik
+
+---
+
+### D. Archive Raporları
+
+Bu raporlar, arşivleme işlemlerinin durumunu ve veri saklama metriklerini gösterir.
+
+---
+
+#### D1. Archive Run Overview
+
+**View:** `reporting.vw_archive_run_overview`
+
+**Amaç:** Her arşivleme çalıştırmasının (archive job) durumunu, süresini ve varsa hata bilgisini listeler.
+
+**Filtreler:** `ArchiveStatus`, `ContentType`, `FileType`, `DateFrom`, `DateTo`
+
+**Kolonlar:**
+
+| Kolon | Açıklama |
+|---|---|
+| `ArchiveLogId` | Arşivleme run'ının benzersiz kimliği |
+| `IngestionFileId` | Arşivlenen dosyanın ID'si (nullable) |
+| `FileName` | Dosya adı |
+| `FileType` | Kart / Clearing |
+| `ContentType` | Ağ |
+| `ArchiveStatus` | `Success`, `Failed`, `Running`, `Skipped` |
+| `ArchiveMessage` | Başarı veya hata mesajı |
+| `FailureReasonsJson` | Varsa hata nedenlerinin JSON listesi |
+| `FilterJson` | Arşivleme için uygulanan filtreler (JSON) |
+| `ArchiveStartedAt` | Başlangıç zamanı |
+| `ArchiveUpdatedAt` | Son güncelleme zamanı |
+| `ArchiveDurationSeconds` | Tamamlanma süresi (saniye) |
+
+**Nasıl yorumlanır?**
+- `ArchiveStatus = Failed` → `FailureReasonsJson` incelenmeli
+- `ArchiveDurationSeconds` beklenenden uzunsa → Veri hacmi artmış veya performans sorunu var
+
+---
+
+#### D2. Archive Eligibility
+
+**View:** `reporting.vw_archive_eligibility`
+
+**Amaç:** Her dosyanın arşivlenmeye uygun olup olmadığını değerlendirir. Henüz arşivlenmemiş ancak arşivlenebilir durumdaki dosyaları belirler.
+
+**Filtreler:** `ContentType`, `FileType`, `ArchiveEligibilityStatus`
+
+**Kolonlar:**
+
+| Kolon | Açıklama |
+|---|---|
+| `FileId` | Dosya kimliği |
+| `FileName` | Dosya adı |
+| `FileType` | Kart / Clearing |
+| `ContentType` | Ağ |
+| `FileStatus` | Dosya işlem durumu |
+| `IsArchived` | Arşivlenmiş mi? |
+| `FileCreatedAt` | Dosyanın sisteme alım zamanı |
+| `AgeDays` | Dosyanın sistemdeki yaşı (gün) |
+| `TotalReconLineCount` | Mutabakat satırı toplam sayısı |
+| `ReconSuccessLineCount` | Başarıyla mutabık satır sayısı |
+| `ReconOpenLineCount` | Hâlâ açık (mutabakatsız) satır sayısı |
+| `ArchiveEligibilityStatus` | `Eligible` (uygun), `NotEligible` (uygun değil), `AlreadyArchived` |
+
+**Nasıl yorumlanır?**
+- `ArchiveEligibilityStatus = Eligible` → Bu dosya arşivlenebilir, arşivleme işlemi başlatılabilir
+- `ReconOpenLineCount > 0` → Bu dosyanın açık satırları var, arşivlemeden önce kapatılmalı
+- `AgeDays` büyük ve `ArchiveEligibilityStatus = NotEligible` → Neden uygun olmadığı araştırılmalı
+
+---
+
+#### D3. Archive Backlog Trend
+
+**View:** `reporting.vw_archive_backlog_trend`
+
+**Amaç:** Günlük arşivleme iş yükü trendini gösterir. Kaç arşivleme run'ı yapıldığını ve başarı oranını gün gün izler.
+
+**Filtreler:** `DateFrom`, `DateTo`
+
+**Kolonlar:**
+
+| Kolon | Açıklama |
+|---|---|
+| `ReportDate` | Tarih |
+| `ArchiveRunCount` | O gün yapılan toplam arşivleme run'ı |
+| `SuccessRunCount` | Başarılı run sayısı |
+| `FailedRunCount` | Başarısız run sayısı |
+| `OtherRunCount` | Diğer durumlardaki run sayısı (Skipped vb.) |
+
+---
+
+#### D4. Archive Retention Snapshot
+
+**View:** `reporting.vw_archive_retention_snapshot`
+
+**Amaç:** Sistemdeki toplam veri hacminin anlık görüntüsünü sunar. Aktif ve arşiv tablolarındaki kayıt sayılarını gösterir. Kapasite planlaması için kullanılır.
+
+**Filtreler:** Yok (anlık snapshot)
+
+**Kolonlar:**
+
+| Kolon | Açıklama |
+|---|---|
+| `ActiveFileCount` | Canlı tablolarda aktif dosya sayısı |
+| `ArchivedMarkedFileCount` | `IsArchived = true` işaretlenmiş dosya sayısı |
+| `ArchiveTableFileCount` | Arşiv tablosundaki dosya sayısı |
+| `ArchiveTableFileLineCount` | Arşiv tablosundaki dosya satırı sayısı |
+| `ArchiveTableEvaluationCount` | Arşiv tablosundaki evaluation sayısı |
+| `ArchiveTableOperationCount` | Arşiv tablosundaki operation sayısı |
+| `ArchiveTableReviewCount` | Arşiv tablosundaki review sayısı |
+| `ArchiveTableAlertCount` | Arşiv tablosundaki alert sayısı |
+| `ArchiveTableExecutionCount` | Arşiv tablosundaki execution sayısı |
+| `OldestUnarchivedFileDate` | Arşivlenmemiş en eski dosyanın tarihi |
+
+**Nasıl yorumlanır?**
+- `OldestUnarchivedFileDate` çok eskiyse → Arşivleme backlog'u birikmiş
+- `ActiveFileCount` sürekli artıyorsa → Arşivleme hızı yetersiz, kapasite artırımı gerekebilir
+
+---
+
+### E. Advanced Reconciliation Raporları
+
+Bu raporlar, mutabakat kalitesini ve trendini derinlemesine analiz etmek için kullanılır.
+
+---
+
+#### E1. File Recon Summary
+
+**View:** `reporting.vw_file_recon_summary`
+
+**Amaç:** Her dosya için mutabakat başarı oranını ve finansal özetini tek satırda sunar. Dosya bazlı mutabakat performansını karşılaştırmak için idealdir.
+
+**Filtreler:** `DataScope`, `ContentType`, `FileType`, `DateFrom`, `DateTo`
+
+**Kolonlar:**
+
+| Kolon | Açıklama |
+|---|---|
+| `FileId` | Dosya kimliği |
+| `FileName` | Dosya adı |
+| `FileType` | Kart / Clearing |
+| `ContentType` | Ağ |
+| `FileStatus` | Dosya durumu |
+| `FileCreatedAt` | Alım zamanı |
+| `DataScope` | Live / Archive |
+| `TotalLineCount` | Toplam satır sayısı |
+| `MatchedLineCount` | Eşleşen satır sayısı |
+| `UnmatchedLineCount` | Eşleşemeyen satır sayısı |
+| `MatchRatePct` | `MatchedLineCount / TotalLineCount × 100` |
+| `TotalOriginalAmount` | Toplam orijinal tutar |
+| `MatchedAmount` | Eşleşen işlemlerin toplam tutarı |
+| `UnmatchedAmount` | Eşleşemeyen işlemlerin toplam tutarı |
+| `TotalSettlementAmount` | Toplam takas tutarı |
+| `ReconReadyCount` | Mutabakat için hazır satır sayısı |
+| `ReconSuccessCount` | Başarıyla mutabık satır sayısı |
+| `ReconFailedCount` | Başarısız mutabakat satır sayısı |
+| `ReconNotApplicableCount` | Mutabakat uygulanmayan satır sayısı |
+
+**Nasıl yorumlanır?**
+- `MatchRatePct < 95` → Bu dosya için detaylı inceleme yapılmalı
+- `UnmatchedAmount` büyükse → Finansal risk, öncelikli çözülmeli
+- `ReconFailedCount > 0` → `B2` veya `B4` raporlarında bu dosyanın kalemleri aranmalı
+
+---
+
+#### E2. Recon Match Rate Trend
+
+**View:** `reporting.vw_recon_match_rate_trend`
+
+**Amaç:** Eşleşme oranının zaman içindeki değişimini ağ ve taraf bazında gösterir. Trendleri ve anomalileri tespit etmek için kullanılır.
+
+**Filtreler:** `DataScope`, `Network`, `Side`, `DateFrom`, `DateTo`
+
+**Kolonlar:**
+
+| Kolon | Açıklama |
+|---|---|
+| `ReportDate` | Tarih |
+| `DataScope` | Live / Archive |
+| `Network` | Ağ |
+| `Side` | `Card` veya `Clearing` |
+| `TotalLineCount` | Toplam satır sayısı |
+| `MatchedCount` | Eşleşen satır sayısı |
+| `UnmatchedCount` | Eşleşemeyen satır sayısı |
+| `MatchRatePct` | Eşleşme oranı (%) |
+| `TotalAmount` | Toplam tutar |
+| `MatchedAmount` | Eşleşen tutarı |
+| `UnmatchedAmount` | Eşleşemeyen tutar |
+
+**Nasıl yorumlanır?**
+- Trend düşüyorsa → Kaynak sistem veya mutabakat kurallarında değişiklik var
+- Belirli bir günde ani düşüş → O günkü dosyalarda sorun var, `A1`'e bakılmalı
+- Card ve Clearing side arasındaki fark → Veri üretim asimetrisi (gecikme, eksik dosya)
+
+---
+
+#### E3. Recon Gap Analysis
+
+**View:** `reporting.vw_recon_gap_analysis`
+
+**Amaç:** Kart ve Clearing tarafları arasındaki satır sayısı ve tutar farklarını (gap) günlük bazda analiz eder. "Neden tam eşleşme yok?" sorusunu yanıtlar.
+
+**Filtreler:** `DataScope`, `Network`, `DateFrom`, `DateTo`
+
+**Kolonlar:**
+
+| Kolon | Açıklama |
+|---|---|
+| `ReportDate` | Tarih |
+| `DataScope` | Live / Archive |
+| `Network` | Ağ |
+| `CardLineCount` | Kart tarafı satır sayısı |
+| `ClearingLineCount` | Clearing tarafı satır sayısı |
+| `LineCountDifference` | `CardLineCount - ClearingLineCount` — pozitif = fazla kart, negatif = fazla clearing |
+| `CardMatchedCount` | Kart tarafında eşleşen satır sayısı |
+| `ClearingMatchedCount` | Clearing tarafında eşleşen satır sayısı |
+| `CardTotalAmount` | Kart tarafı toplam tutar |
+| `ClearingTotalAmount` | Clearing tarafı toplam tutar |
+| `AmountDifference` | `CardTotalAmount - ClearingTotalAmount` — finansal gap |
+| `CardMatchRatePct` | Kart tarafı eşleşme oranı (%) |
+| `ClearingMatchRatePct` | Clearing tarafı eşleşme oranı (%) |
+
+**Nasıl yorumlanır?**
+- `LineCountDifference ≠ 0` → Bir tarafta eksik/fazla dosya var
+- `AmountDifference ≠ 0` → Finansal tutar farkı, muhasebe incelemesi gerektirir
+- `CardMatchRatePct` vs `ClearingMatchRatePct` arasında büyük fark → Eşleşme asimetrisi, kural problemi olabilir
+
+---
+
+#### E4. Unmatched Transaction Aging
+
+**View:** `reporting.vw_unmatched_transaction_aging`
+
+**Amaç:** Eşleşemeyen işlemleri yaşlarına göre gruplandırır. Ne kadar süredirkorunduklarını ve finansal ağırlıklarını gösterir.
+
+**Filtreler:** `DataScope`, `Network`, `Side`
+
+**Kolonlar:**
+
+| Kolon | Açıklama |
+|---|---|
+| `AgeBucket` | Yaş aralığı — ör. `<1d`, `1-3d`, `3-7d`, `7-30d`, `>30d` |
+| `DataScope` | Live / Archive |
+| `Network` | Ağ |
+| `Side` | Kart / Clearing |
+| `UnmatchedCount` | Bu yaş grubundaki eşleşmemiş işlem sayısı |
+| `UnmatchedAmount` | Bu yaş grubundaki toplam eşleşmemiş tutar |
+| `PctOfTotalUnmatched` | Tüm eşleşmemişler içindeki yüzde payı |
+
+**Nasıl yorumlanır?**
+- `>30d` bucket'ında yüksek `UnmatchedAmount` → Uzun vadeli uzlaştırma sorunu, finans departmanı uyarılmalı
+- `PctOfTotalUnmatched` yüksek bir yaş bucket'ı → Sistemik bir problem o dönemde yaşanmış
+- Düşük yaş bucket'larında yoğunluk → Geçici gecikmeler, genellikle otomatik çözülür
+
+---
+
+#### E5. Network Recon Scorecard
+
+**View:** `reporting.vw_network_recon_scorecard`
+
+**Amaç:** Her ağ için kümülatif mutabakat performansını tek bir özet satırda sunar. Yönetim raporlaması ve ağlar arası karşılaştırma için tasarlanmıştır.
+
+**Filtreler:** `DataScope`, `Network`
+
+**Kolonlar:**
+
+| Kolon | Açıklama |
+|---|---|
+| `DataScope` | Live / Archive |
+| `Network` | Visa / MSC / BKM |
+| `TotalFileCount` | Toplam dosya sayısı |
+| `TotalCardLineCount` | Toplam kart satırı sayısı |
+| `TotalClearingLineCount` | Toplam clearing satırı sayısı |
+| `TotalMatchedCount` | Toplam eşleşen satır sayısı |
+| `TotalUnmatchedCount` | Toplam eşleşemeyen satır sayısı |
+| `OverallMatchRatePct` | Genel eşleşme oranı (%) |
+| `TotalCardAmount` | Toplam kart tutarı |
+| `TotalClearingAmount` | Toplam clearing tutarı |
+| `NetAmountDifference` | `TotalCardAmount - TotalClearingAmount` — net finansal fark |
+| `AvgCardOriginalAmount` | Ortalama kart işlem tutarı |
+| `AvgClearingSourceAmount` | Ortalama clearing işlem tutarı |
+| `ReconSuccessLineCount` | Mutabakat başarılı satır sayısı |
+| `ReconFailedLineCount` | Mutabakat başarısız satır sayısı |
+| `ReconPendingLineCount` | Mutabakat bekleyen satır sayısı |
+| `ReconSuccessRatePct` | `ReconSuccessLineCount / TotalCardLineCount × 100` |
+| `FirstFileDate` | Bu ağın ilk dosya tarihi |
+| `LastFileDate` | Bu ağın son dosya tarihi |
+
+**Nasıl yorumlanır?**
+- `OverallMatchRatePct` ağlar arasında karşılaştırılabilir → Hangi ağın daha iyi performans sergilediği görünür
+- `NetAmountDifference` büyükse → O ağ için finansal inceleme gerekli
+- `ReconPendingLineCount` yüksekse → Motor henüz kalemleri işlememiş veya tıkanmış
+
+---
+
+### Filtre Referansı
+
+Tüm raporlarda kullanılan filtrelerin özet tablosu:
+
+| Filtre | Tip | Açıklama |
+|---|---|---|
+| `DataScope` | Enum | `Live` veya `Archive` |
+| `ContentType` / `Network` | Enum | `Visa`, `Mastercard`, `Bkm` |
+| `FileType` | Enum | `Card`, `Clearing` |
+| `FileStatus` | Enum | `Pending`, `Processing`, `Completed`, `Failed`, `PartiallyCompleted` |
+| `DateFrom` | DateTime | Başlangıç tarihi (dahil) |
+| `DateTo` | DateTime | Bitiş tarihi (dahil) |
+| `SeverityLevel` | Enum | `Low`, `Medium`, `High` |
+| `OperationStatus` | Enum | `Planned`, `Executing`, `Blocked`, `Completed`, `Failed` |
+| `UrgencyLevel` | Enum | `Low`, `Medium`, `High`, `Critical` |
+| `AlertStatus` | Enum | `Pending`, `Resolved`, `Failed` |
+| `ArchiveEligibilityStatus` | Enum | `Eligible`, `NotEligible`, `AlreadyArchived` |
+| `ReconciliationStatus` | Enum | `Ready`, `Matched`, `Failed`, `NotApplicable` |
+| `Side` | Enum | `Card`, `Clearing` |
+| `Branch` | String | Operation kolu (ör. `VISA_CARD_LIVE`) |
+| `IsManual` | Bool | `true` = manuel operation |
+| `FinancialType` | String | `Purchase`, `Refund`, `Chargeback`, vb. |
+| `TxnEffect` | String | `Debit`, `Credit` |
+| `OriginalCurrency` | Int | ISO 4217 para birimi kodu (ör. 949 = TRY, 840 = USD) |
+| `ArchiveStatus` | String | `Success`, `Failed`, `Running`, `Skipped` |
+
+---
+
+*Bu doküman koddan otomatik türetilmiştir. Yeni rapor eklendiğinde güncellenmesi gerekir.*
 

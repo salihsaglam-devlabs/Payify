@@ -48,8 +48,8 @@ internal sealed class ArchiveSqlDialect : IArchiveSqlDialect
     private readonly bool _isSqlServer;
     
     private const string FileLineIdProperty = nameof(ReconciliationEvaluation.FileLineId);
-    private const string IngestionFileIdProperty = nameof(IngestionFileLine.IngestionFileId);
-    private const string IngestionFileLineIdProperty = nameof(IngestionCardVisaDetail.IngestionFileLineId);
+    private const string IngestionFileIdProperty = nameof(IngestionFileLine.FileId);
+    private const string IngestionFileLineIdProperty = nameof(IngestionCardVisaDetail.FileLineId);
 
     /// <summary>
     /// Archive copy sırasında kaynak satırdan kopyalanmak yerine parametre ile override edilecek kolonlar.

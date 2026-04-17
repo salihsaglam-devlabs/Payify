@@ -199,12 +199,12 @@ internal sealed class ReviewService
 
         var branchOpsRaw = await _dbContext.ReconciliationOperations
             .AsNoTracking()
-            .Where(o => evaluationIds.Contains(o.EvaluationId) && o.ParentSequenceIndex != null)
-            .Select(o => new { o.EvaluationId, o.ParentSequenceIndex, o.Code, o.Payload, o.Branch })
+            .Where(o => evaluationIds.Contains(o.EvaluationId) && o.ParentSequenceNumber != null)
+            .Select(o => new { o.EvaluationId, o.ParentSequenceNumber, o.Code, o.Payload, o.Branch, o.Note })
             .ToListAsync(cancellationToken);
 
         var branchOpsLookup = branchOpsRaw
-            .GroupBy(o => (o.EvaluationId, o.ParentSequenceIndex))
+            .GroupBy(o => (o.EvaluationId, o.ParentSequenceNumber))
             .ToDictionary(g => g.Key, g => g.ToList());
 
         var items = new List<ManualReview>();
@@ -218,6 +218,7 @@ internal sealed class ReviewService
             {
                 OperationId = op.Id,
                 FileLineId = op.FileLineId,
+                Note = op.Note,
                 OperationCode = op.Code,
                 OperationPayload = op.Payload,
                 CreatedAt = review.CreateDate,
@@ -228,13 +229,14 @@ internal sealed class ReviewService
                 RejectionMessage = _localizer.Get("Reconciliation.RejectionMessage")
             };
 
-            var key = (op.EvaluationId, ParentSequenceIndex: (int?)op.SequenceIndex);
+            var key = (op.EvaluationId, ParentSequenceNumber: (int?)op.SequenceNumber);
             var branchOps = branchOpsLookup.TryGetValue(key, out var matched) ? matched : [];
 
             foreach (var b in branchOps)
             {
                 var branchOperation = new BranchOperation
                 {
+                    Note = b.Note,
                     Code = b.Code,
                     Payload = b.Payload
                 };

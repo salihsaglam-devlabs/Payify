@@ -13,7 +13,6 @@ namespace LinkPara.Card.API.Controllers;
 [Route("v1/Reporting")]
 public class ReportingController : ApiControllerBase
 {
-    #region Ingestion
 
     [Authorize(Policy = ReportingPolicies.Read)]
     [HttpGet("Ingestion/FileOverview")]
@@ -45,9 +44,7 @@ public class ReportingController : ApiControllerBase
         [FromQuery] GetIngestionExceptionHotspotsQuery query, CancellationToken ct = default)
         => await Mediator.Send(query, ct);
 
-    #endregion
 
-    #region Reconciliation Process
 
     [Authorize(Policy = ReportingPolicies.Read)]
     [HttpGet("Reconciliation/DailyOverview")]
@@ -78,9 +75,7 @@ public class ReportingController : ApiControllerBase
         [FromQuery] GetReconAlertSummaryQuery query, CancellationToken ct = default)
         => await Mediator.Send(query, ct);
 
-    #endregion
     
-    #region Reconciliation Content
 
     [Authorize(Policy = ReportingPolicies.Read)]
     [HttpGet("Reconciliation/LiveCardContentDaily")]
@@ -130,9 +125,7 @@ public class ReportingController : ApiControllerBase
         [FromQuery] GetReconResponseStatusAnalysisQuery query, CancellationToken ct = default)
         => await Mediator.Send(query, ct);
 
-    #endregion
     
-    #region Archive
 
     [Authorize(Policy = ReportingPolicies.Read)]
     [HttpGet("Archive/RunOverview")]
@@ -157,9 +150,7 @@ public class ReportingController : ApiControllerBase
     public async Task<GetArchiveRetentionSnapshotResponse> GetArchiveRetentionSnapshot(CancellationToken ct = default)
         => await Mediator.Send(new GetArchiveRetentionSnapshotQuery(), ct);
 
-    #endregion
 
-    #region Advanced Reconciliation Reports
 
     [Authorize(Policy = ReportingPolicies.Read)]
     [HttpGet("Reconciliation/FileReconSummary")]
@@ -191,5 +182,4 @@ public class ReportingController : ApiControllerBase
         [FromQuery] GetNetworkReconScorecardQuery query, CancellationToken ct = default)
         => await Mediator.Send(query, ct);
 
-    #endregion
 }

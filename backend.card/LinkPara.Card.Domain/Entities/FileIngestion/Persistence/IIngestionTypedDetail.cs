@@ -2,6 +2,7 @@ namespace LinkPara.Card.Domain.Entities.FileIngestion.Persistence;
 
 public interface IIngestionTypedDetail
 {
-    Guid IngestionFileLineId { get; set; }
+    Guid FileLineId { get; set; }
+    IngestionFileLine FileLine { get; set; }
 }
 

@@ -22,7 +22,7 @@ internal sealed class ReportingService : IReportingService
         SearchQueryParams paging, DataScope? dataScope, FileContentType? contentType, FileType? fileType, FileStatus? fileStatus,
         DateTime? dateFrom, DateTime? dateTo, CancellationToken ct)
     {
-        var q = _dbContext.Set<IngestionFileOverviewDto>().AsNoTracking().AsQueryable();
+        var q = _dbContext.IngestionFileOverview.AsNoTracking();
 
         if (dataScope.HasValue)
             q = q.Where(x => x.DataScope == dataScope.Value);
@@ -45,7 +45,7 @@ internal sealed class ReportingService : IReportingService
         SearchQueryParams paging, DataScope? dataScope, FileContentType? contentType, FileType? fileType, FileStatus? fileStatus,
         DateTime? dateFrom, DateTime? dateTo, CancellationToken ct)
     {
-        var q = _dbContext.Set<IngestionFileQualityDto>().AsNoTracking().AsQueryable();
+        var q = _dbContext.IngestionFileQuality.AsNoTracking();
 
         if (dataScope.HasValue)
             q = q.Where(x => x.DataScope == dataScope.Value);
@@ -67,7 +67,7 @@ internal sealed class ReportingService : IReportingService
     public async Task<List<IngestionDailySummaryDto>> GetIngestionDailySummaryAsync(
         DataScope? dataScope, FileContentType? contentType, FileType? fileType, DateTime? dateFrom, DateTime? dateTo, CancellationToken ct)
     {
-        var q = _dbContext.Set<IngestionDailySummaryDto>().AsNoTracking().AsQueryable();
+        var q = _dbContext.IngestionDailySummary.AsNoTracking();
 
         if (dataScope.HasValue)
             q = q.Where(x => x.DataScope == dataScope.Value);
@@ -85,20 +85,19 @@ internal sealed class ReportingService : IReportingService
 
     public async Task<List<IngestionNetworkMatrixDto>> GetIngestionNetworkMatrixAsync(DataScope? dataScope, CancellationToken ct)
     {
-        var q = _dbContext.Set<IngestionNetworkMatrixDto>().AsNoTracking().AsQueryable();
+        var q = _dbContext.IngestionNetworkMatrix.AsNoTracking();
 
         if (dataScope.HasValue)
             q = q.Where(x => x.DataScope == dataScope.Value);
 
-        return await q.OrderBy(x => x.ContentType).ThenBy(x => x.FileType)
-            .ToListAsync(ct);
+        return await q.OrderBy(x => x.ContentType).ThenBy(x => x.FileType).ToListAsync(ct);
     }
 
     public async Task<PaginatedList<IngestionExceptionHotspotDto>> GetIngestionExceptionHotspotsAsync(
         SearchQueryParams paging, DataScope? dataScope, FileContentType? contentType, FileType? fileType, SeverityLevel? severityLevel,
         DateTime? dateFrom, DateTime? dateTo, CancellationToken ct)
     {
-        var q = _dbContext.Set<IngestionExceptionHotspotDto>().AsNoTracking().AsQueryable();
+        var q = _dbContext.IngestionExceptionHotspot.AsNoTracking();
 
         if (dataScope.HasValue)
             q = q.Where(x => x.DataScope == dataScope.Value);
@@ -117,11 +116,10 @@ internal sealed class ReportingService : IReportingService
         return await PaginateAsync(q, paging, ct);
     }
 
- 
     public async Task<List<ReconDailyOverviewDto>> GetReconDailyOverviewAsync(
         DataScope? dataScope, DateTime? dateFrom, DateTime? dateTo, CancellationToken ct)
     {
-        var q = _dbContext.Set<ReconDailyOverviewDto>().AsNoTracking().AsQueryable();
+        var q = _dbContext.ReconDailyOverview.AsNoTracking();
 
         if (dataScope.HasValue)
             q = q.Where(x => x.DataScope == dataScope.Value);
@@ -136,7 +134,7 @@ internal sealed class ReportingService : IReportingService
     public async Task<PaginatedList<ReconOpenItemDto>> GetReconOpenItemsAsync(
         SearchQueryParams paging, OperationStatus? operationStatus, string branch, bool? isManual, CancellationToken ct)
     {
-        var q = _dbContext.Set<ReconOpenItemDto>().AsNoTracking().AsQueryable();
+        var q = _dbContext.ReconOpenItem.AsNoTracking();
 
         if (operationStatus.HasValue)
             q = q.Where(x => x.OperationStatus == operationStatus.Value);
@@ -151,7 +149,7 @@ internal sealed class ReportingService : IReportingService
 
     public async Task<List<ReconOpenItemAgingDto>> GetReconOpenItemAgingAsync(CancellationToken ct)
     {
-        return await _dbContext.Set<ReconOpenItemAgingDto>().AsNoTracking()
+        return await _dbContext.ReconOpenItemAging.AsNoTracking()
             .OrderBy(x => x.BucketName)
             .ToListAsync(ct);
     }
@@ -159,7 +157,7 @@ internal sealed class ReportingService : IReportingService
     public async Task<PaginatedList<ReconManualReviewQueueDto>> GetReconManualReviewQueueAsync(
         SearchQueryParams paging, UrgencyLevel? urgencyLevel, string operationBranch, CancellationToken ct)
     {
-        var q = _dbContext.Set<ReconManualReviewQueueDto>().AsNoTracking().AsQueryable();
+        var q = _dbContext.ReconManualReviewQueue.AsNoTracking();
 
         if (urgencyLevel.HasValue)
             q = q.Where(x => x.UrgencyLevel == urgencyLevel.Value);
@@ -173,7 +171,7 @@ internal sealed class ReportingService : IReportingService
     public async Task<List<ReconAlertSummaryDto>> GetReconAlertSummaryAsync(
         DataScope? dataScope, string severity, string alertType, AlertStatus? alertStatus, CancellationToken ct)
     {
-        var q = _dbContext.Set<ReconAlertSummaryDto>().AsNoTracking().AsQueryable();
+        var q = _dbContext.ReconAlertSummary.AsNoTracking();
 
         if (dataScope.HasValue)
             q = q.Where(x => x.DataScope == dataScope.Value);
@@ -186,11 +184,11 @@ internal sealed class ReportingService : IReportingService
 
         return await q.OrderByDescending(x => x.AlertCount).ToListAsync(ct);
     }
-    
+
     public async Task<PaginatedList<ReconCardContentDailyDto>> GetReconLiveCardContentDailyAsync(
         SearchQueryParams paging, FileContentType? network, DateTime? dateFrom, DateTime? dateTo, CancellationToken ct)
     {
-        var q = _dbContext.Set<ReconCardContentDailyDto>().AsNoTracking().AsQueryable();
+        var q = _dbContext.ReconCardContentDaily.AsNoTracking();
 
         if (network.HasValue)
             q = q.Where(x => x.Network == network.Value);
@@ -206,7 +204,7 @@ internal sealed class ReportingService : IReportingService
     public async Task<PaginatedList<ReconClearingContentDailyDto>> GetReconLiveClearingContentDailyAsync(
         SearchQueryParams paging, FileContentType? network, DateTime? dateFrom, DateTime? dateTo, CancellationToken ct)
     {
-        var q = _dbContext.Set<ReconClearingContentDailyDto>().AsNoTracking().AsQueryable();
+        var q = _dbContext.ReconClearingContentDaily.AsNoTracking();
 
         if (network.HasValue)
             q = q.Where(x => x.Network == network.Value);
@@ -222,9 +220,7 @@ internal sealed class ReportingService : IReportingService
     public async Task<PaginatedList<ReconCardContentDailyDto>> GetReconArchiveCardContentDailyAsync(
         SearchQueryParams paging, FileContentType? network, DateTime? dateFrom, DateTime? dateTo, CancellationToken ct)
     {
-        var q = _dbContext.Set<ReconCardContentDailyDto>()
-            .FromSqlRaw("SELECT * FROM reporting.vw_recon_archive_card_content_daily")
-            .AsNoTracking();
+        var q = _dbContext.ReconArchiveCardContentDaily.AsNoTracking();
 
         if (network.HasValue)
             q = q.Where(x => x.Network == network.Value);
@@ -240,9 +236,7 @@ internal sealed class ReportingService : IReportingService
     public async Task<PaginatedList<ReconClearingContentDailyDto>> GetReconArchiveClearingContentDailyAsync(
         SearchQueryParams paging, FileContentType? network, DateTime? dateFrom, DateTime? dateTo, CancellationToken ct)
     {
-        var q = _dbContext.Set<ReconClearingContentDailyDto>()
-            .FromSqlRaw("SELECT * FROM reporting.vw_recon_archive_clearing_content_daily")
-            .AsNoTracking();
+        var q = _dbContext.ReconArchiveClearingContentDaily.AsNoTracking();
 
         if (network.HasValue)
             q = q.Where(x => x.Network == network.Value);
@@ -259,7 +253,7 @@ internal sealed class ReportingService : IReportingService
         SearchQueryParams paging, DataScope? dataScope, FileContentType? network, ReconSide? side,
         DateTime? dateFrom, DateTime? dateTo, CancellationToken ct)
     {
-        var q = _dbContext.Set<ReconContentDailyDto>().AsNoTracking().AsQueryable();
+        var q = _dbContext.ReconContentDaily.AsNoTracking();
 
         if (dataScope.HasValue)
             q = q.Where(x => x.DataScope == dataScope.Value);
@@ -279,7 +273,7 @@ internal sealed class ReportingService : IReportingService
     public async Task<List<ReconClearingControlStatAnalysisDto>> GetReconClearingControlStatAnalysisAsync(
         DataScope? dataScope, FileContentType? network, CancellationToken ct)
     {
-        var q = _dbContext.Set<ReconClearingControlStatAnalysisDto>().AsNoTracking().AsQueryable();
+        var q = _dbContext.ReconClearingControlStatAnalysis.AsNoTracking();
 
         if (dataScope.HasValue)
             q = q.Where(x => x.DataScope == dataScope.Value);
@@ -293,7 +287,7 @@ internal sealed class ReportingService : IReportingService
         DataScope? dataScope, FileContentType? network, string financialType, string txnEffect,
         int? originalCurrency, CancellationToken ct)
     {
-        var q = _dbContext.Set<ReconFinancialSummaryDto>().AsNoTracking().AsQueryable();
+        var q = _dbContext.ReconFinancialSummary.AsNoTracking();
 
         if (dataScope.HasValue)
             q = q.Where(x => x.DataScope == dataScope.Value);
@@ -312,7 +306,7 @@ internal sealed class ReportingService : IReportingService
     public async Task<List<ReconResponseStatusAnalysisDto>> GetReconResponseStatusAnalysisAsync(
         DataScope? dataScope, FileContentType? network, ReconciliationStatus? reconciliationStatus, CancellationToken ct)
     {
-        var q = _dbContext.Set<ReconResponseStatusAnalysisDto>().AsNoTracking().AsQueryable();
+        var q = _dbContext.ReconResponseStatusAnalysis.AsNoTracking();
 
         if (dataScope.HasValue)
             q = q.Where(x => x.DataScope == dataScope.Value);
@@ -323,12 +317,12 @@ internal sealed class ReportingService : IReportingService
 
         return await q.OrderByDescending(x => x.TransactionCount).ToListAsync(ct);
     }
-    
+
     public async Task<PaginatedList<ArchiveRunOverviewDto>> GetArchiveRunOverviewAsync(
         SearchQueryParams paging, string archiveStatus, FileContentType? contentType, FileType? fileType,
         DateTime? dateFrom, DateTime? dateTo, CancellationToken ct)
     {
-        var q = _dbContext.Set<ArchiveRunOverviewDto>().AsNoTracking().AsQueryable();
+        var q = _dbContext.ArchiveRunOverview.AsNoTracking();
 
         if (!string.IsNullOrWhiteSpace(archiveStatus))
             q = q.Where(x => x.ArchiveStatus == archiveStatus);
@@ -349,7 +343,7 @@ internal sealed class ReportingService : IReportingService
         SearchQueryParams paging, FileContentType? contentType, FileType? fileType,
         ArchiveEligibilityStatus? archiveEligibilityStatus, CancellationToken ct)
     {
-        var q = _dbContext.Set<ArchiveEligibilityDto>().AsNoTracking().AsQueryable();
+        var q = _dbContext.ArchiveEligibility.AsNoTracking();
 
         if (contentType.HasValue)
             q = q.Where(x => x.ContentType == contentType.Value);
@@ -365,7 +359,7 @@ internal sealed class ReportingService : IReportingService
     public async Task<List<ArchiveBacklogTrendDto>> GetArchiveBacklogTrendAsync(
         DateTime? dateFrom, DateTime? dateTo, CancellationToken ct)
     {
-        var q = _dbContext.Set<ArchiveBacklogTrendDto>().AsNoTracking().AsQueryable();
+        var q = _dbContext.ArchiveBacklogTrend.AsNoTracking();
 
         if (dateFrom.HasValue)
             q = q.Where(x => x.ReportDate >= dateFrom.Value);
@@ -377,15 +371,14 @@ internal sealed class ReportingService : IReportingService
 
     public async Task<ArchiveRetentionSnapshotDto> GetArchiveRetentionSnapshotAsync(CancellationToken ct)
     {
-        return await _dbContext.Set<ArchiveRetentionSnapshotDto>().AsNoTracking()
-            .FirstOrDefaultAsync(ct);
+        return await _dbContext.ArchiveRetentionSnapshot.AsNoTracking().FirstOrDefaultAsync(ct);
     }
 
     public async Task<PaginatedList<FileReconSummaryDto>> GetFileReconSummaryAsync(
         SearchQueryParams paging, DataScope? dataScope, FileContentType? contentType, FileType? fileType,
         DateTime? dateFrom, DateTime? dateTo, CancellationToken ct)
     {
-        var q = _dbContext.Set<FileReconSummaryDto>().AsNoTracking().AsQueryable();
+        var q = _dbContext.FileReconSummary.AsNoTracking();
 
         if (dataScope.HasValue)
             q = q.Where(x => x.DataScope == dataScope.Value);
@@ -406,7 +399,7 @@ internal sealed class ReportingService : IReportingService
         DataScope? dataScope, FileContentType? network, ReconSide? side,
         DateTime? dateFrom, DateTime? dateTo, CancellationToken ct)
     {
-        var q = _dbContext.Set<ReconMatchRateTrendDto>().AsNoTracking().AsQueryable();
+        var q = _dbContext.ReconMatchRateTrend.AsNoTracking();
 
         if (dataScope.HasValue)
             q = q.Where(x => x.DataScope == dataScope.Value);
@@ -426,7 +419,7 @@ internal sealed class ReportingService : IReportingService
         DataScope? dataScope, FileContentType? network,
         DateTime? dateFrom, DateTime? dateTo, CancellationToken ct)
     {
-        var q = _dbContext.Set<ReconGapAnalysisDto>().AsNoTracking().AsQueryable();
+        var q = _dbContext.ReconGapAnalysis.AsNoTracking();
 
         if (dataScope.HasValue)
             q = q.Where(x => x.DataScope == dataScope.Value);
@@ -443,7 +436,7 @@ internal sealed class ReportingService : IReportingService
     public async Task<List<UnmatchedTransactionAgingDto>> GetUnmatchedTransactionAgingAsync(
         DataScope? dataScope, FileContentType? network, ReconSide? side, CancellationToken ct)
     {
-        var q = _dbContext.Set<UnmatchedTransactionAgingDto>().AsNoTracking().AsQueryable();
+        var q = _dbContext.UnmatchedTransactionAging.AsNoTracking();
 
         if (dataScope.HasValue)
             q = q.Where(x => x.DataScope == dataScope.Value);
@@ -458,7 +451,7 @@ internal sealed class ReportingService : IReportingService
     public async Task<List<NetworkReconScorecardDto>> GetNetworkReconScorecardAsync(
         DataScope? dataScope, FileContentType? network, CancellationToken ct)
     {
-        var q = _dbContext.Set<NetworkReconScorecardDto>().AsNoTracking().AsQueryable();
+        var q = _dbContext.NetworkReconScorecard.AsNoTracking();
 
         if (dataScope.HasValue)
             q = q.Where(x => x.DataScope == dataScope.Value);
@@ -467,7 +460,7 @@ internal sealed class ReportingService : IReportingService
 
         return await q.OrderBy(x => x.Network).ToListAsync(ct);
     }
-    
+
     private static async Task<PaginatedList<T>> PaginateAsync<T>(
         IQueryable<T> query, SearchQueryParams paging, CancellationToken ct)
     {
@@ -481,4 +474,3 @@ internal sealed class ReportingService : IReportingService
         return new PaginatedList<T>(items, total, page, pageSize, paging.OrderBy, paging.SortBy);
     }
 }
-
