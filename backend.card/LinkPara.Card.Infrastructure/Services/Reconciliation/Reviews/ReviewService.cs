@@ -295,9 +295,8 @@ internal sealed class ReviewService
                 var updatedOperationRows = await _dbContext.ReconciliationOperations
                     .Where(x => x.Id == operationId)
                     .Where(x =>
-                        x.Status != OperationStatus.Completed &&
-                        x.Status != OperationStatus.Cancelled &&
-                        x.Status != OperationStatus.Failed)
+                        x.Status == OperationStatus.Blocked ||
+                        x.Status == OperationStatus.Planned)
                     .ExecuteUpdateAsync(update => update
                         .SetProperty(x => x.NextAttemptAt, now)
                         .SetProperty(x => x.LeaseExpiresAt, (DateTime?)null)

@@ -339,3 +339,12 @@ public class NetworkReconScorecardViewConfiguration : IEntityTypeConfiguration<N
 }
 
 
+public class CardClearingCorrelationViewConfiguration : IEntityTypeConfiguration<CardClearingCorrelationDto>
+{
+    public void Configure(EntityTypeBuilder<CardClearingCorrelationDto> builder)
+    {
+        builder.HasNoKey();
+        builder.ToView("vw_card_clearing_correlation", "reporting");
+        builder.Property(x => x.DataScope).HasConversion<string>().HasColumnType("text");
+    }
+}

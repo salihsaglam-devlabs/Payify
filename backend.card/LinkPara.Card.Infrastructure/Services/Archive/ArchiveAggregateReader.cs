@@ -209,9 +209,74 @@ internal sealed class ArchiveAggregateReader
             snapshot.ReconciliationAlertStatuses.Add(status);
         }
 
+        snapshot.LastUpdate = await ResolveAggregateLastUpdateAsync(
+            ingestionFileId,
+            fileLineIds,
+            snapshot.LastUpdate,
+            cancellationToken);
+
         snapshot.ExistsInArchive = await ExistsInArchiveAsync(ingestionFileId, cancellationToken);
 
         return snapshot;
+    }
+
+    private async Task<DateTime?> ResolveAggregateLastUpdateAsync(
+        Guid ingestionFileId,
+        IReadOnlyCollection<Guid> fileLineIds,
+        DateTime? currentLastUpdate,
+        CancellationToken cancellationToken)
+    {
+        DateTime? maxLastUpdate = currentLastUpdate;
+
+        DateTime? Combine(DateTime? a, DateTime? b)
+        {
+            if (!a.HasValue) return b;
+            if (!b.HasValue) return a;
+            return a.Value >= b.Value ? a : b;
+        }
+
+        var fileLineMax = await _dbContext.IngestionFileLines
+            .AsNoTracking()
+            .Where(x => x.FileId == ingestionFileId)
+            .MaxAsync(x => (DateTime?)(x.UpdateDate ?? x.CreateDate), cancellationToken);
+        maxLastUpdate = Combine(maxLastUpdate, fileLineMax);
+
+        if (fileLineIds.Count == 0)
+        {
+            return maxLastUpdate;
+        }
+
+        var evalMax = await _dbContext.ReconciliationEvaluations
+            .AsNoTracking()
+            .Where(x => fileLineIds.Contains(x.FileLineId))
+            .MaxAsync(x => (DateTime?)(x.UpdateDate ?? x.CreateDate), cancellationToken);
+        maxLastUpdate = Combine(maxLastUpdate, evalMax);
+
+        var opMax = await _dbContext.ReconciliationOperations
+            .AsNoTracking()
+            .Where(x => fileLineIds.Contains(x.FileLineId))
+            .MaxAsync(x => (DateTime?)(x.UpdateDate ?? x.CreateDate), cancellationToken);
+        maxLastUpdate = Combine(maxLastUpdate, opMax);
+
+        var reviewMax = await _dbContext.ReconciliationReviews
+            .AsNoTracking()
+            .Where(x => fileLineIds.Contains(x.FileLineId))
+            .MaxAsync(x => (DateTime?)(x.UpdateDate ?? x.CreateDate), cancellationToken);
+        maxLastUpdate = Combine(maxLastUpdate, reviewMax);
+
+        var execMax = await _dbContext.ReconciliationOperationExecutions
+            .AsNoTracking()
+            .Where(x => fileLineIds.Contains(x.FileLineId))
+            .MaxAsync(x => (DateTime?)(x.UpdateDate ?? x.CreateDate), cancellationToken);
+        maxLastUpdate = Combine(maxLastUpdate, execMax);
+
+        var alertMax = await _dbContext.ReconciliationAlerts
+            .AsNoTracking()
+            .Where(x => fileLineIds.Contains(x.FileLineId))
+            .MaxAsync(x => (DateTime?)(x.UpdateDate ?? x.CreateDate), cancellationToken);
+        maxLastUpdate = Combine(maxLastUpdate, alertMax);
+
+        return maxLastUpdate;
     }
 
     private async Task<bool> ExistsInArchiveAsync(Guid ingestionFileId, CancellationToken cancellationToken)

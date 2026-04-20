@@ -9,11 +9,49 @@ using LinkPara.Card.Infrastructure.Persistence;
 using LinkPara.Card.Infrastructure.Services.Reconciliation.Evaluate.Core;
 using LinkPara.Card.Infrastructure.Services.Reconciliation.Execute.Core;
 using LinkPara.Card.Infrastructure.Services.Reconciliation.Integrations.Emoney;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Localization;
 
 namespace LinkPara.Card.Infrastructure.Services.Reconciliation.Evaluate.Flows;
 
+/// <summary>
+/// BKM kart işlemleri (card transaction) mutabakat değerlendiricisi.
+///
+/// Bu sınıf, BKM dosyasından gelen tek bir işlem satırını Payify (Emoney) tarafındaki
+/// karşılığı ile karşılaştırır ve "Kural Kodu" dokümanındaki karar ağacını uygular.
+/// Çıktı olarak her zaman bir <see cref="EvaluationResult"/> üretir; sonuç
+/// aşağıdakilerden bir veya birden fazlasını içerebilir:
+///   - Note      : İlgili case'i operatöre/loglara açıklayan metin
+///   - AutoOp    : Sistem tarafından otomatik uygulanacak operasyon(lar)
+///   - ManualOp  : Operatör onayı / reddi gerektiren manuel inceleme
+///
+/// Karar ağacındaki ana kontrol noktaları:
+///   C1   -> Dosya satırının uzunluk / parse doğrulaması (file length validity).
+///   C2   -> Aynı dosyada/işlem kümesinde duplicate (uniqueness) kontrolü.
+///   C3   -> İşlemin cancel / reversal tipinde olup olmadığı (D7 yönlendirmesi).
+///   C4   -> Cancel/reversal olduğunda orijinal işlemin daha önce iptal edilip edilmediği.
+///   C5   -> Dosya tarafındaki işlem statüsünün ayrımı (Failed / Expired / Successful).
+///   C19  -> Payify tarafındaki işlem statüsünün ayrımı (Failed / Missing / Successful).
+///   C7   -> Expire branch & payify Failed -> işlemi sistemde de Expire'a çek.
+///   C8   -> Expire branch & payify Missing -> işlemi yarat ve Expire'a çek.
+///   C9   -> Expire branch & payify Successful & ACC tarafında bekleyen eşleşme var mı?
+///   C10  -> ACC pending match varsa: yalnızca alarm (manuel müdahale Paycore'da).
+///   C11  -> ACC pending match yoksa: D2 (Expire'a çek + bakiye etkisini geri al).
+///   C12  -> Successful dosya işlemi & payify Failed -> D3 (response code düzelt + başarılıya çevir + bakiye geri al).
+///   C13  -> Successful dosya işlemi & payify Missing -> önce işlemi yarat.
+///   C14  -> C13 sonrası refund değilse D4 (orijinal etki / refund uygula).
+///   C15  -> Successful & refund & matched (linked) refund.
+///   C16  -> Successful & refund & matched değil -> manuel inceleme (D6).
+///   C17  -> Matched refund -> D5 (linked refund otomatik uygula).
+///   D1   -> Failed dosya & payify Successful -> response code düzelt + Failed'a çevir + bakiye geri al.
+///   D7   -> Cancel/Reversal akışında orijinali ters çevir + IsCancelled=1.
+///   D8   -> Successful & payify Successful & amount &lt; billing -> fark kadar shadow balance.
+///
+/// Davranışsal notlar:
+///   - "NoAction" sadece Note ile sonlanan branch'tir; sistem hiçbir operasyon tetiklemez.
+///   - "Alert" branch'lerinde otomatik düzeltme yapılmaz; insan dikkatine sunulur.
+///   - "AutoOperation" branch'leri kuralın mekanik olarak güvenli kabul ettiği düzeltmelerdir.
+///   - "ManualOperation" branch'leri operatör onayına bırakılır (Approve / Reject akışı tanımlıdır).
+/// </summary>
 internal sealed class BkmEvaluator : IEvaluator
 {
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
@@ -34,30 +72,40 @@ internal sealed class BkmEvaluator : IEvaluator
 
     public bool CanEvaluate(FileContentType fileContentType) => fileContentType == FileContentType.Bkm;
 
+    /// <summary>
+    /// Tek bir BKM satırı için karar ağacının giriş noktası.
+    ///
+    /// Akış:
+    ///   1) Root detail elde edilir; yoksa veri tutarsızlığı sayılır ve exception fırlatılır
+    ///      (üst katman bunu kayda alır; sessiz geçilmez).
+    ///   2) C1 - Dosya satırı parse / length doğrulamasını geçemediyse veriye güvenilmez,
+    ///      sadece alarm üretilir ve akış sonlandırılır.
+    ///   3) C2 - Duplicate kontrolü; conflict ya da secondary kayıtlar burada durdurulur.
+    ///      Primary duplicate'lerde alarm üretilir ama akışa devam edilir.
+    ///   4) C3 - İşlem cancel/reversal tipindeyse normal status branch'ine girilmez;
+    ///      önce orijinal işlem üzerinden D7 değerlendirmesi yapılır.
+    ///   5) Aksi halde C5 (file status) ve C19 (payify status) çözümlenir; ardından
+    ///      ilgili Failed / Expired / Successful branch'i çağrılır.
+    /// </summary>
     public async Task<EvaluationResult> EvaluateAsync(
         EvaluationContext context,
         CancellationToken cancellationToken = default)
     {
         var bkmContext = (BkmEvaluationContext)context;
         var result = new EvaluationResult();
-        var currentCard = GetRootCardDetail(bkmContext);
-        bkmContext.CachedRootDetail = currentCard;
 
-        if (TryHandleMissingCardRow(result, bkmContext, currentCard))
-        {
-            return result;
-        }
+        // Root detail bulunamazsa: dosya parse edilmiş olsa bile değerlendirme imkânsız.
+        // Sessiz dönmek yerine domain exception fırlatılır; üst katman bunu izlenebilir yapar.
+        var detail = GetRootCardDetail(bkmContext)
+            ?? throw new ReconciliationCurrentCardRowMissingException(
+                _localizer.Get("Reconciliation.Bkm.CurrentCardRowMissing"));
+        bkmContext.CachedRootDetail = detail;
 
-        if (currentCard is null)
-        {
-            throw new ReconciliationCurrentCardRowMissingException(_localizer.Get("Reconciliation.Bkm.CurrentCardRowMissing"));
-        }
-
-        var detail = currentCard;
-        var latestEmoney = GetLatestEmoneyTransaction(bkmContext.EmoneyTransactions);
+        // C1* - Dosya satırı uzunluk / parse doğrulaması başarısız.
+        // Veri güvenilmez kabul edilir; otomatik düzeltme YAPILMAZ, sadece alarm üretilir.
         if (HasFileLengthValidationFailure(bkmContext))
         {
-            result.SetNote(note: _localizer.Get("Reconciliation.Bkm.FileLengthValidationNote"));
+            result.SetNote(_localizer.Get("Reconciliation.Bkm.FileLengthValidationNote"));
             result.AddAutoOperation(
                 OperationCodes.RaiseAlert,
                 _localizer.Get("Reconciliation.Bkm.FileLengthValidationOp"),
@@ -65,382 +113,415 @@ internal sealed class BkmEvaluator : IEvaluator
             return result;
         }
 
-        if (TryHandleDuplicateRow(result, bkmContext))
+        // C2* - Duplicate / uniqueness değerlendirmesi.
+        // Conflict ve Secondary case'lerinde akış burada sonlanır; Primary'de devam eder
+        // (yine de operatör görsün diye alarm üretilir).
+        if (HandleDuplicate(result, bkmContext) == DuplicateOutcome.Stop)
         {
             return result;
         }
 
-        var payifyStatus = ResolvePayifyStatus(bkmContext.EmoneyTransactions);
-        if (TryHandleAmbiguousPayifyLookup(result, bkmContext, payifyStatus))
+        // CLEARING-PRESENCE GATE
+        // ----------------------
+        // İş kuralı: Bir kart işleminin doğru değerlendirilebilmesi için ilgili clearing
+        // (ACC) kaydının da elimizde olması gerekir. Clearing dosyası henüz işlenmemişse
+        // (ClearingDetails boşsa) işlemi şu an karara bağlamayız:
+        //   1) EvaluationResult AwaitingClearing olarak işaretlenir;
+        //      EvaluateService bu işareti görüp satırı ReconciliationStatus.AwaitingClearing'e taşır.
+        //   2) Bilgilendirme amaçlı tek bir RaiseAlert üretilir; otomatik düzeltme veya manuel
+        //      review YAPILMAZ - karar netleşmediği için operatör süreci gereksiz yere açılmaz.
+        //   3) Clearing dosyası geldiğinde ClearingArrivalRequeueService satırı
+        //      ReconciliationStatus.Ready'ye geri çeker ve değerlendirici tekrar çağrılır.
+        // Bu sayede aynı işlem clearing gelmeden boşa karar üretmez; clearing gelince ise
+        // karar ağacı baştan, eksiksiz veriyle çalışır.
+        if (bkmContext.ClearingDetails.Count == 0)
         {
-            return result;
+            return BuildAwaitingClearingResult(result, bkmContext, "AWAIT_CLEARING");
         }
 
+        // C3* - İşlem iptal / reversal tipinde mi?
+        // Eğer öyleyse normal status akışına girilmez; orijinal işlem bulunup
+        // D7 (reverse + IsCancelled=1) kuralına göre karar verilir.
         if (IsCancelOrReversal(detail))
         {
-            if (bkmContext.ClearingDetails.Count == 0)
-            {
-                return BuildAwaitingClearingResult(result, bkmContext, "AWAIT_CLEARING_REVERSAL");
-            }
             return await EvaluateCancelOrReversalAsync(result, bkmContext, detail, cancellationToken);
         }
 
-        if (IsFailed(detail))
-        {
-            if (bkmContext.ClearingDetails.Count == 0)
-            {
-                return BuildAwaitingClearingResult(result, bkmContext, "AWAIT_CLEARING_FAILED");
-            }
-            return EvaluateFailedTransaction(result, bkmContext, payifyStatus);
-        }
+        // C5* / C19* - Dosya ve Payify statüleri çözümlenir.
+        // latestEmoney sadece Successful + amount karşılaştırması (D8) gereken case için kullanılır.
+        var fileStatus = ResolveFileTransactionStatus(detail);
+        var payifyStatus = ResolvePayifyStatus(bkmContext.EmoneyTransactions);
+        var latestEmoney = GetLatestEmoneyTransaction(bkmContext.EmoneyTransactions);
 
-        if (IsExpired(detail))
+        return fileStatus switch
         {
-            return await EvaluateExpiredTransactionAsync(result, bkmContext, detail, payifyStatus, cancellationToken);
-        }
-
-        if (HasStatusResponseCodeAnomaly(detail))
-        {
-            result.SetNote(note: _localizer.Get("Reconciliation.Bkm.DataConsistencyAnomalyNote"));
-            result.AddAutoOperation(
-                OperationCodes.RaiseAlert,
-                _localizer.Get("Reconciliation.Bkm.DataConsistencyAnomalyAlertOp"),
-                BkmSnapshotBuilder.Create(bkmContext, OperationCodes.RaiseAlert, "DATA_ANOMALY"));
-            result.AddManualOperation(
-                OperationCodes.CreateManualReview,
-                _localizer.Get("Reconciliation.Bkm.DataConsistencyAnomalyReviewOp"),
-                code => BkmSnapshotBuilder.Create(bkmContext, code, "DATA_ANOMALY"),
-                approveCode: OperationCodes.RecoverMissingCardRow,
-                approveNote: _localizer.Get("Reconciliation.Bkm.RequeueForReEvaluation"),
-                rejectCode: OperationCodes.RejectUnmatchedFlow,
-                rejectNote: _localizer.Get("Reconciliation.Bkm.CloseRecordManually"));
-            return result;
-        }
-
-        if (IsSuccessful(detail))
-        {
-            return EvaluateSuccessfulTransaction(result, bkmContext, detail, payifyStatus, latestEmoney);
-        }
-
-        return BuildUnmatchedFlowResult(result, bkmContext);
+            FileTransactionStatus.Failed     => EvaluateFailedBranch(result, bkmContext, payifyStatus),
+            FileTransactionStatus.Expired    => await EvaluateExpireBranchAsync(result, bkmContext, detail, payifyStatus, cancellationToken),
+            FileTransactionStatus.Successful => EvaluateSuccessfulBranch(result, bkmContext, detail, payifyStatus, latestEmoney),
+            _                                => result
+        };
     }
 
+    // ----------------------------------------------------------------------
+    // C3* / C4* / D7 - Cancel & Reversal değerlendirmesi
+    // ----------------------------------------------------------------------
+    /// <summary>
+    /// Dosyadaki işlem cancel/reversal tipinde olduğunda çağrılır.
+    ///
+    /// Karar noktaları:
+    ///   - Orijinal işlem (referans verilen MainTxnGuid) bulunamadıysa: veri tutarsızlığı.
+    ///     Kural Kodu bu olasılığı tanımlamadığı için defansif olarak SADECE alarm üretilir;
+    ///     hiçbir bakiye / statü operasyonu yapılmaz (yanlış yöne düzeltme yapmamak için).
+    ///   - C3: Orijinal işlem zaten iptal edilmişse (IsCancelled = true) tekrar reverse
+    ///     edilmez -> NoAction (yalnızca açıklayıcı not).
+    ///   - C4 + D7: Orijinal henüz iptal edilmemişse otomatik olarak ters çevrilir
+    ///     ve IsCancelled=1 yapılır. İki adım da tek operasyon koduna sarılır;
+    ///     sıralama executor handler içinde garanti edilir.
+    /// </summary>
     private async Task<EvaluationResult> EvaluateCancelOrReversalAsync(
         EvaluationResult result,
         BkmEvaluationContext context,
         CardBkmDetail detail,
         CancellationToken cancellationToken)
     {
-        var originalResolution = await ResolveOriginalTransactionAsync(detail, cancellationToken);
-        if (originalResolution.Status is OriginalTransactionStatus.Missing or OriginalTransactionStatus.Ambiguous)
+        var original = await ResolveOriginalTransactionAsync(detail, cancellationToken);
+
+        // Defansif branch: Kural Kodu "original yok" varsayımı yapmaz; ancak gerçek dünyada
+        // referans verilen işlem bulunamayabilir. Otomatik aksiyon almak yerine alarm üretilir
+        // ki yanlış bir bakiye/statü düzeltmesi yapılmasın.
+        if (original is null)
         {
-            result.SetNote(note: _localizer.Get("Reconciliation.Bkm.OriginalTxnNotResolvedNote"));
+            result.SetNote(_localizer.Get("Reconciliation.Bkm.OriginalTxnNotResolvedNote"));
             result.AddAutoOperation(
                 OperationCodes.RaiseAlert,
                 _localizer.Get("Reconciliation.Bkm.OriginalTxnNotResolvedOp"),
                 BkmSnapshotBuilder.Create(context, OperationCodes.RaiseAlert, "C3"));
-            result.AddManualOperation(
-                OperationCodes.CreateManualReview,
-                _localizer.Get("Reconciliation.Bkm.CancelReversalManualReviewOp"),
-                code => BkmSnapshotBuilder.Create(context, code, "C3"),
-                approveCode: OperationCodes.BindOriginalTransactionAndContinue,
-                approveNote: _localizer.Get("Reconciliation.Bkm.BindOriginalAndReEvaluate"),
-                rejectCode: OperationCodes.RejectReversalRecord,
-                rejectNote: _localizer.Get("Reconciliation.Bkm.CloseCancelReversalManually"));
             return result;
         }
 
-        if (originalResolution.Transaction?.IsCancelled == true)
+        // C3 -> "Orijinal işlem daha önce iptal edilmiş mi?"
+        // EVET ise iş zaten tamamlanmış; tekrar reverse etmek mükerrer bakiye etkisi yaratır.
+        // -> NoAction (sadece bilgi notu).
+        if (original.IsCancelled)
         {
-            result.SetNote(note: _localizer.Get("Reconciliation.Bkm.AlreadyCancelledNote"));
+            result.SetNote(_localizer.Get("Reconciliation.Bkm.AlreadyCancelledNote"));
             return result;
         }
-        
-        var originalTransactionId = originalResolution.Transaction?.Id;
 
-        result.SetNote(note: _localizer.Get("Reconciliation.Bkm.ReversalNotCancelledNote"));
+        // C4* + D7: Orijinal canlı; iptal/reversal etkisini uygula:
+        //   1) ReverseOriginalTransaction -> orijinalin bakiye etkisini ters çevir
+        //   2) Aynı operasyon handler'ı IsCancelled=1 işaretini de atar (sıra garantili).
+        result.SetNote(_localizer.Get("Reconciliation.Bkm.ReversalNotCancelledNote"));
         result.AddAutoOperation(
-            OperationCodes.RaiseAlert,
+            OperationCodes.ReverseOriginalTransaction,
             _localizer.Get("Reconciliation.Bkm.ReverseOriginalOp"),
-            BkmSnapshotBuilder.Create(context, OperationCodes.RaiseAlert, "D7", ("originalTransactionId", originalTransactionId)));
-        result.AddManualOperation(
-            OperationCodes.CreateManualReview,
-            _localizer.Get("Reconciliation.Bkm.CancelReversalManualReviewOp"),
-            code => BkmSnapshotBuilder.Create(context, code, "D7", ("originalTransactionId", originalTransactionId)),
-            approveCode: OperationCodes.ReverseOriginalTransaction,
-            approveNote: _localizer.Get("Reconciliation.Bkm.MarkOriginalCancelledOp"),
-            rejectCode: OperationCodes.RejectReversalRecord,
-            rejectNote: _localizer.Get("Reconciliation.Bkm.CloseCancelReversalManually"));
+            BkmSnapshotBuilder.Create(context, OperationCodes.ReverseOriginalTransaction, "D7",
+                ("referenceTransactionId", original.Id)));
         return result;
     }
 
-    private EvaluationResult EvaluateFailedTransaction(
+    // ----------------------------------------------------------------------
+    // C5* - File status BAŞARISIZ branch (Failed)
+    // ----------------------------------------------------------------------
+    /// <summary>
+    /// Dosya tarafında işlem Failed göründüğünde payify statüsüne göre karar verilir.
+    ///
+    /// Case dağılımı:
+    ///   - payify Failed     : İki taraf da başarısız; tutarlı durum -> NoAction (yalnızca not).
+    ///   - payify Missing    : Dosya başarısız, payify'da hiç kayıt yok; tutarlı -> NoAction.
+    ///   - payify Successful : ÇELİŞKİ. Payify'da işlem başarılı sonuçlanmış ama dosya başarısız.
+    ///                         D1 uygulanır:
+    ///                           1) Response code'u doğru değere çek (CorrectResponseCode)
+    ///                           2) İşlem statüsünü Failed'a çevir (ConvertTransactionToFailed)
+    ///                           3) Bakiye etkisini geri al (ReverseByBalanceEffect)
+    /// </summary>
+    private EvaluationResult EvaluateFailedBranch(
         EvaluationResult result,
         BkmEvaluationContext context,
         PayifyStatus payifyStatus)
     {
-        if (payifyStatus == PayifyStatus.Failed)
+        switch (payifyStatus)
         {
-            result.SetNote(note: _localizer.Get("Reconciliation.Bkm.FailedBothNote"));
-            return result;
-        }
+            case PayifyStatus.Failed:
+                // İki taraf da Failed -> tutarlı, herhangi bir aksiyon gerekmez.
+                result.SetNote(_localizer.Get("Reconciliation.Bkm.FailedBothNote"));
+                return result;
 
-        if (payifyStatus == PayifyStatus.Missing)
-        {
-            result.SetNote(note: _localizer.Get("Reconciliation.Bkm.FailedMissingPayifyNote"));
-            return result;
-        }
+            case PayifyStatus.Missing:
+                // Payify'da hiç işlem yok ve dosya da başarısız -> tutarlı, aksiyon yok.
+                result.SetNote(_localizer.Get("Reconciliation.Bkm.FailedMissingPayifyNote"));
+                return result;
 
-        result.SetNote(note: _localizer.Get("Reconciliation.Bkm.FailedSuccessfulPayifyNote"));
-        result.AddAutoOperation(
-            OperationCodes.CorrectResponseCode,
-            _localizer.Get("Reconciliation.Bkm.CorrectResponseCodeOp"),
-            BkmSnapshotBuilder.Create(context, OperationCodes.CorrectResponseCode, "D1"));
-        result.AddAutoOperation(
-            OperationCodes.ConvertTransactionToFailed,
-            _localizer.Get("Reconciliation.Bkm.ConvertToFailedOp"),
-            BkmSnapshotBuilder.Create(context, OperationCodes.ConvertTransactionToFailed, "D1"));
-        result.AddAutoOperation(
-            OperationCodes.ReverseByBalanceEffect,
-            _localizer.Get("Reconciliation.Bkm.ReverseByBalanceOp"),
-            BkmSnapshotBuilder.Create(context, OperationCodes.ReverseByBalanceEffect, "D1"));
-        return result;
+            case PayifyStatus.Successful:
+                // C6* + D1 - Payify başarılı ama dosya başarısız: müşterinin bakiyesi yanlış olabilir.
+                // 3 adımlı otomatik düzeltme uygulanır (sıralı): kod düzelt -> statü çevir -> bakiye geri al.
+                result.SetNote(_localizer.Get("Reconciliation.Bkm.FailedSuccessfulPayifyNote"));
+                result.AddAutoOperation(
+                    OperationCodes.CorrectResponseCode,
+                    _localizer.Get("Reconciliation.Bkm.CorrectResponseCodeOp"),
+                    BkmSnapshotBuilder.Create(context, OperationCodes.CorrectResponseCode, "D1"));
+                result.AddAutoOperation(
+                    OperationCodes.ConvertTransactionToFailed,
+                    _localizer.Get("Reconciliation.Bkm.ConvertToFailedOp"),
+                    BkmSnapshotBuilder.Create(context, OperationCodes.ConvertTransactionToFailed, "D1"));
+                result.AddAutoOperation(
+                    OperationCodes.ReverseByBalanceEffect,
+                    _localizer.Get("Reconciliation.Bkm.ReverseByBalanceOp"),
+                    BkmSnapshotBuilder.Create(context, OperationCodes.ReverseByBalanceEffect, "D1"));
+                return result;
+
+            default:
+                // Tanımlı olmayan payify statüsü için defansif çıkış.
+                return result;
+        }
     }
 
-    private async Task<EvaluationResult> EvaluateExpiredTransactionAsync(
+    // ----------------------------------------------------------------------
+    // C5* - File status EXPIRE branch
+    // ----------------------------------------------------------------------
+    /// <summary>
+    /// Dosya tarafında işlem Expire (zaman aşımı) olarak geldiğinde uygulanır.
+    ///
+    /// Case dağılımı:
+    ///   - payify Failed     : C7  -> Sistemdeki işlemi de Expire'a çek (otomatik).
+    ///   - payify Missing    : C8  -> Önce işlemi yarat, sonra Expire'a çek (iki adımlı otomatik).
+    ///   - payify Successful : C9  -> ACC tarafında bekleyen (ControlStat=P) bir eşleşme var mı?
+    ///                           Var ise  C10: yalnızca ALARM (manuel müdahale Paycore tarafında).
+    ///                           Yok ise  C11 + D2: Expire'a çek + bakiye etkisini geri al.
+    /// </summary>
+    private async Task<EvaluationResult> EvaluateExpireBranchAsync(
         EvaluationResult result,
         BkmEvaluationContext context,
         CardBkmDetail detail,
         PayifyStatus payifyStatus,
         CancellationToken cancellationToken)
     {
-        if (payifyStatus == PayifyStatus.Failed)
+        switch (payifyStatus)
         {
-            result.SetNote(note: _localizer.Get("Reconciliation.Bkm.ExpiredPayifyFailedNote"));
-            result.AddAutoOperation(
-                OperationCodes.MoveTransactionToExpired,
-                _localizer.Get("Reconciliation.Bkm.MoveToExpiredOp"),
-                BkmSnapshotBuilder.Create(context, OperationCodes.MoveTransactionToExpired, "C7"));
-            return result;
-        }
+            case PayifyStatus.Failed:
+                // C7* - Payify zaten Failed; dosya Expire diyor. Sistemdeki işlemi Expire'a taşı.
+                result.SetNote(_localizer.Get("Reconciliation.Bkm.ExpiredPayifyFailedNote"));
+                result.AddAutoOperation(
+                    OperationCodes.MoveTransactionToExpired,
+                    _localizer.Get("Reconciliation.Bkm.MoveToExpiredOp"),
+                    BkmSnapshotBuilder.Create(context, OperationCodes.MoveTransactionToExpired, "C7"));
+                return result;
 
-        if (payifyStatus == PayifyStatus.Missing)
-        {
-            if (context.ClearingDetails.Count == 0)
-            {
-                return BuildAwaitingClearingResult(result, context, "AWAIT_CLEARING_EXPIRED_NO_PAYIFY");
-            }
+            case PayifyStatus.Missing:
+                // C8* - Payify'da kayıt yok ama dosya Expire diyor.
+                // İki adımlı otomatik akış: önce işlem yaratılır, ardından Expire'a taşınır.
+                result.SetNote(_localizer.Get("Reconciliation.Bkm.ExpiredMissingPayifyNote"));
+                result.AddAutoOperation(
+                    OperationCodes.CreateTransaction,
+                    _localizer.Get("Reconciliation.Bkm.CreateTransactionOp"),
+                    BkmSnapshotBuilder.Create(context, OperationCodes.CreateTransaction, "C8"));
+                result.AddAutoOperation(
+                    OperationCodes.MoveCreatedTransactionToExpired,
+                    _localizer.Get("Reconciliation.Bkm.MoveToExpiredOp"),
+                    BkmSnapshotBuilder.Create(context, OperationCodes.MoveCreatedTransactionToExpired, "C8"));
+                return result;
 
-            result.SetNote(note: _localizer.Get("Reconciliation.Bkm.ExpiredMissingPayifyNote"));
-            result.AddAutoOperation(
-                OperationCodes.RaiseAlert,
-                _localizer.Get("Reconciliation.Bkm.ExpiredAccPendingAlertOp"),
-                BkmSnapshotBuilder.Create(context, OperationCodes.RaiseAlert, "C8"));
-            result.AddManualOperation(
-                OperationCodes.CreateManualReview,
-                _localizer.Get("Reconciliation.Bkm.ExpiredAccPendingReviewOp"),
-                code => BkmSnapshotBuilder.Create(context, code, "C8"),
-                approveCode: OperationCodes.CreateTransaction,
-                approveNote: _localizer.Get("Reconciliation.Bkm.CreateTransactionOp"),
-                rejectCode: OperationCodes.RejectUnmatchedFlow,
-                rejectNote: _localizer.Get("Reconciliation.Bkm.CloseRecordManually"));
-            return result;
-        }
+            case PayifyStatus.Successful:
+                // C9* - ACC tarafında ControlStat=P (Problem/Pending) bir clearing kaydı var mı?
+                // Varsa eşleşme henüz operatör tarafında çözülmemiş demektir; otomatik düzeltme YAPMA.
+                if (await HasAccPendingMatchAsync(detail, context, cancellationToken))
+                {
+                    // C10* - Yalnızca alarm; manuel kontrol Paycore mutabakat ekranı üzerinden yapılır.
+                    result.SetNote(_localizer.Get("Reconciliation.Bkm.AccPendingMatchNote"));
+                    result.AddAutoOperation(
+                        OperationCodes.RaiseAlert,
+                        _localizer.Get("Reconciliation.Bkm.AccPendingMatchOp"),
+                        BkmSnapshotBuilder.Create(context, OperationCodes.RaiseAlert, "C10"));
+                    return result;
+                }
 
-        if (await HasAccPendingMatchAsync(detail, context, cancellationToken))
-        {
-            result.SetNote(note: _localizer.Get("Reconciliation.Bkm.AccPendingMatchNote"));
-            result.AddAutoOperation(
-                OperationCodes.RaiseAlert,
-                _localizer.Get("Reconciliation.Bkm.AccPendingMatchOp"),
-                BkmSnapshotBuilder.Create(context, OperationCodes.RaiseAlert, "C10"));
-            result.AddManualOperation(
-                OperationCodes.CreateManualReview,
-                _localizer.Get("Reconciliation.Bkm.ExpiredManualReviewOp"),
-                code => BkmSnapshotBuilder.Create(context, code, "C10"),
-                approveCode: OperationCodes.ApprovePendingAccReview,
-                approveNote: _localizer.Get("Reconciliation.Bkm.CloseAfterManualReview"),
-                rejectCode: OperationCodes.RejectPendingAccReview,
-                rejectNote: _localizer.Get("Reconciliation.Bkm.CloseAfterManualReview"));
-            return result;
-        }
-        
-        if (context.ClearingDetails.Count == 0)
-        {
-            result.SetNote(note: _localizer.Get("Reconciliation.Bkm.ExpiredAccPendingNote"));
-            result.AddAutoOperation(
-                OperationCodes.RaiseAlert,
-                _localizer.Get("Reconciliation.Bkm.ExpiredAccPendingAlertOp"),
-                BkmSnapshotBuilder.Create(context, OperationCodes.RaiseAlert, "D2_ACC_PENDING"));
-            result.AddManualOperation(
-                OperationCodes.CreateManualReview,
-                _localizer.Get("Reconciliation.Bkm.ExpiredAccPendingReviewOp"),
-                code => BkmSnapshotBuilder.Create(context, code, "D2_ACC_PENDING"),
-                approveCode: OperationCodes.RecoverMissingCardRow,
-                approveNote: _localizer.Get("Reconciliation.Bkm.RequeueForReEvaluation"),
-                rejectCode: OperationCodes.RejectUnmatchedFlow,
-                rejectNote: _localizer.Get("Reconciliation.Bkm.CloseRecordManually"));
-            return result;
-        }
-        
-        var hasAuthoritativeClearing = context.ClearingDetails.Any(c =>
-            c.ControlStat is ClearingBkmControlStat.Normal or ClearingBkmControlStat.ProblemToNormal);
+                // C11* + D2 - Bekleyen eşleşme yok: işlemi Expire'a taşı ve bakiye etkisini geri al.
+                result.SetNote(_localizer.Get("Reconciliation.Bkm.ExpiredSuccessfulNoAccNote"));
+                result.AddAutoOperation(
+                    OperationCodes.MoveTransactionToExpired,
+                    _localizer.Get("Reconciliation.Bkm.MoveToExpiredOp"),
+                    BkmSnapshotBuilder.Create(context, OperationCodes.MoveTransactionToExpired, "D2"));
+                result.AddAutoOperation(
+                    OperationCodes.ReverseByBalanceEffect,
+                    _localizer.Get("Reconciliation.Bkm.ReverseByBalanceOp"),
+                    BkmSnapshotBuilder.Create(context, OperationCodes.ReverseByBalanceEffect, "D2"));
+                return result;
 
-        result.SetNote(note: _localizer.Get(hasAuthoritativeClearing
-            ? "Reconciliation.Bkm.ExpiredWithAuthoritativeClearingNote"
-            : "Reconciliation.Bkm.ExpiredSuccessfulNoAccNote"));
-        result.AddAutoOperation(
-            OperationCodes.RaiseAlert,
-            _localizer.Get("Reconciliation.Bkm.ExpiredAccPendingAlertOp"),
-            BkmSnapshotBuilder.Create(context, OperationCodes.RaiseAlert, "D2"));
-        result.AddManualOperation(
-            OperationCodes.CreateManualReview,
-            _localizer.Get("Reconciliation.Bkm.ExpiredAccPendingReviewOp"),
-            code => BkmSnapshotBuilder.Create(context, code, "D2"),
-            approveCode: OperationCodes.MoveTransactionToExpired,
-            approveNote: _localizer.Get("Reconciliation.Bkm.MoveToExpiredOp"),
-            rejectCode: OperationCodes.RejectUnmatchedFlow,
-            rejectNote: _localizer.Get("Reconciliation.Bkm.CloseRecordManually"));
-        return result;
+            default:
+                return result;
+        }
     }
 
-    private EvaluationResult EvaluateSuccessfulTransaction(
+    // ----------------------------------------------------------------------
+    // C5* - File status BAŞARILI branch (Successful)
+    // ----------------------------------------------------------------------
+    /// <summary>
+    /// Dosya tarafında işlem Successful (ResponseCode=00 ve IsSuccessfulTxn=Successful) ise çağrılır.
+    ///
+    /// Önemli ön koşul:
+    ///   - TxnSettle = Y değilse işlem henüz settle edilmemiş; mutabakat aksiyonu üretilmez (NoAction).
+    ///     Bu kontrol gün-içi geçici farkları otomatik düzeltmeye dönüştürmemek için kritiktir.
+    ///
+    /// Case dağılımı (TxnSettle = Y sonrası):
+    ///   - payify Failed     : C12 + D3 -> response code düzelt, başarılıya çevir, bakiye geri al.
+    ///   - payify Missing    : C13 -> önce işlemi yarat. Sonra:
+    ///                           refund değilse C14 + D4 (orijinal etkisini uygula)
+    ///                           refund ise EvaluateRefund() (matched/unmatched ayrımı).
+    ///   - payify Successful : refund ise EvaluateRefund(); değilse amount karşılaştırması yapılır:
+    ///                           amount = billing -> NoAction
+    ///                           amount &lt; billing -> D8 (fark kadar shadow balance entry)
+    ///                           amount &gt; billing -> NoAction (Kural Kodu bu dalda EVET=END)
+    ///
+    /// Defansif: payify Successful ama latestEmoney null ise tutar karşılaştırılamaz; sadece not.
+    /// </summary>
+    private EvaluationResult EvaluateSuccessfulBranch(
         EvaluationResult result,
         BkmEvaluationContext context,
         CardBkmDetail detail,
         PayifyStatus payifyStatus,
         EmoneyCustomerTransactionDto? latestEmoney)
     {
+        // TxnSettle = Y mi? Settle edilmemiş işlemler için aksiyon üretilmez.
+        // Bu, gün-içi henüz netleşmemiş kayıtların yanlış düzeltilmesini engeller.
         if (!IsSettled(detail))
         {
-            result.SetNote(note: _localizer.Get("Reconciliation.Bkm.NotSettledNote"));
-            return result;
-        }
-        
-        if (context.ClearingDetails.Count == 0)
-        {
-            return BuildAwaitingClearingResult(result, context, "AWAIT_CLEARING_SUCCESS");
-        }
-
-        if (payifyStatus == PayifyStatus.Failed)
-        {
-            result.SetNote(note: _localizer.Get("Reconciliation.Bkm.SuccessfulFailedPayifyNote"));
-            result.AddAutoOperation(
-                OperationCodes.CorrectResponseCode,
-                _localizer.Get("Reconciliation.Bkm.CorrectResponseCodeOp"),
-                BkmSnapshotBuilder.Create(context, OperationCodes.CorrectResponseCode, "D3"));
-            result.AddAutoOperation(
-                OperationCodes.ConvertTransactionToSuccessful,
-                _localizer.Get("Reconciliation.Bkm.ConvertToSuccessfulOp"),
-                BkmSnapshotBuilder.Create(context, OperationCodes.ConvertTransactionToSuccessful, "D3"));
+            result.SetNote(_localizer.Get("Reconciliation.Bkm.NotSettledNote"));
             return result;
         }
 
-        if (payifyStatus == PayifyStatus.Missing)
+        switch (payifyStatus)
         {
-            if (IsRefund(detail))
-            {
+            case PayifyStatus.Failed:
+                // C12* + D3 - Dosya başarılı ama payify Failed: müşteri lehine eksik kayıt.
+                // 3 adımlı otomatik düzeltme: response code düzelt -> Successful'a çevir -> bakiye etkisini uygula.
+                result.SetNote(_localizer.Get("Reconciliation.Bkm.SuccessfulFailedPayifyNote"));
+                result.AddAutoOperation(
+                    OperationCodes.CorrectResponseCode,
+                    _localizer.Get("Reconciliation.Bkm.CorrectResponseCodeOp"),
+                    BkmSnapshotBuilder.Create(context, OperationCodes.CorrectResponseCode, "D3"));
+                result.AddAutoOperation(
+                    OperationCodes.ConvertTransactionToSuccessful,
+                    _localizer.Get("Reconciliation.Bkm.ConvertToSuccessfulOp"),
+                    BkmSnapshotBuilder.Create(context, OperationCodes.ConvertTransactionToSuccessful, "D3"));
+                result.AddAutoOperation(
+                    OperationCodes.ReverseByBalanceEffect,
+                    _localizer.Get("Reconciliation.Bkm.ReverseByBalanceOp"),
+                    BkmSnapshotBuilder.Create(context, OperationCodes.ReverseByBalanceEffect, "D3"));
+                return result;
+
+            case PayifyStatus.Missing:
+                // C13* - Payify'da hiç işlem yok ama dosya başarılı diyor. Önce işlem yaratılır.
                 result.AddAutoOperation(
                     OperationCodes.CreateTransaction,
                     _localizer.Get("Reconciliation.Bkm.CreateTransactionOp"),
                     BkmSnapshotBuilder.Create(context, OperationCodes.CreateTransaction, "C13"));
-                return EvaluateRefund(result, context, detail, "C13");
-            }
 
-            result.SetNote(note: _localizer.Get("Reconciliation.Bkm.SuccessfulMissingRefundNote"));
-            result.AddAutoOperation(
-                OperationCodes.CreateTransaction,
-                _localizer.Get("Reconciliation.Bkm.CreateTransactionGenericOp"),
-                BkmSnapshotBuilder.Create(context, OperationCodes.CreateTransaction, "D4"));
-            result.AddAutoOperation(
-                OperationCodes.ApplyOriginalEffectOrRefund,
-                _localizer.Get("Reconciliation.Bkm.ApplyOriginalEffectOp"),
-                BkmSnapshotBuilder.Create(context, OperationCodes.ApplyOriginalEffectOrRefund, "D4"));
-            return result;
-        }
+                // C14* + D4 - Refund değilse: orijinal işlem etkisini bakiyeye uygula.
+                if (!IsRefund(detail))
+                {
+                    result.SetNote(_localizer.Get("Reconciliation.Bkm.SuccessfulMissingNonRefundNote"));
+                    result.AddAutoOperation(
+                        OperationCodes.ApplyOriginalEffectOrRefund,
+                        _localizer.Get("Reconciliation.Bkm.ApplyOriginalEffectOp"),
+                        BkmSnapshotBuilder.Create(context, OperationCodes.ApplyOriginalEffectOrRefund, "D4"));
+                    return result;
+                }
 
-        if (IsRefund(detail))
-        {
-            return EvaluateRefund(result, context, detail, null);
-        }
+                // Refund ise matched/unmatched ayrımı için ortak refund değerlendirmesine devam et.
+                return EvaluateRefund(result, context, detail);
 
-        if (latestEmoney is null)
-        {
-            result.SetNote(note: _localizer.Get("Reconciliation.Bkm.PayifyNotResolvedNote"));
-            result.AddAutoOperation(
-                OperationCodes.RaiseAlert,
-                _localizer.Get("Reconciliation.Bkm.PayifyNotResolvedOp"),
-                BkmSnapshotBuilder.Create(context, OperationCodes.RaiseAlert, "C19"));
-            result.AddManualOperation(
-                OperationCodes.CreateManualReview,
-                _localizer.Get("Reconciliation.Bkm.SendToManualReviewOp"),
-                code => BkmSnapshotBuilder.Create(context, code, "C19"),
-                approveCode: OperationCodes.ApproveMissingPayifyTransaction,
-                approveNote: _localizer.Get("Reconciliation.Bkm.ApproveCaseManually"),
-                rejectCode: OperationCodes.RejectMissingPayifyTransaction,
-                rejectNote: _localizer.Get("Reconciliation.Bkm.RejectCaseManually"));
-            return result;
-        }
+            case PayifyStatus.Successful:
+                // Hem dosya hem payify başarılı.
+                // Refund ise (linked / unlinked ayrımı için) refund değerlendirmesine git.
+                if (IsRefund(detail))
+                {
+                    return EvaluateRefund(result, context, detail);
+                }
 
-        if (AreAmountsEqual(latestEmoney.Amount, detail.BillingAmount))
-        {
-            result.SetNote(note: _localizer.Get("Reconciliation.Bkm.AmountsEqualNote"));
-            return result;
-        }
+                // Defansif: payify Successful dediği halde tutar bilgisini taşıyan kayıt elde edilemediyse
+                // amount karşılaştırması yapamayız; sadece not bırakılır.
+                if (latestEmoney is null)
+                {
+                    result.SetNote(_localizer.Get("Reconciliation.Bkm.PayifyNotResolvedNote"));
+                    return result;
+                }
 
-        if (IsTransactionAmountLessThanBilling(latestEmoney.Amount, detail.BillingAmount))
-        {
-            var difference = decimal.Round(detail.BillingAmount - latestEmoney.Amount, 2, MidpointRounding.AwayFromZero);
-            result.SetNote(note: _localizer.Get("Reconciliation.Bkm.AmountLessThanBillingNote"));
-            result.AddAutoOperation(
-                OperationCodes.InsertShadowBalanceEntry,
-                _localizer.Get("Reconciliation.Bkm.InsertShadowBalanceOp"),
-                BkmSnapshotBuilder.Create(context, OperationCodes.InsertShadowBalanceEntry, "D8", ("differenceAmount", difference)));
-            result.AddAutoOperation(
-                OperationCodes.RunShadowBalanceProcess,
-                _localizer.Get("Reconciliation.Bkm.RunShadowBalanceOp"),
-                BkmSnapshotBuilder.Create(context, OperationCodes.RunShadowBalanceProcess, "D8", ("differenceAmount", difference)));
-            return result;
+                // Tutarlar eşitse mutabakat zaten sağlanmış demektir -> NoAction.
+                if (AreAmountsEqual(latestEmoney.Amount, detail.BillingAmount))
+                {
+                    result.SetNote(_localizer.Get("Reconciliation.Bkm.AmountsEqualNote"));
+                    return result;
+                }
+
+                // D8 - Payify tutarı billing tutarından küçükse müşteri lehine eksik tahsilat var.
+                // Sadece FARK kadar gölge bakiye (shadow balance) etkisi oluşturulur; gerçek bakiye dokunulmaz.
+                if (IsTransactionAmountLessThanBilling(latestEmoney.Amount, detail.BillingAmount))
+                {
+                    var difference = decimal.Round(detail.BillingAmount - latestEmoney.Amount, 2,
+                        MidpointRounding.AwayFromZero);
+                    result.SetNote(_localizer.Get("Reconciliation.Bkm.AmountLessThanBillingNote"));
+                    result.AddAutoOperation(
+                        OperationCodes.InsertShadowBalanceEntry,
+                        _localizer.Get("Reconciliation.Bkm.InsertShadowBalanceOp"),
+                        BkmSnapshotBuilder.Create(context, OperationCodes.InsertShadowBalanceEntry, "D8",
+                            ("differenceAmount", difference)));
+                    result.AddAutoOperation(
+                        OperationCodes.RunShadowBalanceProcess,
+                        _localizer.Get("Reconciliation.Bkm.RunShadowBalanceOp"),
+                        BkmSnapshotBuilder.Create(context, OperationCodes.RunShadowBalanceProcess, "D8",
+                            ("differenceAmount", difference)));
+                    return result;
+                }
+
+                // amount > billing: Kural Kodu'nda EVET dalı boş bırakılmıştır -> END (NoAction).
+                // Bu durum müşteri aleyhine fazladan tahsilat ifade etmez (zaten payify daha az tahsil etmiş demektir);
+                // dolayısıyla otomatik aksiyon tanımlı değildir, sadece not düşülür.
+                result.SetNote(_localizer.Get("Reconciliation.Bkm.AmountGreaterNote"));
+                return result;
+
+            default:
+                return result;
         }
-        
-        var overcharge = decimal.Round(latestEmoney.Amount - detail.BillingAmount, 2, MidpointRounding.AwayFromZero);
-        result.SetNote(note: _localizer.Get("Reconciliation.Bkm.AmountGreaterNote"));
-        result.AddAutoOperation(
-            OperationCodes.RaiseAlert,
-            _localizer.Get("Reconciliation.Bkm.InsertShadowBalanceOp"),
-            BkmSnapshotBuilder.Create(context, OperationCodes.RaiseAlert, "D8_OVERCHARGE", ("differenceAmount", overcharge)));
-        result.AddManualOperation(
-            OperationCodes.CreateManualReview,
-            _localizer.Get("Reconciliation.Bkm.RunShadowBalanceOp"),
-            code => BkmSnapshotBuilder.Create(context, code, "D8_OVERCHARGE", ("differenceAmount", overcharge)),
-            approveCode: OperationCodes.InsertShadowBalanceEntry,
-            approveNote: _localizer.Get("Reconciliation.Bkm.InsertShadowBalanceOp"),
-            rejectCode: OperationCodes.RejectUnmatchedFlow,
-            rejectNote: _localizer.Get("Reconciliation.Bkm.CloseRecordManually"));
-        return result;
     }
 
+    // ----------------------------------------------------------------------
+    // C15 / C16 / C17 - Refund değerlendirmesi (D5 / D6)
+    // ----------------------------------------------------------------------
+    /// <summary>
+    /// Refund / ReferenceRefund tipindeki işlemler için ayrı değerlendirme.
+    ///
+    /// Karar:
+    ///   - Matched (linked) refund (C17 + D5): Orijinal işlem referansı (MainTxnGuid) dolu ve
+    ///     mevcut işlemden farklı -> bağlı refund otomatik uygulanır (ApplyLinkedRefund).
+    ///   - Unmatched (C16 + D6): Refund ama bir orijinal işleme bağlanamamış. Bu, ya yanlış kayıt
+    ///     ya da kara para / suistimal şüphesi taşıyabilir; bu nedenle OTOMATİK aksiyon yapılmaz,
+    ///     manuel inceleme açılır:
+    ///       Approve -> ApplyUnlinkedRefundEffect (etkisi bakiyeye yansıtılır)
+    ///       Reject  -> StartChargeback (Paycore tarafına chargeback başlatılır)
+    /// </summary>
     private EvaluationResult EvaluateRefund(
         EvaluationResult result,
         BkmEvaluationContext context,
-        CardBkmDetail detail,
-        string? missingPayifyDecisionPoint)
+        CardBkmDetail detail)
     {
-        if (IsLinkedRefund(detail))
+        if (IsMatchedRefund(detail))
         {
-            result.SetNote(note: _localizer.Get("Reconciliation.Bkm.LinkedRefundNote"));
+            // C17* + D5 - Orijinal işleme bağlı refund; güvenli, otomatik uygulanabilir.
+            result.SetNote(_localizer.Get("Reconciliation.Bkm.LinkedRefundNote"));
             result.AddAutoOperation(
                 OperationCodes.ApplyLinkedRefund,
                 _localizer.Get("Reconciliation.Bkm.LinkedRefundOp"),
-                BkmSnapshotBuilder.Create(context, OperationCodes.ApplyLinkedRefund, "C17"));
+                BkmSnapshotBuilder.Create(context, OperationCodes.ApplyLinkedRefund, "D5"));
             return result;
         }
 
-        result.SetNote(note: _localizer.Get("Reconciliation.Bkm.UnlinkedRefundNote"));
+        // C16* + D6 - Eşleniksiz iade. Otomatik aksiyon güvenli değildir; manuel review oluşturulur.
+        // FlowComments C16 referansı: Approve -> bakiyeye etki uygula; Reject -> Paycore'a chargeback başlat.
+        result.SetNote(_localizer.Get("Reconciliation.Bkm.UnlinkedRefundNote"));
         result.AddManualOperation(
             OperationCodes.CreateManualReview,
             _localizer.Get("Reconciliation.Bkm.UnlinkedRefundManualOp"),
-            code => BkmSnapshotBuilder.Create(context, code, "C16"),
+            code => BkmSnapshotBuilder.Create(context, code, "D6"),
             approveCode: OperationCodes.ApplyUnlinkedRefundEffect,
             approveNote: _localizer.Get("Reconciliation.Bkm.ApplyEffectAfterApproval"),
             rejectCode: OperationCodes.StartChargeback,
@@ -448,205 +529,167 @@ internal sealed class BkmEvaluator : IEvaluator
         return result;
     }
 
-    private EvaluationResult BuildUnmatchedFlowResult(
-        EvaluationResult result,
-        BkmEvaluationContext context)
-    {
-        result.SetNote(note: _localizer.Get("Reconciliation.Bkm.UnmatchedFlowNote"));
-        result.AddAutoOperation(
-            OperationCodes.RaiseAlert,
-            _localizer.Get("Reconciliation.Bkm.UnmatchedFlowOp"),
-            BkmSnapshotBuilder.Create(context, OperationCodes.RaiseAlert, "UNMATCHED"));
-        result.AddManualOperation(
-            OperationCodes.CreateManualReview,
-            _localizer.Get("Reconciliation.Bkm.SendToManualReviewOp"),
-            code => BkmSnapshotBuilder.Create(context, code, "UNMATCHED"),
-            approveCode: OperationCodes.ApproveUnmatchedFlow,
-            approveNote: _localizer.Get("Reconciliation.Bkm.CloseCaseManually"),
-            rejectCode: OperationCodes.RejectUnmatchedFlow,
-            rejectNote: _localizer.Get("Reconciliation.Bkm.CloseCaseManually"));
-        return result;
-    }
-    
+    // ----------------------------------------------------------------------
+    // Clearing-presence gate - AwaitingClearing sonucu üretimi
+    // ----------------------------------------------------------------------
+    /// <summary>
+    /// Clearing dosyası henüz ulaşmadığı için kararı erteleyen sonuç tipini üretir.
+    ///
+    /// Davranış:
+    ///   - Sadece bilgilendirme amaçlı tek bir RaiseAlert üretilir (manual review YOKTUR;
+    ///     henüz operatöre yönlendirilecek bir karar yoktur).
+    ///   - <see cref="EvaluationResult"/> AwaitingClearing olarak işaretlenir; üst katman
+    ///     (EvaluateService) bu işareti görüp satırı <c>ReconciliationStatus.AwaitingClearing</c>
+    ///     statüsüne çeker.
+    ///   - Clearing dosyası ileride başarıyla ingestion edildiğinde
+    ///     <c>ClearingArrivalRequeueService</c> aynı korelasyondaki satırları
+    ///     <c>ReconciliationStatus.Ready</c>'ye geri çeker ve değerlendirici tekrar koşar.
+    ///
+    /// Bu pattern sayesinde clearing gelmeden hatalı/boşa kararlar üretilmez; clearing
+    /// ulaşır ulaşmaz aynı satır eksiksiz veriyle baştan değerlendirilir.
+    /// </summary>
     private EvaluationResult BuildAwaitingClearingResult(
         EvaluationResult result,
         BkmEvaluationContext context,
         string decisionPoint)
     {
-        result.SetNote(note: _localizer.Get("Reconciliation.Bkm.AwaitingClearingNote"));
+        result.SetNote(_localizer.Get("Reconciliation.Bkm.AwaitingClearingNote"));
         result.MarkAwaitingClearing(decisionPoint);
-
         result.AddAutoOperation(
             OperationCodes.RaiseAlert,
             _localizer.Get("Reconciliation.Bkm.AwaitingClearingAlertOp"),
             BkmSnapshotBuilder.Create(context, OperationCodes.RaiseAlert, decisionPoint));
-
-        result.AddManualOperation(
-            OperationCodes.CreateManualReview,
-            _localizer.Get("Reconciliation.Bkm.AwaitingClearingReviewOp"),
-            code => BkmSnapshotBuilder.Create(context, code, decisionPoint),
-            approveCode: OperationCodes.RecoverMissingCardRow,
-            approveNote: _localizer.Get("Reconciliation.Bkm.RequeueAfterClearing"),
-            rejectCode: OperationCodes.RejectUnmatchedFlow,
-            rejectNote: _localizer.Get("Reconciliation.Bkm.CloseRecordManually"));
-
         return result;
     }
 
-    private bool TryHandleMissingCardRow(
-        EvaluationResult result,
-        BkmEvaluationContext context,
-        CardBkmDetail? currentCard)
-    {
-        if (currentCard is not null)
-        {
-            return false;
-        }
-
-        result.SetNote(note: _localizer.Get("Reconciliation.Bkm.CardRowMissingNote"));
-        result.AddAutoOperation(
-            OperationCodes.RaiseAlert,
-            _localizer.Get("Reconciliation.Bkm.CardRowMissingOp"),
-            BkmSnapshotBuilder.Create(context, OperationCodes.RaiseAlert, "CARD_ROW_MISSING"));
-        result.AddManualOperation(
-            OperationCodes.CreateManualReview,
-            _localizer.Get("Reconciliation.Bkm.SendToManualReviewOp"),
-            code => BkmSnapshotBuilder.Create(context, code, "CARD_ROW_MISSING"),
-            approveCode: OperationCodes.RecoverMissingCardRow,
-            approveNote: _localizer.Get("Reconciliation.Bkm.RequeueForReEvaluation"),
-            rejectCode: OperationCodes.DropMissingCardRow,
-            rejectNote: _localizer.Get("Reconciliation.Bkm.CloseRecordManually"));
-        return true;
-    }
-
-    private bool TryHandleDuplicateRow(
-        EvaluationResult result,
-        BkmEvaluationContext context)
+    // ----------------------------------------------------------------------
+    // C2 - Duplicate handling
+    // ----------------------------------------------------------------------
+    /// <summary>
+    /// Aynı işlemin dosyada birden fazla kez geldiği durumlar için karar üretir.
+    ///
+    /// Statüler:
+    ///   - Conflict  : Aynı anahtar fakat ALAN farklı -> hangisi doğru bilinemez.
+    ///                 İki kayıt da işlenmez; sadece ALARM ve akış durur (Stop).
+    ///   - Secondary : Tüm alanlar Primary ile birebir aynı; mükerrer kayıt.
+    ///                 Primary işlenecek; bu kayıt skip + alarm. Akış durur (Stop).
+    ///   - Primary   : Tüm alanlar aynı; bu kayıt asıl işlenen. Yine de operatöre görünürlük için
+    ///                 ALARM üretilir, ardından akış normal şekilde devam eder (Continue).
+    ///   - None      : Duplicate değil; herhangi bir aksiyon üretilmez, akış devam eder.
+    /// </summary>
+    private DuplicateOutcome HandleDuplicate(EvaluationResult result, BkmEvaluationContext context)
     {
         switch (ResolveDuplicateStatus(context.RootRow))
         {
             case DuplicateStatus.Conflict:
-                result.SetNote(note: _localizer.Get("Reconciliation.Bkm.DuplicateConflictNote"));
+                // FlowComments C2: anahtar aynı ama alanlar farklı -> hiçbiri otomatik işlenmez.
+                result.SetNote(_localizer.Get("Reconciliation.Bkm.DuplicateConflictNote"));
                 result.AddAutoOperation(
                     OperationCodes.RaiseAlert,
                     _localizer.Get("Reconciliation.Bkm.DuplicateConflictOp"),
                     BkmSnapshotBuilder.Create(context, OperationCodes.RaiseAlert, "C2"));
-                return true;
+                return DuplicateOutcome.Stop;
+
             case DuplicateStatus.Secondary:
-                result.SetNote(note: _localizer.Get("Reconciliation.Bkm.DuplicateEquivalentNote"));
+                // Tüm alanlar primary ile aynı; bu kayıt skip edilir, primary işlenecek.
+                result.SetNote(_localizer.Get("Reconciliation.Bkm.DuplicateEquivalentNote"));
                 result.AddAutoOperation(
                     OperationCodes.RaiseAlert,
                     _localizer.Get("Reconciliation.Bkm.DuplicateEquivalentOp"),
                     BkmSnapshotBuilder.Create(context, OperationCodes.RaiseAlert, "C2"));
-                return true;
+                return DuplicateOutcome.Stop;
+
             case DuplicateStatus.Primary:
-                result.SetNote(note: _localizer.Get("Reconciliation.Bkm.DuplicateEquivalentNote"));
+                // Primary: işlenmesi gereken asıl kayıt. Yine de duplicate olduğunu işaretlemek
+                // için alarm üretilir; ana karar ağacına devam edilir.
+                result.SetNote(_localizer.Get("Reconciliation.Bkm.DuplicateEquivalentNote"));
                 result.AddAutoOperation(
                     OperationCodes.RaiseAlert,
                     _localizer.Get("Reconciliation.Bkm.DuplicateEquivalentOp"),
                     BkmSnapshotBuilder.Create(context, OperationCodes.RaiseAlert, "C2"));
-                return false;
+                return DuplicateOutcome.Continue;
+
             default:
-                return false;
+                // Duplicate değil veya bilinmeyen statü -> akışa devam.
+                return DuplicateOutcome.Continue;
         }
     }
 
-    private bool TryHandleAmbiguousPayifyLookup(
-        EvaluationResult result,
-        BkmEvaluationContext context,
-        PayifyStatus payifyStatus)
-    {
-        if (payifyStatus != PayifyStatus.Ambiguous)
-        {
-            return false;
-        }
 
-        result.SetNote(note: _localizer.Get("Reconciliation.Bkm.AmbiguousPayifyNote"));
-        result.AddAutoOperation(
-            OperationCodes.RaiseAlert,
-            _localizer.Get("Reconciliation.Bkm.AmbiguousPayifyOp"),
-            BkmSnapshotBuilder.Create(context, OperationCodes.RaiseAlert, "C19"));
-        result.AddManualOperation(
-            OperationCodes.CreateManualReview,
-            _localizer.Get("Reconciliation.Bkm.SendToManualReviewOp"),
-            code => BkmSnapshotBuilder.Create(context, code, "C19"),
-            approveCode: OperationCodes.ApproveAmbiguousPayifyRecord,
-            approveNote: _localizer.Get("Reconciliation.Bkm.ReEvaluateWithSelected"),
-            rejectCode: OperationCodes.RejectAmbiguousPayifyRecord,
-            rejectNote: _localizer.Get("Reconciliation.Bkm.CloseAmbiguousManually"));
-        return true;
-    }
-
-    private async Task<OriginalTransactionResolution> ResolveOriginalTransactionAsync(
+    // ----------------------------------------------------------------------
+    // D7 destek - Cancel/Reversal için orijinal işlemi bul
+    // ----------------------------------------------------------------------
+    /// <summary>
+    /// Cancel/Reversal işlemine ait orijinal payify işlemini Emoney servisi üzerinden çözümler.
+    /// MainTxnGuid 0 / negatif ise sorgu yapılmaz (geçersiz referans).
+    /// Birden fazla kayıt dönerse en yenisi (TransactionDate, Id desc) seçilir.
+    /// </summary>
+    private async Task<EmoneyCustomerTransactionDto?> ResolveOriginalTransactionAsync(
         CardBkmDetail detail,
         CancellationToken cancellationToken)
     {
         if (detail.OceanMainTxnGuid <= 0)
         {
-            return new OriginalTransactionResolution(OriginalTransactionStatus.Missing, null);
+            return null;
         }
 
-        var candidates = await _dbContext.Set<IngestionFileLine>()
-            .AsNoTracking()
-            .Where(x => x.CorrelationKey == "OceanTxnGuid"
-                        && x.CorrelationValue == detail.OceanMainTxnGuid.ToString()
-                        && x.IngestionFile.FileType == FileType.Card
-                        && x.IngestionFile.ContentType == FileContentType.Bkm
-                        && x.LineType == "D")
-            .ToListAsync(cancellationToken);
-
-        if (candidates.Count == 0)
-        {
-            return new OriginalTransactionResolution(OriginalTransactionStatus.Missing, null);
-        }
-
-        if (candidates.Count > 1)
-        {
-            return new OriginalTransactionResolution(OriginalTransactionStatus.Ambiguous, null);
-        }
-
-        var row = candidates[0];
-        var parsed = DeserializeDetail(row.ParsedContent);
         var emoneyTransactions = await _emoneyService.GetByCustomerTransactionIdAsync(
-            (parsed?.OceanTxnGuid ?? detail.OceanMainTxnGuid).ToString(CultureInfo.InvariantCulture),
+            detail.OceanMainTxnGuid.ToString(CultureInfo.InvariantCulture),
             cancellationToken);
-        var latestEmoney = GetLatestEmoneyTransaction(emoneyTransactions.ToList());
 
-        return new OriginalTransactionResolution(OriginalTransactionStatus.Found, latestEmoney);
+        return GetLatestEmoneyTransaction(emoneyTransactions.ToList());
     }
 
-    private Task<bool> HasAccPendingMatchAsync(
+    // ----------------------------------------------------------------------
+    // C9 - ACC tarafında bekleyen (ControlStat=P) eşleşme kontrolü
+    // ----------------------------------------------------------------------
+    /// <summary>
+    /// Expire branch'inde C9 kararını verir: clearing detayları arasında ControlStat = Problem
+    /// olan VE alan bazında işlemle uyuşan bir kayıt var mı?
+    /// True dönerse: ACC operatörü henüz incelemekte; otomatik düzeltme yerine alarm üretilmesi gerekir.
+    /// </summary>
+    private static Task<bool> HasAccPendingMatchAsync(
         CardBkmDetail detail,
         BkmEvaluationContext context,
         CancellationToken cancellationToken)
     {
-        _ = cancellationToken; 
+        _ = cancellationToken;
         var match = context.ClearingDetails.Any(c =>
             c.ControlStat == ClearingBkmControlStat.Problem && IsAccFieldMatch(detail, c));
         return Task.FromResult(match);
     }
-    
+
+    /// <summary>
+    /// FlowComments C9 alan eşleşme kuralı:
+    /// RRN (her iki tarafta da doluysa), CardNo, ProvisionCode, ARN, MCC,
+    /// SourceAmount (2 hane yuvarlama) ve SourceCurrency birebir tutmalı.
+    /// RRN nullable kabul edilir; sadece her iki taraf da doluysa karşılaştırılır.
+    /// </summary>
     private static bool IsAccFieldMatch(CardBkmDetail card, ClearingBkmDetail clearing)
     {
-        if (!string.IsNullOrWhiteSpace(card.Rrn) && !string.IsNullOrWhiteSpace(clearing.Rrn))
+        // RRN: yalnızca her iki taraf da doluyken karşılaştırılır (nullable tolerans).
+        if (!string.IsNullOrWhiteSpace(card.Rrn) && !string.IsNullOrWhiteSpace(clearing.Rrn) &&
+            !string.Equals(card.Rrn.Trim(), clearing.Rrn.Trim(), StringComparison.OrdinalIgnoreCase))
         {
-            if (!string.Equals(card.Rrn.Trim(), clearing.Rrn.Trim(), StringComparison.OrdinalIgnoreCase))
-                return false;
+            return false;
         }
-        
+
         if (!string.Equals(card.CardNo?.Trim(), clearing.CardNo?.Trim(), StringComparison.OrdinalIgnoreCase))
             return false;
-        
-        if (!string.Equals(card.ProvisionCode?.Trim(), clearing.ProvisionCode?.Trim(), StringComparison.OrdinalIgnoreCase))
-            return false;
-        
-        if (!string.Equals(card.Arn?.Trim(), clearing.Arn?.Trim(), StringComparison.OrdinalIgnoreCase))
-            return false;
-        
-        if (!int.TryParse(clearing.MccCode?.Trim(), NumberStyles.Integer, CultureInfo.InvariantCulture, out var clearingMcc)
-            || card.Mcc != clearingMcc)
+
+        if (!string.Equals(card.ProvisionCode?.Trim(), clearing.ProvisionCode?.Trim(),
+                StringComparison.OrdinalIgnoreCase))
             return false;
 
+        if (!string.Equals(card.Arn?.Trim(), clearing.Arn?.Trim(), StringComparison.OrdinalIgnoreCase))
+            return false;
+
+        // MCC clearing tarafında string; parse edilemiyorsa veya sayısal eşitlik yoksa eşleşme yok.
+        if (!int.TryParse(clearing.MccCode?.Trim(), NumberStyles.Integer, CultureInfo.InvariantCulture,
+                out var clearingMcc) || card.Mcc != clearingMcc)
+            return false;
+
+        // Tutar karşılaştırması decimal yuvarlama farklarını ezmek için 2 haneye yuvarlanır.
         if (decimal.Round(card.CardHolderBillingAmount, 2, MidpointRounding.AwayFromZero)
             != decimal.Round(clearing.SourceAmount, 2, MidpointRounding.AwayFromZero))
             return false;
@@ -657,7 +700,15 @@ internal sealed class BkmEvaluator : IEvaluator
         return true;
     }
 
+    // ----------------------------------------------------------------------
+    // Yardımcı metotlar
+    // ----------------------------------------------------------------------
 
+    /// <summary>
+    /// Root card detail önce in-memory cache'den (CardDetails[0]) alınır;
+    /// yoksa raw parsed JSON'dan deserialize edilir. Her iki kaynak da yetersizse null döner
+    /// (üst katman bunu exception'a çevirir).
+    /// </summary>
     private static CardBkmDetail? GetRootCardDetail(BkmEvaluationContext context)
     {
         if (context.CardDetails.Count > 0)
@@ -681,10 +732,12 @@ internal sealed class BkmEvaluator : IEvaluator
         }
         catch
         {
+            // Parse hatasını burada yutuyoruz; üst akış null'ı C1 alarmına yönlendirebilir.
             return null;
         }
     }
 
+    /// <summary>En güncel emoney işlemini (TransactionDate, Id desc) döner.</summary>
     private static EmoneyCustomerTransactionDto? GetLatestEmoneyTransaction(
         IReadOnlyList<EmoneyCustomerTransactionDto> transactions)
     {
@@ -694,13 +747,26 @@ internal sealed class BkmEvaluator : IEvaluator
             .FirstOrDefault();
     }
 
+    /// <summary>
+    /// C19 - Payify tarafındaki gerçek işlem statüsünü çözümler.
+    ///   - Hiç kayıt yok -> Missing
+    ///   - "Failed"      -> Failed
+    ///   - "Completed" / "Success" -> Successful
+    ///   - Bilinmeyen statü       -> defansif olarak Missing kabul edilir
+    ///     (Kural Kodu yalnızca 3 statü tanımlıyor; tanımsızı "yok" gibi ele alıp güvenli tarafta kalıyoruz).
+    ///
+    /// Birden fazla kayıt varsa en yenisi seçilir (FlowComments C19: son 20 gün arasında arama).
+    /// </summary>
     private static PayifyStatus ResolvePayifyStatus(
         IReadOnlyList<EmoneyCustomerTransactionDto> transactions)
     {
         if (transactions.Count == 0) return PayifyStatus.Missing;
-        if (transactions.Count > 1) return PayifyStatus.Ambiguous;
 
-        var tx = transactions[0];
+        var tx = transactions
+            .OrderByDescending(x => x.TransactionDate)
+            .ThenByDescending(x => x.Id)
+            .First();
+
         var status = tx.TransactionStatus?.Trim();
 
         if (string.Equals(status, "Failed", StringComparison.OrdinalIgnoreCase))
@@ -710,48 +776,71 @@ internal sealed class BkmEvaluator : IEvaluator
             || string.Equals(status, "Success", StringComparison.OrdinalIgnoreCase))
             return PayifyStatus.Successful;
 
-        return PayifyStatus.Ambiguous;
+        // Defansif: tanımsız statüyü Missing olarak değerlendirip yanlış otomatik düzeltmeyi engelliyoruz.
+        return PayifyStatus.Missing;
     }
 
+    /// <summary>
+    /// C5 - Dosya tarafındaki işlem statüsünü kategorize eder:
+    ///   - TxnStat = Expired                                  -> Expired
+    ///   - IsSuccessfulTxn = Successful AND ResponseCode = 00 -> Successful
+    ///   - Diğer her şey                                      -> Failed
+    /// Her iki kontrolün ŞART olarak birlikte aranması, "00 olmayan başarılı" gibi
+    /// tutarsız satırların yanlışlıkla Successful sayılmasını engeller.
+    /// </summary>
+    private static FileTransactionStatus ResolveFileTransactionStatus(CardBkmDetail detail)
+    {
+        if (detail.TxnStat == CardBkmTxnStat.Expired)
+            return FileTransactionStatus.Expired;
+
+        if (detail.IsSuccessfulTxn == CardBkmIsSuccessfulTxn.Successful && detail.ResponseCode == "00")
+            return FileTransactionStatus.Successful;
+
+        return FileTransactionStatus.Failed;
+    }
+
+    /// <summary>C3 - İşlem cancel/reversal tipinde mi? (TxnStat = Reverse veya Void).</summary>
     private static bool IsCancelOrReversal(CardBkmDetail detail)
         => detail.TxnStat is CardBkmTxnStat.Reverse or CardBkmTxnStat.Void;
 
-    private static bool IsFailed(CardBkmDetail detail)
-        => detail.IsSuccessfulTxn == CardBkmIsSuccessfulTxn.Unsuccessful
-           && detail.ResponseCode != "00";
-
-    private static bool IsExpired(CardBkmDetail detail)
-        => detail.TxnStat == CardBkmTxnStat.Expired;
-
-    private static bool IsSuccessful(CardBkmDetail detail)
-        => detail.IsSuccessfulTxn == CardBkmIsSuccessfulTxn.Successful
-           && detail.ResponseCode == "00";
-
+    /// <summary>Successful branch ön koşulu: işlemin TxnSettle = Settled olması gerekir.</summary>
     private static bool IsSettled(CardBkmDetail detail)
         => detail.IsTxnSettle == CardBkmIsTxnSettle.Settled;
 
-    private static bool HasStatusResponseCodeAnomaly(CardBkmDetail detail)
-        => (detail.IsSuccessfulTxn == CardBkmIsSuccessfulTxn.Unsuccessful && detail.ResponseCode == "00")
-           || (detail.IsSuccessfulTxn == CardBkmIsSuccessfulTxn.Successful && detail.ResponseCode != "00");
-
+    /// <summary>
+    /// İşlemin refund tipinde olup olmadığını döner.
+    /// BankingTxnCode "Refund" veya "ReferenceRefund" değerleri refund kabul edilir.
+    /// </summary>
     private static bool IsRefund(CardBkmDetail detail)
         => string.Equals(detail.BankingTxnCode?.Trim(), "Refund", StringComparison.OrdinalIgnoreCase)
            || string.Equals(detail.BankingTxnCode?.Trim(), "ReferenceRefund", StringComparison.OrdinalIgnoreCase);
 
-    private static bool IsLinkedRefund(CardBkmDetail detail)
+    /// <summary>
+    /// C15 - Matched (linked) refund kontrolü:
+    /// MainTxnGuid dolu (NULL/0 değil) ve mevcut işlemden farklı bir orijinal işleme işaret ediyorsa
+    /// bu refund "bağlı" kabul edilir ve D5 ile otomatik uygulanır.
+    /// </summary>
+    private static bool IsMatchedRefund(CardBkmDetail detail)
         => detail.OceanMainTxnGuid > 0 && detail.OceanMainTxnGuid != detail.OceanTxnGuid;
 
+    /// <summary>İki tutarın 2 hane yuvarlamadan sonra eşitliğini döner (decimal precision koruması).</summary>
     private static bool AreAmountsEqual(decimal payifyAmount, decimal billingAmount)
         => decimal.Round(payifyAmount, 2, MidpointRounding.AwayFromZero)
            == decimal.Round(billingAmount, 2, MidpointRounding.AwayFromZero);
 
+    /// <summary>D8 ön kontrolü: payify tutarı billing tutarından küçük mü? (Yine 2 hane yuvarlamayla).</summary>
     private static bool IsTransactionAmountLessThanBilling(decimal payifyAmount, decimal billingAmount)
         => decimal.Round(payifyAmount, 2, MidpointRounding.AwayFromZero)
            < decimal.Round(billingAmount, 2, MidpointRounding.AwayFromZero);
 
+    /// <summary>C1 - Dosya satırı parse / length validasyonunu geçemediyse (FileRowStatus.Failed) true döner.</summary>
     private static bool HasFileLengthValidationFailure(BkmEvaluationContext context)
         => context.RootRow.Status == FileRowStatus.Failed;
 
+    /// <summary>
+    /// FileIngestion tarafından üretilen DuplicateStatus string değerini içsel enum'a çevirir.
+    /// Tanımsız / boş / parse edilemeyen değerler None kabul edilir (akış normal devam eder).
+    /// </summary>
     private static DuplicateStatus ResolveDuplicateStatus(IngestionFileLine row)
     {
         if (string.IsNullOrWhiteSpace(row.DuplicateStatus))
@@ -763,21 +852,21 @@ internal sealed class BkmEvaluator : IEvaluator
         {
             return parsed switch
             {
-                Domain.Enums.FileIngestion.DuplicateStatus.Conflict => DuplicateStatus.Conflict,
+                Domain.Enums.FileIngestion.DuplicateStatus.Conflict  => DuplicateStatus.Conflict,
                 Domain.Enums.FileIngestion.DuplicateStatus.Secondary => DuplicateStatus.Secondary,
-                Domain.Enums.FileIngestion.DuplicateStatus.Primary => DuplicateStatus.Primary,
-                _ => DuplicateStatus.None
+                Domain.Enums.FileIngestion.DuplicateStatus.Primary   => DuplicateStatus.Primary,
+                _                                                    => DuplicateStatus.None
             };
         }
 
         return DuplicateStatus.None;
     }
 
-    private enum PayifyStatus { Missing, Successful, Failed, Ambiguous }
-    private enum OriginalTransactionStatus { Missing, Found, Ambiguous }
+    // Kural Kodu'ndaki FlowInput ile birebir karşılıklar.
+    // Bu enum'lar yalnızca bu sınıfa özel karar ağacı ifadelerini temsil eder; dışarı sızdırılmaz.
+    private enum FileTransactionStatus { Failed, Expired, Successful }
+    private enum PayifyStatus { Missing, Successful, Failed }
     private enum DuplicateStatus { None, Primary, Secondary, Conflict }
-
-    private sealed record OriginalTransactionResolution(
-        OriginalTransactionStatus Status,
-        EmoneyCustomerTransactionDto? Transaction);
+    private enum DuplicateOutcome { Continue, Stop }
 }
+

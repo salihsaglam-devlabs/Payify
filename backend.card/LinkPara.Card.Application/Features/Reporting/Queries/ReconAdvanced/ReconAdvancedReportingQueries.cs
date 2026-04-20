@@ -191,3 +191,40 @@ public class GetNetworkReconScorecardQueryHandler : IRequestHandler<GetNetworkRe
     }
 }
 
+
+public class GetCardClearingCorrelationQuery : SearchQueryParams, IRequest<GetCardClearingCorrelationResponse>
+{
+    public DataScope? DataScope { get; set; }
+    public string CardTable { get; set; }
+    public Guid? FileId { get; set; }
+    public Guid? FileLineId { get; set; }
+    public Guid? CardId { get; set; }
+}
+
+public class GetCardClearingCorrelationQueryHandler : IRequestHandler<GetCardClearingCorrelationQuery, GetCardClearingCorrelationResponse>
+{
+    private readonly IReportingService _svc;
+    private readonly IReportingErrorMapper _errorMapper;
+    private readonly IStringLocalizer _localizer;
+    private readonly ILogger<GetCardClearingCorrelationQueryHandler> _logger;
+
+    public GetCardClearingCorrelationQueryHandler(IReportingService svc, IReportingErrorMapper errorMapper,
+        Func<LocalizerResource, IStringLocalizer> localizerFactory, ILogger<GetCardClearingCorrelationQueryHandler> logger)
+    { _svc = svc; _errorMapper = errorMapper; _localizer = localizerFactory(LocalizerResource.Messages); _logger = logger; }
+
+    public async Task<GetCardClearingCorrelationResponse> Handle(GetCardClearingCorrelationQuery r, CancellationToken ct)
+    {
+        try
+        {
+            var data = await _svc.GetCardClearingCorrelationAsync(r, r.DataScope, r.CardTable, r.FileId, r.FileLineId, r.CardId, ct);
+            return new GetCardClearingCorrelationResponse { Data = data };
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, _localizer.Get("Handler.Reporting.CardClearingCorrelationFailed"));
+            var error = _errorMapper.MapException(ex, "HANDLER_REPORTING_CARD_CLEARING_CORRELATION");
+            return new GetCardClearingCorrelationResponse
+            { Message = _localizer.Get("Handler.Reporting.CardClearingCorrelationFailed"), ErrorCount = 1, Errors = new List<ReconciliationErrorDetail> { error } };
+        }
+    }
+}

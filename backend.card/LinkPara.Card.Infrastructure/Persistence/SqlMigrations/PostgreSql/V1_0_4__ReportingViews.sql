@@ -2026,3 +2026,218 @@ FROM (
                  ) lc
          GROUP BY ds.data_scope, f.content_type
      ) x;
+
+-- =====================================================================================
+-- F. CARD <-> CLEARING CORRELATION
+-- =====================================================================================
+
+-- -------------------------------------------------------------------------------------
+-- F1. Card kayıtlarını LIVE + ARCHIVE clearing kayıtlarıyla eşleştirir
+--     (ocean_txn_guid, rrn ya da arn üzerinden öncelikli arama)
+-- -------------------------------------------------------------------------------------
+CREATE OR REPLACE VIEW reporting.vw_card_clearing_correlation AS
+WITH all_card AS (
+    -- LIVE
+    SELECT
+        'LIVE'::text AS data_scope,
+        'card_bkm_detail'::text AS card_table,
+        c.id AS card_id,
+        c.file_line_id,
+        fl.file_id,
+        c.ocean_txn_guid,
+        c.rrn,
+        c.arn
+    FROM ingestion.card_bkm_detail c
+    JOIN ingestion.file_line fl ON fl.id = c.file_line_id
+
+    UNION ALL
+
+    SELECT
+        'LIVE',
+        'card_visa_detail',
+        c.id,
+        c.file_line_id,
+        fl.file_id,
+        c.ocean_txn_guid,
+        c.rrn,
+        c.arn
+    FROM ingestion.card_visa_detail c
+    JOIN ingestion.file_line fl ON fl.id = c.file_line_id
+
+    UNION ALL
+
+    SELECT
+        'LIVE',
+        'card_msc_detail',
+        c.id,
+        c.file_line_id,
+        fl.file_id,
+        c.ocean_txn_guid,
+        c.rrn,
+        c.arn
+    FROM ingestion.card_msc_detail c
+    JOIN ingestion.file_line fl ON fl.id = c.file_line_id
+
+    -- ARCHIVE
+    UNION ALL
+
+    SELECT
+        'ARCHIVE',
+        'archive.ingestion_card_bkm_detail',
+        c.id,
+        c.file_line_id,
+        fl.file_id,
+        c.ocean_txn_guid,
+        c.rrn,
+        c.arn
+    FROM archive.ingestion_card_bkm_detail c
+    JOIN archive.ingestion_file_line fl ON fl.id = c.file_line_id
+
+    UNION ALL
+
+    SELECT
+        'ARCHIVE',
+        'archive.ingestion_card_visa_detail',
+        c.id,
+        c.file_line_id,
+        fl.file_id,
+        c.ocean_txn_guid,
+        c.rrn,
+        c.arn
+    FROM archive.ingestion_card_visa_detail c
+    JOIN archive.ingestion_file_line fl ON fl.id = c.file_line_id
+
+    UNION ALL
+
+    SELECT
+        'ARCHIVE',
+        'archive.ingestion_card_msc_detail',
+        c.id,
+        c.file_line_id,
+        fl.file_id,
+        c.ocean_txn_guid,
+        c.rrn,
+        c.arn
+    FROM archive.ingestion_card_msc_detail c
+    JOIN archive.ingestion_file_line fl ON fl.id = c.file_line_id
+)
+SELECT
+    ROW_NUMBER() OVER (ORDER BY c.data_scope, c.card_table, c.card_id) AS row_number,
+
+    c.data_scope        AS data_scope,
+    c.card_table        AS card_table,
+
+    c.card_id           AS card_id,
+    c.file_line_id      AS file_line_id,
+    c.file_id           AS file_id,
+
+    bkm_live.id         AS clearing_bkm_live_id,
+    bkm_arc.id          AS clearing_bkm_archive_id,
+
+    visa_live.id        AS clearing_visa_live_id,
+    visa_arc.id         AS clearing_visa_archive_id,
+
+    msc_live.id         AS clearing_mastercard_live_id,
+    msc_arc.id          AS clearing_mastercard_archive_id
+
+FROM all_card c
+
+-- BKM
+LEFT JOIN LATERAL (
+    SELECT x.id
+    FROM ingestion.clearing_bkm_detail x
+    WHERE x.ocean_txn_guid = c.ocean_txn_guid
+       OR (c.rrn IS NOT NULL AND x.rrn = c.rrn)
+       OR (c.arn IS NOT NULL AND x.arn = c.arn)
+    ORDER BY
+        CASE
+            WHEN x.ocean_txn_guid = c.ocean_txn_guid THEN 1
+            WHEN x.rrn = c.rrn THEN 2
+            WHEN x.arn = c.arn THEN 3
+            ELSE 99
+        END
+    LIMIT 1
+) bkm_live ON TRUE
+
+LEFT JOIN LATERAL (
+    SELECT x.id
+    FROM archive.ingestion_clearing_bkm_detail x
+    WHERE x.ocean_txn_guid = c.ocean_txn_guid
+       OR (c.rrn IS NOT NULL AND x.rrn = c.rrn)
+       OR (c.arn IS NOT NULL AND x.arn = c.arn)
+    ORDER BY
+        CASE
+            WHEN x.ocean_txn_guid = c.ocean_txn_guid THEN 1
+            WHEN x.rrn = c.rrn THEN 2
+            WHEN x.arn = c.arn THEN 3
+            ELSE 99
+        END
+    LIMIT 1
+) bkm_arc ON TRUE
+
+-- VISA
+LEFT JOIN LATERAL (
+    SELECT x.id
+    FROM ingestion.clearing_visa_detail x
+    WHERE x.ocean_txn_guid = c.ocean_txn_guid
+       OR (c.rrn IS NOT NULL AND x.rrn = c.rrn)
+       OR (c.arn IS NOT NULL AND x.arn = c.arn)
+    ORDER BY
+        CASE
+            WHEN x.ocean_txn_guid = c.ocean_txn_guid THEN 1
+            WHEN x.rrn = c.rrn THEN 2
+            WHEN x.arn = c.arn THEN 3
+            ELSE 99
+        END
+    LIMIT 1
+) visa_live ON TRUE
+
+LEFT JOIN LATERAL (
+    SELECT x.id
+    FROM archive.ingestion_clearing_visa_detail x
+    WHERE x.ocean_txn_guid = c.ocean_txn_guid
+       OR (c.rrn IS NOT NULL AND x.rrn = c.rrn)
+       OR (c.arn IS NOT NULL AND x.arn = c.arn)
+    ORDER BY
+        CASE
+            WHEN x.ocean_txn_guid = c.ocean_txn_guid THEN 1
+            WHEN x.rrn = c.rrn THEN 2
+            WHEN x.arn = c.arn THEN 3
+            ELSE 99
+        END
+    LIMIT 1
+) visa_arc ON TRUE
+
+-- MSC
+LEFT JOIN LATERAL (
+    SELECT x.id
+    FROM ingestion.clearing_msc_detail x
+    WHERE x.ocean_txn_guid = c.ocean_txn_guid
+       OR (c.rrn IS NOT NULL AND x.rrn = c.rrn)
+       OR (c.arn IS NOT NULL AND x.arn = c.arn)
+    ORDER BY
+        CASE
+            WHEN x.ocean_txn_guid = c.ocean_txn_guid THEN 1
+            WHEN x.rrn = c.rrn THEN 2
+            WHEN x.arn = c.arn THEN 3
+            ELSE 99
+        END
+    LIMIT 1
+) msc_live ON TRUE
+
+LEFT JOIN LATERAL (
+    SELECT x.id
+    FROM archive.ingestion_clearing_msc_detail x
+    WHERE x.ocean_txn_guid = c.ocean_txn_guid
+       OR (c.rrn IS NOT NULL AND x.rrn = c.rrn)
+       OR (c.arn IS NOT NULL AND x.arn = c.arn)
+    ORDER BY
+        CASE
+            WHEN x.ocean_txn_guid = c.ocean_txn_guid THEN 1
+            WHEN x.rrn = c.rrn THEN 2
+            WHEN x.arn = c.arn THEN 3
+            ELSE 99
+        END
+    LIMIT 1
+) msc_arc ON TRUE;
+

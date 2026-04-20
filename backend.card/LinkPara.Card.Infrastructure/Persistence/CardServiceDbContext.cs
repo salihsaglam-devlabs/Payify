@@ -83,6 +83,7 @@ public class CardDbContext : BaseDbContext
     public DbSet<NetworkReconScorecardDto> NetworkReconScorecard { get; set; }
     public DbSet<ReconCardContentDailyDto> ReconArchiveCardContentDaily { get; set; }
     public DbSet<ReconClearingContentDailyDto> ReconArchiveClearingContentDaily { get; set; }
+    public DbSet<CardClearingCorrelationDto> CardClearingCorrelation { get; set; }
 
     public CardDbContext(DbContextOptions options,
         IContextProvider contextProvider,
@@ -182,6 +183,7 @@ public class CardDbContext : BaseDbContext
         builder.Entity<ReconGapAnalysisDto>().ToView("vw_recon_gap_analysis", reportingSchema).HasNoKey();
         builder.Entity<UnmatchedTransactionAgingDto>().ToView("vw_unmatched_transaction_aging", reportingSchema).HasNoKey();
         builder.Entity<NetworkReconScorecardDto>().ToView("vw_network_recon_scorecard", reportingSchema).HasNoKey();
+        builder.Entity<CardClearingCorrelationDto>().ToView("vw_card_clearing_correlation", reportingSchema).HasNoKey();
     }
 
     private static void CreateMsSqlMappings(ModelBuilder builder)
@@ -255,5 +257,7 @@ public class CardDbContext : BaseDbContext
         builder.Entity<ReconGapAnalysisDto>().ToView("VwReconGapAnalysis", reportingSchema).HasNoKey();
         builder.Entity<UnmatchedTransactionAgingDto>().ToView("VwUnmatchedTransactionAging", reportingSchema).HasNoKey();
         builder.Entity<NetworkReconScorecardDto>().ToView("VwNetworkReconScorecard", reportingSchema).HasNoKey();
+        builder.Entity<CardClearingCorrelationDto>().ToView("VwCardClearingCorrelation", reportingSchema).HasNoKey();
     }
 }
+

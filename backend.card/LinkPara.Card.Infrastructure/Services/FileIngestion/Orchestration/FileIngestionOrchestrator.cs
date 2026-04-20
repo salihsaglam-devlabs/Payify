@@ -1460,7 +1460,8 @@ public class FileIngestionOrchestrator : IFileIngestionService
 
             var efTransaction = _dbContext.Database.CurrentTransaction
                 ?? throw new FileIngestionPostgreBulkInsertFailedException(
-                    _localizer.Get("FileIngestion.PostgreBulkInsertFailed", "No active EF Core transaction for PostgreSQL COPY."));
+                    _localizer.Get("FileIngestion.PostgreBulkInsertFailed",
+                        _localizer.Get("FileIngestion.Detail.NoActiveEfTransactionForCopy")));
             var npgsqlTransaction = (NpgsqlTransaction)efTransaction.GetDbTransaction();
 
             var schema = string.IsNullOrWhiteSpace(entityType.GetSchema())

@@ -117,7 +117,6 @@
   <resheader name="writer">
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
-  <!-- Legacy / Shared -->
   <data name="BankApiAlreadyExists" xml:space="preserve">
     <value>Bank API is already in use!</value>
   </data>
@@ -253,7 +252,6 @@
   <data name="AlreadyInUsePhoneNumberException" xml:space="preserve">
     <value>The phone number is already in use!</value>
   </data>
-  <!-- FileIngestion — Configuration -->
   <data name="FileIngestionLocalPathNotConfiguredException" xml:space="preserve">
     <value>Local file path is not configured for the specified profile.</value>
   </data>
@@ -293,7 +291,6 @@
   <data name="FileIngestionVaultConfigMissingException" xml:space="preserve">
     <value>Vault key missing: CardSecrets/FileIngestion</value>
   </data>
-  <!-- FileIngestion — Parsing -->
   <data name="FileIngestionParserLineEmptyException" xml:space="preserve">
     <value>Parser received an empty line.</value>
   </data>
@@ -315,7 +312,6 @@
   <data name="FileIngestionRecordTypeMismatchException" xml:space="preserve">
     <value>Record type mismatch.</value>
   </data>
-  <!-- FileIngestion — Value Conversion -->
   <data name="FileIngestionDecimalValueInvalidException" xml:space="preserve">
     <value>Invalid decimal value.</value>
   </data>
@@ -328,7 +324,6 @@
   <data name="FileIngestionEnumValueInvalidException" xml:space="preserve">
     <value>Invalid enum value.</value>
   </data>
-  <!-- FileIngestion — Mapping -->
   <data name="FileIngestionEntityTypeNotMappedException" xml:space="preserve">
     <value>Entity type is not mapped.</value>
   </data>
@@ -350,7 +345,6 @@
   <data name="FileIngestionFooterTxnCountMissingException" xml:space="preserve">
     <value>Footer transaction count is missing.</value>
   </data>
-  <!-- FileIngestion — Validation & Bulk -->
   <data name="FileIngestionFilePatternMismatchException" xml:space="preserve">
     <value>File name does not match expected pattern.</value>
   </data>
@@ -372,7 +366,6 @@
   <data name="FileIngestionRecordNotFoundFromEndException" xml:space="preserve">
     <value>Record not found searching from end.</value>
   </data>
-  <!-- FileIngestion — Transport Options -->
   <data name="FileIngestionSftpTimeoutInvalidException" xml:space="preserve">
     <value>SFTP timeout configuration is invalid.</value>
   </data>
@@ -400,7 +393,6 @@
   <data name="FileIngestionFtpUploadRetryExhaustedException" xml:space="preserve">
     <value>FTP upload retry attempts exhausted.</value>
   </data>
-  <!-- FileIngestion — Processing -->
   <data name="FileIngestionProcessingBatchSizeInvalidException" xml:space="preserve">
     <value>Processing batch size configuration is invalid.</value>
   </data>
@@ -410,7 +402,6 @@
   <data name="FileIngestionProcessingMaxParallelismInvalidException" xml:space="preserve">
     <value>Processing max parallelism configuration is invalid.</value>
   </data>
-  <!-- Reconciliation — Context & Core -->
   <data name="ReconciliationFileNotResolvedException" xml:space="preserve">
     <value>Reconciliation file could not be resolved.</value>
   </data>
@@ -429,7 +420,6 @@
   <data name="ReconciliationUnsupportedContentTypeException" xml:space="preserve">
     <value>Unsupported reconciliation content type.</value>
   </data>
-  <!-- Reconciliation — Payload -->
   <data name="ReconciliationOperationPayloadEmptyException" xml:space="preserve">
     <value>Operation payload is empty.</value>
   </data>
@@ -442,11 +432,9 @@
   <data name="ReconciliationOperationPayloadConversionFailedException" xml:space="preserve">
     <value>Operation payload value conversion failed.</value>
   </data>
-  <!-- Reconciliation — Operation -->
   <data name="ReconciliationUnsupportedOperationCodeException" xml:space="preserve">
     <value>Unsupported reconciliation operation code.</value>
   </data>
-  <!-- Reconciliation — Configuration -->
   <data name="ReconciliationExecuteMaxEvaluationsInvalidException" xml:space="preserve">
     <value>Max evaluations configuration is invalid.</value>
   </data>
@@ -465,7 +453,6 @@
   <data name="ReconciliationAlertBatchSizeInvalidException" xml:space="preserve">
     <value>Alert batch size configuration is invalid.</value>
   </data>
-  <!-- Archive — Configuration -->
   <data name="ArchiveOptionsNotConfiguredException" xml:space="preserve">
     <value>Archive options are not configured.</value>
   </data>
@@ -481,7 +468,6 @@
   <data name="ArchiveMinUpdateAgeInvalidException" xml:space="preserve">
     <value>Archive min update age configuration is invalid.</value>
   </data>
-  <!-- Archive — Verification & SQL -->
   <data name="ArchiveLiveCountsNotClearedException" xml:space="preserve">
     <value>Live counts were not cleared after archive delete.</value>
   </data>
@@ -500,7 +486,6 @@
   <data name="ArchiveUnsupportedBeforeDateStrategyException" xml:space="preserve">
     <value>Unsupported before-date strategy.</value>
   </data>
-  <!-- Reporting -->
   <data name="ReportingQueryFailedException" xml:space="preserve">
     <value>Reporting query failed.</value>
   </data>

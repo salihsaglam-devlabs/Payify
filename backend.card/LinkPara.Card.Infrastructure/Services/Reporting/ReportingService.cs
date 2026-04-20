@@ -461,6 +461,27 @@ internal sealed class ReportingService : IReportingService
         return await q.OrderBy(x => x.Network).ToListAsync(ct);
     }
 
+    public async Task<PaginatedList<CardClearingCorrelationDto>> GetCardClearingCorrelationAsync(
+        SearchQueryParams paging, DataScope? dataScope, string cardTable,
+        Guid? fileId, Guid? fileLineId, Guid? cardId, CancellationToken ct)
+    {
+        var q = _dbContext.CardClearingCorrelation.AsNoTracking();
+
+        if (dataScope.HasValue)
+            q = q.Where(x => x.DataScope == dataScope.Value);
+        if (!string.IsNullOrWhiteSpace(cardTable))
+            q = q.Where(x => x.CardTable == cardTable);
+        if (fileId.HasValue)
+            q = q.Where(x => x.FileId == fileId.Value);
+        if (fileLineId.HasValue)
+            q = q.Where(x => x.FileLineId == fileLineId.Value);
+        if (cardId.HasValue)
+            q = q.Where(x => x.CardId == cardId.Value);
+
+        q = q.OrderBy(x => x.RowNumber);
+        return await PaginateAsync(q, paging, ct);
+    }
+
     private static async Task<PaginatedList<T>> PaginateAsync<T>(
         IQueryable<T> query, SearchQueryParams paging, CancellationToken ct)
     {

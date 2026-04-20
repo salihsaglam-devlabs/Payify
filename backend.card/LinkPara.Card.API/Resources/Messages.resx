@@ -59,16 +59,10 @@
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
 
-  <!-- ════════════════════════════════════════════ -->
-  <!-- Common                                       -->
-  <!-- ════════════════════════════════════════════ -->
   <data name="Common.OperationCancelled" xml:space="preserve">
     <value>Operation was cancelled.</value>
   </data>
 
-  <!-- ════════════════════════════════════════════ -->
-  <!-- Validation                                   -->
-  <!-- ════════════════════════════════════════════ -->
   <data name="Validation.FilePathMustBeEmptyForRemote" xml:space="preserve">
     <value>File path must be empty for remote file sources.</value>
   </data>
@@ -151,9 +145,6 @@
     <value>Page number must be at least 1.</value>
   </data>
 
-  <!-- ════════════════════════════════════════════ -->
-  <!-- FileIngestion – Error Mapper                 -->
-  <!-- ════════════════════════════════════════════ -->
   <data name="FileIngestion.ParseError" xml:space="preserve">
     <value>Failed to parse field '{0}'.</value>
   </data>
@@ -209,9 +200,6 @@
     <value>An internal error occurred.</value>
   </data>
 
-  <!-- ════════════════════════════════════════════ -->
-  <!-- FileIngestion – Orchestrator / Services      -->
-  <!-- ════════════════════════════════════════════ -->
   <data name="FileIngestion.InvalidRequest" xml:space="preserve">
     <value>Invalid ingestion request.</value>
   </data>
@@ -435,7 +423,6 @@
     <value>Failed to retrieve the file after archive retry.</value>
   </data>
 
-  <!-- FileIngestion – Transport -->
   <data name="FileIngestion.UnsupportedProtocol" xml:space="preserve">
     <value>Unsupported file transfer protocol: '{0}'.</value>
   </data>
@@ -494,7 +481,6 @@
     <value>SFTP connection attempt {Attempt}/{MaxAttempts} to {Host}:{Port} failed: {ErrorMessage}. Retrying in {Delay}s...</value>
   </data>
 
-  <!-- FileIngestion – Configuration Validation -->
   <data name="Config.FileIngestion.VaultConfigMissing" xml:space="preserve">
     <value>Vault key missing: CardSecrets/FileIngestion (Connections and Profiles are required)</value>
   </data>
@@ -589,7 +575,6 @@
     <value>Paycore customer operation failed.</value>
   </data>
 
-  <!-- FileIngestion – Parser -->
   <data name="FileIngestion.ParserLineEmpty" xml:space="preserve">
     <value>Line is empty and cannot be parsed.</value>
   </data>
@@ -615,12 +600,6 @@
     <value>Value '{0}' is not a valid member of enum '{1}'.</value>
   </data>
 
-  <!-- ════════════════════════════════════════════ -->
-  <!-- Reconciliation – Error Mapper                -->
-  <!-- ════════════════════════════════════════════ -->
-  <!-- ════════════════════════════════════════════ -->
-  <!-- Reporting – Error Mapper                    -->
-  <!-- ════════════════════════════════════════════ -->
   <data name="Reporting.ApiError" xml:space="preserve">
     <value>Reporting error [{0}].</value>
   </data>
@@ -640,9 +619,6 @@
     <value>An internal reporting error occurred.</value>
   </data>
 
-  <!-- ════════════════════════════════════════════ -->
-  <!-- Reporting – Handler Messages                -->
-  <!-- ════════════════════════════════════════════ -->
   <data name="Handler.Reporting.GetTransactionsFailed" xml:space="preserve">
     <value>Failed to retrieve reconciliation transactions. See errors for details.</value>
   </data>
@@ -684,9 +660,6 @@
     <value>An internal error occurred.</value>
   </data>
 
-  <!-- ════════════════════════════════════════════ -->
-  <!-- Reconciliation – Service / Execute / Review  -->
-  <!-- ════════════════════════════════════════════ -->
   <data name="Reconciliation.EvaluationFailed" xml:space="preserve">
     <value>Reconciliation evaluation failed.</value>
   </data>
@@ -798,6 +771,9 @@
   <data name="Reconciliation.CaseRequeued" xml:space="preserve">
     <value>Case was re-queued after {0}.</value>
   </data>
+  <data name="Reconciliation.RequeuedByClearingArrival" xml:space="preserve">
+    <value>Re-queued by clearing arrival: {0}.</value>
+  </data>
   <data name="Reconciliation.ManualBranchCompleted" xml:space="preserve">
     <value>Manual branch completed with {0}.</value>
   </data>
@@ -871,9 +847,6 @@
     <value>customerTransactionId '{0}' lookup failed. {1}</value>
   </data>
 
-  <!-- ════════════════════════════════════════════ -->
-  <!-- FileIngestion – Orchestrator remaining       -->
-  <!-- ════════════════════════════════════════════ -->
   <data name="FileIngestion.RequestIsNull" xml:space="preserve">
     <value>File ingestion request is null.</value>
   </data>
@@ -902,9 +875,6 @@
     <value>Unknown job type: '{0}'. Supported types: IngestFile, Evaluate, Execute.</value>
   </data>
 
-  <!-- ════════════════════════════════════════════ -->
-  <!-- Reconciliation – BKM Evaluator               -->
-  <!-- ════════════════════════════════════════════ -->
   <data name="Reconciliation.Bkm.CurrentCardRowMissing" xml:space="preserve">
     <value>Current card row is missing.</value>
   </data>
@@ -920,23 +890,11 @@
   <data name="Reconciliation.Bkm.OriginalTxnNotResolvedOp" xml:space="preserve">
     <value>The original transaction could not be resolved for the cancel/reversal record.</value>
   </data>
-  <data name="Reconciliation.Bkm.CancelReversalManualReviewOp" xml:space="preserve">
-    <value>The cancel/reversal record is sent to manual review.</value>
-  </data>
-  <data name="Reconciliation.Bkm.BindOriginalAndReEvaluate" xml:space="preserve">
-    <value>Bind the original transaction and re-evaluate the flow.</value>
-  </data>
-  <data name="Reconciliation.Bkm.CloseCancelReversalManually" xml:space="preserve">
-    <value>Close the cancel/reversal record manually.</value>
-  </data>
   <data name="Reconciliation.Bkm.AlreadyCancelledNote" xml:space="preserve">
     <value>The transaction is already cancelled. No action is required.</value>
   </data>
   <data name="Reconciliation.Bkm.ReversalNotCancelledNote" xml:space="preserve">
     <value>This is a reversal/void record for a transaction that is not yet cancelled. Cancel the original transaction and create the reverse entry.</value>
-  </data>
-  <data name="Reconciliation.Bkm.MarkOriginalCancelledOp" xml:space="preserve">
-    <value>Mark the original transaction as cancelled.</value>
   </data>
   <data name="Reconciliation.Bkm.ReverseOriginalOp" xml:space="preserve">
     <value>Reverse the effect of the original transaction.</value>
@@ -971,20 +929,11 @@
   <data name="Reconciliation.Bkm.CreateTransactionOp" xml:space="preserve">
     <value>Create the missing transaction.</value>
   </data>
-  <data name="Reconciliation.Bkm.MoveCreatedToExpiredOp" xml:space="preserve">
-    <value>Move the created transaction to EXPIRE status.</value>
-  </data>
   <data name="Reconciliation.Bkm.AccPendingMatchNote" xml:space="preserve">
     <value>An ACC ControlStat=P match was found within the last 20 days for the EXPIRE record. Raise an alert and require manual review.</value>
   </data>
   <data name="Reconciliation.Bkm.AccPendingMatchOp" xml:space="preserve">
     <value>An ACC ControlStat=P match was found for the EXPIRE record.</value>
-  </data>
-  <data name="Reconciliation.Bkm.ExpiredManualReviewOp" xml:space="preserve">
-    <value>Send the EXPIRE record to manual review.</value>
-  </data>
-  <data name="Reconciliation.Bkm.CloseAfterManualReview" xml:space="preserve">
-    <value>Close the case after manual review.</value>
   </data>
   <data name="Reconciliation.Bkm.ExpiredSuccessfulNoAccNote" xml:space="preserve">
     <value>The Card Transaction record is EXPIRE, the Payify record is SUCCESSFUL, and there is no ACC match. Move the transaction to EXPIRE status and reverse the balance effect.</value>
@@ -998,29 +947,14 @@
   <data name="Reconciliation.Bkm.ConvertToSuccessfulOp" xml:space="preserve">
     <value>Move the transaction to SUCCESSFUL status.</value>
   </data>
-  <data name="Reconciliation.Bkm.SuccessfulMissingRefundNote" xml:space="preserve">
+  <data name="Reconciliation.Bkm.SuccessfulMissingNonRefundNote" xml:space="preserve">
     <value>The Card Transaction record is SUCCESSFUL while the Payify record is MISSING. Create the transaction and apply the refund/effect based on the original transaction.</value>
-  </data>
-  <data name="Reconciliation.Bkm.CreateTransactionGenericOp" xml:space="preserve">
-    <value>Create the transaction.</value>
   </data>
   <data name="Reconciliation.Bkm.ApplyOriginalEffectOp" xml:space="preserve">
     <value>Execute the refund by original transaction.</value>
   </data>
   <data name="Reconciliation.Bkm.PayifyNotResolvedNote" xml:space="preserve">
     <value>The Payify record could not be resolved. Raise an alert and require manual review.</value>
-  </data>
-  <data name="Reconciliation.Bkm.PayifyNotResolvedOp" xml:space="preserve">
-    <value>The Payify record could not be resolved.</value>
-  </data>
-  <data name="Reconciliation.Bkm.SendToManualReviewOp" xml:space="preserve">
-    <value>Send the record to manual review.</value>
-  </data>
-  <data name="Reconciliation.Bkm.ApproveCaseManually" xml:space="preserve">
-    <value>Approve the case manually.</value>
-  </data>
-  <data name="Reconciliation.Bkm.RejectCaseManually" xml:space="preserve">
-    <value>Reject the case manually.</value>
   </data>
   <data name="Reconciliation.Bkm.AmountsEqualNote" xml:space="preserve">
     <value>Transaction.Amount equals CardTransaction.BillingAmount. No action is required.</value>
@@ -1055,27 +989,6 @@
   <data name="Reconciliation.Bkm.StartChargebackAfterRejection" xml:space="preserve">
     <value>Start the chargeback flow after rejection.</value>
   </data>
-  <data name="Reconciliation.Bkm.UnmatchedFlowNote" xml:space="preserve">
-    <value>The record does not match any supported flow. Raise an alert and require manual review.</value>
-  </data>
-  <data name="Reconciliation.Bkm.UnmatchedFlowOp" xml:space="preserve">
-    <value>The record does not match any supported flow.</value>
-  </data>
-  <data name="Reconciliation.Bkm.CloseCaseManually" xml:space="preserve">
-    <value>Close the case manually.</value>
-  </data>
-  <data name="Reconciliation.Bkm.CardRowMissingNote" xml:space="preserve">
-    <value>The Card Transaction row could not be resolved. Raise an alert and require manual review.</value>
-  </data>
-  <data name="Reconciliation.Bkm.CardRowMissingOp" xml:space="preserve">
-    <value>The Card Transaction row could not be resolved.</value>
-  </data>
-  <data name="Reconciliation.Bkm.RequeueForReEvaluation" xml:space="preserve">
-    <value>Requeue the record for re-evaluation.</value>
-  </data>
-  <data name="Reconciliation.Bkm.CloseRecordManually" xml:space="preserve">
-    <value>Close the record manually.</value>
-  </data>
   <data name="Reconciliation.Bkm.DuplicateConflictNote" xml:space="preserve">
     <value>The duplicate records are conflicting. Do not process both records and raise an alert.</value>
   </data>
@@ -1088,59 +1001,12 @@
   <data name="Reconciliation.Bkm.DuplicateEquivalentOp" xml:space="preserve">
     <value>Equivalent duplicate records were detected.</value>
   </data>
-  <data name="Reconciliation.Bkm.AmbiguousPayifyNote" xml:space="preserve">
-    <value>The Payify lookup returned multiple candidates. Raise an alert and require manual review.</value>
-  </data>
-  <data name="Reconciliation.Bkm.AmbiguousPayifyOp" xml:space="preserve">
-    <value>The Payify lookup returned multiple candidates.</value>
-  </data>
-  <data name="Reconciliation.Bkm.ReEvaluateWithSelected" xml:space="preserve">
-    <value>Re-evaluate the flow with the selected record.</value>
-  </data>
-  <data name="Reconciliation.Bkm.CloseAmbiguousManually" xml:space="preserve">
-    <value>Close the ambiguous record manually.</value>
-  </data>
-  <data name="Reconciliation.Bkm.AccNotYetReceivedNote" xml:space="preserve">
-    <value>The transaction is SUCCESSFUL and settled, but ACC clearing data has not yet been received. Reconciliation deferred pending ACC arrival.</value>
-  </data>
   <data name="Reconciliation.Bkm.AwaitingClearingNote" xml:space="preserve">
     <value>Clearing data not yet received. Transaction kept OUT of financial reconciliation; waiting for clearing arrival. No balance-affecting operation performed.</value>
   </data>
   <data name="Reconciliation.Bkm.AwaitingClearingAlertOp" xml:space="preserve">
     <value>Awaiting clearing — no automatic financial correction will be applied until clearing arrives. Alert raised.</value>
   </data>
-  <data name="Reconciliation.Bkm.AwaitingClearingReviewOp" xml:space="preserve">
-    <value>Record pending clearing; will be re-evaluated automatically once clearing is ingested. Manual review gate available for operator override.</value>
-  </data>
-  <data name="Reconciliation.Bkm.RequeueAfterClearing" xml:space="preserve">
-    <value>Re-queue for evaluation once clearing arrives.</value>
-  </data>
-  <data name="Reconciliation.Bkm.AccMissingAlertOp" xml:space="preserve">
-    <value>ACC clearing data missing for successful settled transaction — alert raised for manual tracking.</value>
-  </data>
-  <data name="Reconciliation.Bkm.AccMissingReviewOp" xml:space="preserve">
-    <value>Manual review required — ACC clearing data not available for reconciliation.</value>
-  </data>
-  <data name="Reconciliation.Bkm.ExpiredAccPendingNote" xml:space="preserve">
-    <value>The Card Transaction record is EXPIRE, the Payify record is SUCCESSFUL, but ACC clearing data has not yet been received. Permanent balance correction deferred.</value>
-  </data>
-  <data name="Reconciliation.Bkm.ExpiredAccPendingAlertOp" xml:space="preserve">
-    <value>ACC clearing data pending for expired transaction — permanent correction deferred, alert raised.</value>
-  </data>
-  <data name="Reconciliation.Bkm.ExpiredAccPendingReviewOp" xml:space="preserve">
-    <value>Manual review required — ACC data pending for expired transaction, balance correction on hold.</value>
-  </data>
-  <data name="Reconciliation.Bkm.DataConsistencyAnomalyNote" xml:space="preserve">
-    <value>Data consistency anomaly detected: ResponseCode and IsSuccessfulTxn fields are contradictory. The record cannot be classified as SUCCESSFUL or FAILED and requires manual investigation.</value>
-  </data>
-  <data name="Reconciliation.Bkm.DataConsistencyAnomalyAlertOp" xml:space="preserve">
-    <value>Data anomaly alert — ResponseCode vs IsSuccessfulTxn mismatch detected, record flagged for review.</value>
-  </data>
-  <data name="Reconciliation.Bkm.DataConsistencyAnomalyReviewOp" xml:space="preserve">
-    <value>Manual review required — ResponseCode and IsSuccessfulTxn values are inconsistent, automated processing suspended.</value>
-  </data>
-
-  <!-- Reconciliation – MSC / Visa Evaluator -->
   <data name="Reconciliation.Msc.RulesNotDefined" xml:space="preserve">
     <value>MSC evaluator rules are not defined yet. No automatic or manual action was produced.</value>
   </data>
@@ -1148,9 +1014,6 @@
     <value>Visa evaluator rules are not defined yet. No automatic or manual action was produced.</value>
   </data>
 
-  <!-- ════════════════════════════════════════════ -->
-  <!-- Archive – Error Mapper                       -->
-  <!-- ════════════════════════════════════════════ -->
   <data name="Archive.OperationCancelled" xml:space="preserve">
     <value>Archive operation was cancelled.</value>
   </data>
@@ -1167,9 +1030,6 @@
     <value>An internal error occurred.</value>
   </data>
 
-  <!-- ════════════════════════════════════════════ -->
-  <!-- Archive – Service                            -->
-  <!-- ════════════════════════════════════════════ -->
   <data name="Archive.PreviewFailed" xml:space="preserve">
     <value>Archive preview failed.</value>
   </data>
@@ -1201,9 +1061,6 @@
     <value>Archive auto-run failed after successful reconciliation execute.</value>
   </data>
 
-  <!-- ════════════════════════════════════════════ -->
-  <!-- Alert – Service                              -->
-  <!-- ════════════════════════════════════════════ -->
   <data name="Alert.Disabled" xml:space="preserve">
     <value>AlertService skipped because alert settings are disabled.</value>
   </data>
@@ -1244,7 +1101,6 @@
     <value>Description</value>
   </data>
 
-  <!-- Alert – Detail Labels -->
   <data name="Alert.Template.Title" xml:space="preserve">
     <value>Reconciliation Alert Notification</value>
   </data>
@@ -1279,7 +1135,6 @@
     <value>Technical Details</value>
   </data>
 
-  <!-- Alert – Detail Labels -->
   <data name="Alert.Detail.AlertHeader" xml:space="preserve">
     <value>Alert</value>
   </data>
@@ -1377,9 +1232,6 @@
     <value>Attempt</value>
   </data>
 
-  <!-- ════════════════════════════════════════════ -->
-  <!-- Handler-Level Errors                         -->
-  <!-- ════════════════════════════════════════════ -->
   <data name="Handler.FileIngestion.Failed" xml:space="preserve">
     <value>File ingestion handler failed. See errors for details.</value>
   </data>
@@ -1408,9 +1260,6 @@
     <value>Archive preview handler failed. See errors for details.</value>
   </data>
 
-  <!-- ════════════════════════════════════════════ -->
-  <!-- ApiError – Error Mapper (ApiException)       -->
-  <!-- ════════════════════════════════════════════ -->
   <data name="FileIngestion.ApiError" xml:space="preserve">
     <value>File ingestion error [{0}].</value>
   </data>
@@ -1421,9 +1270,6 @@
     <value>Archive error [{0}].</value>
   </data>
   
-  <!-- ════════════════════════════════════════════ -->
-  <!-- Handler – Reporting                          -->
-  <!-- ════════════════════════════════════════════ -->
   <data name="Handler.Reporting.IngestionFileOverviewFailed" xml:space="preserve">
     <value>Failed to retrieve ingestion file overview. See errors for details.</value>
   </data>
@@ -1489,6 +1335,55 @@
   </data>
   <data name="Handler.Reporting.ArchiveRetentionSnapshotFailed" xml:space="preserve">
     <value>Failed to retrieve archive retention snapshot. See errors for details.</value>
+  </data>
+
+  <data name="Reconciliation.LateClearingRequeuedAtFinalize" xml:space="preserve">
+    <value>Late-arriving clearing detected at finalize; requeued to re-evaluate.</value>
+  </data>
+
+  <data name="Reconciliation.Bkm.ExpiredWithAuthoritativeClearingNote" xml:space="preserve">
+    <value>Card transaction is EXPIRED, Payify record is SUCCESSFUL and Clearing is AUTHORITATIVELY CONFIRMED by the scheme (Normal/ProblemToNormal). Because the scheme has funded the transaction, automatic expire + reverse is NOT applied; an operator must approve the action.</value>
+  </data>
+
+  <data name="FileIngestion.Detail.NoActiveEfTransactionForCopy" xml:space="preserve">
+    <value>No active EF Core transaction for PostgreSQL COPY.</value>
+  </data>
+
+  <data name="Paycore.PinBlock.ClearPinEmpty" xml:space="preserve">
+    <value>ClearPin must not be empty.</value>
+  </data>
+  <data name="Paycore.PinBlock.ClearPinDigitsOnly" xml:space="preserve">
+    <value>ClearPin must contain only digits.</value>
+  </data>
+  <data name="Paycore.PinBlock.ClearPinLengthRange" xml:space="preserve">
+    <value>ClearPin length must be between 4 and 12 characters.</value>
+  </data>
+  <data name="Paycore.PinBlock.ClearPanEmpty" xml:space="preserve">
+    <value>Clear card number must not be empty.</value>
+  </data>
+  <data name="Paycore.PinBlock.ClearPanDigitsOnly" xml:space="preserve">
+    <value>Clear card number must contain only digits.</value>
+  </data>
+  <data name="Paycore.PinBlock.ClearPanInvalid" xml:space="preserve">
+    <value>Clear card number is invalid.</value>
+  </data>
+  <data name="Paycore.PinBlock.EncryptedBlockEmpty" xml:space="preserve">
+    <value>EncryptedBlock must not be empty.</value>
+  </data>
+  <data name="Paycore.PinBlock.EncryptedBlockHexLength" xml:space="preserve">
+    <value>EncryptedBlock must be 16 hexadecimal characters.</value>
+  </data>
+  <data name="Paycore.PinBlock.EncryptedBlockHexOnly" xml:space="preserve">
+    <value>EncryptedBlock must contain only hexadecimal characters.</value>
+  </data>
+  <data name="Paycore.PinBlock.DecryptedBlockInvalid" xml:space="preserve">
+    <value>Decrypted data block is invalid.</value>
+  </data>
+  <data name="Paycore.PinBlock.DataLengthUnresolved" xml:space="preserve">
+    <value>Data length could not be resolved.</value>
+  </data>
+  <data name="Paycore.PinBlock.ZpkSizeInvalid" xml:space="preserve">
+    <value>ZPK must be 16 or 24 bytes.</value>
   </data>
 
 </root>

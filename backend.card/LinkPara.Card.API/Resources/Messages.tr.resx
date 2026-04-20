@@ -59,16 +59,10 @@
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
 
-  <!-- ════════════════════════════════════════════ -->
-  <!-- Common                                       -->
-  <!-- ════════════════════════════════════════════ -->
   <data name="Common.OperationCancelled" xml:space="preserve">
     <value>İşlem iptal edildi.</value>
   </data>
 
-  <!-- ════════════════════════════════════════════ -->
-  <!-- Validation                                   -->
-  <!-- ════════════════════════════════════════════ -->
   <data name="Validation.FilePathMustBeEmptyForRemote" xml:space="preserve">
     <value>Uzak dosya kaynakları için dosya yolu boş olmalıdır.</value>
   </data>
@@ -151,9 +145,6 @@
     <value>Sayfa numarası en az 1 olmalıdır.</value>
   </data>
 
-  <!-- ════════════════════════════════════════════ -->
-  <!-- FileIngestion – Error Mapper                 -->
-  <!-- ════════════════════════════════════════════ -->
   <data name="FileIngestion.ParseError" xml:space="preserve">
     <value>'{0}' alanı ayrıştırılamadı.</value>
   </data>
@@ -209,9 +200,6 @@
     <value>Dahili bir hata oluştu.</value>
   </data>
 
-  <!-- ════════════════════════════════════════════ -->
-  <!-- FileIngestion – Orchestrator / Services      -->
-  <!-- ════════════════════════════════════════════ -->
   <data name="FileIngestion.InvalidRequest" xml:space="preserve">
     <value>Geçersiz dosya alım isteği.</value>
   </data>
@@ -435,7 +423,6 @@
     <value>Arşiv yeniden denemesi sonrası dosya alınamadı.</value>
   </data>
 
-  <!-- FileIngestion – Transport -->
   <data name="FileIngestion.UnsupportedProtocol" xml:space="preserve">
     <value>Desteklenmeyen dosya aktarım protokolü: '{0}'.</value>
   </data>
@@ -494,7 +481,6 @@
     <value>{Host}:{Port} adresine SFTP bağlantı denemesi {Attempt}/{MaxAttempts} başarısız oldu: {ErrorMessage}. {Delay}s sonra yeniden denenecek...</value>
   </data>
 
-  <!-- FileIngestion – Configuration Validation -->
   <data name="Config.FileIngestion.VaultConfigMissing" xml:space="preserve">
     <value>Vault anahtarı eksik: CardSecrets/FileIngestion (Connections ve Profiles gereklidir)</value>
   </data>
@@ -589,7 +575,6 @@
     <value>Paycore müşteri işlemi başarısız oldu.</value>
   </data>
 
-  <!-- FileIngestion – Parser -->
   <data name="FileIngestion.ParserLineEmpty" xml:space="preserve">
     <value>Satır boş ve ayrıştırılamaz.</value>
   </data>
@@ -615,9 +600,6 @@
     <value>'{0}' değeri '{1}' numaralandırmasının geçerli bir üyesi değil.</value>
   </data>
 
-  <!-- ════════════════════════════════════════════ -->
-  <!-- Reporting – Error Mapper                    -->
-  <!-- ════════════════════════════════════════════ -->
   <data name="Reporting.ApiError" xml:space="preserve">
     <value>Raporlama hatası [{0}].</value>
   </data>
@@ -637,9 +619,6 @@
     <value>Dahili raporlama hatası oluştu.</value>
   </data>
 
-  <!-- ════════════════════════════════════════════ -->
-  <!-- Reporting – Handler Messages                -->
-  <!-- ════════════════════════════════════════════ -->
   <data name="Handler.Reporting.GetTransactionsFailed" xml:space="preserve">
     <value>Mutabakat işlemleri alınamadı. Detaylar için hatalara bakın.</value>
   </data>
@@ -662,9 +641,6 @@
     <value>Genel özet alınamadı. Detaylar için hatalara bakın.</value>
   </data>
 
-  <!-- ════════════════════════════════════════════ -->
-  <!-- Reconciliation                               -->
-  <!-- ════════════════════════════════════════════ -->
   <data name="Reconciliation.OperationCancelled" xml:space="preserve">
     <value>Mutabakat işlemi iptal edildi.</value>
   </data>
@@ -794,6 +770,9 @@
   <data name="Reconciliation.CaseRequeued" xml:space="preserve">
     <value>{0} sonrası vaka yeniden kuyruğa alındı.</value>
   </data>
+  <data name="Reconciliation.RequeuedByClearingArrival" xml:space="preserve">
+    <value>Clearing kaydı geldiği için yeniden kuyruğa alındı: {0}.</value>
+  </data>
   <data name="Reconciliation.ManualBranchCompleted" xml:space="preserve">
     <value>{0} ile manuel dal tamamlandı.</value>
   </data>
@@ -867,9 +846,6 @@
     <value>customerTransactionId '{0}' sorgusu başarısız oldu. {1}</value>
   </data>
 
-  <!-- ════════════════════════════════════════════ -->
-  <!-- FileIngestion – Orchestrator remaining       -->
-  <!-- ════════════════════════════════════════════ -->
   <data name="FileIngestion.RequestIsNull" xml:space="preserve">
     <value>Dosya alım isteği boş.</value>
   </data>
@@ -898,9 +874,6 @@
     <value>Bilinmeyen iş türü: '{0}'. Desteklenen türler: IngestFile, Evaluate, Execute.</value>
   </data>
 
-  <!-- ════════════════════════════════════════════ -->
-  <!-- Reconciliation – BKM Evaluator               -->
-  <!-- ════════════════════════════════════════════ -->
   <data name="Reconciliation.Bkm.CurrentCardRowMissing" xml:space="preserve">
     <value>Mevcut kart satırı eksik.</value>
   </data>
@@ -916,23 +889,11 @@
   <data name="Reconciliation.Bkm.OriginalTxnNotResolvedOp" xml:space="preserve">
     <value>İptal/iade kaydı için orijinal işlem çözümlenemedi.</value>
   </data>
-  <data name="Reconciliation.Bkm.CancelReversalManualReviewOp" xml:space="preserve">
-    <value>İptal/iade kaydı manuel incelemeye gönderildi.</value>
-  </data>
-  <data name="Reconciliation.Bkm.BindOriginalAndReEvaluate" xml:space="preserve">
-    <value>Orijinal işlemi bağla ve akışı yeniden değerlendir.</value>
-  </data>
-  <data name="Reconciliation.Bkm.CloseCancelReversalManually" xml:space="preserve">
-    <value>İptal/iade kaydını manuel olarak kapatın.</value>
-  </data>
   <data name="Reconciliation.Bkm.AlreadyCancelledNote" xml:space="preserve">
     <value>İşlem zaten iptal edilmiş. Herhangi bir işlem gerekmiyor.</value>
   </data>
   <data name="Reconciliation.Bkm.ReversalNotCancelledNote" xml:space="preserve">
     <value>Bu, henüz iptal edilmemiş bir işlem için iade/iptal kaydıdır. Orijinal işlemi iptal edin ve ters kayıt oluşturun.</value>
-  </data>
-  <data name="Reconciliation.Bkm.MarkOriginalCancelledOp" xml:space="preserve">
-    <value>Orijinal işlemi iptal edilmiş olarak işaretle.</value>
   </data>
   <data name="Reconciliation.Bkm.ReverseOriginalOp" xml:space="preserve">
     <value>Orijinal işlemin etkisini tersine çevir.</value>
@@ -967,20 +928,11 @@
   <data name="Reconciliation.Bkm.CreateTransactionOp" xml:space="preserve">
     <value>Eksik işlemi oluştur.</value>
   </data>
-  <data name="Reconciliation.Bkm.MoveCreatedToExpiredOp" xml:space="preserve">
-    <value>Oluşturulan işlemi SÜRESİ DOLMUŞ durumuna taşı.</value>
-  </data>
   <data name="Reconciliation.Bkm.AccPendingMatchNote" xml:space="preserve">
     <value>SÜRESİ DOLMUŞ kayıt için son 20 gün içinde ACC ControlStat=P eşleşmesi bulundu. Uyarı oluşturun ve manuel inceleme gerektirir.</value>
   </data>
   <data name="Reconciliation.Bkm.AccPendingMatchOp" xml:space="preserve">
     <value>SÜRESİ DOLMUŞ kayıt için ACC ControlStat=P eşleşmesi bulundu.</value>
-  </data>
-  <data name="Reconciliation.Bkm.ExpiredManualReviewOp" xml:space="preserve">
-    <value>SÜRESİ DOLMUŞ kaydı manuel incelemeye gönder.</value>
-  </data>
-  <data name="Reconciliation.Bkm.CloseAfterManualReview" xml:space="preserve">
-    <value>Manuel inceleme sonrası vakayı kapat.</value>
   </data>
   <data name="Reconciliation.Bkm.ExpiredSuccessfulNoAccNote" xml:space="preserve">
     <value>Kart İşlem kaydı SÜRESİ DOLMUŞ, Payify kaydı BAŞARILI ve ACC eşleşmesi yok. Clearing içeriği scheme tarafının işlemi fonladığına işaret ediyor olabileceği için otomatik reverse yapılmaz; operatör inceleme kapısına alınır.</value>
@@ -997,29 +949,14 @@
   <data name="Reconciliation.Bkm.ConvertToSuccessfulOp" xml:space="preserve">
     <value>İşlemi BAŞARILI durumuna taşı.</value>
   </data>
-  <data name="Reconciliation.Bkm.SuccessfulMissingRefundNote" xml:space="preserve">
+  <data name="Reconciliation.Bkm.SuccessfulMissingNonRefundNote" xml:space="preserve">
     <value>Kart İşlem kaydı BAŞARILI iken Payify kaydı EKSİK. İşlemi oluştur ve orijinal işleme dayalı iade/etkiyi uygula.</value>
-  </data>
-  <data name="Reconciliation.Bkm.CreateTransactionGenericOp" xml:space="preserve">
-    <value>İşlemi oluştur.</value>
   </data>
   <data name="Reconciliation.Bkm.ApplyOriginalEffectOp" xml:space="preserve">
     <value>Orijinal işleme göre iadeyi yürüt.</value>
   </data>
   <data name="Reconciliation.Bkm.PayifyNotResolvedNote" xml:space="preserve">
     <value>Payify kaydı çözümlenemedi. Uyarı oluşturun ve manuel inceleme gerektirir.</value>
-  </data>
-  <data name="Reconciliation.Bkm.PayifyNotResolvedOp" xml:space="preserve">
-    <value>Payify kaydı çözümlenemedi.</value>
-  </data>
-  <data name="Reconciliation.Bkm.SendToManualReviewOp" xml:space="preserve">
-    <value>Kaydı manuel incelemeye gönder.</value>
-  </data>
-  <data name="Reconciliation.Bkm.ApproveCaseManually" xml:space="preserve">
-    <value>Vakayı manuel olarak onayla.</value>
-  </data>
-  <data name="Reconciliation.Bkm.RejectCaseManually" xml:space="preserve">
-    <value>Vakayı manuel olarak reddet.</value>
   </data>
   <data name="Reconciliation.Bkm.AmountsEqualNote" xml:space="preserve">
     <value>Transaction.Amount, CardTransaction.BillingAmount ile eşit. Herhangi bir işlem gerekmiyor.</value>
@@ -1054,27 +991,6 @@
   <data name="Reconciliation.Bkm.StartChargebackAfterRejection" xml:space="preserve">
     <value>Red sonrası ters ibraz akışını başlat.</value>
   </data>
-  <data name="Reconciliation.Bkm.UnmatchedFlowNote" xml:space="preserve">
-    <value>Kayıt desteklenen hiçbir akışla eşleşmiyor. Uyarı oluşturun ve manuel inceleme gerektirir.</value>
-  </data>
-  <data name="Reconciliation.Bkm.UnmatchedFlowOp" xml:space="preserve">
-    <value>Kayıt desteklenen hiçbir akışla eşleşmiyor.</value>
-  </data>
-  <data name="Reconciliation.Bkm.CloseCaseManually" xml:space="preserve">
-    <value>Vakayı manuel olarak kapat.</value>
-  </data>
-  <data name="Reconciliation.Bkm.CardRowMissingNote" xml:space="preserve">
-    <value>Kart İşlem satırı çözümlenemedi. Uyarı oluşturun ve manuel inceleme gerektirir.</value>
-  </data>
-  <data name="Reconciliation.Bkm.CardRowMissingOp" xml:space="preserve">
-    <value>Kart İşlem satırı çözümlenemedi.</value>
-  </data>
-  <data name="Reconciliation.Bkm.RequeueForReEvaluation" xml:space="preserve">
-    <value>Kaydı yeniden değerlendirme için kuyruğa al.</value>
-  </data>
-  <data name="Reconciliation.Bkm.CloseRecordManually" xml:space="preserve">
-    <value>Kaydı manuel olarak kapat.</value>
-  </data>
   <data name="Reconciliation.Bkm.DuplicateConflictNote" xml:space="preserve">
     <value>Yinelenen kayıtlar çakışıyor. Her iki kaydı da işlemeyin ve uyarı oluşturun.</value>
   </data>
@@ -1087,59 +1003,12 @@
   <data name="Reconciliation.Bkm.DuplicateEquivalentOp" xml:space="preserve">
     <value>Eşdeğer yinelenen kayıtlar tespit edildi.</value>
   </data>
-  <data name="Reconciliation.Bkm.AmbiguousPayifyNote" xml:space="preserve">
-    <value>Payify sorgusu birden fazla aday döndürdü. Uyarı oluşturun ve manuel inceleme gerektirir.</value>
-  </data>
-  <data name="Reconciliation.Bkm.AmbiguousPayifyOp" xml:space="preserve">
-    <value>Payify sorgusu birden fazla aday döndürdü.</value>
-  </data>
-  <data name="Reconciliation.Bkm.ReEvaluateWithSelected" xml:space="preserve">
-    <value>Seçilen kayıtla akışı yeniden değerlendir.</value>
-  </data>
-  <data name="Reconciliation.Bkm.CloseAmbiguousManually" xml:space="preserve">
-    <value>Belirsiz kaydı manuel olarak kapat.</value>
-  </data>
-  <data name="Reconciliation.Bkm.AccNotYetReceivedNote" xml:space="preserve">
-    <value>İşlem BAŞARILI ve settle edilmiş, ancak ACC takas verisi henüz alınmadı. Mutabakat ACC gelişine kadar ertelendi.</value>
-  </data>
   <data name="Reconciliation.Bkm.AwaitingClearingNote" xml:space="preserve">
     <value>Clearing verisi henüz alınmadı. İşlem finansal mutabakat dışında tutuluyor; clearing gelişi bekleniyor. Herhangi bir bakiye etkili işlem uygulanmadı.</value>
   </data>
   <data name="Reconciliation.Bkm.AwaitingClearingAlertOp" xml:space="preserve">
     <value>Clearing bekleniyor — clearing gelene kadar otomatik finansal düzeltme uygulanmayacak. Alarm oluşturuldu.</value>
   </data>
-  <data name="Reconciliation.Bkm.AwaitingClearingReviewOp" xml:space="preserve">
-    <value>Clearing bekleyen kayıt; clearing ingest olduğunda otomatik olarak yeniden değerlendirilecek. Operatör override'ı için manuel inceleme kapısı açık.</value>
-  </data>
-  <data name="Reconciliation.Bkm.RequeueAfterClearing" xml:space="preserve">
-    <value>Clearing geldiğinde yeniden değerlendirme kuyruğuna al.</value>
-  </data>
-  <data name="Reconciliation.Bkm.AccMissingAlertOp" xml:space="preserve">
-    <value>Başarılı settle edilmiş işlem için ACC takas verisi eksik — manuel takip için uyarı oluşturuldu.</value>
-  </data>
-  <data name="Reconciliation.Bkm.AccMissingReviewOp" xml:space="preserve">
-    <value>Manuel inceleme gerekli — mutabakat için ACC takas verisi mevcut değil.</value>
-  </data>
-  <data name="Reconciliation.Bkm.ExpiredAccPendingNote" xml:space="preserve">
-    <value>Kart İşlem kaydı SÜRESİ DOLMUŞ, Payify kaydı BAŞARILI, ancak ACC takas verisi henüz alınmadı. Kalıcı bakiye düzeltmesi ertelendi.</value>
-  </data>
-  <data name="Reconciliation.Bkm.ExpiredAccPendingAlertOp" xml:space="preserve">
-    <value>Süresi dolmuş işlem için ACC takas verisi bekleniyor — kalıcı düzeltme ertelendi, uyarı oluşturuldu.</value>
-  </data>
-  <data name="Reconciliation.Bkm.ExpiredAccPendingReviewOp" xml:space="preserve">
-    <value>Manuel inceleme gerekli — süresi dolmuş işlem için ACC verisi bekleniyor, bakiye düzeltmesi askıda.</value>
-  </data>
-  <data name="Reconciliation.Bkm.DataConsistencyAnomalyNote" xml:space="preserve">
-    <value>Veri tutarsızlığı tespit edildi: ResponseCode ve IsSuccessfulTxn alanları çelişkili. Kayıt BAŞARILI veya BAŞARISIZ olarak sınıflandırılamıyor, manuel inceleme gerekiyor.</value>
-  </data>
-  <data name="Reconciliation.Bkm.DataConsistencyAnomalyAlertOp" xml:space="preserve">
-    <value>Veri anomalisi uyarısı — ResponseCode ile IsSuccessfulTxn uyumsuzluğu tespit edildi, kayıt incelemeye alındı.</value>
-  </data>
-  <data name="Reconciliation.Bkm.DataConsistencyAnomalyReviewOp" xml:space="preserve">
-    <value>Manuel inceleme gerekli — ResponseCode ve IsSuccessfulTxn değerleri tutarsız, otomatik işleme askıya alındı.</value>
-  </data>
-
-  <!-- Reconciliation – MSC / Visa Evaluator -->
   <data name="Reconciliation.Msc.RulesNotDefined" xml:space="preserve">
     <value>MSC değerlendirici kuralları henüz tanımlanmamış. Otomatik veya manuel işlem üretilmedi.</value>
   </data>
@@ -1147,9 +1016,6 @@
     <value>Visa değerlendirici kuralları henüz tanımlanmamış. Otomatik veya manuel işlem üretilmedi.</value>
   </data>
 
-  <!-- ════════════════════════════════════════════ -->
-  <!-- Archive – Error Mapper                       -->
-  <!-- ════════════════════════════════════════════ -->
   <data name="Archive.OperationCancelled" xml:space="preserve">
     <value>Arşiv işlemi iptal edildi.</value>
   </data>
@@ -1166,9 +1032,6 @@
     <value>Dahili bir hata oluştu.</value>
   </data>
 
-  <!-- ════════════════════════════════════════════ -->
-  <!-- Archive – Service                            -->
-  <!-- ════════════════════════════════════════════ -->
   <data name="Archive.PreviewFailed" xml:space="preserve">
     <value>Arşiv önizleme başarısız oldu.</value>
   </data>
@@ -1200,9 +1063,6 @@
     <value>Başarılı mutabakat işlemi sonrası otomatik arşivleme başarısız oldu.</value>
   </data>
 
-  <!-- ════════════════════════════════════════════ -->
-  <!-- Alert – Service                              -->
-  <!-- ════════════════════════════════════════════ -->
   <data name="Alert.Disabled" xml:space="preserve">
     <value>Uyarı ayarları devre dışı olduğu için AlertService atlandı.</value>
   </data>
@@ -1243,7 +1103,6 @@
     <value>Açıklama</value>
   </data>
 
-  <!-- Alert – Detail Labels -->
   <data name="Alert.Template.Title" xml:space="preserve">
     <value>Mutabakat Uyari Bildirimi</value>
   </data>
@@ -1278,7 +1137,6 @@
     <value>Teknik Detay</value>
   </data>
 
-  <!-- Alert – Detail Labels -->
   <data name="Alert.Detail.AlertHeader" xml:space="preserve">
     <value>Uyarı</value>
   </data>
@@ -1376,9 +1234,6 @@
     <value>Deneme</value>
   </data>
 
-  <!-- ════════════════════════════════════════════ -->
-  <!-- Handler-Level Errors                         -->
-  <!-- ════════════════════════════════════════════ -->
   <data name="Handler.FileIngestion.Failed" xml:space="preserve">
     <value>Dosya alım işleyicisi başarısız oldu. Ayrıntılar için hatalara bakın.</value>
   </data>
@@ -1407,9 +1262,6 @@
     <value>Arşiv önizleme işleyicisi başarısız oldu. Ayrıntılar için hatalara bakın.</value>
   </data>
 
-  <!-- ════════════════════════════════════════════ -->
-  <!-- ApiError – Error Mapper (ApiException)       -->
-  <!-- ════════════════════════════════════════════ -->
   <data name="FileIngestion.ApiError" xml:space="preserve">
     <value>Dosya alım hatası [{0}].</value>
   </data>
@@ -1420,9 +1272,6 @@
     <value>Arşiv hatası [{0}].</value>
   </data>
   
-  <!-- ════════════════════════════════════════════ -->
-  <!-- Handler – Reporting                          -->
-  <!-- ════════════════════════════════════════════ -->
   <data name="Handler.Reporting.IngestionFileOverviewFailed" xml:space="preserve">
     <value>Dosya alım genel görünümü alınamadı. Ayrıntılar için hatalara bakın.</value>
   </data>
@@ -1489,4 +1338,50 @@
   <data name="Handler.Reporting.ArchiveRetentionSnapshotFailed" xml:space="preserve">
     <value>Arşiv saklama anlık görüntüsü alınamadı. Ayrıntılar için hatalara bakın.</value>
   </data>
+
+  <data name="Reconciliation.LateClearingRequeuedAtFinalize" xml:space="preserve">
+    <value>Geç gelen clearing finalize aşamasında tespit edildi; yeniden değerlendirme için kuyruğa alındı.</value>
+  </data>
+
+  <data name="FileIngestion.Detail.NoActiveEfTransactionForCopy" xml:space="preserve">
+    <value>PostgreSQL COPY için aktif EF Core transaction bulunamadı.</value>
+  </data>
+
+  <data name="Paycore.PinBlock.ClearPinEmpty" xml:space="preserve">
+    <value>ClearPin boş olamaz.</value>
+  </data>
+  <data name="Paycore.PinBlock.ClearPinDigitsOnly" xml:space="preserve">
+    <value>ClearPin sadece rakamlardan oluşmalıdır.</value>
+  </data>
+  <data name="Paycore.PinBlock.ClearPinLengthRange" xml:space="preserve">
+    <value>ClearPin uzunluğu 4 ile 12 arasında olmalıdır.</value>
+  </data>
+  <data name="Paycore.PinBlock.ClearPanEmpty" xml:space="preserve">
+    <value>Clear kart numarası boş olamaz.</value>
+  </data>
+  <data name="Paycore.PinBlock.ClearPanDigitsOnly" xml:space="preserve">
+    <value>Clear kart numarası sadece rakamlardan oluşmalıdır.</value>
+  </data>
+  <data name="Paycore.PinBlock.ClearPanInvalid" xml:space="preserve">
+    <value>Clear kart numarası geçersiz.</value>
+  </data>
+  <data name="Paycore.PinBlock.EncryptedBlockEmpty" xml:space="preserve">
+    <value>EncryptedBlock boş olamaz.</value>
+  </data>
+  <data name="Paycore.PinBlock.EncryptedBlockHexLength" xml:space="preserve">
+    <value>EncryptedBlock 16 hex karakter olmalıdır.</value>
+  </data>
+  <data name="Paycore.PinBlock.EncryptedBlockHexOnly" xml:space="preserve">
+    <value>EncryptedBlock yalnızca hex karakterlerden oluşmalıdır.</value>
+  </data>
+  <data name="Paycore.PinBlock.DecryptedBlockInvalid" xml:space="preserve">
+    <value>Çözülen veri bloğu geçersiz.</value>
+  </data>
+  <data name="Paycore.PinBlock.DataLengthUnresolved" xml:space="preserve">
+    <value>Veri uzunluğu çözümlenemedi.</value>
+  </data>
+  <data name="Paycore.PinBlock.ZpkSizeInvalid" xml:space="preserve">
+    <value>ZPK 16 veya 24 byte olmalıdır.</value>
+  </data>
+
 </root>

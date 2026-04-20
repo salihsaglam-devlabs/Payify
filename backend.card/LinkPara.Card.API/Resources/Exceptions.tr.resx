@@ -117,7 +117,6 @@
   <resheader name="writer">
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
-  <!-- Legacy / Shared -->
   <data name="BankApiAlreadyExists" xml:space="preserve">
     <value>Bank API kullanımda !</value>
   </data>
@@ -253,7 +252,6 @@
   <data name="AlreadyInUsePhoneNumberException" xml:space="preserve">
     <value>İlgili Telefon Numarası kullanımdadır !</value>
   </data>
-  <!-- FileIngestion — Configuration -->
   <data name="FileIngestionLocalPathNotConfiguredException" xml:space="preserve">
     <value>Belirtilen profil için yerel dosya yolu yapılandırılmamış.</value>
   </data>
@@ -293,7 +291,6 @@
   <data name="FileIngestionVaultConfigMissingException" xml:space="preserve">
     <value>Vault anahtarı eksik: CardSecrets/FileIngestion</value>
   </data>
-  <!-- FileIngestion — Parsing -->
   <data name="FileIngestionParserLineEmptyException" xml:space="preserve">
     <value>Ayrıştırıcı boş satır aldı.</value>
   </data>
@@ -315,7 +312,6 @@
   <data name="FileIngestionRecordTypeMismatchException" xml:space="preserve">
     <value>Kayıt türü uyuşmazlığı.</value>
   </data>
-  <!-- FileIngestion — Value Conversion -->
   <data name="FileIngestionDecimalValueInvalidException" xml:space="preserve">
     <value>Geçersiz ondalık değer.</value>
   </data>
@@ -328,7 +324,6 @@
   <data name="FileIngestionEnumValueInvalidException" xml:space="preserve">
     <value>Geçersiz enum değer.</value>
   </data>
-  <!-- FileIngestion — Mapping -->
   <data name="FileIngestionEntityTypeNotMappedException" xml:space="preserve">
     <value>Varlık türü eşlenmemiş.</value>
   </data>
@@ -350,7 +345,6 @@
   <data name="FileIngestionFooterTxnCountMissingException" xml:space="preserve">
     <value>Alt bilgi işlem sayısı eksik.</value>
   </data>
-  <!-- FileIngestion — Validation & Bulk -->
   <data name="FileIngestionFilePatternMismatchException" xml:space="preserve">
     <value>Dosya adı beklenen kalıpla eşleşmiyor.</value>
   </data>
@@ -372,7 +366,6 @@
   <data name="FileIngestionRecordNotFoundFromEndException" xml:space="preserve">
     <value>Sondan arama yapılırken kayıt bulunamadı.</value>
   </data>
-  <!-- FileIngestion — Transport Options -->
   <data name="FileIngestionSftpTimeoutInvalidException" xml:space="preserve">
     <value>SFTP zaman aşımı yapılandırması geçersiz.</value>
   </data>
@@ -400,7 +393,6 @@
   <data name="FileIngestionFtpUploadRetryExhaustedException" xml:space="preserve">
     <value>FTP yükleme yeniden deneme hakları tükendi.</value>
   </data>
-  <!-- FileIngestion — Processing -->
   <data name="FileIngestionProcessingBatchSizeInvalidException" xml:space="preserve">
     <value>İşleme parti boyutu yapılandırması geçersiz.</value>
   </data>
@@ -410,7 +402,6 @@
   <data name="FileIngestionProcessingMaxParallelismInvalidException" xml:space="preserve">
     <value>İşleme maksimum paralellik yapılandırması geçersiz.</value>
   </data>
-  <!-- Reconciliation — Context & Core -->
   <data name="ReconciliationFileNotResolvedException" xml:space="preserve">
     <value>Mutabakat dosyası çözümlenemedi.</value>
   </data>
@@ -429,7 +420,6 @@
   <data name="ReconciliationUnsupportedContentTypeException" xml:space="preserve">
     <value>Desteklenmeyen mutabakat içerik türü.</value>
   </data>
-  <!-- Reconciliation — Payload -->
   <data name="ReconciliationOperationPayloadEmptyException" xml:space="preserve">
     <value>İşlem yükü boş.</value>
   </data>
@@ -442,11 +432,9 @@
   <data name="ReconciliationOperationPayloadConversionFailedException" xml:space="preserve">
     <value>İşlem yükü değer dönüşümü başarısız.</value>
   </data>
-  <!-- Reconciliation — Operation -->
   <data name="ReconciliationUnsupportedOperationCodeException" xml:space="preserve">
     <value>Desteklenmeyen mutabakat işlem kodu.</value>
   </data>
-  <!-- Reconciliation — Configuration -->
   <data name="ReconciliationExecuteMaxEvaluationsInvalidException" xml:space="preserve">
     <value>Maksimum değerlendirme sayısı yapılandırması geçersiz.</value>
   </data>
@@ -465,7 +453,6 @@
   <data name="ReconciliationAlertBatchSizeInvalidException" xml:space="preserve">
     <value>Uyarı parti boyutu yapılandırması geçersiz.</value>
   </data>
-  <!-- Archive — Configuration -->
   <data name="ArchiveOptionsNotConfiguredException" xml:space="preserve">
     <value>Arşiv seçenekleri yapılandırılmamış.</value>
   </data>
@@ -481,7 +468,6 @@
   <data name="ArchiveMinUpdateAgeInvalidException" xml:space="preserve">
     <value>Arşiv minimum güncelleme yaşı yapılandırması geçersiz.</value>
   </data>
-  <!-- Archive — Verification & SQL -->
   <data name="ArchiveLiveCountsNotClearedException" xml:space="preserve">
     <value>Arşiv silme sonrası canlı sayılar temizlenmedi.</value>
   </data>
@@ -500,7 +486,6 @@
   <data name="ArchiveUnsupportedBeforeDateStrategyException" xml:space="preserve">
     <value>Desteklenmeyen önceki tarih stratejisi.</value>
   </data>
-  <!-- Reporting -->
   <data name="ReportingQueryFailedException" xml:space="preserve">
     <value>Raporlama sorgusu başarısız oldu.</value>
   </data>

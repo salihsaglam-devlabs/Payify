@@ -182,4 +182,10 @@ public class ReportingController : ApiControllerBase
         [FromQuery] GetNetworkReconScorecardQuery query, CancellationToken ct = default)
         => await Mediator.Send(query, ct);
 
+    [Authorize(Policy = ReportingPolicies.Read)]
+    [HttpGet("Reconciliation/CardClearingCorrelation")]
+    public async Task<GetCardClearingCorrelationResponse> GetCardClearingCorrelation(
+        [FromQuery] GetCardClearingCorrelationQuery query, CancellationToken ct = default)
+        => await Mediator.Send(query, ct);
+
 }

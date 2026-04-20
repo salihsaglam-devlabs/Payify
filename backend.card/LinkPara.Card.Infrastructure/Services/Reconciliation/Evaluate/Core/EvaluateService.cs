@@ -323,7 +323,7 @@ internal sealed class EvaluateService : IEvaluateService
 
                         if (redirectIds.Count > 0)
                             await MarkRowsBatchAsync(redirectIds, ReconciliationStatus.Ready,
-                                $"Late-arriving clearing detected at finalize; requeued to re-evaluate.", cancellationToken);
+                                _localizer.Get("Reconciliation.LateClearingRequeuedAtFinalize"), cancellationToken);
                         if (stayIds.Count > 0)
                             await MarkRowsBatchAsync(stayIds, ReconciliationStatus.AwaitingClearing, noteGroup.Key, cancellationToken);
                     }
@@ -344,6 +344,14 @@ internal sealed class EvaluateService : IEvaluateService
         {
             _dbContext.ChangeTracker.Clear();
             var createdOperationCount = 0;
+            
+            var awaitingItems = items.Where(x => x.Result.IsAwaitingClearing).ToList();
+            IReadOnlySet<Guid> redirectToReadyRowIds = awaitingItems.Count > 0
+                ? await ResolveRowsWithLateArrivingClearingAsync(
+                    awaitingItems.Select(x => x.Row).ToList(),
+                    cancellationToken)
+                : new HashSet<Guid>();
+
             foreach (var item in items)
             {
                 try
@@ -352,14 +360,16 @@ internal sealed class EvaluateService : IEvaluateService
                         .AsNoTracking()
                         .AnyAsync(e => e.FileLineId == item.Row.Id && e.GroupId == groupId, cancellationToken);
 
+                    var (targetStatus, targetMessage) = ResolveFallbackTargetStatus(item, redirectToReadyRowIds);
+
                     if (alreadyPersisted)
                     {
-                        await MarkRowAsync(item.Row.Id, ResolveTargetStatus(item.Result), item.Result.Note, cancellationToken);
+                        await MarkRowAsync(item.Row.Id, targetStatus, targetMessage, cancellationToken);
                         continue;
                     }
 
                     createdOperationCount += await PersistEvaluationAsync(item.Row, item.Result, groupId, cancellationToken);
-                    await MarkRowAsync(item.Row.Id, ResolveTargetStatus(item.Result), item.Result.Note, cancellationToken);
+                    await MarkRowAsync(item.Row.Id, targetStatus, targetMessage, cancellationToken);
                 }
                 catch (Exception ex)
                 {
@@ -373,6 +383,19 @@ internal sealed class EvaluateService : IEvaluateService
             }
             return createdOperationCount;
         }
+    }
+
+    private (ReconciliationStatus Status, string Message) ResolveFallbackTargetStatus(
+        SuccessfulEvaluationPersistence item,
+        IReadOnlySet<Guid> redirectToReadyRowIds)
+    {
+        if (item.Result.IsAwaitingClearing && redirectToReadyRowIds.Contains(item.Row.Id))
+        {
+            return (ReconciliationStatus.Ready,
+                _localizer.Get("Reconciliation.LateClearingRequeuedAtFinalize"));
+        }
+
+        return (ResolveTargetStatus(item.Result), item.Result.Note);
     }
 
     private async Task<IReadOnlySet<Guid>> ResolveRowsWithLateArrivingClearingAsync(

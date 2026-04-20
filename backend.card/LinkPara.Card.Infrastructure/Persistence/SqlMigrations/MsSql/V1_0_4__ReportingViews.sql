@@ -1854,3 +1854,213 @@ FROM (
          GROUP BY ds.DataScope, f.ContentType
      ) x;
 GO
+
+-- =====================================================================================
+-- F. CARD <-> CLEARING CORRELATION
+-- =====================================================================================
+
+-- F1. Card kayıtlarını LIVE + ARCHIVE clearing kayıtlarıyla eşleştirir
+--     (OceanTxnGuid, Rrn ya da Arn üzerinden öncelikli arama)
+CREATE OR ALTER VIEW [Reporting].[VwCardClearingCorrelation] AS
+WITH AllCard AS (
+    -- LIVE
+    SELECT
+        CAST('LIVE' AS VARCHAR(16)) AS DataScope,
+        CAST('CardBkmDetail' AS VARCHAR(64)) AS CardTable,
+        c.Id AS CardId,
+        c.FileLineId,
+        fl.FileId,
+        c.OceanTxnGuid,
+        c.Rrn,
+        c.Arn
+    FROM [Ingestion].[CardBkmDetail] c
+    JOIN [Ingestion].[FileLine] fl ON fl.Id = c.FileLineId
+
+    UNION ALL
+
+    SELECT
+        'LIVE',
+        'CardVisaDetail',
+        c.Id,
+        c.FileLineId,
+        fl.FileId,
+        c.OceanTxnGuid,
+        c.Rrn,
+        c.Arn
+    FROM [Ingestion].[CardVisaDetail] c
+    JOIN [Ingestion].[FileLine] fl ON fl.Id = c.FileLineId
+
+    UNION ALL
+
+    SELECT
+        'LIVE',
+        'CardMscDetail',
+        c.Id,
+        c.FileLineId,
+        fl.FileId,
+        c.OceanTxnGuid,
+        c.Rrn,
+        c.Arn
+    FROM [Ingestion].[CardMscDetail] c
+    JOIN [Ingestion].[FileLine] fl ON fl.Id = c.FileLineId
+
+    -- ARCHIVE
+    UNION ALL
+
+    SELECT
+        'ARCHIVE',
+        'Archive.IngestionCardBkmDetail',
+        c.Id,
+        c.FileLineId,
+        fl.FileId,
+        c.OceanTxnGuid,
+        c.Rrn,
+        c.Arn
+    FROM [Archive].[IngestionCardBkmDetail] c
+    JOIN [Archive].[IngestionFileLine] fl ON fl.Id = c.FileLineId
+
+    UNION ALL
+
+    SELECT
+        'ARCHIVE',
+        'Archive.IngestionCardVisaDetail',
+        c.Id,
+        c.FileLineId,
+        fl.FileId,
+        c.OceanTxnGuid,
+        c.Rrn,
+        c.Arn
+    FROM [Archive].[IngestionCardVisaDetail] c
+    JOIN [Archive].[IngestionFileLine] fl ON fl.Id = c.FileLineId
+
+    UNION ALL
+
+    SELECT
+        'ARCHIVE',
+        'Archive.IngestionCardMscDetail',
+        c.Id,
+        c.FileLineId,
+        fl.FileId,
+        c.OceanTxnGuid,
+        c.Rrn,
+        c.Arn
+    FROM [Archive].[IngestionCardMscDetail] c
+    JOIN [Archive].[IngestionFileLine] fl ON fl.Id = c.FileLineId
+)
+SELECT
+    ROW_NUMBER() OVER (ORDER BY c.DataScope, c.CardTable, c.CardId) AS RowNumber,
+
+    c.DataScope                  AS DataScope,
+    c.CardTable                  AS CardTable,
+
+    c.CardId                     AS CardId,
+    c.FileLineId                 AS FileLineId,
+    c.FileId                     AS FileId,
+
+    bkm_live.Id                  AS ClearingBkmLiveId,
+    bkm_arc.Id                   AS ClearingBkmArchiveId,
+
+    visa_live.Id                 AS ClearingVisaLiveId,
+    visa_arc.Id                  AS ClearingVisaArchiveId,
+
+    msc_live.Id                  AS ClearingMastercardLiveId,
+    msc_arc.Id                   AS ClearingMastercardArchiveId
+FROM AllCard c
+
+-- BKM LIVE
+OUTER APPLY (
+    SELECT TOP 1 x.Id
+    FROM [Ingestion].[ClearingBkmDetail] x
+    WHERE x.OceanTxnGuid = c.OceanTxnGuid
+       OR (c.Rrn IS NOT NULL AND x.Rrn = c.Rrn)
+       OR (c.Arn IS NOT NULL AND x.Arn = c.Arn)
+    ORDER BY
+        CASE
+            WHEN x.OceanTxnGuid = c.OceanTxnGuid THEN 1
+            WHEN x.Rrn = c.Rrn THEN 2
+            WHEN x.Arn = c.Arn THEN 3
+            ELSE 99
+        END
+) bkm_live
+
+-- BKM ARCHIVE
+OUTER APPLY (
+    SELECT TOP 1 x.Id
+    FROM [Archive].[IngestionClearingBkmDetail] x
+    WHERE x.OceanTxnGuid = c.OceanTxnGuid
+       OR (c.Rrn IS NOT NULL AND x.Rrn = c.Rrn)
+       OR (c.Arn IS NOT NULL AND x.Arn = c.Arn)
+    ORDER BY
+        CASE
+            WHEN x.OceanTxnGuid = c.OceanTxnGuid THEN 1
+            WHEN x.Rrn = c.Rrn THEN 2
+            WHEN x.Arn = c.Arn THEN 3
+            ELSE 99
+        END
+) bkm_arc
+
+-- VISA LIVE
+OUTER APPLY (
+    SELECT TOP 1 x.Id
+    FROM [Ingestion].[ClearingVisaDetail] x
+    WHERE x.OceanTxnGuid = c.OceanTxnGuid
+       OR (c.Rrn IS NOT NULL AND x.Rrn = c.Rrn)
+       OR (c.Arn IS NOT NULL AND x.Arn = c.Arn)
+    ORDER BY
+        CASE
+            WHEN x.OceanTxnGuid = c.OceanTxnGuid THEN 1
+            WHEN x.Rrn = c.Rrn THEN 2
+            WHEN x.Arn = c.Arn THEN 3
+            ELSE 99
+        END
+) visa_live
+
+-- VISA ARCHIVE
+OUTER APPLY (
+    SELECT TOP 1 x.Id
+    FROM [Archive].[IngestionClearingVisaDetail] x
+    WHERE x.OceanTxnGuid = c.OceanTxnGuid
+       OR (c.Rrn IS NOT NULL AND x.Rrn = c.Rrn)
+       OR (c.Arn IS NOT NULL AND x.Arn = c.Arn)
+    ORDER BY
+        CASE
+            WHEN x.OceanTxnGuid = c.OceanTxnGuid THEN 1
+            WHEN x.Rrn = c.Rrn THEN 2
+            WHEN x.Arn = c.Arn THEN 3
+            ELSE 99
+        END
+) visa_arc
+
+-- MSC LIVE
+OUTER APPLY (
+    SELECT TOP 1 x.Id
+    FROM [Ingestion].[ClearingMscDetail] x
+    WHERE x.OceanTxnGuid = c.OceanTxnGuid
+       OR (c.Rrn IS NOT NULL AND x.Rrn = c.Rrn)
+       OR (c.Arn IS NOT NULL AND x.Arn = c.Arn)
+    ORDER BY
+        CASE
+            WHEN x.OceanTxnGuid = c.OceanTxnGuid THEN 1
+            WHEN x.Rrn = c.Rrn THEN 2
+            WHEN x.Arn = c.Arn THEN 3
+            ELSE 99
+        END
+) msc_live
+
+-- MSC ARCHIVE
+OUTER APPLY (
+    SELECT TOP 1 x.Id
+    FROM [Archive].[IngestionClearingMscDetail] x
+    WHERE x.OceanTxnGuid = c.OceanTxnGuid
+       OR (c.Rrn IS NOT NULL AND x.Rrn = c.Rrn)
+       OR (c.Arn IS NOT NULL AND x.Arn = c.Arn)
+    ORDER BY
+        CASE
+            WHEN x.OceanTxnGuid = c.OceanTxnGuid THEN 1
+            WHEN x.Rrn = c.Rrn THEN 2
+            WHEN x.Arn = c.Arn THEN 3
+            ELSE 99
+        END
+) msc_arc;
+GO
+

@@ -104,3 +104,20 @@ public class NetworkReconScorecardDto
     public DateTime? LastFileDate { get; set; }
 }
 
+
+public class CardClearingCorrelationDto
+{
+    public long RowNumber { get; set; }
+    public DataScope DataScope { get; set; }
+    public string CardTable { get; set; }
+    public Guid CardId { get; set; }
+    public Guid FileLineId { get; set; }
+    public Guid FileId { get; set; }
+
+    public Guid? ClearingBkmLiveId { get; set; }
+    public Guid? ClearingBkmArchiveId { get; set; }
+    public Guid? ClearingVisaLiveId { get; set; }
+    public Guid? ClearingVisaArchiveId { get; set; }
+    public Guid? ClearingMastercardLiveId { get; set; }
+    public Guid? ClearingMastercardArchiveId { get; set; }
+}

@@ -1,9 +1,29 @@
 # LinkPara Card — Konsolide Teknik Dokümantasyon
 
 **Oluşturulma Tarihi:** 16 Nisan 2026  
+**Son Güncelleme:** 20 Nisan 2026  
 **Kaynak:** `backend.card` repository kaynak kodu + SQL view analizi  
 **Dil:** Türkçe (teknik terimler İngilizce ile)  
 **Kapsam:** Archive, FileIngestion, Reconciliation, Reporting — tüm endpoint, enum, view, iş kuralı ve operasyonel rehber
+
+> **20 Nisan 2026 değişiklik özeti:**
+> - `BkmEvaluator` karar ağacına **clearing-presence gate** eklendi: clearing dosyası ulaşmadıysa karar ertelenir; satır `ReconciliationStatus.AwaitingClearing` statüsüne taşınır ve clearing geldiğinde `ClearingArrivalRequeueService` tarafından otomatik `Ready`'e çevrilerek yeniden değerlendirilir (bkz. §16.3).
+> - Operation kodları konsolide edildi: artık yalnızca **16 kanonik kod** vardır; eski draft `RecoverMissingCardRow`, `ApproveAmbiguousPayifyRecord`, `RejectUnmatchedFlow` vb. kodlar kaldırıldı (§4.6).
+> - `OperationExecutor`'da ölü kod (`AddInfoAlertAsync`, `ExecuteApplyRefundInternalAsync` wrapper) temizlendi; `MoveCreatedTransactionToExpired` artık ayrı `SUCCESS_MOVE_CREATED_TRANSACTION_TO_EXPIRED` result code'u döner.
+> - 34 yetim localization key resx dosyalarından silindi; eksik `Reconciliation.Bkm.SuccessfulMissingNonRefundNote` key'i eklendi.
+> - §6 ve §22 enum sözlükleri gerçek `.cs` enum tanımlarıyla bire bir hizalandı.
+
+> **20 Nisan 2026 — yeni view ve endpoint:**
+> - **F1 — `reporting.vw_card_clearing_correlation` / `[Reporting].[VwCardClearingCorrelation]`** eklendi: tüm kart detay tabloları (BKM/Visa/MSC, LIVE+ARCHIVE) `UNION ALL` ile birleştirilir; her satır için clearing eşleşmesi `ocean_txn_guid → rrn → arn` öncelik sırasına göre `LEFT JOIN LATERAL` (PostgreSQL) / `OUTER APPLY` (MSSQL) ile aranır. 6 nullable clearing ID döner (BKM/Visa/MSC × LIVE/ARCHIVE).
+> - Yeni endpoint: **D28** `GET /v1/Reporting/Reconciliation/CardClearingCorrelation` — filtreler: `DataScope`, `CardTable`, `FileId`, `FileLineId`, `CardId` + pagination. DTO: `CardClearingCorrelationDto`. Handler: `GetCardClearingCorrelationQueryHandler`. Resx: `Handler.Reporting.CardClearingCorrelationFailed`.
+>
+> **20 Nisan 2026 — ek tutarlılık düzeltmeleri:**
+> - `EvaluateService.PersistSuccessfulEvaluationsAsync` **fallback (per-item) yolunda** late-arriving clearing redirect kontrolü eksikti; artık fallback'te de `ResolveRowsWithLateArrivingClearingAsync` çalıştırılıyor ve clearing tamamlanmış satırlar `AwaitingClearing` yerine `Ready`'e çevriliyor (HIGH).
+> - `ReviewService.SetDecisionAsync` artık operation lease'ini yalnızca `Status == Blocked || Status == Planned` iken alıyor; daha önce `Executing` durumdaki bir operasyonun lease'ini de paralel olarak alabiliyordu (race düzeltildi, MEDIUM).
+> - `ArchiveService` `Limit` ve `MaxFiles` clamp üst sınırı **1.000 → 10.000** olarak güncellendi (validator: `Validation.ArchivePreviewLimitRange` / `ArchiveMaxFilesRange` ile uyumlu).
+> - `ArchiveAggregateReader.GetSnapshotAsync` artık `LastUpdate` değerini sadece `IngestionFile.UpdateDate`'ten değil; ilgili `IngestionFileLine` / `ReconciliationEvaluation` / `Operation` / `Review` / `OperationExecution` / `Alert` tablolarındaki en yeni `UpdateDate` ile birleşerek hesaplıyor. Böylece `MIN_LAST_UPDATE_AGE_NOT_REACHED` kuralı çocuk değişikliklerini de görüyor.
+> - `ClearingArrivalRequeueService` artık satır `Message` alanını sabit İngilizce string yerine yeni `Reconciliation.RequeuedByClearingArrival` resx key'i üzerinden lokalize ediyor.
+> - **Bilinen kısıt:** `Archive` modülünde `Restore` (archive → live geri taşıma) akışı **uygulanmamıştır**; sadece `Preview` ve `Run` mevcut. `FileRowStatus.Processing` enum üyesi tanımlı ancak hiçbir kod yolu bu değeri set etmiyor (claim aşaması doğrudan `Failed`/`Success` yazıyor).
 
 ---
 
@@ -23,7 +43,7 @@
 - 4.8 [Reconciliation/Reviews/Reject](#48-reconciliationreviewsreject)
 - 4.9 [Reconciliation/Reviews/Pending](#49-reconciliationreviewspending)
 - 4.10 [Reconciliation/Alerts](#410-reconciliationalerts)
-- 4.11 [Reporting Endpoint'leri (D1–D27)](#411-reporting-endpointleri)
+- 4.11 [Reporting Endpoint'leri (D1–D28)](#411-reporting-endpointleri)
 5. [SQL View Analizi](#5-sql-view-analizi)
 6. [Status / Enum Sözlüğü](#6-status--enum-sözlüğü)
 7. [State Transition (Durum Geçişi) Diyagramları](#7-state-transition-diyagramları)
@@ -137,13 +157,15 @@ Controller (API katmanı)
 | Mutabakat yürütme | `ExecuteService` | Infrastructure |
 | Manuel inceleme | `ReviewService` | Infrastructure |
 | Uyarı servisi | `AlertService` | Infrastructure |
+| Uyarı sorgu servisi | `GetAlertsService` | Infrastructure |
+| Geç gelen clearing requeue | `ClearingArrivalRequeueService` | Infrastructure |
 | Arşiv servisi | `ArchiveService` | Infrastructure |
 | Arşiv yürütücü | `ArchiveExecutor` | Infrastructure |
 | Uygunluk değerlendiricisi | `ArchiveEligibilityEvaluator` | Infrastructure |
 | Operasyon yürütücü | `OperationExecutor` | Infrastructure |
 | Raporlama servisi | `ReportingService` | Infrastructure |
 
-**DB Context:** `CardServiceDbContext` → `Infrastructure/Persistence/CardServiceDbContext.cs`
+**DB Context:** `CardDbContext` → `Infrastructure/Persistence/CardDbContext.cs`
 
 **DB Şemaları:**
 - `ingestion` → file, file_line, card_visa_detail, card_msc_detail, card_bkm_detail, clearing_visa_detail, clearing_msc_detail, clearing_bkm_detail
@@ -167,7 +189,7 @@ Controller (API katmanı)
 | 8 | ReconciliationController | POST | `Reconciliation/Reviews/Reject` | `Reconciliation:Update` |
 | 9 | ReconciliationController | GET | `Reconciliation/Reviews/Pending` | `Reconciliation:ReadAll` |
 | 10 | ReconciliationController | GET | `Reconciliation/Alerts` | `Reconciliation:ReadAll` |
-| 11–32 | ReportingController | GET | `v1/Reporting/...` (22 endpoint) | `Reconciliation:ReadAll` |
+| 11–38 | ReportingController | GET | `v1/Reporting/...` (28 endpoint) | `ReportingPolicies.Read` (= `Reconciliation:ReadAll`) |
 
 ---
 
@@ -200,7 +222,7 @@ Controller (API katmanı)
 |------|-----|---------|----------|-------------|----------------|
 | `IngestionFileIds` | `Guid[]?` | Hayır | Belirli dosyaları hedefler | `null` → tüm adaylar otomatik bulunur | Var olmayan GUID → o aday dönmez, hata vermez |
 | `BeforeDate` | `DateTime?` | Hayır | Bu tarihten önce oluşturulanlar | `ArchiveOptions.DefaultBeforeDateStrategy` | `UseConfiguredBeforeDateOnly=true` ise request değeri yok sayılır |
-| `Limit` | `int?` | Hayır | Maks aday sayısı. `Math.Clamp(1,1000)` | `DefaultPreviewLimit` (5000) | Negatif → muhtemelen 0 aday |
+| `Limit` | `int?` | Hayır | Maks aday sayısı. `Math.Clamp(1,10000)` | `DefaultPreviewLimit` (5000) | Negatif → muhtemelen 0 aday |
 
 **Validator:** `PreviewArchiveQueryValidator`
 - Request not null; IngestionFileIds: Guid.Empty yok, distinct; Limit: 0–10.000; BeforeDate: gelecek tarih olamaz.
@@ -232,7 +254,7 @@ Controller (API katmanı)
 1. Controller → `PreviewArchiveQuery` → MediatR
 2. `PreviewArchiveQueryHandler` → `ArchiveService.PreviewAsync`
 3. `ResolveBeforeDate`: konfigürasyon `RetentionDays` veya request değeri
-4. `ResolveEffectiveLimit`: `Math.Clamp(1,1000)`
+4. `ResolveEffectiveLimit`: `Math.Clamp(1,10000)`
 5. `ArchiveAggregateReader.ResolveCandidateFileIdsAsync` → aday ID'ler
 6. Her aday için `GetSnapshotAsync` → `ArchiveEligibilityEvaluator.Evaluate`
 7. Response döner
@@ -307,7 +329,7 @@ Controller (API katmanı)
 |------|-----|------------|----------|
 | `IngestionFileIds` | `Guid[]?` | null → tüm adaylar | Arşivlenecek belirli dosyalar |
 | `BeforeDate` | `DateTime?` | Konfigürasyondan | Bu tarihten önce oluşturulanlar |
-| `MaxFiles` | `int?` | `DefaultMaxRunCount` (50000), `Math.Clamp(1,1000)` | İşlenecek max dosya |
+| `MaxFiles` | `int?` | `DefaultMaxRunCount` (50000), `Math.Clamp(1,10000)` | İşlenecek max dosya |
 | `ContinueOnError` | `bool?` | `false` | Hata sonrası devam edilsin mi? |
 
 **Validator:** `RunArchiveCommandValidator`
@@ -665,37 +687,29 @@ Davranış, response ve validator: Body endpoint (4.3) ile aynı.
 
 #### Operasyon Kodları
 
-| Kod | Açıklama | Dış Servis |
-|-----|----------|-----------|
-| `RaiseAlert` | Alert kaydı oluşturur | Hayır |
-| `CreateManualReview` | Manuel review gate | Hayır |
-| `MarkOriginalTransactionCancelled` | İşlemi iptal işaretler | `EmoneyService.UpdateTransactionStatusAsync` |
-| `ReverseOriginalTransaction` | Bakiye etkisini tersine çevirir | `EmoneyService.ReverseBalanceEffectAsync` |
-| `CorrectResponseCode` | Response code düzeltme | `EmoneyService.CorrectResponseCodeAsync` |
-| `ConvertTransactionToFailed` | İşlem → Failed | `EmoneyService.UpdateTransactionStatusAsync` |
-| `ConvertTransactionToSuccessful` | İşlem → Completed | `EmoneyService.UpdateTransactionStatusAsync` |
-| `ReverseByBalanceEffect` | Bakiye ters kayıt | `EmoneyService.ReverseBalanceEffectAsync` |
-| `MoveTransactionToExpired` | İşlem → Expired | `EmoneyService.ExpireTransactionAsync` |
-| `CreateTransaction` | Eksik işlem oluşturur (wallet binding gerekli) | `EmoneyService.CreateTransactionAsync` |
-| `MoveCreatedTransactionToExpired` | Yeni oluşturulan → Expired | `EmoneyService.ExpireTransactionAsync` |
-| `ApplyOriginalEffectOrRefund` | Effect/refund uygula | `EmoneyService.RefundTransactionAsync` |
-| `ApplyLinkedRefund` | Eşlenikli iade | `EmoneyService.RefundTransactionAsync` |
-| `ApplyUnlinkedRefundEffect` | Eşleniksiz iade | `EmoneyService.RefundTransactionAsync` |
-| `StartChargeback` | Chargeback başlat | `EmoneyService.InitChargebackAsync` + `ApproveChargebackAsync` |
-| `InsertShadowBalanceEntry` | Gölge bakiye kaydı | `EmoneyService.CreateShadowBalanceDebtCreditAsync` |
-| `RunShadowBalanceProcess` | Gölge bakiye işlem | `EmoneyService.RunShadowBalanceProcessAsync` |
-| `RecoverMissingCardRow` | Satır → Ready, yeniden kuyruğa | DB update |
-| `DropMissingCardRow` | Manuel branch kapatma | Hayır |
-| `ApproveAmbiguousPayifyRecord` | Satır → Ready | DB update |
-| `RejectAmbiguousPayifyRecord` | Manuel branch kapatma | Hayır |
-| `ApproveUnmatchedFlow` | Manuel branch kapatma | Hayır |
-| `RejectUnmatchedFlow` | Manuel branch kapatma | Hayır |
-| `BindOriginalTransactionAndContinue` | Satır → Ready | DB update |
-| `RejectReversalRecord` | Manuel branch kapatma | Hayır |
-| `ApprovePendingAccReview` | Manuel branch kapatma | Hayır |
-| `RejectPendingAccReview` | Manuel branch kapatma | Hayır |
-| `ApproveMissingPayifyTransaction` | Manuel branch kapatma | Hayır |
-| `RejectMissingPayifyTransaction` | Manuel branch kapatma | Hayır |
+> Tüm operasyon kodlarının kanonik tanımı: [`OperationCodes.cs`](LinkPara.Card.Infrastructure/Services/Reconciliation/Execute/Core/OperationCodes.cs).
+> Her kod, `OperationExecutor.ExecuteAsync` switch içinde **tek bir handler**'a karşılık gelir.
+
+| Kod | Branch / Karar Noktası | Açıklama | Dış Servis |
+|-----|------------------------|----------|-----------|
+| `RaiseAlert` | C1, C2, C10, AwaitingClearing, defansif | Reconciliation alert kaydı oluşturur | Hayır |
+| `CreateManualReview` | D6 (eşleniksiz iade) | Manuel review gate; finansal etki yok | Hayır |
+| `ReverseOriginalTransaction` | D7 (cancel/reversal) | Orijinal işlemi iptal eder + bakiye etkisini ters çevirir (tek handler içinde sıralı) | `EmoneyService.UpdateTransactionStatusAsync` + `ReverseBalanceEffectAsync` |
+| `CorrectResponseCode` | D1, D3 | İşlemin response code'unu düzeltir | `EmoneyService.CorrectResponseCodeAsync` |
+| `ConvertTransactionToFailed` | D1 | İşlem statüsünü Failed'a çeker | `EmoneyService.UpdateTransactionStatusAsync` |
+| `ConvertTransactionToSuccessful` | D3 | İşlem statüsünü Completed'a çeker | `EmoneyService.UpdateTransactionStatusAsync` |
+| `ReverseByBalanceEffect` | D1, D2, D3 | Bakiye etkisini ters kayıtla geri alır | `EmoneyService.ReverseBalanceEffectAsync` |
+| `MoveTransactionToExpired` | C7, D2 | Mevcut işlemi Expired statüsüne taşır | `EmoneyService.ExpireTransactionAsync` |
+| `CreateTransaction` | C8, C13 | Eksik Payify işlemini oluşturur (wallet binding zorunlu) | `EmoneyService.CreateTransactionAsync` |
+| `MoveCreatedTransactionToExpired` | C8 | `CreateTransaction` sonrası oluşturulan işlemi Expired'e taşır | `EmoneyService.ExpireTransactionAsync` |
+| `ApplyOriginalEffectOrRefund` | D4 | Orijinaline göre effect veya refund uygular | `EmoneyService.RefundTransactionAsync` |
+| `ApplyLinkedRefund` | D5 (matched refund) | Eşlenikli iade işlemini uygular | `EmoneyService.RefundTransactionAsync` |
+| `ApplyUnlinkedRefundEffect` | D6 approve | Manuel onaydan sonra eşleniksiz iade etkisini uygular | `EmoneyService.RefundTransactionAsync` |
+| `StartChargeback` | D6 reject | Chargeback sürecini başlatır | `EmoneyService.InitChargebackAsync` + `ApproveChargebackAsync` |
+| `InsertShadowBalanceEntry` | D8 (amount < billing) | Gölge bakiye için fark kaydı | `EmoneyService.CreateShadowBalanceDebtCreditAsync` |
+| `RunShadowBalanceProcess` | D8 | Gölge bakiye işleme sürecini çalıştırır | `EmoneyService.RunShadowBalanceProcessAsync` |
+
+> **Not:** Önceki tasarımda yer alan `RecoverMissingCardRow`, `DropMissingCardRow`, `ApproveAmbiguousPayifyRecord`, `RejectAmbiguousPayifyRecord`, `ApproveUnmatchedFlow`, `RejectUnmatchedFlow`, `BindOriginalTransactionAndContinue`, `RejectReversalRecord`, `ApprovePendingAccReview`, `RejectPendingAccReview`, `ApproveMissingPayifyTransaction`, `RejectMissingPayifyTransaction`, `MarkOriginalTransactionCancelled` kodları **kaldırılmıştır**. Manuel review yalnızca **D6 eşleniksiz iade** branch'inde üretilir; satır seviyesinde "queue'ya geri al" gereksinimi `EvaluationResult.MarkAwaitingClearing` ile karşılanır ve `ClearingArrivalRequeueService` tarafından clearing dosyası geldiğinde otomatik olarak `Ready`'ye çevrilir (bkz. §16.3 ve §6).
 
 #### Veri Etkisi
 
@@ -1273,6 +1287,40 @@ Bucket'lar: `0-1 days`, `1-3 days`, `3-7 days`, `7-30 days`, `30+ days`
 
 ---
 
+#### D28. GET /Reporting/Reconciliation/CardClearingCorrelation
+
+**Amaç:** Her kart kaydı (BKM/Visa/MSC, LIVE+ARCHIVE) için olası clearing eşleşmelerinin (BKM/Visa/MSC × LIVE/ARCHIVE) ID'lerini öncelik sırasıyla (`ocean_txn_guid → rrn → arn`) tek bir satırda gösterir. Cross-network ve cross-scope (LIVE↔ARCHIVE) eşleşme tespiti için kullanılır.
+**View:** `reporting.vw_card_clearing_correlation` / `[Reporting].[VwCardClearingCorrelation]`
+**Filtreler:** `DataScope`, `CardTable` (`card_bkm_detail` / `card_visa_detail` / `card_msc_detail` / `archive.ingestion_card_*_detail`), `FileId`, `FileLineId`, `CardId`, pagination
+**Handler:** `GetCardClearingCorrelationQueryHandler` (resx: `Handler.Reporting.CardClearingCorrelationFailed`)
+
+**Teknik:**
+- Tüm 6 kart detay tablosu (3 network × LIVE/ARCHIVE) `UNION ALL` ile birleşir
+- Her satır için 6 ayrı `LEFT JOIN LATERAL` (PostgreSQL) / `OUTER APPLY` (MSSQL) bloğu — clearing tablosunda `ocean_txn_guid = c.ocean_txn_guid` (rank 1) → `rrn = c.rrn` (rank 2) → `arn = c.arn` (rank 3) öncelik sırasıyla **ilk** eşleşen kayıt çekilir (`LIMIT 1` / `TOP 1`)
+- ROW_NUMBER `(data_scope, card_table, card_id)` ASC sırasıyla atanır
+
+**DTO Alanları (`CardClearingCorrelationDto`):**
+
+| Alan | Açıklama | Uyarı |
+|------|----------|-------|
+| `RowNumber` | Sıralama numarası | Stable değil; sorgu/sayfa değişince yeniden hesaplanır |
+| `DataScope` | LIVE / ARCHIVE | Kart kaydının yaşadığı ortam |
+| `CardTable` | Kart detay tablosunun adı | Network'ü ima eder ama enum değil — string |
+| `CardId` | Kart kaydı PK | İlgili `card_*_detail.id` |
+| `FileLineId` / `FileId` | Kart kaydının dosya bağlamı | Filtreleme için indeks dostu |
+| `ClearingBkmLiveId` | LIVE BKM clearing eşleşmesi | null = eşleşme yok |
+| `ClearingBkmArchiveId` | ARCHIVE BKM clearing eşleşmesi | null = eşleşme yok |
+| `ClearingVisaLiveId` / `ClearingVisaArchiveId` | Visa eşleşmeleri | Cross-network eşleşme tespiti için kritik |
+| `ClearingMastercardLiveId` / `ClearingMastercardArchiveId` | MSC eşleşmeleri | — |
+
+**Yorumlama:**
+- Aynı satırda birden fazla `Clearing*Id` dolu → kart kaydı için **birden fazla network/scope'ta** clearing eşleşmesi var (cross-network çakışma şüphesi)
+- Tüm 6 alan null → henüz eşleşmeyen kart (D26 `UnmatchedTransactionAging` ile çapraz okunmalı)
+- `LIVE` kartın yalnızca `ARCHIVE` clearing eşleşmesi → geç gelen clearing arşivde; `ClearingArrivalRequeueService` müdahalesi gerekebilir
+- Match priority `ocean_txn_guid → rrn → arn` sırasıyla en güçlü eşleşmeyi tek tek seçer; ikincil eşleşmeler view'da görünmez
+
+---
+
 ## 5. SQL View Analizi
 
 ### Özet Tablo
@@ -1306,6 +1354,7 @@ Bucket'lar: `0-1 days`, `1-3 days`, `3-7 days`, `7-30 days`, `30+ days`
 | `vw_recon_gap_analysis` | E3 | **FULL OUTER JOIN**, CROSS JOIN LATERAL |
 | `vw_unmatched_transaction_aging` | E4 | WHERE matched_clearing_line_id IS NULL, yaş bucket |
 | `vw_network_recon_scorecard` | E5 | CROSS JOIN LATERAL, 12 scalar subquery — performans riski |
+| `vw_card_clearing_correlation` | F1 | UNION ALL (3 network × LIVE/ARCHIVE = 6 kart kaynağı), 6 LEFT JOIN LATERAL, ocean_txn_guid → rrn → arn öncelikli match |
 
 ### Kritik SQL Tasarım Notları
 
@@ -1328,7 +1377,7 @@ Bucket'lar: `0-1 days`, `1-3 days`, `3-7 days`, `7-30 days`, `30+ days`
 | `FileStatus` | Processing(1), Failed(2), Success(3) |
 | `FileRowStatus` | Processing(1), Failed(2), Success(3) |
 | `DuplicateStatus` | Unique(1), Primary(2), Secondary(3), Conflict(4) |
-| `ReconciliationStatus` | Ready(1), Failed(2), Success(3), Processing(4) |
+| `ReconciliationStatus` | Ready(1), Failed(2), Success(3), Processing(4), AwaitingClearing(5) |
 
 ### Reconciliation Enum'ları
 
@@ -1382,6 +1431,16 @@ Bucket'lar: `0-1 days`, `1-3 days`, `3-7 days`, `7-30 days`, `30+ days`
 | Secondary(3) | Duplicate grubunun tekrar kaydı (atlanır) |
 | Conflict(4) | Belirsiz — manuel müdahale gerekebilir |
 
+**ReconciliationStatus:**
+
+| Değer | Terminal? | Anlamı |
+|-------|-----------|--------|
+| Ready(1) | Hayır | Değerlendirici tarafından alınmaya hazır |
+| Failed(2) | Evet | Değerlendirme/persist hatası |
+| Success(3) | Evet | Değerlendirme tamamlandı, planlanan operasyonlar oluşturuldu |
+| Processing(4) | Hayır | EvaluateService satırı claim etti, değerlendiriliyor |
+| AwaitingClearing(5) | Hayır (geri dönebilir) | İlgili clearing kaydı henüz dosya olarak gelmemiş; karar ertelendi. Clearing dosyası başarıyla ingestion edildiğinde `ClearingArrivalRequeueService` satırı tekrar `Ready`'e çeker (bkz. §16.3 — clearing-presence gate). |
+
 ---
 
 ## 7. State Transition Diyagramları
@@ -1400,8 +1459,14 @@ Bucket'lar: `0-1 days`, `1-3 days`, `3-7 days`, `7-30 days`, `30+ days`
 
 ### Reconciliation Status (satır seviyesi)
 ```
-(yeni satır) → Ready → Processing → Success
-                                   → Failed
+(yeni satır) → Ready ─→ Processing ─→ Success
+                  ↑                   ─→ Failed
+                  │                   ─→ AwaitingClearing  ──┐
+                  └────────────────────────────────────────── ┘
+                     (ClearingArrivalRequeueService:
+                      ilgili clearing dosyası gelince
+                      AwaitingClearing satırlar Ready'e çevrilir
+                      ve aynı satır yeniden değerlendirilir)
 ```
 
 ### Evaluation Status
@@ -1472,6 +1537,7 @@ Pending → Processing → Consumed
 | `ReconGapAnalysisDto` | `reporting.vw_recon_gap_analysis` |
 | `UnmatchedTransactionAgingDto` | `reporting.vw_unmatched_transaction_aging` |
 | `NetworkReconScorecardDto` | `reporting.vw_network_recon_scorecard` |
+| `CardClearingCorrelationDto` | `reporting.vw_card_clearing_correlation` |
 
 ---
 
@@ -1584,6 +1650,7 @@ Pending → Processing → Consumed
 | Advanced/GapAnalysis | "Card ve Clearing arasında fark mı büyüyor?" | Operasyon, analist | `LineCountDifference`, `AmountDifference`, `Network` | Farkların eşik üstü kalması | Kur/fx/zaman farkını kayıp sanmak |
 | Advanced/UnmatchedTransactionAging | "Eşleşmeyenler ne kadar süredir bekliyor?" | Operasyon | `AgeBucket`, `UnmatchedCount`, `Side` | Yaşlı eşleşmeyen artışı | Yeni ile eskiyi aynı ele almak |
 | Advanced/NetworkScorecard | "Ağ bazında kalite skoru?" | Yönetim, operasyon | `OverallMatchRatePct`, `ReconSuccessRatePct` | Skor sürekli düşüşte | Score bileşenlerini görmeden tek metrikle karar |
+| Advanced/CardClearingCorrelation | "Bir kart hangi clearing kaydı/kayıtlarıyla çakıştı?" | Operasyon, teknik | `CardId`, `Clearing*LiveId`, `Clearing*ArchiveId` | Birden fazla network/scope'ta eşleşme = çakışma şüphesi | Tüm kolonların null olmasını "veri eksik" sanmak (gerçekten eşleşme yok demek) |
 
 ### Rapor Seçim Rehberi
 
@@ -1647,6 +1714,9 @@ Pending → Processing → Consumed
 
 "Network bazında genel skor?"
  └→ NetworkScorecard
+
+"Bir kart kaydı hangi clearing'lerle eşleşti / cross-network çakışma var mı?"
+ └→ CardClearingCorrelation
 ```
 
 ---
@@ -1925,70 +1995,105 @@ Satırlar işlenirken `TargetWriter` (arşiv dosyası) eş zamanlı yazılır. T
 `EvaluatorResolver.Resolve(contentType)` DI'dan enjekte edilen `IEnumerable<IEvaluator>` içinden `evaluator.CanEvaluate(contentType) == true` olan ilkini seçer. Kayıtlı üç evaluator:
 
 #### BkmEvaluator (`FileContentType.Bkm`)
-Tam implement edilmiş; 769 satır. Karar ağacı:
+
+Tam implement edilmiş; ~870 satır. Karar ağacı (kanonik karşılık: [`BkmEvaluator.cs`](LinkPara.Card.Infrastructure/Services/Reconciliation/Evaluate/Flows/BkmEvaluator.cs)):
 
 ```
-1. FileLengthValidation hatası (row.Status = Failed)
-   → RaiseAlert [C1]
+0. Root detail çözümlenemiyorsa
+   → ReconciliationCurrentCardRowMissingException (üst katman: row Failed + alarm)
 
-2. Duplicate satır kontrolü (DuplicateStatus alanı)
-   Conflict/Secondary → RaiseAlert [C2], dur
-   Primary → RaiseAlert [C2], devam et
+1. C1 — File length / parse validation hatası (RootRow.Status == Failed)
+   → RaiseAlert  [decision: C1]
+   → STOP (NoAction haricinde aksiyon yok)
 
-3. Payify ambiguity (emoneyTransactions.Count > 1 veya bilinmeyen status)
-   → RaiseAlert + CreateManualReview [C19]
-   Approve: ApproveAmbiguousPayifyRecord
-   Reject:  RejectAmbiguousPayifyRecord
+2. C2 — Duplicate / uniqueness değerlendirmesi
+   Conflict   → RaiseAlert + STOP
+   Secondary  → RaiseAlert + STOP   (primary işlenecek; bu skip edilir)
+   Primary    → RaiseAlert + DEVAM  (bu kayıt asıl işlenen; alarm bilgi amaçlı)
+   None       → DEVAM
 
-4. Cancel/Reversal (TxnStat = Reverse | Void)
-   OceanMainTxnGuid → orijinal txn aranır
-   Missing/Ambiguous → RaiseAlert + CreateManualReview [C3]
-   Found + zaten Cancel → no-op
-   Found + değil → MarkOriginalTransactionCancelled + ReverseOriginalTransaction [D7]
+3. CLEARING-PRESENCE GATE  (BuildAwaitingClearingResult)
+   ClearingDetails.Count == 0
+   → MarkAwaitingClearing("AWAIT_CLEARING")
+   → RaiseAlert (bilgilendirme; manual review YOK)
+   → EvaluateService satırı ReconciliationStatus.AwaitingClearing'e taşır
+   → Clearing dosyası ileride başarıyla ingestion edildiğinde
+     ClearingArrivalRequeueService satırı tekrar Ready'e çeker
+     ve aynı kayıt eksiksiz veriyle yeniden değerlendirilir.
 
-5. Failed (IsSuccessfulTxn != Successful AND ResponseCode != "00")
-   PayifyStatus = Failed   → no-op (zaten başarısız)
-   PayifyStatus = Missing  → no-op
-   PayifyStatus = Success  → CorrectResponseCode + ConvertToFailed + ReverseByBalanceEffect [D1]
+4. C3 — Cancel / Reversal (TxnStat = Reverse | Void)
+   Orijinal txn (OceanMainTxnGuid) bulunamadı
+     → RaiseAlert  (defansif; otomatik düzeltme YAPILMAZ)
+   Orijinal zaten IsCancelled = true
+     → NoAction (yalnızca not)
+   Orijinal canlı
+     → ReverseOriginalTransaction  [D7]
+       (handler içinde: orijinali ters çevir + IsCancelled=1)
 
-6. Expired (TxnStat = Expired)
-   PayifyStatus = Failed  → MoveToExpired [C7]
-   PayifyStatus = Missing → CreateTransaction + MoveCreatedToExpired [C8]
-   AccPending match var   → RaiseAlert + CreateManualReview [C10]
-   ClearingDetails boş   → RaiseAlert + CreateManualReview [D2_ACC_PENDING]
-   Diğer                  → MoveToExpired + ReverseByBalanceEffect [D2]
+5. C5 — File transaction status branch'i
+   ResolveFileTransactionStatus(detail) →
+     TxnStat = Expired                                 → Expired
+     IsSuccessfulTxn = Successful AND ResponseCode=00  → Successful
+     diğer her şey                                     → Failed
 
-7. DataAnomaly (IsSuccessful=true & ResponseCode!="00" veya tersi)
-   → RaiseAlert + CreateManualReview [DATA_ANOMALY]
+6. EvaluateFailedBranch (file Failed)
+   payify Failed     → NoAction
+   payify Missing    → NoAction
+   payify Successful → CorrectResponseCode + ConvertToFailed + ReverseByBalanceEffect  [D1]
 
-8. Successful (IsSuccessfulTxn = Successful AND ResponseCode = "00")
-   NOT Settled (IsTxnSettle != Settled) → no-op
-   ClearingDetails boş (clearing henüz gelmedi)
-   → RaiseAlert + CreateManualReview [ACC_MISSING]
-   PayifyStatus = Failed → CorrectResponseCode + ConvertToSuccessful + ReverseByBalance [D3]
-   PayifyStatus = Missing + Refund → CreateTransaction + EvaluateRefund [C13]
-   PayifyStatus = Missing + diğer → CreateTransaction + ApplyOriginalEffectOrRefund [D4]
-   Refund (linked) → ApplyLinkedRefund [C17]
-   Refund (unlinked) → CreateManualReview [C16]
-     Approve: ApplyUnlinkedRefundEffect
-     Reject:  StartChargeback
-   latestEmoney null → RaiseAlert + CreateManualReview [C19]
-   Amounts equal → no-op
-   payify < billing → InsertShadowBalanceEntry + RunShadowBalanceProcess [D8]
-   payify > billing → no-op (not)
+7. EvaluateExpireBranchAsync (file Expired)
+   payify Failed     → MoveToExpired                                          [C7]
+   payify Missing    → CreateTransaction + MoveCreatedTransactionToExpired    [C8]
+   payify Successful:
+     ACC pending match (ControlStat = Problem ve alanlar uyuyor)
+       → RaiseAlert (manuel müdahale Paycore tarafında)                       [C10]
+     ACC pending match yok
+       → MoveToExpired + ReverseByBalanceEffect                               [D2]
 
-9. Unmatched (diğer tüm durumlar)
-   → RaiseAlert + CreateManualReview [UNMATCHED]
+8. EvaluateSuccessfulBranch (file Successful)
+   IsTxnSettle != Settled                          → NoAction
+   payify Failed
+     → CorrectResponseCode + ConvertToSuccessful + ReverseByBalanceEffect    [D3]
+   payify Missing:
+     refund değil → CreateTransaction + ApplyOriginalEffectOrRefund          [C13 + D4]
+     refund      → CreateTransaction + EvaluateRefund                        [C13]
+   payify Successful:
+     refund      → EvaluateRefund
+     latestEmoney null            → NoAction (defansif not)
+     amount == billing            → NoAction
+     amount  < billing            → InsertShadowBalanceEntry +
+                                    RunShadowBalanceProcess  (fark kadar)    [D8]
+     amount  > billing            → NoAction
+                                    (Kural Kodu'nda EVET dalı boş)
+
+9. EvaluateRefund (yardımcı; C13/payify Successful akışlarından çağrılır)
+   IsMatchedRefund (MainTxnGuid > 0 ve mevcutten farklı)
+     → ApplyLinkedRefund                                                     [D5]
+   Eşleniksiz (unmatched)
+     → CreateManualReview gate +
+         Approve → ApplyUnlinkedRefundEffect
+         Reject  → StartChargeback                                            [D6]
+       (Tek manual review noktası; Approve/Reject branch'leri executor'da
+        gerçekleştirilir; bkz. §4.7 / §4.8)
 ```
 
-**AccPending eşleştirme kriteri (`IsAccFieldMatch`):** RRN, CardNo, ProvisionCode, ARN, MCC, CardHolderBillingAmount (2 hane yuvarla), CardHolderBillingCurrency alanlarının tamamı eşleşmeli. Son 20 gün içindeki clearing satırlarına bakılır.
+**ACC pending match (`HasAccPendingMatchAsync` + `IsAccFieldMatch`):** Clearing detayları içinde `ControlStat = Problem` olan ve aşağıdaki alanların tamamı uyuşan kayıt aranır: RRN (her iki tarafta da doluysa), CardNo, ProvisionCode, ARN, MCC, CardHolderBillingAmount (2 hane yuvarlama), CardHolderBillingCurrency.
 
-**PayifyStatus çözümlemesi:**
-- `transactions.Count == 0` → Missing
-- `transactions.Count > 1` → Ambiguous
-- Status = "Failed" → Failed
-- Status = "Completed" | "Success" → Successful
-- Diğer → Ambiguous
+**PayifyStatus çözümlemesi (`ResolvePayifyStatus`):**
+- `transactions.Count == 0` → **Missing**
+- Status = `"Failed"` → **Failed**
+- Status = `"Completed"` veya `"Success"` → **Successful**
+- Diğer / bilinmeyen → defansif olarak **Missing** (yanlış otomatik düzeltmeyi engellemek için)
+
+**Sonuç tipleri matrisi:**
+
+| Branch sonucu | Anlamı |
+|---|---|
+| **NoAction** | Yalnızca açıklayıcı `Note`; sistem hiçbir şey tetiklemez. Tutarlı durum veya ileride netleşecek case. |
+| **Alert** | `RaiseAlert` üretilir; otomatik düzeltme yapılmaz. İnsan dikkatine sunulur. |
+| **AutoOperation** | Bir veya daha fazla otomatik operasyon planlanır; sırası executor garantilidir. |
+| **ManualOperation** | `CreateManualReview` gate + Approve / Reject branch'leri planlanır. Kuralda yalnızca **D6 (eşleniksiz iade)** branch'inde kullanılır. |
+| **AwaitingClearing** | `Result.IsAwaitingClearing = true`; satır geri planda `Ready ↔ AwaitingClearing` döngüsünde tutulur. |
 
 #### VisaEvaluator (`FileContentType.Visa`)
 **Kural tanımlanmamış (stub).** `EvaluateAsync` yalnızca `result.SetNote("Reconciliation.Visa.RulesNotDefined")` döndürür; hiçbir operasyon üretmez.
@@ -2315,21 +2420,24 @@ Bir ingestion dosyasının işlem durumu.
 
 | Değer | Anlamı |
 |---|---|
-| `Pending` | Kuyruğa alındı, henüz işlenmedi |
-| `Processing` | Aktif olarak işleniyor |
-| `Completed` | Tüm satırlar başarıyla işlendi |
-| `Failed` | İşlem hatası oluştu |
-| `PartiallyCompleted` | Kısmi tamamlama (bazı satırlar hatalı) |
+| `Processing` (1) | Dosya henüz tamamlanmadı |
+| `Failed` (2) | İşlem hatası oluştu |
+| `Success` (3) | Tüm satırlar işlendi (satır bazında bireysel hatalar olabilir) |
+
+> Tek doğruluk kaynağı: §6 ve [`FileStatus.cs`](LinkPara.Card.Domain/Enums/FileIngestion/FileStatus.cs).
 
 #### ReconciliationStatus
-Bir satırın mutabakat sonucu.
+Bir kart işlemi satırının mutabakat çevrim durumu.
 
 | Değer | Anlamı |
 |---|---|
-| `Ready` | Mutabakat için hazır |
-| `Matched` | Eşleşme sağlandı ✅ |
-| `Failed` | Eşleşme kurulamadı ❌ |
-| `NotApplicable` | Bu satır için mutabakat uygulanmaz |
+| `Ready` (1) | Mutabakat için hazır; değerlendirici alabilir |
+| `Failed` (2) | Değerlendirme veya persist hatası |
+| `Success` (3) | Değerlendirme tamamlandı, planlanan operasyonlar oluşturuldu |
+| `Processing` (4) | EvaluateService satırı claim etti |
+| `AwaitingClearing` (5) | Karşılık gelen clearing kaydı henüz dosya olarak gelmemiş; karar ertelendi. Clearing dosyası başarıyla ingestion edildiğinde `ClearingArrivalRequeueService` satırı otomatik olarak `Ready`'e geri çeker (bkz. §16.3 — clearing-presence gate). |
+
+> Tek doğruluk kaynağı: §6 ve [`ReconciliationStatus.cs`](LinkPara.Card.Domain/Enums/FileIngestion/ReconciliationStatus.cs).
 
 #### ReconSide
 Mutabakat tarafını belirtir.
@@ -2344,28 +2452,31 @@ Exception hotspot raporunda kullanılır.
 
 | Değer | Anlamı |
 |---|---|
-| `Low` | Düşük hata oranı (< %5) |
-| `Medium` | Orta hata oranı (%5–%25) |
-| `High` | Yüksek hata oranı (> %25) |
+| `LOW` (1) | Düşük hata oranı |
+| `MEDIUM` (2) | Orta hata oranı |
+| `HIGH` (3) | Yüksek hata oranı |
+| `CRITICAL` (4) | Kritik — acil müdahale |
 
 #### UrgencyLevel (Manuel İnceleme Aciliyeti)
 Manuel review queue raporunda kullanılır.
 
 | Değer | Anlamı |
 |---|---|
-| `Low` | Düşük aciliyet |
-| `Medium` | Orta aciliyet |
-| `High` | Yüksek, bugün çözülmeli |
-| `Critical` | Kritik, acil müdahale gerektirir |
+| `NORMAL` (1) | Normal aciliyet — süresi içinde |
+| `OVERDUE` (2) | Süresi geçmiş ancak hâlâ açık |
+| `EXPIRING_SOON` (3) | Yakında expire olacak |
+| `EXPIRED` (4) | Expire olmuş |
 
 #### AlertStatus
 Bir uyarının durumu.
 
 | Değer | Anlamı |
 |---|---|
-| `Pending` | Henüz işlenmedi |
-| `Resolved` | Çözüldü |
-| `Failed` | Uyarı iletimi başarısız |
+| `Pending` (0) | Henüz işlenmedi |
+| `Processing` (1) | Bildirim çıkışı sürüyor |
+| `Consumed` (2) | Başarıyla iletildi |
+| `Failed` (3) | Bildirim iletimi başarısız |
+| `Ignored` (4) | Politika gereği atlandı |
 
 #### DuplicateStatus
 Bir satırın tekrar durumu.

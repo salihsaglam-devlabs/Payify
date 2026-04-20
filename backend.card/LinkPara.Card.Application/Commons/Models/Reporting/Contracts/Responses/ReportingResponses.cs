@@ -128,3 +128,8 @@ public class GetNetworkReconScorecardResponse : ReconciliationResponseBase
 {
     public List<NetworkReconScorecardDto> Data { get; set; } = new();
 }
+
+public class GetCardClearingCorrelationResponse : ReconciliationResponseBase
+{
+    public PaginatedList<CardClearingCorrelationDto> Data { get; set; }
+}

@@ -104,4 +104,8 @@ public interface IReportingService
 
     Task<List<NetworkReconScorecardDto>> GetNetworkReconScorecardAsync(
         DataScope? dataScope = null, FileContentType? network = null, CancellationToken ct = default);
+
+    Task<PaginatedList<CardClearingCorrelationDto>> GetCardClearingCorrelationAsync(
+        SearchQueryParams paging, DataScope? dataScope = null, string cardTable = null,
+        Guid? fileId = null, Guid? fileLineId = null, Guid? cardId = null, CancellationToken ct = default);
 }

@@ -57,14 +57,12 @@ public class PaycoreCustomerService : IPaycoreCustomerService
 
         if (customerWallets.Any())
         {
-            var customerWallet = customerWallets.FirstOrDefault(x => x.ProductCode == command.ProductCode);
+            var customerWallet = customerWallets
+                .FirstOrDefault(x => x.ProductCode == command.ProductCode && 
+                                     x.IsActive);
 
             if (customerWallet is not null)
             {
-                if (!customerWallet.IsActive)
-                {
-                    await CreateCustomerWallet(command, customerWallet);
-                }
                 return new PaycoreResponse()
                 {
                     IsSuccess = true

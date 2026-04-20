@@ -811,7 +811,7 @@ internal sealed class ExecuteService
         {
             Id = Guid.NewGuid(),
             FileLineId = operation.FileLineId,
-            GroupId = operation.GroupId, // sadece informatik amaçlı tutuluyor
+            GroupId = operation.GroupId, // kept for informational purposes only
             EvaluationId = operation.EvaluationId,
             OperationId = operation.Id,
             Severity = "Error",

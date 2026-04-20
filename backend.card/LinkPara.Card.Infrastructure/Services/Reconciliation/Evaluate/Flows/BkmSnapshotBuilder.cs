@@ -9,7 +9,6 @@ namespace LinkPara.Card.Infrastructure.Services.Reconciliation.Evaluate.Flows;
 internal static class BkmSnapshotBuilder
 {
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
-    private const string CurrentCardRowMissingMessage = "Current card row is missing.";
 
     public static Dictionary<string, List<OperationPayloadItem>> Create(
         BkmEvaluationContext context,
@@ -18,7 +17,7 @@ internal static class BkmSnapshotBuilder
         params (string Key, object? Value)[] extra)
     {
         var detail = context.CachedRootDetail ?? DeserializeRootCardDetail(context.RootRow)
-            ?? throw new ReconciliationCurrentCardRowMissingException(CurrentCardRowMissingMessage);
+            ?? throw new ReconciliationCurrentCardRowMissingException();
         var latestEmoney = context.EmoneyTransactions
             .OrderByDescending(x => x.TransactionDate)
             .ThenByDescending(x => x.Id)

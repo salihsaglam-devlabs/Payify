@@ -32,35 +32,22 @@ internal sealed class OperationExecutor
     {
         return operation.Code switch
         {
-            OperationCodes.RaiseAlert => ExecuteRaiseAlertAsync(operation, cancellationToken),
-            OperationCodes.CreateManualReview => ExecuteCreateManualReviewAsync(operation, cancellationToken),
-            OperationCodes.MarkOriginalTransactionCancelled => ExecuteMarkOriginalTransactionCancelledAsync(operation, cancellationToken),
-            OperationCodes.ReverseOriginalTransaction => ExecuteReverseOriginalTransactionAsync(operation, cancellationToken),
-            OperationCodes.CorrectResponseCode => ExecuteCorrectResponseCodeAsync(operation, cancellationToken),
-            OperationCodes.ConvertTransactionToFailed => ExecuteConvertTransactionToFailedAsync(operation, cancellationToken),
-            OperationCodes.ConvertTransactionToSuccessful => ExecuteConvertTransactionToSuccessfulAsync(operation, cancellationToken),
-            OperationCodes.ReverseByBalanceEffect => ExecuteReverseByBalanceEffectAsync(operation, cancellationToken),
-            OperationCodes.MoveTransactionToExpired => ExecuteMoveTransactionToExpiredAsync(operation, cancellationToken),
-            OperationCodes.CreateTransaction => ExecuteCreateTransactionAsync(operation, cancellationToken),
-            OperationCodes.MoveCreatedTransactionToExpired => ExecuteMoveCreatedTransactionToExpiredAsync(operation, cancellationToken),
-            OperationCodes.ApplyOriginalEffectOrRefund => ExecuteApplyOriginalEffectOrRefundAsync(operation, cancellationToken),
-            OperationCodes.ApplyLinkedRefund => ExecuteApplyLinkedRefundAsync(operation, cancellationToken),
-            OperationCodes.ApplyUnlinkedRefundEffect => ExecuteApplyUnlinkedRefundEffectAsync(operation, cancellationToken),
-            OperationCodes.StartChargeback => ExecuteStartChargebackAsync(operation, cancellationToken),
-            OperationCodes.InsertShadowBalanceEntry => ExecuteInsertShadowBalanceEntryAsync(operation, cancellationToken),
-            OperationCodes.RunShadowBalanceProcess => ExecuteRunShadowBalanceProcessAsync(operation, cancellationToken),
-            OperationCodes.RecoverMissingCardRow => ExecuteRecoverMissingCardRowAsync(operation, cancellationToken),
-            OperationCodes.ApproveAmbiguousPayifyRecord => ExecuteApproveAmbiguousPayifyRecordAsync(operation, cancellationToken),
-            OperationCodes.BindOriginalTransactionAndContinue => ExecuteBindOriginalTransactionAndContinueAsync(operation, cancellationToken),
-            OperationCodes.DropMissingCardRow => ExecuteDropMissingCardRowAsync(operation, cancellationToken),
-            OperationCodes.RejectAmbiguousPayifyRecord => ExecuteRejectAmbiguousPayifyRecordAsync(operation, cancellationToken),
-            OperationCodes.ApproveUnmatchedFlow => ExecuteApproveUnmatchedFlowAsync(operation, cancellationToken),
-            OperationCodes.RejectUnmatchedFlow => ExecuteRejectUnmatchedFlowAsync(operation, cancellationToken),
-            OperationCodes.RejectReversalRecord => ExecuteRejectReversalRecordAsync(operation, cancellationToken),
-            OperationCodes.ApprovePendingAccReview => ExecuteApprovePendingAccReviewAsync(operation, cancellationToken),
-            OperationCodes.RejectPendingAccReview => ExecuteRejectPendingAccReviewAsync(operation, cancellationToken),
-            OperationCodes.ApproveMissingPayifyTransaction => ExecuteApproveMissingPayifyTransactionAsync(operation, cancellationToken),
-            OperationCodes.RejectMissingPayifyTransaction => ExecuteRejectMissingPayifyTransactionAsync(operation, cancellationToken),
+            OperationCodes.RaiseAlert                       => ExecuteRaiseAlertAsync(operation, cancellationToken),
+            OperationCodes.CreateManualReview               => ExecuteCreateManualReviewAsync(operation, cancellationToken),
+            OperationCodes.ReverseOriginalTransaction       => ExecuteReverseOriginalTransactionAsync(operation, cancellationToken),
+            OperationCodes.CorrectResponseCode              => ExecuteCorrectResponseCodeAsync(operation, cancellationToken),
+            OperationCodes.ConvertTransactionToFailed       => ExecuteConvertTransactionToFailedAsync(operation, cancellationToken),
+            OperationCodes.ConvertTransactionToSuccessful   => ExecuteConvertTransactionToSuccessfulAsync(operation, cancellationToken),
+            OperationCodes.ReverseByBalanceEffect           => ExecuteReverseByBalanceEffectAsync(operation, cancellationToken),
+            OperationCodes.MoveTransactionToExpired         => ExecuteMoveTransactionToExpiredAsync(operation, cancellationToken),
+            OperationCodes.CreateTransaction                => ExecuteCreateTransactionAsync(operation, cancellationToken),
+            OperationCodes.MoveCreatedTransactionToExpired  => ExecuteMoveCreatedTransactionToExpiredAsync(operation, cancellationToken),
+            OperationCodes.ApplyOriginalEffectOrRefund      => ExecuteApplyOriginalEffectOrRefundAsync(operation, cancellationToken),
+            OperationCodes.ApplyLinkedRefund                => ExecuteApplyLinkedRefundAsync(operation, cancellationToken),
+            OperationCodes.ApplyUnlinkedRefundEffect        => ExecuteApplyUnlinkedRefundEffectAsync(operation, cancellationToken),
+            OperationCodes.StartChargeback                  => ExecuteStartChargebackAsync(operation, cancellationToken),
+            OperationCodes.InsertShadowBalanceEntry         => ExecuteInsertShadowBalanceEntryAsync(operation, cancellationToken),
+            OperationCodes.RunShadowBalanceProcess          => ExecuteRunShadowBalanceProcessAsync(operation, cancellationToken),
             _ => throw new ReconciliationUnsupportedOperationCodeException(_localizer.Get("Reconciliation.UnsupportedOperationCode", operation.Code))
         };
     }
@@ -106,89 +93,6 @@ internal sealed class OperationExecutor
         return Skipped("SKIPPED_MANUAL_REVIEW_GATE", _localizer.Get("Reconciliation.ManualReviewGateHandled"), operation, null);
     }
 
-    private Task<OperationHandlerResult> ExecuteRecoverMissingCardRowAsync(ReconciliationOperation operation, CancellationToken cancellationToken)
-        => ExecuteManualRequeueAsync(operation, _localizer.Get("Reconciliation.CaseRequeued", "RecoverMissingCardRow"), cancellationToken);
-
-    private Task<OperationHandlerResult> ExecuteApproveAmbiguousPayifyRecordAsync(ReconciliationOperation operation, CancellationToken cancellationToken)
-        => ExecuteManualRequeueAsync(operation, _localizer.Get("Reconciliation.CaseRequeued", "ApproveAmbiguousPayifyRecord"), cancellationToken);
-
-    private Task<OperationHandlerResult> ExecuteBindOriginalTransactionAndContinueAsync(ReconciliationOperation operation, CancellationToken cancellationToken)
-        => ExecuteManualRequeueAsync(operation, _localizer.Get("Reconciliation.CaseRequeued", "BindOriginalTransactionAndContinue"), cancellationToken);
-
-    private Task<OperationHandlerResult> ExecuteDropMissingCardRowAsync(ReconciliationOperation operation, CancellationToken cancellationToken)
-        => ExecuteManualCloseAsync(operation, _localizer.Get("Reconciliation.ManualBranchCompleted", "DropMissingCardRow"), cancellationToken);
-
-    private Task<OperationHandlerResult> ExecuteRejectAmbiguousPayifyRecordAsync(ReconciliationOperation operation, CancellationToken cancellationToken)
-        => ExecuteManualCloseAsync(operation, _localizer.Get("Reconciliation.ManualBranchCompleted", "RejectAmbiguousPayifyRecord"), cancellationToken);
-
-    private Task<OperationHandlerResult> ExecuteApproveUnmatchedFlowAsync(ReconciliationOperation operation, CancellationToken cancellationToken)
-        => ExecuteManualCloseAsync(operation, _localizer.Get("Reconciliation.ManualBranchCompleted", "ApproveUnmatchedFlow"), cancellationToken);
-
-    private Task<OperationHandlerResult> ExecuteRejectUnmatchedFlowAsync(ReconciliationOperation operation, CancellationToken cancellationToken)
-        => ExecuteManualCloseAsync(operation, _localizer.Get("Reconciliation.ManualBranchCompleted", "RejectUnmatchedFlow"), cancellationToken);
-
-    private Task<OperationHandlerResult> ExecuteRejectReversalRecordAsync(ReconciliationOperation operation, CancellationToken cancellationToken)
-        => ExecuteManualCloseAsync(operation, _localizer.Get("Reconciliation.ManualBranchCompleted", "RejectReversalRecord"), cancellationToken);
-
-    private Task<OperationHandlerResult> ExecuteApprovePendingAccReviewAsync(ReconciliationOperation operation, CancellationToken cancellationToken)
-        => ExecuteManualCloseAsync(operation, _localizer.Get("Reconciliation.ManualBranchCompleted", "ApprovePendingAccReview"), cancellationToken);
-
-    private Task<OperationHandlerResult> ExecuteRejectPendingAccReviewAsync(ReconciliationOperation operation, CancellationToken cancellationToken)
-        => ExecuteManualCloseAsync(operation, _localizer.Get("Reconciliation.ManualBranchCompleted", "RejectPendingAccReview"), cancellationToken);
-
-    private Task<OperationHandlerResult> ExecuteApproveMissingPayifyTransactionAsync(ReconciliationOperation operation, CancellationToken cancellationToken)
-        => ExecuteManualCloseAsync(operation, _localizer.Get("Reconciliation.ManualBranchCompleted", "ApproveMissingPayifyTransaction"), cancellationToken);
-
-    private Task<OperationHandlerResult> ExecuteRejectMissingPayifyTransactionAsync(ReconciliationOperation operation, CancellationToken cancellationToken)
-        => ExecuteManualCloseAsync(operation, _localizer.Get("Reconciliation.ManualBranchCompleted", "RejectMissingPayifyTransaction"), cancellationToken);
-
-    private async Task<OperationHandlerResult> ExecuteManualRequeueAsync(
-        ReconciliationOperation operation,
-        string resultMessage,
-        CancellationToken cancellationToken)
-    {
-        var row = await _dbContext.IngestionFileLines
-            .AsTracking()
-            .SingleAsync(x => x.Id == operation.FileLineId, cancellationToken);
-
-        row.ReconciliationStatus = ReconciliationStatus.Ready;
-        row.Message = operation.Note;
-
-        await AddInfoAlertAsync(operation, cancellationToken);
-
-        _auditStampService.StampForUpdate(row);
-        await _dbContext.SaveChangesAsync(cancellationToken);
-
-        return Success("SUCCESS_REQUEUED", resultMessage, operation, new { requeued = true });
-    }
-
-    private async Task<OperationHandlerResult> ExecuteManualCloseAsync(
-        ReconciliationOperation operation,
-        string resultMessage,
-        CancellationToken cancellationToken)
-    {
-        await AddInfoAlertAsync(operation, cancellationToken);
-
-        await _dbContext.SaveChangesAsync(cancellationToken);
-
-        return Success("SUCCESS_MANUAL_OUTCOME_COMPLETED", resultMessage, operation, new { requeued = false });
-    }
-
-    private async Task<OperationHandlerResult> ExecuteMarkOriginalTransactionCancelledAsync(ReconciliationOperation operation, CancellationToken cancellationToken)
-    {
-        var payload = new OperationPayloadAccessor(operation.Payload, _localizer);
-        var request = new
-        {
-            customerTransactionId = GetRequired<long>(payload, operation, "referenceTransactionId").ToString(),
-            targetStatus = "Rejected",
-            isCancelled = true,
-            idempotencyKey = operation.IdempotencyKey,
-            note = operation.Note
-        };
-
-        var response = await _emoneyService.UpdateTransactionStatusAsync(request, cancellationToken);
-        return FromExternalResult("SUCCESS_MARK_ORIGINAL_TRANSACTION_CANCELLED", "MARK_ORIGINAL_TRANSACTION_CANCELLED_FAILED", request, response);
-    }
 
     private async Task<OperationHandlerResult> ExecuteReverseOriginalTransactionAsync(ReconciliationOperation operation, CancellationToken cancellationToken)
     {
@@ -242,25 +146,35 @@ internal sealed class OperationExecutor
     }
 
     private async Task<OperationHandlerResult> ExecuteConvertTransactionToFailedAsync(ReconciliationOperation operation, CancellationToken cancellationToken)
-        => await ExecuteConvertTransactionStatusAsync(operation, "Failed", "SUCCESS_CONVERT_TRANSACTION_TO_FAILED", "CONVERT_TRANSACTION_TO_FAILED_FAILED", cancellationToken);
-
-    private async Task<OperationHandlerResult> ExecuteConvertTransactionToSuccessfulAsync(ReconciliationOperation operation, CancellationToken cancellationToken)
-        => await ExecuteConvertTransactionStatusAsync(operation, "Completed", "SUCCESS_CONVERT_TRANSACTION_TO_SUCCESSFUL", "CONVERT_TRANSACTION_TO_SUCCESSFUL_FAILED", cancellationToken);
-
-    private async Task<OperationHandlerResult> ExecuteConvertTransactionStatusAsync(ReconciliationOperation operation, string targetStatus, string successCode, string failureCode, CancellationToken cancellationToken)
     {
         var payload = new OperationPayloadAccessor(operation.Payload, _localizer);
         var request = new
         {
             customerTransactionId = GetRequired<long>(payload, operation, "currentTransactionId").ToString(),
-            targetStatus,
+            targetStatus = "Failed",
             isSettlementReceived = GetOptional<bool>(payload, operation, "isSettlementReceived"),
             idempotencyKey = operation.IdempotencyKey,
             note = operation.Note
         };
 
         var response = await _emoneyService.UpdateTransactionStatusAsync(request, cancellationToken);
-        return FromExternalResult(successCode, failureCode, request, response);
+        return FromExternalResult("SUCCESS_CONVERT_TRANSACTION_TO_FAILED", "CONVERT_TRANSACTION_TO_FAILED_FAILED", request, response);
+    }
+
+    private async Task<OperationHandlerResult> ExecuteConvertTransactionToSuccessfulAsync(ReconciliationOperation operation, CancellationToken cancellationToken)
+    {
+        var payload = new OperationPayloadAccessor(operation.Payload, _localizer);
+        var request = new
+        {
+            customerTransactionId = GetRequired<long>(payload, operation, "currentTransactionId").ToString(),
+            targetStatus = "Completed",
+            isSettlementReceived = GetOptional<bool>(payload, operation, "isSettlementReceived"),
+            idempotencyKey = operation.IdempotencyKey,
+            note = operation.Note
+        };
+
+        var response = await _emoneyService.UpdateTransactionStatusAsync(request, cancellationToken);
+        return FromExternalResult("SUCCESS_CONVERT_TRANSACTION_TO_SUCCESSFUL", "CONVERT_TRANSACTION_TO_SUCCESSFUL_FAILED", request, response);
     }
 
     private async Task<OperationHandlerResult> ExecuteReverseByBalanceEffectAsync(ReconciliationOperation operation, CancellationToken cancellationToken)
@@ -296,6 +210,20 @@ internal sealed class OperationExecutor
         return FromExternalResult("SUCCESS_MOVE_TRANSACTION_TO_EXPIRED", "MOVE_TRANSACTION_TO_EXPIRED_FAILED", request, response);
     }
 
+    private async Task<OperationHandlerResult> ExecuteMoveCreatedTransactionToExpiredAsync(ReconciliationOperation operation, CancellationToken cancellationToken)
+    {
+        var payload = new OperationPayloadAccessor(operation.Payload, _localizer);
+        var request = new
+        {
+            customerTransactionId = GetRequired<long>(payload, operation, "currentTransactionId").ToString(),
+            idempotencyKey = operation.IdempotencyKey,
+            note = operation.Note
+        };
+
+        var response = await _emoneyService.ExpireTransactionAsync(request, cancellationToken);
+        return FromExternalResult("SUCCESS_MOVE_CREATED_TRANSACTION_TO_EXPIRED", "MOVE_CREATED_TRANSACTION_TO_EXPIRED_FAILED", request, response);
+    }
+
     private async Task<OperationHandlerResult> ExecuteCreateTransactionAsync(ReconciliationOperation operation, CancellationToken cancellationToken)
     {
         var payload = new OperationPayloadAccessor(operation.Payload, _localizer);
@@ -326,19 +254,8 @@ internal sealed class OperationExecutor
         return FromExternalResult("SUCCESS_CREATE_TRANSACTION", "CREATE_TRANSACTION_FAILED", request, response);
     }
 
-    private async Task<OperationHandlerResult> ExecuteMoveCreatedTransactionToExpiredAsync(ReconciliationOperation operation, CancellationToken cancellationToken)
-        => await ExecuteMoveTransactionToExpiredAsync(operation, cancellationToken);
 
     private async Task<OperationHandlerResult> ExecuteApplyOriginalEffectOrRefundAsync(ReconciliationOperation operation, CancellationToken cancellationToken)
-        => await ExecuteApplyRefundInternalAsync(operation, "SUCCESS_APPLY_ORIGINAL_EFFECT_OR_REFUND", "APPLY_ORIGINAL_EFFECT_OR_REFUND_FAILED", cancellationToken);
-
-    private async Task<OperationHandlerResult> ExecuteApplyLinkedRefundAsync(ReconciliationOperation operation, CancellationToken cancellationToken)
-        => await ExecuteApplyRefundInternalAsync(operation, "SUCCESS_APPLY_LINKED_REFUND", "APPLY_LINKED_REFUND_FAILED", cancellationToken);
-
-    private async Task<OperationHandlerResult> ExecuteApplyUnlinkedRefundEffectAsync(ReconciliationOperation operation, CancellationToken cancellationToken)
-        => await ExecuteApplyRefundInternalAsync(operation, "SUCCESS_APPLY_UNLINKED_REFUND_EFFECT", "APPLY_UNLINKED_REFUND_EFFECT_FAILED", cancellationToken);
-
-    private async Task<OperationHandlerResult> ExecuteApplyRefundAsync(ReconciliationOperation operation, string successCode, string failureCode, CancellationToken cancellationToken)
     {
         var payload = new OperationPayloadAccessor(operation.Payload, _localizer);
         var currentTransactionId = GetRequired<long>(payload, operation, "currentTransactionId");
@@ -353,11 +270,45 @@ internal sealed class OperationExecutor
         };
 
         var response = await _emoneyService.RefundTransactionAsync(request, cancellationToken);
-        return FromExternalResult(successCode, failureCode, request, response);
+        return FromExternalResult("SUCCESS_APPLY_ORIGINAL_EFFECT_OR_REFUND", "APPLY_ORIGINAL_EFFECT_OR_REFUND_FAILED", request, response);
     }
 
-    private Task<OperationHandlerResult> ExecuteApplyRefundInternalAsync(ReconciliationOperation operation, string successCode, string failureCode, CancellationToken cancellationToken)
-        => ExecuteApplyRefundAsync(operation, successCode, failureCode, cancellationToken);
+    private async Task<OperationHandlerResult> ExecuteApplyLinkedRefundAsync(ReconciliationOperation operation, CancellationToken cancellationToken)
+    {
+        var payload = new OperationPayloadAccessor(operation.Payload, _localizer);
+        var currentTransactionId = GetRequired<long>(payload, operation, "currentTransactionId");
+        var request = new
+        {
+            customerTransactionId = currentTransactionId.ToString(),
+            referenceCustomerTransactionId = GetOptional<long?>(payload, operation, "referenceTransactionId")?.ToString() ?? currentTransactionId.ToString(),
+            amount = GetRequired<decimal>(payload, operation, "billingAmount"),
+            currencyCode = GetRequired<string>(payload, operation, "currencyCode"),
+            idempotencyKey = operation.IdempotencyKey,
+            note = operation.Note
+        };
+
+        var response = await _emoneyService.RefundTransactionAsync(request, cancellationToken);
+        return FromExternalResult("SUCCESS_APPLY_LINKED_REFUND", "APPLY_LINKED_REFUND_FAILED", request, response);
+    }
+
+    private async Task<OperationHandlerResult> ExecuteApplyUnlinkedRefundEffectAsync(ReconciliationOperation operation, CancellationToken cancellationToken)
+    {
+        var payload = new OperationPayloadAccessor(operation.Payload, _localizer);
+        var currentTransactionId = GetRequired<long>(payload, operation, "currentTransactionId");
+        var request = new
+        {
+            customerTransactionId = currentTransactionId.ToString(),
+            referenceCustomerTransactionId = GetOptional<long?>(payload, operation, "referenceTransactionId")?.ToString() ?? currentTransactionId.ToString(),
+            amount = GetRequired<decimal>(payload, operation, "billingAmount"),
+            currencyCode = GetRequired<string>(payload, operation, "currencyCode"),
+            idempotencyKey = operation.IdempotencyKey,
+            note = operation.Note
+        };
+
+        var response = await _emoneyService.RefundTransactionAsync(request, cancellationToken);
+        return FromExternalResult("SUCCESS_APPLY_UNLINKED_REFUND_EFFECT", "APPLY_UNLINKED_REFUND_EFFECT_FAILED", request, response);
+    }
+
 
     private async Task<OperationHandlerResult> ExecuteStartChargebackAsync(ReconciliationOperation operation, CancellationToken cancellationToken)
     {
@@ -440,22 +391,6 @@ internal sealed class OperationExecutor
             .FirstOrDefaultAsync(cancellationToken);
     }
 
-    private Task AddInfoAlertAsync(ReconciliationOperation operation, CancellationToken cancellationToken)
-    {
-        var alert = new ReconciliationAlert
-        {
-            Id = Guid.NewGuid(),
-            FileLineId = operation.FileLineId,
-            GroupId = operation.GroupId,
-            OperationId = operation.Id,
-            EvaluationId = operation.EvaluationId,
-            Severity = "Info",
-            AlertType = operation.Code,
-            Message = operation.Note
-        };
-        _auditStampService.StampForCreate(alert);
-        return _dbContext.ReconciliationAlerts.AddAsync(alert, cancellationToken).AsTask();
-    }
 
     private static string ResolveDirection(string txnEffect)
     {
