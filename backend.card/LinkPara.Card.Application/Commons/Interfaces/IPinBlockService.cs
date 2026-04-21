@@ -4,6 +4,6 @@ namespace LinkPara.Card.Application.Commons.Interfaces;
 
 public interface IPinBlockService
 {
-    Task<SetCardBinResponse> GenerateEncryptedPinBlock(string clearPin, string clearCardNumber);
-    Task<SetCardBinResponse> DecryptEncryptedPinBlock(string encryptedBlock, string clearCardNumber);
+    Task<EncDecPinblockResponse> GenerateEncryptedPinBlock(string clearPin, string clearCardNumber);
+    Task<EncDecPinblockResponse> DecryptEncryptedPinBlock(string encryptedBlock, string clearCardNumber);
 }

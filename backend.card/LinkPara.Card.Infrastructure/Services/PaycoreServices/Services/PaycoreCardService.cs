@@ -5,6 +5,7 @@ using LinkPara.Card.Application.Features.PaycoreServices.CardServices.Commands.C
 using LinkPara.Card.Application.Features.PaycoreServices.CardServices.Commands.UpdateCardAuthorizations;
 using LinkPara.Card.Application.Features.PaycoreServices.CardServices.Commands.UpdateCardStatus;
 using LinkPara.Card.Application.Features.PaycoreServices.CardServices.Queries.GetCardAuthorization;
+using LinkPara.Card.Application.Features.PaycoreServices.CardServices.Queries.GetCardEmbossStatus;
 using LinkPara.Card.Application.Features.PaycoreServices.CardServices.Queries.GetCardInformation;
 using LinkPara.Card.Application.Features.PaycoreServices.CardServices.Queries.GetCardSensitiveData;
 using LinkPara.Card.Application.Features.PaycoreServices.CardServices.Queries.GetCardTransactions;
@@ -229,11 +230,11 @@ public class PaycoreCardService : IPaycoreCardService
     {
         try
         {
-            var sensitiveResponse = await _clientService.ExecuteAsync<CrdCardSensitiveInfo[]>(
-                              $"{_paycoreSettings.VaultSettings.BaseUrl}{_paycoreSettings.GetCardEncryptedCvv2AndExpireDate}{request.TokenPan}",
-                PaycoreRequestType.Get);
+            var sensitiveResponse = await _clientService.ExecuteAsync<CrdCardSensitiveInfo>(
+               $"{_paycoreSettings.VaultSettings.BaseUrl}{_paycoreSettings.GetCardEncryptedCvv2AndExpireDate}+{request.TokenPan}",
+                              PaycoreRequestType.Get);
 
-            if (!sensitiveResponse.IsSuccess || !sensitiveResponse.Result.Any())
+            if (!sensitiveResponse.IsSuccess || sensitiveResponse.Result == null)
             {
                 return new GetCardSensitiveDataResponse
                 {
@@ -242,7 +243,7 @@ public class PaycoreCardService : IPaycoreCardService
                 };
             }
 
-            if (string.IsNullOrWhiteSpace(sensitiveResponse.Result.FirstOrDefault().CardNo))
+            if (string.IsNullOrWhiteSpace(sensitiveResponse.Result.CardNo))
             {
                 return new GetCardSensitiveDataResponse
                 {
@@ -251,7 +252,7 @@ public class PaycoreCardService : IPaycoreCardService
                 };
             }
 
-            if (string.IsNullOrWhiteSpace(sensitiveResponse.Result.FirstOrDefault().ExpiryDate))
+            if (string.IsNullOrWhiteSpace(sensitiveResponse.Result.ExpiryDate))
             {
                 return new GetCardSensitiveDataResponse
                 {
@@ -261,8 +262,15 @@ public class PaycoreCardService : IPaycoreCardService
             }
 
             var clearExpiryDateAndCvv2 = await _pinBlockService.DecryptEncryptedPinBlock(
-                sensitiveResponse.Result.FirstOrDefault().ExpiryDate,
-                sensitiveResponse.Result.FirstOrDefault().CardNo);
+                sensitiveResponse.Result.ExpiryDate,
+                sensitiveResponse.Result.CardNo);
+
+            if (!clearExpiryDateAndCvv2.IsSuccess)
+                return new GetCardSensitiveDataResponse
+                {
+                    IsSuccess = false,
+                    Description = clearExpiryDateAndCvv2.Description
+                };
 
             if (string.IsNullOrWhiteSpace(clearExpiryDateAndCvv2.Data) || clearExpiryDateAndCvv2.Data.Length < 7)
             {
@@ -278,9 +286,9 @@ public class PaycoreCardService : IPaycoreCardService
 
             CrdCardSensitiveInfo info = new CrdCardSensitiveInfo
             {
-                CardNo = sensitiveResponse.Result.FirstOrDefault().CardNo,
-                BankingCustomerNo = sensitiveResponse.Result.FirstOrDefault().BankingCustomerNo,
-                CustomerNo = sensitiveResponse.Result.FirstOrDefault().CustomerNo,
+                CardNo = sensitiveResponse.Result.CardNo,
+                BankingCustomerNo = sensitiveResponse.Result.BankingCustomerNo,
+                CustomerNo = sensitiveResponse.Result.CustomerNo,
                 ExpiryDate = expiryDate,
                 Cvv2 = cvv2
             };
@@ -289,7 +297,7 @@ public class PaycoreCardService : IPaycoreCardService
             {
                 IsSuccess = true,
                 Description = ResponseDescription.SUCCESS,
-                CrdCardInfo = new CrdCardSensitiveInfo[1] {info}
+                CrdCardInfo = info
             };
         }
         catch (Exception ex)
@@ -301,9 +309,35 @@ public class PaycoreCardService : IPaycoreCardService
             };
         }
     }
-    public Task<GetCardTransactionsResponse> GetCardTransactionsAsync(GetCardTransactionsQuery request)
+
+    public async Task<GetCardTransactionsResponse> GetCardTransactionsAsync(GetCardTransactionsQuery request)
     {
-        throw new NotImplementedException();
+        var transactionResponse = await _clientService.ExecuteAsync<GetCardTransactionsResponse>(
+            $"{_paycoreSettings.VaultSettings.BaseUrl}{_paycoreSettings.GetCardTransactions}" + 
+            $"?CardNo={request.CardNo}" +
+            $"&StartDate={request.StartDate:O}" +
+            $"&EndDate={request.EndDate:O}"+
+            $"&FinancialIndicator=1" +
+            $"&TxnConfirmStat=1",
+            PaycoreRequestType.Get);
+
+        if (transactionResponse == null)
+        {
+            throw new InvalidOperationException();
+        }
+
+        if (!transactionResponse.IsSuccess || transactionResponse.Result == null)
+        {
+            return new GetCardTransactionsResponse
+            {
+                IsSuccess = false
+            };
+        }
+
+        var result = transactionResponse.Result;
+        result.IsSuccess = true;
+
+        return result;
     }
     public async Task<PaycoreResponse> UpdateCardAuthorizationsAsync(UpdateCardAuthorizationCommand request)
     {
@@ -588,4 +622,24 @@ public class PaycoreCardService : IPaycoreCardService
             };
         }
     }
+    public async Task<GetCardEmbossStatusResponse> GetCardEmbossStatusAsync(GetCardEmbossStatusQuery request)
+    {
+        var embossStatusResponse = await _clientService.ExecuteGenericAsync<PaycoreGetCardEmbossStatusResponse>(
+                                   $"{_paycoreSettings.VaultSettings.BaseUrl}{_paycoreSettings.GetCardEmbossStatus}{request.CardNo}",
+                                   PaycoreRequestType.Get);
+
+        if (embossStatusResponse == null)
+           {
+             throw new InvalidOperationException();
+           }
+
+        return new GetCardEmbossStatusResponse
+           {
+              EmbossStat = embossStatusResponse.embossStat,
+              Description = embossStatusResponse.description,
+              EmbossRequestDate = embossStatusResponse.embossRequestDate  
+            };
+                
+    }
+
 }

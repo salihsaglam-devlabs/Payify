@@ -71,31 +71,38 @@ namespace LinkPara.Card.Infrastructure.Services.PaycoreServices.Services
 
         public async Task<DebitAuthorizationResponse> DebitAuthAsync(DebitAuthorizationCommand command)
         {
-            DebitAuthorizationResponse response = new DebitAuthorizationResponse();
-
             if (command == null) throw new ArgumentNullException(nameof(command));
 
-            if (command.TransactionType != null && !CheckTxnType(command.TransactionType))
-            {
-                _logger.LogError("Debit authorization unknown transaction type : {command.TransactionType}", command.TransactionType);
-                return GenerateDebitAuthResponse(command, null, TransactionResponseCodes.DisallowedCardTransaction, EmoneyResponseCodes.DisallowedCardTransaction7Msg);
-            }
-
-            bool existingRecord = _dbContext.DebitAuthorization.Any(x => x.CorrelationID == command.CorrelationID &&
-                        x.RequestType == TxnRequestTypes.NORMAL);
-
-            if (existingRecord)
-            {
-                _logger.LogError("Debit authorization dublicated transaction : {command.CorrelationID}", command.CorrelationID);
-                return GenerateDebitAuthResponse(command, null, TransactionResponseCodes.McrDuplicatedTransaction, EmoneyResponseCodes.McrDuplicatedTransaction);
-            }
-
+            DebitAuthorizationResponse response = new DebitAuthorizationResponse();
             String paycoreResponseCode = "";
             String paycoreResponseMsg = "";
 
             try
             {
+
+                bool existingRecord = _dbContext.DebitAuthorization.Any(x => x.CorrelationID == command.CorrelationID &&
+                          x.RequestType == TxnRequestTypes.NORMAL);
+
+                if (existingRecord)
+                {
+                    _logger.LogError("Debit authorization dublicated transaction : {command.CorrelationID}", command.CorrelationID);
+                    return GenerateDebitAuthResponse(command, null, TransactionResponseCodes.McrDuplicatedTransaction, EmoneyResponseCodes.McrDuplicatedTransaction);
+                }
+
                 DebitAuthorization debitAuthorization = await CreateDebitAuthorizationRecord(command);
+
+                if (command.TransactionType != null && !CheckTxnType(command.TransactionType))
+                {
+                    _logger.LogError("Debit authorization unknown transaction type : {command.TransactionType}", command.TransactionType);
+                    return GenerateDebitAuthResponse(command, null, TransactionResponseCodes.DisallowedCardTransaction, EmoneyResponseCodes.DisallowedCardTransaction7Msg);
+                }
+
+                if (TxnTypes.INQUIRYBALANCE.Equals(command.TransactionType) && !command.FeeList.Any())
+                {
+                    _logger.LogError("Balance inquiry must contain fee list : {command.CorrelationID}", command.CorrelationID);
+                    paycoreResponseMsg = "Validation Error! Balance inquiry must contain fee list";
+                    return GenerateDebitAuthResponse(command, null, TransactionResponseCodes.SystemError96, paycoreResponseMsg);
+                }
 
                 if (!debitAuthorization.IsReturn)
                 {

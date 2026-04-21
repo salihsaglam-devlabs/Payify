@@ -4,347 +4,242 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace LinkPara.Card.Infrastructure.Persistence.Configurations.Reporting;
 
-
-public class IngestionFileOverviewViewConfiguration : IEntityTypeConfiguration<IngestionFileOverviewDto>
+public class ActionRadarViewConfiguration : IEntityTypeConfiguration<ActionRadarDto>
 {
-    public void Configure(EntityTypeBuilder<IngestionFileOverviewDto> builder)
+    public void Configure(EntityTypeBuilder<ActionRadarDto> builder)
     {
         builder.HasNoKey();
-        builder.ToView("vw_ingestion_file_overview", "reporting");
-        builder.Property(x => x.SourceType).HasConversion<string>().HasColumnType("text");
-        builder.Property(x => x.FileType).HasConversion<string>().HasColumnType("text");
-        builder.Property(x => x.ContentType).HasConversion<string>().HasColumnType("text");
-        builder.Property(x => x.FileStatus).HasConversion<string>().HasColumnType("text");
+        builder.ToView("rep_action_radar", "reporting");
         builder.Property(x => x.DataScope).HasConversion<string>().HasColumnType("text");
     }
 }
 
-public class IngestionFileQualityViewConfiguration : IEntityTypeConfiguration<IngestionFileQualityDto>
+public class UnhealthyFilesViewConfiguration : IEntityTypeConfiguration<UnhealthyFileDto>
 {
-    public void Configure(EntityTypeBuilder<IngestionFileQualityDto> builder)
+    public void Configure(EntityTypeBuilder<UnhealthyFileDto> builder)
     {
         builder.HasNoKey();
-        builder.ToView("vw_ingestion_file_quality", "reporting");
-        builder.Property(x => x.FileType).HasConversion<string>().HasColumnType("text");
-        builder.Property(x => x.ContentType).HasConversion<string>().HasColumnType("text");
-        builder.Property(x => x.FileStatus).HasConversion<string>().HasColumnType("text");
+        builder.ToView("rep_unhealthy_files", "reporting");
         builder.Property(x => x.DataScope).HasConversion<string>().HasColumnType("text");
     }
 }
 
-public class IngestionDailySummaryViewConfiguration : IEntityTypeConfiguration<IngestionDailySummaryDto>
+public class StuckPipelineItemsViewConfiguration : IEntityTypeConfiguration<StuckPipelineItemDto>
 {
-    public void Configure(EntityTypeBuilder<IngestionDailySummaryDto> builder)
+    public void Configure(EntityTypeBuilder<StuckPipelineItemDto> builder)
     {
         builder.HasNoKey();
-        builder.ToView("vw_ingestion_daily_summary", "reporting");
-        builder.Property(x => x.ContentType).HasConversion<string>().HasColumnType("text");
-        builder.Property(x => x.FileType).HasConversion<string>().HasColumnType("text");
+        builder.ToView("rep_stuck_pipeline_items", "reporting");
         builder.Property(x => x.DataScope).HasConversion<string>().HasColumnType("text");
     }
 }
 
-public class IngestionNetworkMatrixViewConfiguration : IEntityTypeConfiguration<IngestionNetworkMatrixDto>
+public class ReconFailureCategorizationViewConfiguration : IEntityTypeConfiguration<ReconFailureCategorizationDto>
 {
-    public void Configure(EntityTypeBuilder<IngestionNetworkMatrixDto> builder)
+    public void Configure(EntityTypeBuilder<ReconFailureCategorizationDto> builder)
     {
         builder.HasNoKey();
-        builder.ToView("vw_ingestion_network_matrix", "reporting");
-        builder.Property(x => x.ContentType).HasConversion<string>().HasColumnType("text");
-        builder.Property(x => x.FileType).HasConversion<string>().HasColumnType("text");
+        builder.ToView("rep_recon_failure_categorization", "reporting");
         builder.Property(x => x.DataScope).HasConversion<string>().HasColumnType("text");
     }
 }
 
-public class IngestionExceptionHotspotViewConfiguration : IEntityTypeConfiguration<IngestionExceptionHotspotDto>
+public class ManualReviewPressureViewConfiguration : IEntityTypeConfiguration<ManualReviewPressureDto>
 {
-    public void Configure(EntityTypeBuilder<IngestionExceptionHotspotDto> builder)
+    public void Configure(EntityTypeBuilder<ManualReviewPressureDto> builder)
     {
         builder.HasNoKey();
-        builder.ToView("vw_ingestion_exception_hotspots", "reporting");
-        builder.Property(x => x.SourceType).HasConversion<string>().HasColumnType("text");
-        builder.Property(x => x.FileType).HasConversion<string>().HasColumnType("text");
-        builder.Property(x => x.ContentType).HasConversion<string>().HasColumnType("text");
-        builder.Property(x => x.FileStatus).HasConversion<string>().HasColumnType("text");
-        builder.Property(x => x.SeverityLevel).HasConversion<string>().HasColumnType("text");
+        builder.ToView("rep_manual_review_pressure", "reporting");
         builder.Property(x => x.DataScope).HasConversion<string>().HasColumnType("text");
     }
 }
 
-
-
-public class ReconDailyOverviewViewConfiguration : IEntityTypeConfiguration<ReconDailyOverviewDto>
+public class AlertDeliveryHealthViewConfiguration : IEntityTypeConfiguration<AlertDeliveryHealthDto>
 {
-    public void Configure(EntityTypeBuilder<ReconDailyOverviewDto> builder)
+    public void Configure(EntityTypeBuilder<AlertDeliveryHealthDto> builder)
     {
         builder.HasNoKey();
-        builder.ToView("vw_recon_daily_overview", "reporting");
+        builder.ToView("rep_alert_delivery_health", "reporting");
         builder.Property(x => x.DataScope).HasConversion<string>().HasColumnType("text");
     }
 }
 
-public class ReconOpenItemViewConfiguration : IEntityTypeConfiguration<ReconOpenItemDto>
+public class UnmatchedFinancialExposureViewConfiguration : IEntityTypeConfiguration<UnmatchedFinancialExposureDto>
 {
-    public void Configure(EntityTypeBuilder<ReconOpenItemDto> builder)
+    public void Configure(EntityTypeBuilder<UnmatchedFinancialExposureDto> builder)
     {
         builder.HasNoKey();
-        builder.ToView("vw_recon_open_items", "reporting");
-        builder.Property(x => x.OperationStatus).HasConversion<string>().HasColumnType("text");
-        builder.Property(x => x.EvaluationStatus).HasConversion<string>().HasColumnType("text");
-    }
-}
-
-public class ReconOpenItemAgingViewConfiguration : IEntityTypeConfiguration<ReconOpenItemAgingDto>
-{
-    public void Configure(EntityTypeBuilder<ReconOpenItemAgingDto> builder)
-    {
-        builder.HasNoKey();
-        builder.ToView("vw_recon_open_item_aging", "reporting");
-    }
-}
-
-public class ReconManualReviewQueueViewConfiguration : IEntityTypeConfiguration<ReconManualReviewQueueDto>
-{
-    public void Configure(EntityTypeBuilder<ReconManualReviewQueueDto> builder)
-    {
-        builder.HasNoKey();
-        builder.ToView("vw_recon_manual_review_queue", "reporting");
-        builder.Property(x => x.Decision).HasConversion<string>().HasColumnType("text");
-        builder.Property(x => x.ExpirationAction).HasConversion<string>().HasColumnType("text");
-        builder.Property(x => x.ExpirationFlowAction).HasConversion<string>().HasColumnType("text");
-        builder.Property(x => x.OperationStatus).HasConversion<string>().HasColumnType("text");
-        builder.Property(x => x.UrgencyLevel).HasConversion<string>().HasColumnType("text");
-        builder.Property(x => x.EvaluationStatus).HasConversion<string>().HasColumnType("text");
-        builder.Property(x => x.FileSourceType).HasConversion<string>().HasColumnType("text");
-        builder.Property(x => x.FileType).HasConversion<string>().HasColumnType("text");
-        builder.Property(x => x.ContentType).HasConversion<string>().HasColumnType("text");
-        builder.Property(x => x.FileStatus).HasConversion<string>().HasColumnType("text");
-        builder.Property(x => x.LineStatus).HasConversion<string>().HasColumnType("text");
-        builder.Property(x => x.LineReconciliationStatus).HasConversion<string>().HasColumnType("text");
-        builder.Property(x => x.LineDuplicateStatus).HasConversion<string>().HasColumnType("text");
-        
-        builder.Property(x => x.LineNumber).HasColumnType("integer");
-        builder.Property(x => x.CardTransactionDate).HasColumnType("integer");
-        builder.Property(x => x.CardTransactionTime).HasColumnType("integer");
-        builder.Property(x => x.CardOriginalCurrency).HasColumnType("integer");
-        builder.Property(x => x.ClearingTxnDate).HasColumnType("integer");
-        builder.Property(x => x.ClearingTxnTime).HasColumnType("integer");
-        builder.Property(x => x.ClearingSourceCurrency).HasColumnType("integer");
-        builder.Property(x => x.LastAttemptNumber).HasColumnType("integer");
-        builder.Property(x => x.OperationRetryCount).HasColumnType("integer");
-        builder.Property(x => x.OperationMaxRetries).HasColumnType("integer");
-        builder.Property(x => x.EvaluationOperationCount).HasColumnType("integer");
-    }
-}
-
-public class ReconAlertSummaryViewConfiguration : IEntityTypeConfiguration<ReconAlertSummaryDto>
-{
-    public void Configure(EntityTypeBuilder<ReconAlertSummaryDto> builder)
-    {
-        builder.HasNoKey();
-        builder.ToView("vw_recon_alert_summary", "reporting");
-        builder.Property(x => x.AlertStatus).HasConversion<string>().HasColumnType("text");
+        builder.ToView("rep_unmatched_financial_exposure", "reporting");
         builder.Property(x => x.DataScope).HasConversion<string>().HasColumnType("text");
     }
 }
 
-
-
-public class ReconCardContentDailyViewConfiguration : IEntityTypeConfiguration<ReconCardContentDailyDto>
+public class CardClearingImbalanceViewConfiguration : IEntityTypeConfiguration<CardClearingImbalanceDto>
 {
-    public void Configure(EntityTypeBuilder<ReconCardContentDailyDto> builder)
+    public void Configure(EntityTypeBuilder<CardClearingImbalanceDto> builder)
     {
         builder.HasNoKey();
-        builder.ToView("vw_recon_live_card_content_daily", "reporting");
-        builder.Property(x => x.Network).HasConversion<string>().HasColumnType("text");
-        builder.Property(x => x.LineStatus).HasConversion<string>().HasColumnType("text");
-        builder.Property(x => x.ReconciliationStatus).HasConversion<string>().HasColumnType("text");
-        builder.Property(x => x.DataScope).HasConversion<string>().HasColumnType("text");
-        
-        builder.Property(x => x.OriginalCurrency).HasColumnType("integer");
-    }
-}
-
-public class ReconClearingContentDailyViewConfiguration : IEntityTypeConfiguration<ReconClearingContentDailyDto>
-{
-    public void Configure(EntityTypeBuilder<ReconClearingContentDailyDto> builder)
-    {
-        builder.HasNoKey();
-        builder.ToView("vw_recon_live_clearing_content_daily", "reporting");
-        builder.Property(x => x.Network).HasConversion<string>().HasColumnType("text");
-        builder.Property(x => x.LineStatus).HasConversion<string>().HasColumnType("text");
-        builder.Property(x => x.ReconciliationStatus).HasConversion<string>().HasColumnType("text");
-        builder.Property(x => x.DataScope).HasConversion<string>().HasColumnType("text");
-        
-        builder.Property(x => x.SourceCurrency).HasColumnType("integer");
-    }
-}
-
-public class ReconContentDailyViewConfiguration : IEntityTypeConfiguration<ReconContentDailyDto>
-{
-    public void Configure(EntityTypeBuilder<ReconContentDailyDto> builder)
-    {
-        builder.HasNoKey();
-        builder.ToView("vw_recon_content_daily", "reporting");
-        builder.Property(x => x.Network).HasConversion<string>().HasColumnType("text");
-        builder.Property(x => x.LineStatus).HasConversion<string>().HasColumnType("text");
-        builder.Property(x => x.ReconciliationStatus).HasConversion<string>().HasColumnType("text");
-        builder.Property(x => x.DataScope).HasConversion<string>().HasColumnType("text");
-        builder.Property(x => x.Side).HasConversion<string>().HasColumnType("text");
-    }
-}
-
-public class ReconClearingControlStatAnalysisViewConfiguration : IEntityTypeConfiguration<ReconClearingControlStatAnalysisDto>
-{
-    public void Configure(EntityTypeBuilder<ReconClearingControlStatAnalysisDto> builder)
-    {
-        builder.HasNoKey();
-        builder.ToView("vw_recon_clearing_controlstat_analysis", "reporting");
-        builder.Property(x => x.Network).HasConversion<string>().HasColumnType("text");
-        builder.Property(x => x.LineStatus).HasConversion<string>().HasColumnType("text");
+        builder.ToView("rep_card_clearing_imbalance", "reporting");
         builder.Property(x => x.DataScope).HasConversion<string>().HasColumnType("text");
     }
 }
 
-public class ReconFinancialSummaryViewConfiguration : IEntityTypeConfiguration<ReconFinancialSummaryDto>
+public class ReconciliationQualityScoreViewConfiguration : IEntityTypeConfiguration<ReconciliationQualityScoreDto>
 {
-    public void Configure(EntityTypeBuilder<ReconFinancialSummaryDto> builder)
+    public void Configure(EntityTypeBuilder<ReconciliationQualityScoreDto> builder)
     {
         builder.HasNoKey();
-        builder.ToView("vw_recon_financial_summary", "reporting");
-        builder.Property(x => x.Network).HasConversion<string>().HasColumnType("text");
-        builder.Property(x => x.LineStatus).HasConversion<string>().HasColumnType("text");
-        builder.Property(x => x.DataScope).HasConversion<string>().HasColumnType("text");
-        
-        builder.Property(x => x.OriginalCurrency).HasColumnType("integer");
-    }
-}
-
-public class ReconResponseStatusAnalysisViewConfiguration : IEntityTypeConfiguration<ReconResponseStatusAnalysisDto>
-{
-    public void Configure(EntityTypeBuilder<ReconResponseStatusAnalysisDto> builder)
-    {
-        builder.HasNoKey();
-        builder.ToView("vw_recon_response_status_analysis", "reporting");
-        builder.Property(x => x.Network).HasConversion<string>().HasColumnType("text");
-        builder.Property(x => x.LineStatus).HasConversion<string>().HasColumnType("text");
-        builder.Property(x => x.ReconciliationStatus).HasConversion<string>().HasColumnType("text");
+        builder.ToView("rep_reconciliation_quality_score", "reporting");
         builder.Property(x => x.DataScope).HasConversion<string>().HasColumnType("text");
     }
 }
 
-
-
-public class ArchiveRunOverviewViewConfiguration : IEntityTypeConfiguration<ArchiveRunOverviewDto>
+public class MisleadingSuccessCasesViewConfiguration : IEntityTypeConfiguration<MisleadingSuccessCaseDto>
 {
-    public void Configure(EntityTypeBuilder<ArchiveRunOverviewDto> builder)
+    public void Configure(EntityTypeBuilder<MisleadingSuccessCaseDto> builder)
     {
         builder.HasNoKey();
-        builder.ToView("vw_archive_run_overview", "reporting");
-        builder.Property(x => x.FileType).HasConversion<string>().HasColumnType("text");
-        builder.Property(x => x.ContentType).HasConversion<string>().HasColumnType("text");
-    }
-}
-
-public class ArchiveEligibilityViewConfiguration : IEntityTypeConfiguration<ArchiveEligibilityDto>
-{
-    public void Configure(EntityTypeBuilder<ArchiveEligibilityDto> builder)
-    {
-        builder.HasNoKey();
-        builder.ToView("vw_archive_eligibility", "reporting");
-        builder.Property(x => x.FileType).HasConversion<string>().HasColumnType("text");
-        builder.Property(x => x.ContentType).HasConversion<string>().HasColumnType("text");
-        builder.Property(x => x.FileStatus).HasConversion<string>().HasColumnType("text");
-        builder.Property(x => x.ArchiveEligibilityStatus).HasConversion<string>().HasColumnType("text");
-    }
-}
-
-public class ArchiveBacklogTrendViewConfiguration : IEntityTypeConfiguration<ArchiveBacklogTrendDto>
-{
-    public void Configure(EntityTypeBuilder<ArchiveBacklogTrendDto> builder)
-    {
-        builder.HasNoKey();
-        builder.ToView("vw_archive_backlog_trend", "reporting");
-    }
-}
-
-public class ArchiveRetentionSnapshotViewConfiguration : IEntityTypeConfiguration<ArchiveRetentionSnapshotDto>
-{
-    public void Configure(EntityTypeBuilder<ArchiveRetentionSnapshotDto> builder)
-    {
-        builder.HasNoKey();
-        builder.ToView("vw_archive_retention_snapshot", "reporting");
-    }
-}
-
-
-
-public class FileReconSummaryViewConfiguration : IEntityTypeConfiguration<FileReconSummaryDto>
-{
-    public void Configure(EntityTypeBuilder<FileReconSummaryDto> builder)
-    {
-        builder.HasNoKey();
-        builder.ToView("vw_file_recon_summary", "reporting");
-        builder.Property(x => x.FileType).HasConversion<string>().HasColumnType("text");
-        builder.Property(x => x.ContentType).HasConversion<string>().HasColumnType("text");
-        builder.Property(x => x.FileStatus).HasConversion<string>().HasColumnType("text");
+        builder.ToView("rep_misleading_success_cases", "reporting");
         builder.Property(x => x.DataScope).HasConversion<string>().HasColumnType("text");
     }
 }
 
-public class ReconMatchRateTrendViewConfiguration : IEntityTypeConfiguration<ReconMatchRateTrendDto>
+public class ArchivePipelineHealthViewConfiguration : IEntityTypeConfiguration<ArchivePipelineHealthDto>
 {
-    public void Configure(EntityTypeBuilder<ReconMatchRateTrendDto> builder)
+    public void Configure(EntityTypeBuilder<ArchivePipelineHealthDto> builder)
     {
         builder.HasNoKey();
-        builder.ToView("vw_recon_match_rate_trend", "reporting");
-        builder.Property(x => x.Network).HasConversion<string>().HasColumnType("text");
-        builder.Property(x => x.DataScope).HasConversion<string>().HasColumnType("text");
-        builder.Property(x => x.Side).HasConversion<string>().HasColumnType("text");
-    }
-}
-
-public class ReconGapAnalysisViewConfiguration : IEntityTypeConfiguration<ReconGapAnalysisDto>
-{
-    public void Configure(EntityTypeBuilder<ReconGapAnalysisDto> builder)
-    {
-        builder.HasNoKey();
-        builder.ToView("vw_recon_gap_analysis", "reporting");
-        builder.Property(x => x.Network).HasConversion<string>().HasColumnType("text");
+        builder.ToView("rep_archive_pipeline_health", "reporting");
         builder.Property(x => x.DataScope).HasConversion<string>().HasColumnType("text");
     }
 }
 
-public class UnmatchedTransactionAgingViewConfiguration : IEntityTypeConfiguration<UnmatchedTransactionAgingDto>
+public class DailyTransactionVolumeViewConfiguration : IEntityTypeConfiguration<DailyTransactionVolumeDto>
 {
-    public void Configure(EntityTypeBuilder<UnmatchedTransactionAgingDto> builder)
+    public void Configure(EntityTypeBuilder<DailyTransactionVolumeDto> builder)
     {
         builder.HasNoKey();
-        builder.ToView("vw_unmatched_transaction_aging", "reporting");
-        builder.Property(x => x.Network).HasConversion<string>().HasColumnType("text");
-        builder.Property(x => x.DataScope).HasConversion<string>().HasColumnType("text");
-        builder.Property(x => x.Side).HasConversion<string>().HasColumnType("text");
-    }
-}
-
-public class NetworkReconScorecardViewConfiguration : IEntityTypeConfiguration<NetworkReconScorecardDto>
-{
-    public void Configure(EntityTypeBuilder<NetworkReconScorecardDto> builder)
-    {
-        builder.HasNoKey();
-        builder.ToView("vw_network_recon_scorecard", "reporting");
-        builder.Property(x => x.Network).HasConversion<string>().HasColumnType("text");
+        builder.ToView("rep_daily_transaction_volume", "reporting");
         builder.Property(x => x.DataScope).HasConversion<string>().HasColumnType("text");
     }
 }
 
-
-public class CardClearingCorrelationViewConfiguration : IEntityTypeConfiguration<CardClearingCorrelationDto>
+public class MccRevenueConcentrationViewConfiguration : IEntityTypeConfiguration<MccRevenueConcentrationDto>
 {
-    public void Configure(EntityTypeBuilder<CardClearingCorrelationDto> builder)
+    public void Configure(EntityTypeBuilder<MccRevenueConcentrationDto> builder)
     {
         builder.HasNoKey();
-        builder.ToView("vw_card_clearing_correlation", "reporting");
+        builder.ToView("rep_mcc_revenue_concentration", "reporting");
         builder.Property(x => x.DataScope).HasConversion<string>().HasColumnType("text");
     }
 }
+
+public class MerchantRiskHotspotsViewConfiguration : IEntityTypeConfiguration<MerchantRiskHotspotDto>
+{
+    public void Configure(EntityTypeBuilder<MerchantRiskHotspotDto> builder)
+    {
+        builder.HasNoKey();
+        builder.ToView("rep_merchant_risk_hotspots", "reporting");
+        builder.Property(x => x.DataScope).HasConversion<string>().HasColumnType("text");
+    }
+}
+
+public class CountryCrossBorderExposureViewConfiguration : IEntityTypeConfiguration<CountryCrossBorderExposureDto>
+{
+    public void Configure(EntityTypeBuilder<CountryCrossBorderExposureDto> builder)
+    {
+        builder.HasNoKey();
+        builder.ToView("rep_country_cross_border_exposure", "reporting");
+        builder.Property(x => x.DataScope).HasConversion<string>().HasColumnType("text");
+    }
+}
+
+public class ResponseCodeDeclineHealthViewConfiguration : IEntityTypeConfiguration<ResponseCodeDeclineHealthDto>
+{
+    public void Configure(EntityTypeBuilder<ResponseCodeDeclineHealthDto> builder)
+    {
+        builder.HasNoKey();
+        builder.ToView("rep_response_code_decline_health", "reporting");
+        builder.Property(x => x.DataScope).HasConversion<string>().HasColumnType("text");
+    }
+}
+
+public class SettlementLagAnalysisViewConfiguration : IEntityTypeConfiguration<SettlementLagAnalysisDto>
+{
+    public void Configure(EntityTypeBuilder<SettlementLagAnalysisDto> builder)
+    {
+        builder.HasNoKey();
+        builder.ToView("rep_settlement_lag_analysis", "reporting");
+        builder.Property(x => x.DataScope).HasConversion<string>().HasColumnType("text");
+    }
+}
+
+public class CurrencyFxDriftViewConfiguration : IEntityTypeConfiguration<CurrencyFxDriftDto>
+{
+    public void Configure(EntityTypeBuilder<CurrencyFxDriftDto> builder)
+    {
+        builder.HasNoKey();
+        builder.ToView("rep_currency_fx_drift", "reporting");
+        builder.Property(x => x.DataScope).HasConversion<string>().HasColumnType("text");
+    }
+}
+
+public class InstallmentPortfolioSummaryViewConfiguration : IEntityTypeConfiguration<InstallmentPortfolioSummaryDto>
+{
+    public void Configure(EntityTypeBuilder<InstallmentPortfolioSummaryDto> builder)
+    {
+        builder.HasNoKey();
+        builder.ToView("rep_installment_portfolio_summary", "reporting");
+        builder.Property(x => x.DataScope).HasConversion<string>().HasColumnType("text");
+    }
+}
+
+public class LoyaltyPointsEconomyViewConfiguration : IEntityTypeConfiguration<LoyaltyPointsEconomyDto>
+{
+    public void Configure(EntityTypeBuilder<LoyaltyPointsEconomyDto> builder)
+    {
+        builder.HasNoKey();
+        builder.ToView("rep_loyalty_points_economy", "reporting");
+        builder.Property(x => x.DataScope).HasConversion<string>().HasColumnType("text");
+    }
+}
+
+public class ClearingDisputeSummaryViewConfiguration : IEntityTypeConfiguration<ClearingDisputeSummaryDto>
+{
+    public void Configure(EntityTypeBuilder<ClearingDisputeSummaryDto> builder)
+    {
+        builder.HasNoKey();
+        builder.ToView("rep_clearing_dispute_summary", "reporting");
+        builder.Property(x => x.DataScope).HasConversion<string>().HasColumnType("text");
+    }
+}
+
+public class ClearingIoImbalanceViewConfiguration : IEntityTypeConfiguration<ClearingIoImbalanceDto>
+{
+    public void Configure(EntityTypeBuilder<ClearingIoImbalanceDto> builder)
+    {
+        builder.HasNoKey();
+        builder.ToView("rep_clearing_io_imbalance", "reporting");
+        builder.Property(x => x.DataScope).HasConversion<string>().HasColumnType("text");
+    }
+}
+
+public class HighValueUnmatchedTransactionsViewConfiguration : IEntityTypeConfiguration<HighValueUnmatchedTransactionDto>
+{
+    public void Configure(EntityTypeBuilder<HighValueUnmatchedTransactionDto> builder)
+    {
+        builder.HasNoKey();
+        builder.ToView("rep_high_value_unmatched_transactions", "reporting");
+        builder.Property(x => x.DataScope).HasConversion<string>().HasColumnType("text");
+    }
+}
+
+public class ReportingDocumentationViewConfiguration : IEntityTypeConfiguration<ReportingDocumentationDto>
+{
+    public void Configure(EntityTypeBuilder<ReportingDocumentationDto> builder)
+    {
+        builder.HasNoKey();
+        builder.ToView("rep_documentation", "reporting");
+    }
+}
+

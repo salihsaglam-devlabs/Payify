@@ -1,5 +1,4 @@
 #nullable enable
-using System.Text;
 using LinkPara.Card.Application.Commons.Extensions;
 using LinkPara.SharedModels.Exceptions;
 using Microsoft.Extensions.Localization;

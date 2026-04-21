@@ -5,6 +5,7 @@ using LinkPara.Card.Infrastructure.Services.PaycoreServices.Models;
 using LinkPara.HttpProviders.Vault;
 using Microsoft.Extensions.Configuration;
 using System.Security.Cryptography;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace LinkPara.Card.Application.Features.PaycoreServices.CardPinServices.Services;
 
@@ -23,7 +24,7 @@ public class PinBlockService : IPinBlockService
         _paycoreSettings.VaultSettings =
             _vaultClient.GetSecretValue<PaycoreVaultSettings>("CardSecrets", "PaycoreSettings");
     }
-    public async Task<SetCardBinResponse> GenerateEncryptedPinBlock(string clearPin, string clearCardNumber)
+    public async Task<EncDecPinblockResponse> GenerateEncryptedPinBlock(string clearPin, string clearCardNumber)
     {
         Validate(clearPin, clearCardNumber);
 
@@ -51,46 +52,59 @@ public class PinBlockService : IPinBlockService
         using ICryptoTransform encryptor = tripleDes.CreateEncryptor();
         byte[] encryptedPinBlock = encryptor.TransformFinalBlock(clearPinBlock, 0, clearPinBlock.Length);
 
-        return new SetCardBinResponse
+        return new EncDecPinblockResponse
         {
             IsSuccess = true,
             Data = HexHelper.BytesToHex(encryptedPinBlock)
         };
     }
-    public async Task<SetCardBinResponse> DecryptEncryptedPinBlock(string encryptedBlock, string clearCardNumber)
+    public async Task<EncDecPinblockResponse> DecryptEncryptedPinBlock(string encryptedBlock, string clearCardNumber)
     {
-        ValidateEncryptedBlock(encryptedBlock, clearCardNumber);
-
-        byte[] encryptedBytes = HexHelper.HexToBytes(encryptedBlock);
-
-        byte[] zpkBytes = HexHelper.HexToBytes(_paycoreSettings.VaultSettings.ClearZpkHex);
-        byte[] normalizedKey = NormalizeKey(zpkBytes);
-
-        using TripleDES tripleDes = TripleDES.Create();
-        tripleDes.Mode = CipherMode.ECB;
-        tripleDes.Padding = PaddingMode.None;
-        tripleDes.Key = normalizedKey;
-
-        using ICryptoTransform decryptor = tripleDes.CreateDecryptor();
-        byte[] decryptedBlock = decryptor.TransformFinalBlock(encryptedBytes, 0, encryptedBytes.Length);
-
-        string pan12 = clearCardNumber.Substring(clearCardNumber.Length - 13, 12);
-        string panField = $"0000{pan12}";
-        byte[] panBytes = HexHelper.HexToBytes(panField);
-
-        byte[] clearDataBlock = new byte[8];
-        for (int i = 0; i < 8; i++)
+        try
         {
-            clearDataBlock[i] = (byte)(decryptedBlock[i] ^ panBytes[i]);
+            ValidateEncryptedBlock(encryptedBlock, clearCardNumber);
+
+            byte[] encryptedBytes = HexHelper.HexToBytes(encryptedBlock);
+
+            byte[] zpkBytes = HexHelper.HexToBytes(_paycoreSettings.VaultSettings.ClearZpkHex);
+            byte[] normalizedKey = NormalizeKey(zpkBytes);
+
+            using TripleDES tripleDes = TripleDES.Create();
+            tripleDes.Mode = CipherMode.ECB;
+            tripleDes.Padding = PaddingMode.None;
+            tripleDes.Key = normalizedKey;
+
+            using ICryptoTransform decryptor = tripleDes.CreateDecryptor();
+            byte[] decryptedBlock = decryptor.TransformFinalBlock(encryptedBytes, 0, encryptedBytes.Length);
+
+            string pan12 = clearCardNumber.Substring(clearCardNumber.Length - 13, 12);
+            string panField = $"0000{pan12}";
+            byte[] panBytes = HexHelper.HexToBytes(panField);
+
+            byte[] clearDataBlock = new byte[8];
+            for (int i = 0; i < 8; i++)
+            {
+                clearDataBlock[i] = (byte)(decryptedBlock[i] ^ panBytes[i]);
+            }
+
+            string clearDataHex = HexHelper.BytesToHex(clearDataBlock);
+
+            var data = ParseClearBlock(clearDataHex);
+
+            return new EncDecPinblockResponse
+            {
+                IsSuccess = true,
+                Data = data
+            };
         }
-
-        string clearDataHex = HexHelper.BytesToHex(clearDataBlock);
-
-        return new SetCardBinResponse
-        {
-            IsSuccess = true,
-            Data = ParseClearBlock(clearDataHex)
-        };
+        catch(Exception ex) {
+            return new EncDecPinblockResponse
+            {
+                IsSuccess = false,
+                Data = null,
+                Description = ex.Message               
+            };
+        }
     }
     private static string ParseClearBlock(string clearDataHex)
     {

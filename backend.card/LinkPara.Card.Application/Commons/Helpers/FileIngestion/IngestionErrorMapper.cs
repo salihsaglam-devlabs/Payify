@@ -1,5 +1,4 @@
 #nullable enable
-using System.Text;
 using LinkPara.Card.Application.Commons.Extensions;
 using LinkPara.Card.Application.Commons.Interfaces.FileIngestion;
 using LinkPara.SharedModels.Exceptions;

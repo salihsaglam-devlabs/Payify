@@ -40,7 +40,7 @@ public class PaycoreSecurityService : IPaycoreSecurityService
         _paycoreCardService = paycoreCardService;
     }
 
-    public async Task<SetCardBinResponse> SetCardPinAsync(SetCardPinCommand command)
+    public async Task<EncDecPinblockResponse> SetCardPinAsync(SetCardPinCommand command)
     {
         try
         {
@@ -53,7 +53,7 @@ public class PaycoreSecurityService : IPaycoreSecurityService
             var clearCardNo = clearCardResponse.CrdClearCardInfo.First().CardNo;
             if (string.IsNullOrWhiteSpace(clearCardNo))
             {
-                return new SetCardBinResponse
+                return new EncDecPinblockResponse
                 {
                     IsSuccess = false,
                     Description = ResponseDescription.CLEAR_CARD_NO_EMPTY,
@@ -79,7 +79,7 @@ public class PaycoreSecurityService : IPaycoreSecurityService
 
             if (!response.IsSuccess)
             {
-                return new SetCardBinResponse
+                return new EncDecPinblockResponse
                 {
                     IsSuccess = false,
                     Description = response.exception.message,
@@ -88,7 +88,7 @@ public class PaycoreSecurityService : IPaycoreSecurityService
                 };
             }
 
-            return new SetCardBinResponse
+            return new EncDecPinblockResponse
             {
                 IsSuccess = true,
                 Description = "Success",
@@ -98,7 +98,7 @@ public class PaycoreSecurityService : IPaycoreSecurityService
         }
         catch (Exception ex) 
         {
-            return new SetCardBinResponse
+            return new EncDecPinblockResponse
             {
                 IsSuccess = false,
                 Description = ex.Message,

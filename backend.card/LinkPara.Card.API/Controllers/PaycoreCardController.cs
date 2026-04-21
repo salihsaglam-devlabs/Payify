@@ -4,9 +4,10 @@ using LinkPara.Card.Application.Features.PaycoreServices.CardServices.Commands.C
 using LinkPara.Card.Application.Features.PaycoreServices.CardServices.Commands.UpdateCardAuthorizations;
 using LinkPara.Card.Application.Features.PaycoreServices.CardServices.Commands.UpdateCardStatus;
 using LinkPara.Card.Application.Features.PaycoreServices.CardServices.Queries.GetCardAuthorization;
+using LinkPara.Card.Application.Features.PaycoreServices.CardServices.Queries.GetCardEmbossStatus;
 using LinkPara.Card.Application.Features.PaycoreServices.CardServices.Queries.GetCardInformation;
-using LinkPara.Card.Application.Features.PaycoreServices.CardServices.Queries.GetCardTransactions;
 using LinkPara.Card.Application.Features.PaycoreServices.CardServices.Queries.GetCardSensitiveData;
+using LinkPara.Card.Application.Features.PaycoreServices.CardServices.Queries.GetCardTransactions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -81,7 +82,7 @@ namespace LinkPara.Card.API.Controllers
         /// <returns></returns>
         [Authorize(Policy = "PaycoreCard:ReadAll")]
         [HttpGet("transactions")]
-        public async Task<GetCardTransactionsResponse> GetCardTransactionsAsync(GetCardTransactionsQuery query)
+        public async Task<GetCardTransactionsResponse> GetCardTransactionsAsync([FromQuery] GetCardTransactionsQuery query)
         {
             return await Mediator.Send(query);
         }
@@ -142,6 +143,17 @@ namespace LinkPara.Card.API.Controllers
         [Authorize(Policy = "PaycoreCard:Read")]
         [HttpGet("card-status")]
         public async Task<GetCardStatusResponse> GetCardStatusAsync([FromQuery] GetCardStatusQuery query)
+        {
+            return await Mediator.Send(query);
+        }
+        /// <summary>
+        /// Gets Card Emboss Status
+        /// </summary>
+        /// <param name="query"></param>
+        /// <returns></returns>
+        [AllowAnonymous]
+        [HttpGet("card-emboss-status")]
+        public async Task<GetCardEmbossStatusResponse> GetCardEmbossStatusAsync([FromQuery] GetCardEmbossStatusQuery query)
         {
             return await Mediator.Send(query);
         }

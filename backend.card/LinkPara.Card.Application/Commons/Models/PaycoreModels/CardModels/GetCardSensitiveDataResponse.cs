@@ -2,7 +2,8 @@
 
 public class GetCardSensitiveDataResponse : PaycoreResponse
 {
-    public CrdCardSensitiveInfo[] CrdCardInfo { get; set; }
+    public CrdCardSensitiveInfo CrdCardInfo { get; set; }
+
 }
 
 

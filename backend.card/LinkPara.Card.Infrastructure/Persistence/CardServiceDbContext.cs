@@ -56,34 +56,31 @@ public class CardDbContext : BaseDbContext
     public DbSet<ArchiveReconciliationOperationExecution> ArchiveReconciliationOperationExecutions { get; set; }
     public DbSet<ArchiveReconciliationAlert> ArchiveReconciliationAlerts { get; set; }
     
-    public DbSet<IngestionFileOverviewDto> IngestionFileOverview { get; set; }
-    public DbSet<IngestionFileQualityDto> IngestionFileQuality { get; set; }
-    public DbSet<IngestionDailySummaryDto> IngestionDailySummary { get; set; }
-    public DbSet<IngestionNetworkMatrixDto> IngestionNetworkMatrix { get; set; }
-    public DbSet<IngestionExceptionHotspotDto> IngestionExceptionHotspot { get; set; }
-    public DbSet<ReconDailyOverviewDto> ReconDailyOverview { get; set; }
-    public DbSet<ReconOpenItemDto> ReconOpenItem { get; set; }
-    public DbSet<ReconOpenItemAgingDto> ReconOpenItemAging { get; set; }
-    public DbSet<ReconManualReviewQueueDto> ReconManualReviewQueue { get; set; }
-    public DbSet<ReconAlertSummaryDto> ReconAlertSummary { get; set; }
-    public DbSet<ReconCardContentDailyDto> ReconCardContentDaily { get; set; }
-    public DbSet<ReconClearingContentDailyDto> ReconClearingContentDaily { get; set; }
-    public DbSet<ReconContentDailyDto> ReconContentDaily { get; set; }
-    public DbSet<ReconClearingControlStatAnalysisDto> ReconClearingControlStatAnalysis { get; set; }
-    public DbSet<ReconFinancialSummaryDto> ReconFinancialSummary { get; set; }
-    public DbSet<ReconResponseStatusAnalysisDto> ReconResponseStatusAnalysis { get; set; }
-    public DbSet<ArchiveRunOverviewDto> ArchiveRunOverview { get; set; }
-    public DbSet<ArchiveEligibilityDto> ArchiveEligibility { get; set; }
-    public DbSet<ArchiveBacklogTrendDto> ArchiveBacklogTrend { get; set; }
-    public DbSet<ArchiveRetentionSnapshotDto> ArchiveRetentionSnapshot { get; set; }
-    public DbSet<FileReconSummaryDto> FileReconSummary { get; set; }
-    public DbSet<ReconMatchRateTrendDto> ReconMatchRateTrend { get; set; }
-    public DbSet<ReconGapAnalysisDto> ReconGapAnalysis { get; set; }
-    public DbSet<UnmatchedTransactionAgingDto> UnmatchedTransactionAging { get; set; }
-    public DbSet<NetworkReconScorecardDto> NetworkReconScorecard { get; set; }
-    public DbSet<ReconCardContentDailyDto> ReconArchiveCardContentDaily { get; set; }
-    public DbSet<ReconClearingContentDailyDto> ReconArchiveClearingContentDaily { get; set; }
-    public DbSet<CardClearingCorrelationDto> CardClearingCorrelation { get; set; }
+    public DbSet<DailyTransactionVolumeDto> DailyTransactionVolume { get; set; }
+    public DbSet<MccRevenueConcentrationDto> MccRevenueConcentration { get; set; }
+    public DbSet<MerchantRiskHotspotDto> MerchantRiskHotspots { get; set; }
+    public DbSet<CountryCrossBorderExposureDto> CountryCrossBorderExposure { get; set; }
+    public DbSet<ResponseCodeDeclineHealthDto> ResponseCodeDeclineHealth { get; set; }
+    public DbSet<SettlementLagAnalysisDto> SettlementLagAnalysis { get; set; }
+    public DbSet<CurrencyFxDriftDto> CurrencyFxDrift { get; set; }
+    public DbSet<InstallmentPortfolioSummaryDto> InstallmentPortfolioSummary { get; set; }
+    public DbSet<LoyaltyPointsEconomyDto> LoyaltyPointsEconomy { get; set; }
+    public DbSet<ClearingDisputeSummaryDto> ClearingDisputeSummary { get; set; }
+    public DbSet<ClearingIoImbalanceDto> ClearingIoImbalance { get; set; }
+    public DbSet<HighValueUnmatchedTransactionDto> HighValueUnmatchedTransactions { get; set; }
+    
+    public DbSet<ActionRadarDto> ActionRadar { get; set; }
+    public DbSet<UnhealthyFileDto> UnhealthyFiles { get; set; }
+    public DbSet<StuckPipelineItemDto> StuckPipelineItems { get; set; }
+    public DbSet<ReconFailureCategorizationDto> ReconFailureCategorization { get; set; }
+    public DbSet<ManualReviewPressureDto> ManualReviewPressure { get; set; }
+    public DbSet<AlertDeliveryHealthDto> AlertDeliveryHealth { get; set; }
+    public DbSet<UnmatchedFinancialExposureDto> UnmatchedFinancialExposure { get; set; }
+    public DbSet<CardClearingImbalanceDto> CardClearingImbalance { get; set; }
+    public DbSet<ReconciliationQualityScoreDto> ReconciliationQualityScore { get; set; }
+    public DbSet<MisleadingSuccessCaseDto> MisleadingSuccessCases { get; set; }
+    public DbSet<ArchivePipelineHealthDto> ArchivePipelineHealth { get; set; }
+    public DbSet<ReportingDocumentationDto> ReportingDocumentation { get; set; }
 
     public CardDbContext(DbContextOptions options,
         IContextProvider contextProvider,
@@ -157,33 +154,31 @@ public class CardDbContext : BaseDbContext
         builder.Entity<ArchiveReconciliationReview>().ToTable("reconciliation_review", archiveSchema);
         builder.Entity<ArchiveReconciliationOperationExecution>().ToTable("reconciliation_operation_execution", archiveSchema);
         builder.Entity<ArchiveReconciliationAlert>().ToTable("reconciliation_alert", archiveSchema);
-        
-        builder.Entity<IngestionFileOverviewDto>().ToView("vw_ingestion_file_overview", reportingSchema).HasNoKey();
-        builder.Entity<IngestionFileQualityDto>().ToView("vw_ingestion_file_quality", reportingSchema).HasNoKey();
-        builder.Entity<IngestionDailySummaryDto>().ToView("vw_ingestion_daily_summary", reportingSchema).HasNoKey();
-        builder.Entity<IngestionNetworkMatrixDto>().ToView("vw_ingestion_network_matrix", reportingSchema).HasNoKey();
-        builder.Entity<IngestionExceptionHotspotDto>().ToView("vw_ingestion_exception_hotspots", reportingSchema).HasNoKey();
-        builder.Entity<ReconDailyOverviewDto>().ToView("vw_recon_daily_overview", reportingSchema).HasNoKey();
-        builder.Entity<ReconOpenItemDto>().ToView("vw_recon_open_items", reportingSchema).HasNoKey();
-        builder.Entity<ReconOpenItemAgingDto>().ToView("vw_recon_open_item_aging", reportingSchema).HasNoKey();
-        builder.Entity<ReconManualReviewQueueDto>().ToView("vw_recon_manual_review_queue", reportingSchema).HasNoKey();
-        builder.Entity<ReconAlertSummaryDto>().ToView("vw_recon_alert_summary", reportingSchema).HasNoKey();
-        builder.Entity<ReconCardContentDailyDto>().ToView("vw_recon_live_card_content_daily", reportingSchema).HasNoKey();
-        builder.Entity<ReconClearingContentDailyDto>().ToView("vw_recon_live_clearing_content_daily", reportingSchema).HasNoKey();
-        builder.Entity<ReconContentDailyDto>().ToView("vw_recon_content_daily", reportingSchema).HasNoKey();
-        builder.Entity<ReconClearingControlStatAnalysisDto>().ToView("vw_recon_clearing_controlstat_analysis", reportingSchema).HasNoKey();
-        builder.Entity<ReconFinancialSummaryDto>().ToView("vw_recon_financial_summary", reportingSchema).HasNoKey();
-        builder.Entity<ReconResponseStatusAnalysisDto>().ToView("vw_recon_response_status_analysis", reportingSchema).HasNoKey();
-        builder.Entity<ArchiveRunOverviewDto>().ToView("vw_archive_run_overview", reportingSchema).HasNoKey();
-        builder.Entity<ArchiveEligibilityDto>().ToView("vw_archive_eligibility", reportingSchema).HasNoKey();
-        builder.Entity<ArchiveBacklogTrendDto>().ToView("vw_archive_backlog_trend", reportingSchema).HasNoKey();
-        builder.Entity<ArchiveRetentionSnapshotDto>().ToView("vw_archive_retention_snapshot", reportingSchema).HasNoKey();
-        builder.Entity<FileReconSummaryDto>().ToView("vw_file_recon_summary", reportingSchema).HasNoKey();
-        builder.Entity<ReconMatchRateTrendDto>().ToView("vw_recon_match_rate_trend", reportingSchema).HasNoKey();
-        builder.Entity<ReconGapAnalysisDto>().ToView("vw_recon_gap_analysis", reportingSchema).HasNoKey();
-        builder.Entity<UnmatchedTransactionAgingDto>().ToView("vw_unmatched_transaction_aging", reportingSchema).HasNoKey();
-        builder.Entity<NetworkReconScorecardDto>().ToView("vw_network_recon_scorecard", reportingSchema).HasNoKey();
-        builder.Entity<CardClearingCorrelationDto>().ToView("vw_card_clearing_correlation", reportingSchema).HasNoKey();
+
+        builder.Entity<DailyTransactionVolumeDto>().ToView("rep_daily_transaction_volume", reportingSchema);
+        builder.Entity<MccRevenueConcentrationDto>().ToView("rep_mcc_revenue_concentration", reportingSchema);
+        builder.Entity<MerchantRiskHotspotDto>().ToView("rep_merchant_risk_hotspots", reportingSchema);
+        builder.Entity<CountryCrossBorderExposureDto>().ToView("rep_country_cross_border_exposure", reportingSchema);
+        builder.Entity<ResponseCodeDeclineHealthDto>().ToView("rep_response_code_decline_health", reportingSchema);
+        builder.Entity<SettlementLagAnalysisDto>().ToView("rep_settlement_lag_analysis", reportingSchema);
+        builder.Entity<CurrencyFxDriftDto>().ToView("rep_currency_fx_drift", reportingSchema);
+        builder.Entity<InstallmentPortfolioSummaryDto>().ToView("rep_installment_portfolio_summary", reportingSchema);
+        builder.Entity<LoyaltyPointsEconomyDto>().ToView("rep_loyalty_points_economy", reportingSchema);
+        builder.Entity<ClearingDisputeSummaryDto>().ToView("rep_clearing_dispute_summary", reportingSchema);
+        builder.Entity<ClearingIoImbalanceDto>().ToView("rep_clearing_io_imbalance", reportingSchema);
+        builder.Entity<HighValueUnmatchedTransactionDto>().ToView("rep_high_value_unmatched_transactions", reportingSchema);
+        builder.Entity<ActionRadarDto>().ToView("rep_action_radar", reportingSchema);
+        builder.Entity<UnhealthyFileDto>().ToView("rep_unhealthy_files", reportingSchema);
+        builder.Entity<StuckPipelineItemDto>().ToView("rep_stuck_pipeline_items", reportingSchema);
+        builder.Entity<ReconFailureCategorizationDto>().ToView("rep_recon_failure_categorization", reportingSchema);
+        builder.Entity<ManualReviewPressureDto>().ToView("rep_manual_review_pressure", reportingSchema);
+        builder.Entity<AlertDeliveryHealthDto>().ToView("rep_alert_delivery_health", reportingSchema);
+        builder.Entity<UnmatchedFinancialExposureDto>().ToView("rep_unmatched_financial_exposure", reportingSchema);
+        builder.Entity<CardClearingImbalanceDto>().ToView("rep_card_clearing_imbalance", reportingSchema);
+        builder.Entity<ReconciliationQualityScoreDto>().ToView("rep_reconciliation_quality_score", reportingSchema);
+        builder.Entity<MisleadingSuccessCaseDto>().ToView("rep_misleading_success_cases", reportingSchema);
+        builder.Entity<ArchivePipelineHealthDto>().ToView("rep_archive_pipeline_health", reportingSchema);
+        builder.Entity<ReportingDocumentationDto>().ToView("rep_documentation", reportingSchema);
     }
 
     private static void CreateMsSqlMappings(ModelBuilder builder)
@@ -232,32 +227,30 @@ public class CardDbContext : BaseDbContext
         builder.Entity<ArchiveReconciliationOperationExecution>().ToTable("ReconciliationOperationExecution", archiveSchema);
         builder.Entity<ArchiveReconciliationAlert>().ToTable("ReconciliationAlert", archiveSchema);
         
-        builder.Entity<IngestionFileOverviewDto>().ToView("VwIngestionFileOverview", reportingSchema).HasNoKey();
-        builder.Entity<IngestionFileQualityDto>().ToView("VwIngestionFileQuality", reportingSchema).HasNoKey();
-        builder.Entity<IngestionDailySummaryDto>().ToView("VwIngestionDailySummary", reportingSchema).HasNoKey();
-        builder.Entity<IngestionNetworkMatrixDto>().ToView("VwIngestionNetworkMatrix", reportingSchema).HasNoKey();
-        builder.Entity<IngestionExceptionHotspotDto>().ToView("VwIngestionExceptionHotspots", reportingSchema).HasNoKey();
-        builder.Entity<ReconDailyOverviewDto>().ToView("VwReconDailyOverview", reportingSchema).HasNoKey();
-        builder.Entity<ReconOpenItemDto>().ToView("VwReconOpenItems", reportingSchema).HasNoKey();
-        builder.Entity<ReconOpenItemAgingDto>().ToView("VwReconOpenItemAging", reportingSchema).HasNoKey();
-        builder.Entity<ReconManualReviewQueueDto>().ToView("VwReconManualReviewQueue", reportingSchema).HasNoKey();
-        builder.Entity<ReconAlertSummaryDto>().ToView("VwReconAlertSummary", reportingSchema).HasNoKey();
-        builder.Entity<ReconCardContentDailyDto>().ToView("VwReconLiveCardContentDaily", reportingSchema).HasNoKey();
-        builder.Entity<ReconClearingContentDailyDto>().ToView("VwReconLiveClearingContentDaily", reportingSchema).HasNoKey();
-        builder.Entity<ReconContentDailyDto>().ToView("VwReconContentDaily", reportingSchema).HasNoKey();
-        builder.Entity<ReconClearingControlStatAnalysisDto>().ToView("VwReconClearingControlstatAnalysis", reportingSchema).HasNoKey();
-        builder.Entity<ReconFinancialSummaryDto>().ToView("VwReconFinancialSummary", reportingSchema).HasNoKey();
-        builder.Entity<ReconResponseStatusAnalysisDto>().ToView("VwReconResponseStatusAnalysis", reportingSchema).HasNoKey();
-        builder.Entity<ArchiveRunOverviewDto>().ToView("VwArchiveRunOverview", reportingSchema).HasNoKey();
-        builder.Entity<ArchiveEligibilityDto>().ToView("VwArchiveEligibility", reportingSchema).HasNoKey();
-        builder.Entity<ArchiveBacklogTrendDto>().ToView("VwArchiveBacklogTrend", reportingSchema).HasNoKey();
-        builder.Entity<ArchiveRetentionSnapshotDto>().ToView("VwArchiveRetentionSnapshot", reportingSchema).HasNoKey();
-        builder.Entity<FileReconSummaryDto>().ToView("VwFileReconSummary", reportingSchema).HasNoKey();
-        builder.Entity<ReconMatchRateTrendDto>().ToView("VwReconMatchRateTrend", reportingSchema).HasNoKey();
-        builder.Entity<ReconGapAnalysisDto>().ToView("VwReconGapAnalysis", reportingSchema).HasNoKey();
-        builder.Entity<UnmatchedTransactionAgingDto>().ToView("VwUnmatchedTransactionAging", reportingSchema).HasNoKey();
-        builder.Entity<NetworkReconScorecardDto>().ToView("VwNetworkReconScorecard", reportingSchema).HasNoKey();
-        builder.Entity<CardClearingCorrelationDto>().ToView("VwCardClearingCorrelation", reportingSchema).HasNoKey();
+        builder.Entity<DailyTransactionVolumeDto>().ToView("VwDailyTransactionVolume", reportingSchema);
+        builder.Entity<MccRevenueConcentrationDto>().ToView("VwMccRevenueConcentration", reportingSchema);
+        builder.Entity<MerchantRiskHotspotDto>().ToView("VwMerchantRiskHotspots", reportingSchema);
+        builder.Entity<CountryCrossBorderExposureDto>().ToView("VwCountryCrossBorderExposure", reportingSchema);
+        builder.Entity<ResponseCodeDeclineHealthDto>().ToView("VwResponseCodeDeclineHealth", reportingSchema);
+        builder.Entity<SettlementLagAnalysisDto>().ToView("VwSettlementLagAnalysis", reportingSchema);
+        builder.Entity<CurrencyFxDriftDto>().ToView("VwCurrencyFxDrift", reportingSchema);
+        builder.Entity<InstallmentPortfolioSummaryDto>().ToView("VwInstallmentPortfolioSummary", reportingSchema);
+        builder.Entity<LoyaltyPointsEconomyDto>().ToView("VwLoyaltyPointsEconomy", reportingSchema);
+        builder.Entity<ClearingDisputeSummaryDto>().ToView("VwClearingDisputeSummary", reportingSchema);
+        builder.Entity<ClearingIoImbalanceDto>().ToView("VwClearingIoImbalance", reportingSchema);
+        builder.Entity<HighValueUnmatchedTransactionDto>().ToView("VwHighValueUnmatchedTransactions", reportingSchema);
+        builder.Entity<ActionRadarDto>().ToView("VwActionRadar", reportingSchema);
+        builder.Entity<UnhealthyFileDto>().ToView("VwUnhealthyFiles", reportingSchema);
+        builder.Entity<StuckPipelineItemDto>().ToView("VwStuckPipelineItems", reportingSchema);
+        builder.Entity<ReconFailureCategorizationDto>().ToView("VwReconFailureCategorization", reportingSchema);
+        builder.Entity<ManualReviewPressureDto>().ToView("VwManualReviewPressure", reportingSchema);
+        builder.Entity<AlertDeliveryHealthDto>().ToView("VwAlertDeliveryHealth", reportingSchema);
+        builder.Entity<UnmatchedFinancialExposureDto>().ToView("VwUnmatchedFinancialExposure", reportingSchema);
+        builder.Entity<CardClearingImbalanceDto>().ToView("VwCardClearingImbalance", reportingSchema);
+        builder.Entity<ReconciliationQualityScoreDto>().ToView("VwReconciliationQualityScore", reportingSchema);
+        builder.Entity<MisleadingSuccessCaseDto>().ToView("VwMisleadingSuccessCases", reportingSchema);
+        builder.Entity<ArchivePipelineHealthDto>().ToView("VwArchivePipelineHealth", reportingSchema);
+        builder.Entity<ReportingDocumentationDto>().ToView("VwReportingDocumentation", reportingSchema);
     }
 }
 

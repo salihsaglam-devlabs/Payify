@@ -2064,3 +2064,720 @@ OUTER APPLY (
 ) msc_arc;
 GO
 
+
+-- =====================================================================================
+-- G. FINANCIAL ANALYTICS  (MSSQL conversion of PG rep_* extension views)
+-- LIVE + ARCHIVE union, network breakdown, flag/urgency/recommended_action triplet.
+-- =====================================================================================
+
+-- G1. Daily transaction volume by network (real TransactionDate)
+CREATE OR ALTER VIEW [Reporting].[VwDailyTransactionVolume] AS
+WITH Src AS (
+    SELECT 'LIVE' AS Scope, 'BKM' AS Network, TransactionDate, OriginalAmount, OriginalCurrency, FinancialType, TxnEffect, Tax1, Tax2, SurchargeAmount, CashbackAmount FROM [Ingestion].[CardBkmDetail]
+    UNION ALL SELECT 'LIVE','VISA', TransactionDate, OriginalAmount, OriginalCurrency, FinancialType, TxnEffect, Tax1, Tax2, SurchargeAmount, CashbackAmount FROM [Ingestion].[CardVisaDetail]
+    UNION ALL SELECT 'LIVE','MSC',  TransactionDate, OriginalAmount, OriginalCurrency, FinancialType, TxnEffect, Tax1, Tax2, SurchargeAmount, CashbackAmount FROM [Ingestion].[CardMscDetail]
+    UNION ALL SELECT 'ARCHIVE','BKM', TransactionDate, OriginalAmount, OriginalCurrency, FinancialType, TxnEffect, Tax1, Tax2, SurchargeAmount, CashbackAmount FROM [Archive].[IngestionCardBkmDetail]
+    UNION ALL SELECT 'ARCHIVE','VISA',TransactionDate, OriginalAmount, OriginalCurrency, FinancialType, TxnEffect, Tax1, Tax2, SurchargeAmount, CashbackAmount FROM [Archive].[IngestionCardVisaDetail]
+    UNION ALL SELECT 'ARCHIVE','MSC', TransactionDate, OriginalAmount, OriginalCurrency, FinancialType, TxnEffect, Tax1, Tax2, SurchargeAmount, CashbackAmount FROM [Archive].[IngestionCardMscDetail]
+)
+SELECT
+    Scope AS DataScope, Network,
+    TRY_CONVERT(DATE, CAST(TransactionDate AS VARCHAR(8)), 112) AS TransactionDate,
+    CAST(OriginalCurrency AS VARCHAR(8))                        AS OriginalCurrency,
+    COUNT(*)                                                    AS TransactionCount,
+    SUM(OriginalAmount)                                         AS GrossAmount,
+    SUM(CASE WHEN TxnEffect = 'Debit'  THEN OriginalAmount ELSE 0 END)          AS DebitAmount,
+    SUM(CASE WHEN TxnEffect = 'Credit' THEN OriginalAmount ELSE 0 END)          AS CreditAmount,
+    SUM(CASE WHEN TxnEffect = 'Debit'  THEN OriginalAmount ELSE 0 END)
+        - SUM(CASE WHEN TxnEffect = 'Credit' THEN OriginalAmount ELSE 0 END)    AS NetFlowAmount,
+    SUM(ISNULL(Tax1,0) + ISNULL(Tax2,0))                                        AS TotalTaxAmount,
+    SUM(ISNULL(SurchargeAmount,0))                                              AS TotalSurchargeAmount,
+    SUM(ISNULL(CashbackAmount,0))                                               AS TotalCashbackAmount,
+    CASE WHEN Scope = 'ARCHIVE' THEN 'HISTORICAL'
+         WHEN SUM(OriginalAmount) >= 10000000 THEN 'PEAK_VOLUME_DAY'
+         WHEN SUM(OriginalAmount) >= 1000000  THEN 'HIGH_VOLUME_DAY'
+         ELSE 'NORMAL' END AS VolumeFlag,
+    CASE WHEN Scope = 'ARCHIVE' THEN 'P5'
+         WHEN SUM(OriginalAmount) >= 10000000 THEN 'P2'
+         WHEN SUM(OriginalAmount) >= 1000000  THEN 'P3'
+         ELSE 'P5' END AS Urgency,
+    CASE WHEN Scope = 'ARCHIVE' THEN 'HISTORICAL_TREND_ANALYSIS_ONLY'
+         WHEN SUM(OriginalAmount) >= 10000000 THEN 'CAPACITY_PLANNING_REVIEW'
+         WHEN SUM(OriginalAmount) >= 1000000  THEN 'MONITOR_VOLUME_TREND'
+         ELSE 'NONE' END AS RecommendedAction
+FROM Src
+WHERE TransactionDate BETWEEN 19000101 AND 99991231
+GROUP BY Scope, Network, TransactionDate, OriginalCurrency;
+GO
+
+
+-- G2. MCC revenue concentration
+CREATE OR ALTER VIEW [Reporting].[VwMccRevenueConcentration] AS
+WITH Src AS (
+    SELECT 'LIVE' AS Scope, 'BKM' AS Network, Mcc, OriginalAmount FROM [Ingestion].[CardBkmDetail]
+    UNION ALL SELECT 'LIVE','VISA', Mcc, OriginalAmount FROM [Ingestion].[CardVisaDetail]
+    UNION ALL SELECT 'LIVE','MSC',  Mcc, OriginalAmount FROM [Ingestion].[CardMscDetail]
+    UNION ALL SELECT 'ARCHIVE','BKM', Mcc, OriginalAmount FROM [Archive].[IngestionCardBkmDetail]
+    UNION ALL SELECT 'ARCHIVE','VISA',Mcc, OriginalAmount FROM [Archive].[IngestionCardVisaDetail]
+    UNION ALL SELECT 'ARCHIVE','MSC', Mcc, OriginalAmount FROM [Archive].[IngestionCardMscDetail]
+), Agg AS (
+    SELECT Scope, Network, Mcc,
+           COUNT(*)            AS TransactionCount,
+           SUM(OriginalAmount) AS TotalAmount
+    FROM Src
+    GROUP BY Scope, Network, Mcc
+)
+SELECT
+    Scope AS DataScope, Network, Mcc, TransactionCount, TotalAmount,
+    ROUND(CAST(TotalAmount AS DECIMAL(38,4)) * 100
+          / NULLIF(SUM(TotalAmount) OVER (PARTITION BY Scope, Network), 0), 2) AS NetworkSharePct,
+    CASE WHEN Scope = 'ARCHIVE' THEN 'HISTORICAL'
+         WHEN CAST(TotalAmount AS DECIMAL(38,4)) / NULLIF(SUM(TotalAmount) OVER (PARTITION BY Scope, Network), 0) >= 0.30 THEN 'HIGH_CONCENTRATION'
+         WHEN CAST(TotalAmount AS DECIMAL(38,4)) / NULLIF(SUM(TotalAmount) OVER (PARTITION BY Scope, Network), 0) >= 0.15 THEN 'MEDIUM_CONCENTRATION'
+         ELSE 'DIVERSIFIED' END AS ConcentrationFlag,
+    CASE WHEN Scope = 'ARCHIVE' THEN 'P5'
+         WHEN CAST(TotalAmount AS DECIMAL(38,4)) / NULLIF(SUM(TotalAmount) OVER (PARTITION BY Scope, Network), 0) >= 0.30 THEN 'P2'
+         WHEN CAST(TotalAmount AS DECIMAL(38,4)) / NULLIF(SUM(TotalAmount) OVER (PARTITION BY Scope, Network), 0) >= 0.15 THEN 'P3'
+         ELSE 'P5' END AS Urgency,
+    CASE WHEN Scope = 'ARCHIVE' THEN 'HISTORICAL_TREND_ANALYSIS_ONLY'
+         WHEN CAST(TotalAmount AS DECIMAL(38,4)) / NULLIF(SUM(TotalAmount) OVER (PARTITION BY Scope, Network), 0) >= 0.30 THEN 'REVIEW_MCC_CONCENTRATION_RISK'
+         WHEN CAST(TotalAmount AS DECIMAL(38,4)) / NULLIF(SUM(TotalAmount) OVER (PARTITION BY Scope, Network), 0) >= 0.15 THEN 'MONITOR_MCC_DEPENDENCY'
+         ELSE 'NONE' END AS RecommendedAction
+FROM Agg;
+GO
+
+
+-- G3. Merchant risk hotspots
+CREATE OR ALTER VIEW [Reporting].[VwMerchantRiskHotspots] AS
+WITH Src AS (
+    SELECT 'LIVE' AS Scope, 'BKM' AS Network, d.MerchantId, d.MerchantName, d.MerchantCountry, d.OriginalAmount, d.IsSuccessfulTxn, d.ResponseCode,
+           CASE WHEN fl.MatchedClearingLineId IS NULL THEN 1 ELSE 0 END AS IsUnmatched
+    FROM [Ingestion].[CardBkmDetail] d JOIN [Ingestion].[FileLine] fl ON fl.Id = d.FileLineId
+    UNION ALL
+    SELECT 'LIVE','VISA', d.MerchantId, d.MerchantName, d.MerchantCountry, d.OriginalAmount, d.IsSuccessfulTxn, d.ResponseCode,
+           CASE WHEN fl.MatchedClearingLineId IS NULL THEN 1 ELSE 0 END
+    FROM [Ingestion].[CardVisaDetail] d JOIN [Ingestion].[FileLine] fl ON fl.Id = d.FileLineId
+    UNION ALL
+    SELECT 'LIVE','MSC', d.MerchantId, d.MerchantName, d.MerchantCountry, d.OriginalAmount, d.IsSuccessfulTxn, d.ResponseCode,
+           CASE WHEN fl.MatchedClearingLineId IS NULL THEN 1 ELSE 0 END
+    FROM [Ingestion].[CardMscDetail] d JOIN [Ingestion].[FileLine] fl ON fl.Id = d.FileLineId
+    UNION ALL
+    SELECT 'ARCHIVE','BKM', d.MerchantId, d.MerchantName, d.MerchantCountry, d.OriginalAmount, d.IsSuccessfulTxn, d.ResponseCode,
+           CASE WHEN fl.MatchedClearingLineId IS NULL THEN 1 ELSE 0 END
+    FROM [Archive].[IngestionCardBkmDetail] d JOIN [Archive].[IngestionFileLine] fl ON fl.Id = d.FileLineId
+    UNION ALL
+    SELECT 'ARCHIVE','VISA', d.MerchantId, d.MerchantName, d.MerchantCountry, d.OriginalAmount, d.IsSuccessfulTxn, d.ResponseCode,
+           CASE WHEN fl.MatchedClearingLineId IS NULL THEN 1 ELSE 0 END
+    FROM [Archive].[IngestionCardVisaDetail] d JOIN [Archive].[IngestionFileLine] fl ON fl.Id = d.FileLineId
+    UNION ALL
+    SELECT 'ARCHIVE','MSC', d.MerchantId, d.MerchantName, d.MerchantCountry, d.OriginalAmount, d.IsSuccessfulTxn, d.ResponseCode,
+           CASE WHEN fl.MatchedClearingLineId IS NULL THEN 1 ELSE 0 END
+    FROM [Archive].[IngestionCardMscDetail] d JOIN [Archive].[IngestionFileLine] fl ON fl.Id = d.FileLineId
+), Agg AS (
+    SELECT Scope, Network,
+           ISNULL(MerchantId, 'UNKNOWN')      AS MerchantId,
+           ISNULL(MerchantName, 'UNKNOWN')    AS MerchantName,
+           ISNULL(MerchantCountry, 'UNKNOWN') AS MerchantCountry,
+           COUNT(*)                                                                                                  AS TransactionCount,
+           SUM(CASE WHEN IsSuccessfulTxn = 'N' OR (ResponseCode IS NOT NULL AND ResponseCode <> '00') THEN 1 ELSE 0 END) AS DeclinedCount,
+           SUM(IsUnmatched)                                                                                            AS UnmatchedCount,
+           SUM(OriginalAmount)                                                                                          AS TotalAmount,
+           SUM(CASE WHEN IsUnmatched = 1 THEN OriginalAmount ELSE 0 END)                                                AS UnmatchedAmount
+    FROM Src
+    GROUP BY Scope, Network, ISNULL(MerchantId, 'UNKNOWN'), ISNULL(MerchantName, 'UNKNOWN'), ISNULL(MerchantCountry, 'UNKNOWN')
+)
+SELECT
+    Scope AS DataScope, Network, MerchantId, MerchantName, MerchantCountry,
+    TransactionCount, DeclinedCount, UnmatchedCount, TotalAmount, UnmatchedAmount,
+    CASE WHEN TransactionCount > 0 THEN ROUND(CAST(DeclinedCount  AS DECIMAL(38,4)) / TransactionCount * 100, 2) ELSE 0 END AS DeclineRatePct,
+    CASE WHEN TransactionCount > 0 THEN ROUND(CAST(UnmatchedCount AS DECIMAL(38,4)) / TransactionCount * 100, 2) ELSE 0 END AS UnmatchedRatePct,
+    CASE WHEN Scope = 'ARCHIVE' THEN 'HISTORICAL'
+         WHEN UnmatchedCount > 0 AND CAST(UnmatchedCount AS DECIMAL(38,4)) / NULLIF(TransactionCount, 0) >= 0.20 AND UnmatchedAmount >= 100000 THEN 'HIGH_RISK_MERCHANT'
+         WHEN CAST(DeclinedCount AS DECIMAL(38,4)) / NULLIF(TransactionCount, 0) >= 0.30 THEN 'HIGH_DECLINE_MERCHANT'
+         WHEN UnmatchedCount > 0 THEN 'NEEDS_INVESTIGATION'
+         ELSE 'HEALTHY' END AS RiskFlag,
+    CASE WHEN Scope = 'ARCHIVE' THEN 'P5'
+         WHEN UnmatchedCount > 0 AND CAST(UnmatchedCount AS DECIMAL(38,4)) / NULLIF(TransactionCount, 0) >= 0.20 AND UnmatchedAmount >= 100000 THEN 'P1'
+         WHEN CAST(DeclinedCount AS DECIMAL(38,4)) / NULLIF(TransactionCount, 0) >= 0.30 THEN 'P2'
+         WHEN UnmatchedCount > 0 THEN 'P3'
+         ELSE 'P5' END AS Urgency,
+    CASE WHEN Scope = 'ARCHIVE' THEN 'HISTORICAL_TREND_ANALYSIS_ONLY'
+         WHEN UnmatchedCount > 0 AND CAST(UnmatchedCount AS DECIMAL(38,4)) / NULLIF(TransactionCount, 0) >= 0.20 AND UnmatchedAmount >= 100000 THEN 'ESCALATE_TO_RISK_TEAM'
+         WHEN CAST(DeclinedCount AS DECIMAL(38,4)) / NULLIF(TransactionCount, 0) >= 0.30 THEN 'INVESTIGATE_DECLINE_PATTERN'
+         WHEN UnmatchedCount > 0 THEN 'INVESTIGATE_UNMATCHED'
+         ELSE 'NONE' END AS RecommendedAction
+FROM Agg;
+GO
+
+
+-- G4. Country / cross-border FX exposure
+CREATE OR ALTER VIEW [Reporting].[VwCountryCrossBorderExposure] AS
+WITH Src AS (
+    SELECT 'LIVE' AS Scope, 'BKM' AS Network, MerchantCountry, OriginalAmount, OriginalCurrency, SettlementCurrency FROM [Ingestion].[CardBkmDetail]
+    UNION ALL SELECT 'LIVE','VISA', MerchantCountry, OriginalAmount, OriginalCurrency, SettlementCurrency FROM [Ingestion].[CardVisaDetail]
+    UNION ALL SELECT 'LIVE','MSC',  MerchantCountry, OriginalAmount, OriginalCurrency, SettlementCurrency FROM [Ingestion].[CardMscDetail]
+    UNION ALL SELECT 'ARCHIVE','BKM', MerchantCountry, OriginalAmount, OriginalCurrency, SettlementCurrency FROM [Archive].[IngestionCardBkmDetail]
+    UNION ALL SELECT 'ARCHIVE','VISA',MerchantCountry, OriginalAmount, OriginalCurrency, SettlementCurrency FROM [Archive].[IngestionCardVisaDetail]
+    UNION ALL SELECT 'ARCHIVE','MSC', MerchantCountry, OriginalAmount, OriginalCurrency, SettlementCurrency FROM [Archive].[IngestionCardMscDetail]
+), Agg AS (
+    SELECT Scope, Network,
+           ISNULL(MerchantCountry, 'UNKNOWN') AS MerchantCountry,
+           CASE WHEN OriginalCurrency <> SettlementCurrency THEN 'CROSS_CURRENCY' ELSE 'SAME_CURRENCY' END AS FxPattern,
+           CAST(OriginalCurrency AS VARCHAR(8))   AS OriginalCurrency,
+           CAST(SettlementCurrency AS VARCHAR(8)) AS SettlementCurrency,
+           COUNT(*)                  AS TransactionCount,
+           SUM(OriginalAmount)       AS TotalOriginalAmount
+    FROM Src
+    GROUP BY Scope, Network,
+             ISNULL(MerchantCountry, 'UNKNOWN'),
+             CASE WHEN OriginalCurrency <> SettlementCurrency THEN 'CROSS_CURRENCY' ELSE 'SAME_CURRENCY' END,
+             OriginalCurrency, SettlementCurrency
+)
+SELECT
+    Scope AS DataScope, Network, MerchantCountry, FxPattern, OriginalCurrency, SettlementCurrency,
+    TransactionCount, TotalOriginalAmount,
+    CASE WHEN Scope = 'ARCHIVE' THEN 'HISTORICAL'
+         WHEN FxPattern = 'CROSS_CURRENCY' AND TotalOriginalAmount >= 1000000 THEN 'HIGH_FX_EXPOSURE'
+         WHEN FxPattern = 'CROSS_CURRENCY'                                     THEN 'FX_EXPOSURE'
+         ELSE 'DOMESTIC' END AS ExposureFlag,
+    CASE WHEN Scope = 'ARCHIVE' THEN 'P5'
+         WHEN FxPattern = 'CROSS_CURRENCY' AND TotalOriginalAmount >= 1000000 THEN 'P2'
+         WHEN FxPattern = 'CROSS_CURRENCY'                                     THEN 'P3'
+         ELSE 'P5' END AS Urgency,
+    CASE WHEN Scope = 'ARCHIVE' THEN 'HISTORICAL_TREND_ANALYSIS_ONLY'
+         WHEN FxPattern = 'CROSS_CURRENCY' AND TotalOriginalAmount >= 1000000 THEN 'HEDGE_OR_REVIEW_FX_EXPOSURE'
+         WHEN FxPattern = 'CROSS_CURRENCY'                                     THEN 'MONITOR_FX_EXPOSURE'
+         ELSE 'NONE' END AS RecommendedAction
+FROM Agg;
+GO
+
+
+-- G5. Response code decline health
+CREATE OR ALTER VIEW [Reporting].[VwResponseCodeDeclineHealth] AS
+WITH Src AS (
+    SELECT 'LIVE' AS Scope, 'BKM' AS Network, ResponseCode, IsSuccessfulTxn, OriginalAmount FROM [Ingestion].[CardBkmDetail]
+    UNION ALL SELECT 'LIVE','VISA', ResponseCode, IsSuccessfulTxn, OriginalAmount FROM [Ingestion].[CardVisaDetail]
+    UNION ALL SELECT 'LIVE','MSC',  ResponseCode, IsSuccessfulTxn, OriginalAmount FROM [Ingestion].[CardMscDetail]
+    UNION ALL SELECT 'ARCHIVE','BKM', ResponseCode, IsSuccessfulTxn, OriginalAmount FROM [Archive].[IngestionCardBkmDetail]
+    UNION ALL SELECT 'ARCHIVE','VISA',ResponseCode, IsSuccessfulTxn, OriginalAmount FROM [Archive].[IngestionCardVisaDetail]
+    UNION ALL SELECT 'ARCHIVE','MSC', ResponseCode, IsSuccessfulTxn, OriginalAmount FROM [Archive].[IngestionCardMscDetail]
+), Agg AS (
+    SELECT Scope, Network, ISNULL(ResponseCode, 'NONE') AS ResponseCode,
+           COUNT(*)                                                  AS TransactionCount,
+           SUM(OriginalAmount)                                       AS TotalAmount,
+           SUM(CASE WHEN IsSuccessfulTxn = 'Y' THEN 1 ELSE 0 END)    AS SuccessfulCount,
+           SUM(CASE WHEN IsSuccessfulTxn = 'N' THEN 1 ELSE 0 END)    AS FailedCount
+    FROM Src
+    GROUP BY Scope, Network, ISNULL(ResponseCode, 'NONE')
+)
+SELECT
+    Scope AS DataScope, Network, ResponseCode,
+    TransactionCount, TotalAmount, SuccessfulCount, FailedCount,
+    CASE WHEN TransactionCount > 0 THEN ROUND(CAST(FailedCount AS DECIMAL(38,4)) / TransactionCount * 100, 2) ELSE 0 END AS FailureRatePct,
+    ROUND(CAST(TransactionCount AS DECIMAL(38,4)) * 100 / NULLIF(SUM(TransactionCount) OVER (PARTITION BY Scope, Network), 0), 2) AS NetworkSharePct,
+    CASE WHEN Scope = 'ARCHIVE' THEN 'HISTORICAL'
+         WHEN ResponseCode NOT IN ('00','NONE')
+              AND CAST(TransactionCount AS DECIMAL(38,4)) / NULLIF(SUM(TransactionCount) OVER (PARTITION BY Scope, Network), 0) >= 0.05 THEN 'DOMINANT_FAILURE_REASON'
+         WHEN ResponseCode NOT IN ('00','NONE') THEN 'NORMAL_FAILURE'
+         ELSE 'SUCCESS_OR_UNKNOWN' END AS HealthFlag,
+    CASE WHEN Scope = 'ARCHIVE' THEN 'P5'
+         WHEN ResponseCode NOT IN ('00','NONE')
+              AND CAST(TransactionCount AS DECIMAL(38,4)) / NULLIF(SUM(TransactionCount) OVER (PARTITION BY Scope, Network), 0) >= 0.05 THEN 'P2'
+         WHEN ResponseCode NOT IN ('00','NONE') THEN 'P4'
+         ELSE 'P5' END AS Urgency,
+    CASE WHEN Scope = 'ARCHIVE' THEN 'HISTORICAL_TREND_ANALYSIS_ONLY'
+         WHEN ResponseCode NOT IN ('00','NONE')
+              AND CAST(TransactionCount AS DECIMAL(38,4)) / NULLIF(SUM(TransactionCount) OVER (PARTITION BY Scope, Network), 0) >= 0.05 THEN 'INVESTIGATE_DOMINANT_DECLINE_REASON'
+         WHEN ResponseCode NOT IN ('00','NONE') THEN 'TRACK_DECLINE_REASON'
+         ELSE 'NONE' END AS RecommendedAction
+FROM Agg;
+GO
+
+
+-- G6. Settlement lag analysis
+CREATE OR ALTER VIEW [Reporting].[VwSettlementLagAnalysis] AS
+WITH Src AS (
+    SELECT 'LIVE' AS Scope, 'BKM' AS Network, TransactionDate, ValueDate, EndOfDayDate, CreateDate, OriginalAmount FROM [Ingestion].[CardBkmDetail]
+    UNION ALL SELECT 'LIVE','VISA', TransactionDate, ValueDate, EndOfDayDate, CreateDate, OriginalAmount FROM [Ingestion].[CardVisaDetail]
+    UNION ALL SELECT 'LIVE','MSC',  TransactionDate, ValueDate, EndOfDayDate, CreateDate, OriginalAmount FROM [Ingestion].[CardMscDetail]
+    UNION ALL SELECT 'ARCHIVE','BKM', TransactionDate, ValueDate, EndOfDayDate, CreateDate, OriginalAmount FROM [Archive].[IngestionCardBkmDetail]
+    UNION ALL SELECT 'ARCHIVE','VISA',TransactionDate, ValueDate, EndOfDayDate, CreateDate, OriginalAmount FROM [Archive].[IngestionCardVisaDetail]
+    UNION ALL SELECT 'ARCHIVE','MSC', TransactionDate, ValueDate, EndOfDayDate, CreateDate, OriginalAmount FROM [Archive].[IngestionCardMscDetail]
+), Calc AS (
+    SELECT Scope, Network, OriginalAmount,
+           DATEDIFF(DAY, TRY_CONVERT(DATE, CAST(TransactionDate AS VARCHAR(8)), 112), CAST(CreateDate AS DATE))                                          AS IngestLagDays,
+           DATEDIFF(DAY, TRY_CONVERT(DATE, CAST(TransactionDate AS VARCHAR(8)), 112), TRY_CONVERT(DATE, CAST(ValueDate AS VARCHAR(8)), 112))             AS ValueLagDays,
+           DATEDIFF(DAY, TRY_CONVERT(DATE, CAST(TransactionDate AS VARCHAR(8)), 112), TRY_CONVERT(DATE, CAST(EndOfDayDate AS VARCHAR(8)), 112))          AS EodLagDays
+    FROM Src
+    WHERE TransactionDate BETWEEN 19000101 AND 99991231
+)
+SELECT
+    Scope AS DataScope, Network,
+    COUNT(*)                                                            AS TransactionCount,
+    SUM(OriginalAmount)                                                 AS TotalAmount,
+    AVG(CAST(IngestLagDays AS DECIMAL(38,4)))                           AS AvgIngestLagDays,
+    AVG(CAST(ValueLagDays  AS DECIMAL(38,4)))                           AS AvgValueLagDays,
+    AVG(CAST(EodLagDays    AS DECIMAL(38,4)))                           AS AvgEodLagDays,
+    MAX(IngestLagDays)                                                  AS MaxIngestLagDays,
+    MAX(ValueLagDays)                                                   AS MaxValueLagDays,
+    SUM(CASE WHEN IngestLagDays > 3 THEN 1 ELSE 0 END)                  AS LateIngestCount,
+    SUM(CASE WHEN ValueLagDays  > 3 THEN 1 ELSE 0 END)                  AS LateValueCount,
+    CASE WHEN Scope = 'ARCHIVE' THEN 'HISTORICAL'
+         WHEN AVG(CAST(IngestLagDays AS DECIMAL(38,4))) >= 5 OR AVG(CAST(ValueLagDays AS DECIMAL(38,4))) >= 5 THEN 'CRITICAL_SETTLEMENT_DELAY'
+         WHEN AVG(CAST(IngestLagDays AS DECIMAL(38,4))) >= 2 OR AVG(CAST(ValueLagDays AS DECIMAL(38,4))) >= 2 THEN 'ELEVATED_LAG'
+         ELSE 'NORMAL' END AS LagFlag,
+    CASE WHEN Scope = 'ARCHIVE' THEN 'P5'
+         WHEN AVG(CAST(IngestLagDays AS DECIMAL(38,4))) >= 5 OR AVG(CAST(ValueLagDays AS DECIMAL(38,4))) >= 5 THEN 'P1'
+         WHEN AVG(CAST(IngestLagDays AS DECIMAL(38,4))) >= 2 OR AVG(CAST(ValueLagDays AS DECIMAL(38,4))) >= 2 THEN 'P3'
+         ELSE 'P5' END AS Urgency,
+    CASE WHEN Scope = 'ARCHIVE' THEN 'HISTORICAL_TREND_ANALYSIS_ONLY'
+         WHEN AVG(CAST(IngestLagDays AS DECIMAL(38,4))) >= 5 OR AVG(CAST(ValueLagDays AS DECIMAL(38,4))) >= 5 THEN 'ESCALATE_SETTLEMENT_PIPELINE_BREACH'
+         WHEN AVG(CAST(IngestLagDays AS DECIMAL(38,4))) >= 2 OR AVG(CAST(ValueLagDays AS DECIMAL(38,4))) >= 2 THEN 'REVIEW_INGEST_OR_VALUE_LAG_TREND'
+         ELSE 'NONE' END AS RecommendedAction
+FROM Calc
+GROUP BY Scope, Network;
+GO
+
+
+-- G7. Currency / FX drift
+CREATE OR ALTER VIEW [Reporting].[VwCurrencyFxDrift] AS
+WITH Src AS (
+    SELECT 'LIVE' AS Scope, 'BKM' AS Network, OriginalCurrency, SettlementCurrency, OriginalAmount, SettlementAmount FROM [Ingestion].[CardBkmDetail]
+    UNION ALL SELECT 'LIVE','VISA', OriginalCurrency, SettlementCurrency, OriginalAmount, SettlementAmount FROM [Ingestion].[CardVisaDetail]
+    UNION ALL SELECT 'LIVE','MSC',  OriginalCurrency, SettlementCurrency, OriginalAmount, SettlementAmount FROM [Ingestion].[CardMscDetail]
+    UNION ALL SELECT 'ARCHIVE','BKM', OriginalCurrency, SettlementCurrency, OriginalAmount, SettlementAmount FROM [Archive].[IngestionCardBkmDetail]
+    UNION ALL SELECT 'ARCHIVE','VISA',OriginalCurrency, SettlementCurrency, OriginalAmount, SettlementAmount FROM [Archive].[IngestionCardVisaDetail]
+    UNION ALL SELECT 'ARCHIVE','MSC', OriginalCurrency, SettlementCurrency, OriginalAmount, SettlementAmount FROM [Archive].[IngestionCardMscDetail]
+)
+SELECT
+    Scope AS DataScope, Network,
+    CAST(OriginalCurrency AS VARCHAR(8))    AS OriginalCurrency,
+    CAST(SettlementCurrency AS VARCHAR(8))  AS SettlementCurrency,
+    COUNT(*)                                                  AS TransactionCount,
+    SUM(OriginalAmount)                                       AS TotalOriginalAmount,
+    SUM(SettlementAmount)                                     AS TotalSettlementAmount,
+    SUM(SettlementAmount) - SUM(OriginalAmount)               AS DriftAmount,
+    CASE WHEN SUM(OriginalAmount) <> 0
+         THEN ROUND((SUM(SettlementAmount) - SUM(OriginalAmount)) * 100.0 / NULLIF(SUM(OriginalAmount), 0), 4) ELSE 0 END AS DriftPct,
+    CASE WHEN Scope = 'ARCHIVE' THEN 'HISTORICAL'
+         WHEN OriginalCurrency = SettlementCurrency THEN 'NO_FX'
+         WHEN ABS(SUM(SettlementAmount) - SUM(OriginalAmount)) >= 100000 THEN 'HIGH_FX_DRIFT'
+         WHEN ABS(SUM(SettlementAmount) - SUM(OriginalAmount)) >= 10000  THEN 'MODERATE_FX_DRIFT'
+         ELSE 'STABLE' END AS DriftFlag,
+    CASE WHEN Scope = 'ARCHIVE' THEN 'P5'
+         WHEN OriginalCurrency = SettlementCurrency THEN 'P5'
+         WHEN ABS(SUM(SettlementAmount) - SUM(OriginalAmount)) >= 100000 THEN 'P2'
+         WHEN ABS(SUM(SettlementAmount) - SUM(OriginalAmount)) >= 10000  THEN 'P3'
+         ELSE 'P5' END AS Urgency,
+    CASE WHEN Scope = 'ARCHIVE' THEN 'HISTORICAL_TREND_ANALYSIS_ONLY'
+         WHEN OriginalCurrency = SettlementCurrency THEN 'NONE'
+         WHEN ABS(SUM(SettlementAmount) - SUM(OriginalAmount)) >= 100000 THEN 'INVESTIGATE_FX_RATE_OR_HEDGING'
+         WHEN ABS(SUM(SettlementAmount) - SUM(OriginalAmount)) >= 10000  THEN 'MONITOR_FX_DRIFT'
+         ELSE 'NONE' END AS RecommendedAction
+FROM Src
+GROUP BY Scope, Network, OriginalCurrency, SettlementCurrency;
+GO
+
+
+-- G8. Installment portfolio summary
+CREATE OR ALTER VIEW [Reporting].[VwInstallmentPortfolioSummary] AS
+WITH Src AS (
+    SELECT 'LIVE' AS Scope, 'BKM' AS Network, InstallCount, OriginalAmount FROM [Ingestion].[CardBkmDetail]
+    UNION ALL SELECT 'LIVE','VISA', InstallCount, OriginalAmount FROM [Ingestion].[CardVisaDetail]
+    UNION ALL SELECT 'LIVE','MSC',  InstallCount, OriginalAmount FROM [Ingestion].[CardMscDetail]
+    UNION ALL SELECT 'ARCHIVE','BKM', InstallCount, OriginalAmount FROM [Archive].[IngestionCardBkmDetail]
+    UNION ALL SELECT 'ARCHIVE','VISA',InstallCount, OriginalAmount FROM [Archive].[IngestionCardVisaDetail]
+    UNION ALL SELECT 'ARCHIVE','MSC', InstallCount, OriginalAmount FROM [Archive].[IngestionCardMscDetail]
+)
+SELECT
+    Scope AS DataScope, Network,
+    CASE WHEN InstallCount IS NULL OR InstallCount <= 1 THEN 'SINGLE_PAYMENT'
+         WHEN InstallCount BETWEEN 2 AND 3              THEN 'SHORT_TERM_2_3'
+         WHEN InstallCount BETWEEN 4 AND 6              THEN 'MEDIUM_TERM_4_6'
+         WHEN InstallCount BETWEEN 7 AND 12             THEN 'LONG_TERM_7_12'
+         ELSE 'EXTENDED_13_PLUS' END AS InstallmentBucket,
+    COUNT(*)                AS TransactionCount,
+    SUM(OriginalAmount)     AS TotalAmount,
+    AVG(CAST(OriginalAmount AS DECIMAL(38,4))) AS AvgAmount,
+    CASE WHEN Scope = 'ARCHIVE' THEN 'HISTORICAL'
+         WHEN MAX(InstallCount) >= 13 AND SUM(OriginalAmount) >= 1000000 THEN 'HIGH_EXTENDED_INSTALLMENT_RISK'
+         WHEN MAX(InstallCount) >= 13 THEN 'EXTENDED_INSTALLMENT_PRESENT'
+         WHEN MAX(InstallCount) >= 7  THEN 'LONG_TERM_PRESENT'
+         ELSE 'SHORT_TERM_PORTFOLIO' END AS PortfolioFlag,
+    CASE WHEN Scope = 'ARCHIVE' THEN 'P5'
+         WHEN MAX(InstallCount) >= 13 AND SUM(OriginalAmount) >= 1000000 THEN 'P2'
+         WHEN MAX(InstallCount) >= 13 THEN 'P3'
+         WHEN MAX(InstallCount) >= 7  THEN 'P4'
+         ELSE 'P5' END AS Urgency,
+    CASE WHEN Scope = 'ARCHIVE' THEN 'HISTORICAL_TREND_ANALYSIS_ONLY'
+         WHEN MAX(InstallCount) >= 13 AND SUM(OriginalAmount) >= 1000000 THEN 'REVIEW_EXTENDED_INSTALLMENT_RISK'
+         WHEN MAX(InstallCount) >= 13 THEN 'MONITOR_EXTENDED_INSTALLMENT_PORTFOLIO'
+         WHEN MAX(InstallCount) >= 7  THEN 'TRACK_LONG_TERM_INSTALLMENT_GROWTH'
+         ELSE 'NONE' END AS RecommendedAction
+FROM Src
+GROUP BY Scope, Network,
+         CASE WHEN InstallCount IS NULL OR InstallCount <= 1 THEN 'SINGLE_PAYMENT'
+              WHEN InstallCount BETWEEN 2 AND 3              THEN 'SHORT_TERM_2_3'
+              WHEN InstallCount BETWEEN 4 AND 6              THEN 'MEDIUM_TERM_4_6'
+              WHEN InstallCount BETWEEN 7 AND 12             THEN 'LONG_TERM_7_12'
+              ELSE 'EXTENDED_13_PLUS' END;
+GO
+
+
+-- G9. Loyalty points economy
+CREATE OR ALTER VIEW [Reporting].[VwLoyaltyPointsEconomy] AS
+WITH Src AS (
+    SELECT 'LIVE' AS Scope, 'BKM' AS Network, BcPointAmount, McPointAmount, CcPointAmount, OriginalAmount FROM [Ingestion].[CardBkmDetail]
+    UNION ALL SELECT 'LIVE','VISA', BcPointAmount, McPointAmount, CcPointAmount, OriginalAmount FROM [Ingestion].[CardVisaDetail]
+    UNION ALL SELECT 'LIVE','MSC',  BcPointAmount, McPointAmount, CcPointAmount, OriginalAmount FROM [Ingestion].[CardMscDetail]
+    UNION ALL SELECT 'ARCHIVE','BKM', BcPointAmount, McPointAmount, CcPointAmount, OriginalAmount FROM [Archive].[IngestionCardBkmDetail]
+    UNION ALL SELECT 'ARCHIVE','VISA',BcPointAmount, McPointAmount, CcPointAmount, OriginalAmount FROM [Archive].[IngestionCardVisaDetail]
+    UNION ALL SELECT 'ARCHIVE','MSC', BcPointAmount, McPointAmount, CcPointAmount, OriginalAmount FROM [Archive].[IngestionCardMscDetail]
+)
+SELECT
+    Scope AS DataScope, Network,
+    COUNT(*)                                                                            AS TransactionCount,
+    SUM(ISNULL(BcPointAmount, 0))                                                       AS TotalBcPoints,
+    SUM(ISNULL(McPointAmount, 0))                                                       AS TotalMcPoints,
+    SUM(ISNULL(CcPointAmount, 0))                                                       AS TotalCcPoints,
+    SUM(ISNULL(BcPointAmount, 0) + ISNULL(McPointAmount, 0) + ISNULL(CcPointAmount, 0)) AS TotalPointAmount,
+    SUM(OriginalAmount)                                                                 AS TotalSpendAmount,
+    CASE WHEN SUM(OriginalAmount) > 0
+         THEN ROUND(SUM(ISNULL(BcPointAmount, 0) + ISNULL(McPointAmount, 0) + ISNULL(CcPointAmount, 0)) * 100.0
+                    / NULLIF(SUM(OriginalAmount), 0), 4)
+         ELSE 0 END AS PointToSpendRatioPct,
+    CASE WHEN Scope = 'ARCHIVE' THEN 'HISTORICAL'
+         WHEN SUM(ISNULL(BcPointAmount, 0) + ISNULL(McPointAmount, 0) + ISNULL(CcPointAmount, 0))
+              / NULLIF(SUM(OriginalAmount), 0) >= 0.05 THEN 'HIGH_POINT_LIABILITY'
+         WHEN SUM(ISNULL(BcPointAmount, 0) + ISNULL(McPointAmount, 0) + ISNULL(CcPointAmount, 0)) > 0 THEN 'ACTIVE_LOYALTY_PROGRAM'
+         ELSE 'NO_POINT_ACCRUAL' END AS LoyaltyFlag,
+    CASE WHEN Scope = 'ARCHIVE' THEN 'P5'
+         WHEN SUM(ISNULL(BcPointAmount, 0) + ISNULL(McPointAmount, 0) + ISNULL(CcPointAmount, 0))
+              / NULLIF(SUM(OriginalAmount), 0) >= 0.05 THEN 'P2'
+         WHEN SUM(ISNULL(BcPointAmount, 0) + ISNULL(McPointAmount, 0) + ISNULL(CcPointAmount, 0)) > 0 THEN 'P4'
+         ELSE 'P5' END AS Urgency,
+    CASE WHEN Scope = 'ARCHIVE' THEN 'HISTORICAL_TREND_ANALYSIS_ONLY'
+         WHEN SUM(ISNULL(BcPointAmount, 0) + ISNULL(McPointAmount, 0) + ISNULL(CcPointAmount, 0))
+              / NULLIF(SUM(OriginalAmount), 0) >= 0.05 THEN 'REVIEW_LOYALTY_LIABILITY_AND_BURN_RATE'
+         WHEN SUM(ISNULL(BcPointAmount, 0) + ISNULL(McPointAmount, 0) + ISNULL(CcPointAmount, 0)) > 0 THEN 'TRACK_LOYALTY_PROGRAM_HEALTH'
+         ELSE 'NONE' END AS RecommendedAction
+FROM Src
+GROUP BY Scope, Network;
+GO
+
+
+-- G10. Clearing dispute summary
+CREATE OR ALTER VIEW [Reporting].[VwClearingDisputeSummary] AS
+WITH Src AS (
+    SELECT 'LIVE' AS Scope, 'BKM' AS Network, DisputeCode, ReasonCode, ControlStat, SourceAmount, ReimbursementAmount, TxnDate FROM [Ingestion].[ClearingBkmDetail]
+    UNION ALL SELECT 'LIVE','VISA', DisputeCode, ReasonCode, ControlStat, SourceAmount, ReimbursementAmount, TxnDate FROM [Ingestion].[ClearingVisaDetail]
+    UNION ALL SELECT 'LIVE','MSC',  DisputeCode, ReasonCode, ControlStat, SourceAmount, ReimbursementAmount, TxnDate FROM [Ingestion].[ClearingMscDetail]
+    UNION ALL SELECT 'ARCHIVE','BKM', DisputeCode, ReasonCode, ControlStat, SourceAmount, ReimbursementAmount, TxnDate FROM [Archive].[IngestionClearingBkmDetail]
+    UNION ALL SELECT 'ARCHIVE','VISA',DisputeCode, ReasonCode, ControlStat, SourceAmount, ReimbursementAmount, TxnDate FROM [Archive].[IngestionClearingVisaDetail]
+    UNION ALL SELECT 'ARCHIVE','MSC', DisputeCode, ReasonCode, ControlStat, SourceAmount, ReimbursementAmount, TxnDate FROM [Archive].[IngestionClearingMscDetail]
+), Agg AS (
+    SELECT Scope, Network,
+           ISNULL(CAST(DisputeCode AS VARCHAR(100)), 'NONE') AS DisputeCode,
+           ISNULL(ReasonCode, 'NONE')                        AS ReasonCode,
+           CAST(ControlStat AS VARCHAR(64))                  AS ControlStat,
+           COUNT(*)                                          AS TransactionCount,
+           SUM(SourceAmount)                                 AS TotalSourceAmount,
+           SUM(ReimbursementAmount)                          AS TotalReimbursementAmount,
+           MIN(CASE WHEN TxnDate BETWEEN 19000101 AND 99991231 THEN TRY_CONVERT(DATE, CAST(TxnDate AS VARCHAR(8)), 112) END) AS FirstTxnDate,
+           MAX(CASE WHEN TxnDate BETWEEN 19000101 AND 99991231 THEN TRY_CONVERT(DATE, CAST(TxnDate AS VARCHAR(8)), 112) END) AS LastTxnDate
+    FROM Src
+    GROUP BY Scope, Network,
+             ISNULL(CAST(DisputeCode AS VARCHAR(100)), 'NONE'),
+             ISNULL(ReasonCode, 'NONE'),
+             CAST(ControlStat AS VARCHAR(64))
+)
+SELECT
+    Scope AS DataScope, Network, DisputeCode, ReasonCode, ControlStat,
+    TransactionCount, TotalSourceAmount, TotalReimbursementAmount, FirstTxnDate, LastTxnDate,
+    CASE WHEN Scope = 'ARCHIVE' THEN 'HISTORICAL'
+         WHEN DisputeCode <> 'NONE' AND TotalReimbursementAmount >= 100000 THEN 'HIGH_DISPUTE_EXPOSURE'
+         WHEN DisputeCode <> 'NONE'                                        THEN 'ACTIVE_DISPUTE'
+         ELSE 'CLEAN' END AS DisputeFlag,
+    CASE WHEN Scope = 'ARCHIVE' THEN 'P5'
+         WHEN DisputeCode <> 'NONE' AND TotalReimbursementAmount >= 100000 THEN 'P1'
+         WHEN DisputeCode <> 'NONE'                                        THEN 'P3'
+         ELSE 'P5' END AS Urgency,
+    CASE WHEN Scope = 'ARCHIVE' THEN 'HISTORICAL_TREND_ANALYSIS_ONLY'
+         WHEN DisputeCode <> 'NONE' AND TotalReimbursementAmount >= 100000 THEN 'ESCALATE_DISPUTE_RESOLUTION'
+         WHEN DisputeCode <> 'NONE'                                        THEN 'WORK_DISPUTE_QUEUE'
+         ELSE 'NONE' END AS RecommendedAction
+FROM Agg;
+GO
+
+
+-- G11. Daily clearing incoming vs outgoing imbalance
+CREATE OR ALTER VIEW [Reporting].[VwClearingIoImbalance] AS
+WITH Src AS (
+    SELECT 'LIVE' AS Scope, 'BKM' AS Network, TxnDate, IoFlag, SourceAmount FROM [Ingestion].[ClearingBkmDetail]
+    UNION ALL SELECT 'LIVE','VISA', TxnDate, IoFlag, SourceAmount FROM [Ingestion].[ClearingVisaDetail]
+    UNION ALL SELECT 'LIVE','MSC',  TxnDate, IoFlag, SourceAmount FROM [Ingestion].[ClearingMscDetail]
+    UNION ALL SELECT 'ARCHIVE','BKM', TxnDate, IoFlag, SourceAmount FROM [Archive].[IngestionClearingBkmDetail]
+    UNION ALL SELECT 'ARCHIVE','VISA',TxnDate, IoFlag, SourceAmount FROM [Archive].[IngestionClearingVisaDetail]
+    UNION ALL SELECT 'ARCHIVE','MSC', TxnDate, IoFlag, SourceAmount FROM [Archive].[IngestionClearingMscDetail]
+)
+SELECT
+    Scope AS DataScope, Network,
+    TRY_CONVERT(DATE, CAST(TxnDate AS VARCHAR(8)), 112) AS TxnDate,
+    SUM(CASE WHEN IoFlag = 'In'  THEN 1 ELSE 0 END)                  AS IncomingCount,
+    SUM(CASE WHEN IoFlag = 'Out' THEN 1 ELSE 0 END)                  AS OutgoingCount,
+    SUM(CASE WHEN IoFlag = 'In'  THEN SourceAmount ELSE 0 END)       AS IncomingAmount,
+    SUM(CASE WHEN IoFlag = 'Out' THEN SourceAmount ELSE 0 END)       AS OutgoingAmount,
+    SUM(CASE WHEN IoFlag = 'In'  THEN SourceAmount ELSE 0 END)
+        - SUM(CASE WHEN IoFlag = 'Out' THEN SourceAmount ELSE 0 END) AS NetImbalanceAmount,
+    CASE WHEN Scope = 'ARCHIVE' THEN 'HISTORICAL'
+         WHEN ABS(SUM(CASE WHEN IoFlag = 'In' THEN SourceAmount ELSE 0 END)
+                  - SUM(CASE WHEN IoFlag = 'Out' THEN SourceAmount ELSE 0 END)) >= 1000000 THEN 'CRITICAL_IMBALANCE'
+         WHEN ABS(SUM(CASE WHEN IoFlag = 'In' THEN SourceAmount ELSE 0 END)
+                  - SUM(CASE WHEN IoFlag = 'Out' THEN SourceAmount ELSE 0 END)) >= 100000  THEN 'NOTABLE_IMBALANCE'
+         ELSE 'BALANCED' END AS ImbalanceFlag,
+    CASE WHEN Scope = 'ARCHIVE' THEN 'P5'
+         WHEN ABS(SUM(CASE WHEN IoFlag = 'In' THEN SourceAmount ELSE 0 END)
+                  - SUM(CASE WHEN IoFlag = 'Out' THEN SourceAmount ELSE 0 END)) >= 1000000 THEN 'P1'
+         WHEN ABS(SUM(CASE WHEN IoFlag = 'In' THEN SourceAmount ELSE 0 END)
+                  - SUM(CASE WHEN IoFlag = 'Out' THEN SourceAmount ELSE 0 END)) >= 100000  THEN 'P3'
+         ELSE 'P5' END AS Urgency,
+    CASE WHEN Scope = 'ARCHIVE' THEN 'HISTORICAL_TREND_ANALYSIS_ONLY'
+         WHEN ABS(SUM(CASE WHEN IoFlag = 'In' THEN SourceAmount ELSE 0 END)
+                  - SUM(CASE WHEN IoFlag = 'Out' THEN SourceAmount ELSE 0 END)) >= 1000000 THEN 'ESCALATE_CLEARING_RECONCILIATION'
+         WHEN ABS(SUM(CASE WHEN IoFlag = 'In' THEN SourceAmount ELSE 0 END)
+                  - SUM(CASE WHEN IoFlag = 'Out' THEN SourceAmount ELSE 0 END)) >= 100000  THEN 'INVESTIGATE_DAILY_IMBALANCE'
+         ELSE 'NONE' END AS RecommendedAction
+FROM Src
+WHERE TxnDate BETWEEN 19000101 AND 99991231
+GROUP BY Scope, Network, TRY_CONVERT(DATE, CAST(TxnDate AS VARCHAR(8)), 112);
+GO
+
+
+-- G12. High-value unmatched transactions (>= 100k) - row-level alarms
+CREATE OR ALTER VIEW [Reporting].[VwHighValueUnmatchedTransactions] AS
+WITH Src AS (
+    SELECT 'LIVE' AS Scope, 'BKM' AS Network, d.Id AS DetailId, d.OriginalAmount, d.OriginalCurrency, d.MerchantId, d.MerchantName, d.MerchantCountry, d.TransactionDate, d.CardNo, d.CreateDate
+    FROM [Ingestion].[CardBkmDetail] d JOIN [Ingestion].[FileLine] fl ON fl.Id = d.FileLineId
+    WHERE fl.MatchedClearingLineId IS NULL AND d.OriginalAmount >= 100000
+    UNION ALL
+    SELECT 'LIVE','VISA', d.Id, d.OriginalAmount, d.OriginalCurrency, d.MerchantId, d.MerchantName, d.MerchantCountry, d.TransactionDate, d.CardNo, d.CreateDate
+    FROM [Ingestion].[CardVisaDetail] d JOIN [Ingestion].[FileLine] fl ON fl.Id = d.FileLineId
+    WHERE fl.MatchedClearingLineId IS NULL AND d.OriginalAmount >= 100000
+    UNION ALL
+    SELECT 'LIVE','MSC', d.Id, d.OriginalAmount, d.OriginalCurrency, d.MerchantId, d.MerchantName, d.MerchantCountry, d.TransactionDate, d.CardNo, d.CreateDate
+    FROM [Ingestion].[CardMscDetail] d JOIN [Ingestion].[FileLine] fl ON fl.Id = d.FileLineId
+    WHERE fl.MatchedClearingLineId IS NULL AND d.OriginalAmount >= 100000
+    UNION ALL
+    SELECT 'ARCHIVE','BKM', d.Id, d.OriginalAmount, d.OriginalCurrency, d.MerchantId, d.MerchantName, d.MerchantCountry, d.TransactionDate, d.CardNo, d.CreateDate
+    FROM [Archive].[IngestionCardBkmDetail] d JOIN [Archive].[IngestionFileLine] fl ON fl.Id = d.FileLineId
+    WHERE fl.MatchedClearingLineId IS NULL AND d.OriginalAmount >= 100000
+    UNION ALL
+    SELECT 'ARCHIVE','VISA', d.Id, d.OriginalAmount, d.OriginalCurrency, d.MerchantId, d.MerchantName, d.MerchantCountry, d.TransactionDate, d.CardNo, d.CreateDate
+    FROM [Archive].[IngestionCardVisaDetail] d JOIN [Archive].[IngestionFileLine] fl ON fl.Id = d.FileLineId
+    WHERE fl.MatchedClearingLineId IS NULL AND d.OriginalAmount >= 100000
+    UNION ALL
+    SELECT 'ARCHIVE','MSC', d.Id, d.OriginalAmount, d.OriginalCurrency, d.MerchantId, d.MerchantName, d.MerchantCountry, d.TransactionDate, d.CardNo, d.CreateDate
+    FROM [Archive].[IngestionCardMscDetail] d JOIN [Archive].[IngestionFileLine] fl ON fl.Id = d.FileLineId
+    WHERE fl.MatchedClearingLineId IS NULL AND d.OriginalAmount >= 100000
+)
+SELECT
+    Scope AS DataScope, Network, DetailId,
+    OriginalAmount, CAST(OriginalCurrency AS VARCHAR(8)) AS OriginalCurrency,
+    ISNULL(MerchantId, 'UNKNOWN')      AS MerchantId,
+    ISNULL(MerchantName, 'UNKNOWN')    AS MerchantName,
+    ISNULL(MerchantCountry, 'UNKNOWN') AS MerchantCountry,
+    TRY_CONVERT(DATE, CAST(TransactionDate AS VARCHAR(8)), 112) AS TransactionDate,
+    CASE WHEN CardNo IS NOT NULL AND LEN(CardNo) >= 4 THEN '****' + RIGHT(CardNo, 4) ELSE NULL END AS CardLast4,
+    CreateDate AS IngestedAt,
+    DATEDIFF(DAY,
+             TRY_CONVERT(DATE, CAST(TransactionDate AS VARCHAR(8)), 112),
+             CAST(CreateDate AS DATE)) AS AgeDays,
+    CASE WHEN Scope = 'ARCHIVE'                         THEN 'HISTORICAL'
+         WHEN OriginalAmount >= 1000000                 THEN 'CRITICAL_UNMATCHED'
+         WHEN OriginalAmount >= 500000                  THEN 'HIGH_VALUE_UNMATCHED'
+         ELSE 'ELEVATED_UNMATCHED' END AS AlarmFlag,
+    CASE WHEN Scope = 'ARCHIVE'         THEN 'P5'
+         WHEN OriginalAmount >= 1000000 THEN 'P1'
+         WHEN OriginalAmount >= 500000  THEN 'P2'
+         ELSE 'P3' END AS Urgency,
+    CASE WHEN Scope = 'ARCHIVE'         THEN 'HISTORICAL_TREND_ANALYSIS_ONLY'
+         WHEN OriginalAmount >= 1000000 THEN 'IMMEDIATE_RECONCILIATION_REQUIRED'
+         WHEN OriginalAmount >= 500000  THEN 'PRIORITY_RECONCILIATION_REQUIRED'
+         ELSE 'INVESTIGATE_HIGH_VALUE_UNMATCHED' END AS RecommendedAction
+FROM Src
+WHERE TransactionDate BETWEEN 19000101 AND 99991231;
+GO
+
+
+
+-- =====================================================================================
+-- [Reporting].[VwReportingDocumentation] source (parallel to reporting.rep_documentation).
+-- Contains entries for every [Reporting].[Vw*] view present in this migration; column
+-- names are PascalCase per project convention.
+-- =====================================================================================
+IF OBJECT_ID('[Reporting].[VwReportingDocumentation]', 'V') IS NOT NULL
+    DROP VIEW [Reporting].[VwReportingDocumentation];
+GO
+
+CREATE VIEW [Reporting].[VwReportingDocumentation] AS
+SELECT d.ViewName, d.ReportGroup,
+       d.PurposeTr, d.PurposeEn,
+       d.BusinessQuestionTr, d.BusinessQuestionEn,
+       d.InterpretationTr, d.InterpretationEn,
+       d.UsageTimeTr, d.UsageTimeEn,
+       d.TargetUserTr, d.TargetUserEn,
+       d.ActionGuidanceTr, d.ActionGuidanceEn,
+       d.ImportantColumnsTr, d.ImportantColumnsEn,
+       d.LiveArchiveInterpretationTr, d.LiveArchiveInterpretationEn,
+       d.NotesTr, d.NotesEn
+FROM (VALUES
+    ('[Reporting].[VwHighValueUnmatchedTransactions]', 'FINANCIAL_RISK', 'Tek tek 100k+ tutarli eslesmemis islemleri merchant adi, kanal ve PAN-mask edilmis kart bilgisi ile listeler; tek-noktali yuksek riski hedefler.', 'Lists individual unmatched transactions of 100k+ with merchant name, channel and PAN-masked card; targets single-item high risk.', 'Yuksek tutarli hangi tek tek islemler hala beklemede?', 'Which individual high-value transactions are still pending match?', 'risk_flag CRITICAL_HIGH_VALUE_UNMATCHED 1M+ islemdir, derhal incelenmelidir; HIGH_VALUE_UNMATCHED ikinci sira riskidir.', 'CRITICAL_HIGH_VALUE_UNMATCHED risk_flag is a 1M+ transaction; inspect immediately. HIGH_VALUE_UNMATCHED is the second-tier risk.', 'Gunluk finansal kapanis sonrasi.', 'After the daily financial close.', 'Recon, finans, risk, KYC ekibi.', 'Recon, finance, risk, KYC team.', 'CRITICAL_HIGH_VALUE_UNMATCHED satirlari risk komitesine eskale, gerekirse manuel hareketle deniklestir; HIGH_VALUE_UNMATCHED operasyon ekibinde isleme alinir.', 'Escalate CRITICAL_HIGH_VALUE_UNMATCHED to the risk committee, balance manually if required; HIGH_VALUE_UNMATCHED is processed by operations.', 'detail_id, transaction_date, original_amount, merchant_name, card_mask, risk_flag', 'detail_id, transaction_date, original_amount, merchant_name, card_mask, risk_flag', 'LIVE: aktif yuksek tutarli risk. ARCHIVE: tarihi yuksek tutarli profil.', 'LIVE: active high-value risk. ARCHIVE: historical high-value profile.', 'Kart numarasi PAN-mask edilir (ilk6 + **** + son4); 100k esiginin altindaki islemler dahil edilmez.', 'Card number is PAN-masked (first6 + **** + last4); transactions below the 100k threshold are excluded.'),
+    ('[Reporting].[VwDailyTransactionVolume]', 'FINANCIAL_VOLUME', 'Islem tarihine (transaction_date) gore network/financial_type/txn_effect/currency bazinda gunluk hacim, debit/credit ve net akis.', 'Daily volume per network/financial_type/txn_effect/currency using real business transaction_date with debit, credit and net flow.', 'Hangi guneki finansal hacim ne kadardi, anormal bir tepe ya da cukur var mi?', 'What was the daily financial volume, are there abnormal peaks or troughs?', 'volume_flag MATERIAL_NET_FLOW net akis 1M esigini astigini gosterir, denetim gerekir; NORMAL_VOLUME ise olagan dagilimdir.', 'MATERIAL_NET_FLOW volume_flag means net flow exceeds the 1M threshold and warrants review; NORMAL_VOLUME indicates ordinary distribution.', 'Gunluk finansal kapanis ve haftalik trend incelemesi.', 'Daily financial close and weekly trend review.', 'Finans, recon, yonetim.', 'Finance, recon, management.', 'Anormal net akis tespit edilirse o gunun yuksek tutarli islemleri (rep_high_value_unmatched_transactions) ve cesidi (network/currency) ile incele.', 'On abnormal net flow drill into that day high-value transactions (rep_high_value_unmatched_transactions) and breakdown (network/currency).', 'transaction_date, network, currency, debit_amount, credit_amount, net_flow_amount, volume_flag', 'transaction_date, network, currency, debit_amount, credit_amount, net_flow_amount, volume_flag', 'LIVE: bugunku/dunku gercek tarihler. ARCHIVE: tarihsel hacim profili ve trend.', 'LIVE: today/yesterday actuals. ARCHIVE: historical volume profile and trend.', 'transaction_date int4 YYYYMMDD formatindadir; out-of-range degerler atlanir (1900-9999).', 'transaction_date is int4 YYYYMMDD; out-of-range values are skipped (1900-9999).'),
+    ('[Reporting].[VwMccRevenueConcentration]', 'FINANCIAL_CONCENTRATION', 'MCC bazinda hacim payi, vergi/komisyon, surcharge ve cashback ekonomisi; konsantrasyon riski etiketi.', 'Per-MCC volume share, tax/commission, surcharge and cashback economics with concentration risk flag.', 'Hacmimiz hangi MCC lere bagli, tek bir MCC ye asiri bagimliyiz?', 'Which MCCs drive our volume, are we over-dependent on a single one?', 'concentration_risk HIGH_CONCENTRATION MCC payinin %30 unu astigini gosterir; is surekliligi ve gelir cesitlendirme riskidir.', 'HIGH_CONCENTRATION concentration_risk means an MCC exceeds 30% share; a business-continuity and revenue diversification risk.', 'Aylik portfoy degerlendirmesi.', 'Monthly portfolio review.', 'Risk, finans, ticari ekipler.', 'Risk, finance, commercial teams.', 'HIGH_CONCENTRATION MCC ler portfoy diversifikasyonu calismasina alinir; ticari ekiple yeni MCC kazanimi planlanir.', 'HIGH_CONCENTRATION MCCs are sent to portfolio diversification work; new MCC acquisition is planned with the commercial team.', 'mcc, volume_share_pct, total_tax_amount, total_cashback_amount, concentration_risk', 'mcc, volume_share_pct, total_tax_amount, total_cashback_amount, concentration_risk', 'LIVE: guncel portfoy. ARCHIVE: tarihsel konsantrasyon trendi.', 'LIVE: current portfolio. ARCHIVE: historical concentration trend.', 'Vergi geliri (tax1+tax2) ve cashback gideri ayni satirda goruldugu icin net katki hesaplanabilir.', 'Tax revenue (tax1+tax2) and cashback cost are visible side by side; net contribution is computable.'),
+    ('[Reporting].[VwMerchantRiskHotspots]', 'FINANCIAL_RISK', 'Merchant bazinda decline orani, eslesmemis is orani ve eslesmesim is finansal etki ile risk siniflandirmasi (HIGH_RISK / MEDIUM_RISK / LOW_RISK / HIGH_DECLINE).', 'Per-merchant decline rate, unmatched rate and unmatched financial impact with risk classification (HIGH_RISK / MEDIUM_RISK / LOW_RISK / HIGH_DECLINE).', 'Hangi merchant lar yuksek risk tasiyor, hangi merchant da decline patlamasi var?', 'Which merchants carry high risk, where is decline spiking?', 'HIGH_RISK_MERCHANT %20+ unmatched ve 100k+ tutar; HIGH_DECLINE_MERCHANT decline ozellikle yogun.', 'HIGH_RISK_MERCHANT means 20%+ unmatched and 100k+ amount; HIGH_DECLINE_MERCHANT means decline is particularly intense.', 'Haftalik merchant risk degerlendirmesi.', 'Weekly merchant risk review.', 'Risk, ticari, finans.', 'Risk, commercial, finance.', 'HIGH_RISK_MERCHANT ler risk ekibine eskale; HIGH_DECLINE_MERCHANT lar icin decline pattern (issuer/limit/3DS) incelenir.', 'Escalate HIGH_RISK_MERCHANT to the risk team; for HIGH_DECLINE_MERCHANT investigate decline pattern (issuer/limit/3DS).', 'merchant_id, decline_rate_pct, unmatched_rate_pct, unmatched_amount, risk_flag', 'merchant_id, decline_rate_pct, unmatched_rate_pct, unmatched_amount, risk_flag', 'LIVE: aktif merchant riski. ARCHIVE: gecmis profili.', 'LIVE: active merchant risk. ARCHIVE: historical profile.', 'Decline orani response_code <> 00 veya is_successful_txn = N kombinasyonuyla hesaplanir.', 'Decline rate is computed from response_code <> 00 or is_successful_txn = N.'),
+    ('[Reporting].[VwCountryCrossBorderExposure]', 'FINANCIAL_RISK', 'Merchant ulkesi ve original/settlement currency esitsizligine gore yurt disi ve FX maruziyetini gosterir.', 'Surfaces cross-border and FX exposure by merchant_country and original-vs-settlement currency.', 'Yurt disi ve farkli para birimi islemlerine ne kadar maruziz?', 'How exposed are we to cross-border and cross-currency transactions?', 'exposure_flag HIGH_FX_EXPOSURE yuksek tutarli FX maruziyetidir, hedge degerlendirilmelidir.', 'HIGH_FX_EXPOSURE exposure_flag indicates large FX exposure; consider hedging.', 'Aylik FX risk degerlendirmesi.', 'Monthly FX risk review.', 'Hazine, finans, risk.', 'Treasury, finance, risk.', 'HIGH_FX_EXPOSURE icin hedging politikasi gozden gecirilir; ulke bazinda diversifikasyon planlanir.', 'Review hedging policy on HIGH_FX_EXPOSURE; plan country-level diversification.', 'merchant_country, fx_pattern, total_original_amount, exposure_flag', 'merchant_country, fx_pattern, total_original_amount, exposure_flag', 'LIVE: guncel exposure. ARCHIVE: tarihsel FX riski.', 'LIVE: current exposure. ARCHIVE: historical FX risk.', 'Currency kodlari ISO 4217 numerik (orn 949 = TRY) olabilir.', 'Currency codes are likely ISO 4217 numeric (e.g. 949 = TRY).'),
+    ('[Reporting].[VwResponseCodeDeclineHealth]', 'AUTHORIZATION_HEALTH', 'Network bazinda response_code dagilimi, basarisizlik orani ve baskin red sebepleri.', 'Per-network response_code distribution with failure rate and dominant decline reasons.', 'Iadeler ve redler hangi response_code dan geliyor?', 'Which response_codes are driving declines and refusals?', 'DOMINANT_FAILURE_REASON %5 ustu paya sahip bir red sebebi vardir, kaynak arastirilmalidir; HEALTHY normaldir.', 'DOMINANT_FAILURE_REASON means a decline reason exceeds 5% share; investigate the root cause; HEALTHY is normal.', 'Gunluk operasyonel takip.', 'Daily operational monitoring.', 'Operasyon, urun, risk.', 'Operations, product, risk.', 'DOMINANT_FAILURE_REASON satirlari icin kaynak (issuer/network/limit) arastirilir; gerekirse 3DS/limit ayarlari guncellenir.', 'Investigate the source (issuer/network/limit) for DOMINANT_FAILURE_REASON rows; update 3DS/limit settings if needed.', 'network, response_code, failure_rate_pct, network_share_pct, health_flag', 'network, response_code, failure_rate_pct, network_share_pct, health_flag', 'LIVE: anlik authorization sagligi. ARCHIVE: tarihsel red profili.', 'LIVE: real-time authorization health. ARCHIVE: historical decline profile.', 'response_code = 00 basari kabul edilir; NONE veri eksikligini gosterir.', 'response_code = 00 is treated as success; NONE indicates missing data.'),
+    ('[Reporting].[VwSettlementLagAnalysis]', 'OPERATIONS_KPI', 'Islem tarihi ile end_of_day_date, value_date ve dosya alim tarihi arasindaki gecikmeleri olcer.', 'Measures lag between transaction_date and end_of_day_date, value_date, and file ingestion date.', 'Islemler ne kadar zamaninda sisteme dusuyor, hangi noktada gecikme olusuyor?', 'How timely are transactions arriving in the system, where does the delay accumulate?', 'lag_health CHRONIC_INGEST_DELAY yapisal bir alim gecikmesidir; ON_TARGET SLA icindedir.', 'CHRONIC_INGEST_DELAY lag_health means structurally lagging ingestion; ON_TARGET means within SLA.', 'Gunluk SLA takibi.', 'Daily SLA monitoring.', 'Operasyon, SRE, recon.', 'Operations, SRE, recon.', 'CHRONIC_INGEST_DELAY de upstream provider/kanal ile temas kurulur; transport ya da batch zamanlamasi degistirilir.', 'On CHRONIC_INGEST_DELAY contact upstream provider/channel; change transport or batch schedule.', 'channel, avg_lag_to_ingest_days, max_lag_to_ingest_days, late_ingest_count, lag_health', 'channel, avg_lag_to_ingest_days, max_lag_to_ingest_days, late_ingest_count, lag_health', 'LIVE: guncel SLA durumu. ARCHIVE: tarihsel SLA profili.', 'LIVE: current SLA status. ARCHIVE: historical SLA profile.', 'transaction_date, end_of_day_date, value_date YYYYMMDD int4 olarak tutulur.', 'transaction_date, end_of_day_date, value_date are stored as YYYYMMDD int4.'),
+    ('[Reporting].[VwCurrencyFxDrift]', 'FINANCIAL_RISK', 'Cross-currency islemlerde original ve settlement tutar farklarini toplayarak FX drift i (kazanc/kayip) gosterir.', 'For cross-currency transactions aggregates the original-vs-settlement amount drift to surface FX gain/loss.', 'FX donusumlerinde sistematik bir kayip ya da kazanc var mi?', 'Is there systematic FX gain/loss in our currency conversions?', 'MATERIAL_DRIFT 100k+ kumulatif drift birikmistir; settlement mantigi ve kur kaynagi denetlenmelidir.', 'MATERIAL_DRIFT means cumulative drift exceeds 100k; review settlement logic and FX rate source.', 'Aylik FX denetimi.', 'Monthly FX audit.', 'Hazine, finans, denetim.', 'Treasury, finance, audit.', 'MATERIAL_DRIFT te kur kaynagi (Reuters/issuer rate) ve settlement formulu denetlenir; gerekirse rezerv ayrilir.', 'On MATERIAL_DRIFT audit the FX rate source (Reuters/issuer rate) and settlement formula; reserve if needed.', 'currency_pair, settlement_drift, billing_drift, fx_drift_severity', 'currency_pair, settlement_drift, billing_drift, fx_drift_severity', 'LIVE: guncel FX drift. ARCHIVE: tarihsel FX drift profili.', 'LIVE: current FX drift. ARCHIVE: historical FX drift profile.', 'Sadece original_currency <> settlement_currency olan satirlar ele alinir.', 'Only original_currency <> settlement_currency rows are considered.'),
+    ('[Reporting].[VwInstallmentPortfolioSummary]', 'PORTFOLIO_RISK', 'Network bazinda taksit kovasi (1, 2-3, 4-6, 7-12, 13+) ile portfoy dagilimi ve uzun vadeli maruziyet bayragi.', 'Per-network installment buckets (1, 2-3, 4-6, 7-12, 13+) with portfolio share and long-term exposure flag.', 'Taksitli portfoyumuz ne kadar uzun vadeye yayilmis?', 'How much of our portfolio is in long-term installments?', 'HIGH_LONG_TERM_INSTALLMENT_EXPOSURE 13+ taksit %10 unu astigini gosterir, kredi riski artmistir.', 'HIGH_LONG_TERM_INSTALLMENT_EXPOSURE means 13+ installment exceeds 10%, increasing credit risk.', 'Aylik portfoy degerlendirmesi.', 'Monthly portfolio review.', 'Risk, kredi, finans.', 'Risk, credit, finance.', 'HIGH_LONG_TERM_INSTALLMENT_EXPOSURE durumunda taksit politikasi/skorlama incelenmelidir.', 'Review installment policy/scoring on HIGH_LONG_TERM_INSTALLMENT_EXPOSURE.', 'network, installment_bucket, volume_share_pct, amount_share_pct, portfolio_flag', 'network, installment_bucket, volume_share_pct, amount_share_pct, portfolio_flag', 'LIVE: guncel portfoy. ARCHIVE: tarihsel taksit egilimi.', 'LIVE: current portfolio. ARCHIVE: historical installment trend.', 'install_count detail tabloundaki gercek taksit sayisidir; install_order taksit sirasidir.', 'install_count is the real installment count from detail; install_order is the order index.'),
+    ('[Reporting].[VwLoyaltyPointsEconomy]', 'PROGRAM_ECONOMICS', 'Gunluk bazda BC/MC/CC puan tutarlarinin orijinal islem tutarina oranini gosterir; sadakat program maliyetini olcer.', 'Daily BC/MC/CC point amounts vs original transaction amount; measures loyalty program cost.', 'Sadakat programi gunluk olarak ne kadara mal oluyor?', 'How much does the loyalty program cost daily?', 'HIGH_LOYALTY_USAGE %10+ subvansiyon var; program maliyeti gozden gecirilmelidir.', 'HIGH_LOYALTY_USAGE means subsidy exceeds 10%; review program cost.', 'Aylik program degerlendirmesi.', 'Monthly program review.', 'Sadakat, urun, finans.', 'Loyalty, product, finance.', 'HIGH_LOYALTY_USAGE gunlerinde puan kazanim/harcama kurallari ve kampanyalar gozden gecirilir.', 'On HIGH_LOYALTY_USAGE days review point earning/burning rules and campaigns.', 'business_date, total_loyalty_amount, loyalty_to_amount_ratio_pct, loyalty_intensity', 'business_date, total_loyalty_amount, loyalty_to_amount_ratio_pct, loyalty_intensity', 'LIVE: gunluk program maliyeti. ARCHIVE: tarihsel maliyet trendi.', 'LIVE: daily program cost. ARCHIVE: historical cost trend.', 'BC/MC/CC point_amount alanlari TL bazinda tutar olarak saklanir.', 'BC/MC/CC point_amount fields are stored as currency amounts.'),
+    ('[Reporting].[VwClearingDisputeSummary]', 'DISPUTES', 'Clearing tarafindaki dispute_code/reason_code/control_stat bazinda islem ve reimbursement tutarlari.', 'Clearing dispute aggregations by dispute_code/reason_code/control_stat with reimbursement amount.', 'Itiraz/chargeback yuku ne kadar, hangi reason_code lar baskin?', 'What is our chargeback load, which reason codes dominate?', 'HIGH_DISPUTE_EXPOSURE reimbursement tutarinin 100k yi astigini gosterir, eskale edilmelidir.', 'HIGH_DISPUTE_EXPOSURE means reimbursement exceeds 100k; escalate.', 'Haftalik dispute degerlendirmesi.', 'Weekly dispute review.', 'Dispute ekibi, finans, denetim.', 'Dispute team, finance, audit.', 'HIGH_DISPUTE_EXPOSURE icin musteri/issuer ile temas plani olusturulur; reason_code bazinda root cause incelenir.', 'For HIGH_DISPUTE_EXPOSURE create a contact plan with customer/issuer; investigate root cause per reason_code.', 'dispute_code, reason_code, control_stat, total_reimbursement_amount, dispute_flag', 'dispute_code, reason_code, control_stat, total_reimbursement_amount, dispute_flag', 'LIVE: aktif disputes. ARCHIVE: tarihsel dispute profili.', 'LIVE: active disputes. ARCHIVE: historical dispute profile.', 'Sadece clearing detay tablolari kullanilir; card detail tarafinda dispute alani yoktur.', 'Only clearing detail tables are used; card detail does not have a dispute field.'),
+    ('[Reporting].[VwClearingIoImbalance]', 'CLEARING_FLOW', 'Gunluk clearing incoming/outgoing tutarlari ve net akis dengesizligi.', 'Daily clearing incoming/outgoing amounts and net flow imbalance.', 'Clearing incoming/outgoing dengemiz nasil, net akis ne yonde?', 'How is our incoming/outgoing clearing balance, in which direction is the net flow?', 'MATERIAL_NET_IMBALANCE 1M yi asan net akis demektir; recon veya reconciliation gecikmesi gostergesidir.', 'MATERIAL_NET_IMBALANCE means net flow exceeds 1M; indicates recon delay or imbalance.', 'Gunluk T+1 takibi.', 'Daily T+1 monitoring.', 'Recon, finans.', 'Recon, finance.', 'MATERIAL_NET_IMBALANCE icin gunluk reconciliation kapanis akisi denetlenir.', 'On MATERIAL_NET_IMBALANCE check the daily reconciliation close flow.', 'business_date, incoming_amount, outgoing_amount, net_flow_amount, imbalance_flag', 'business_date, incoming_amount, outgoing_amount, net_flow_amount, imbalance_flag', 'LIVE: guncel akis dengesi. ARCHIVE: tarihsel akis profili.', 'LIVE: current flow balance. ARCHIVE: historical flow profile.', 'io_flag I = incoming, O = outgoing kabul edilir.', 'io_flag I = incoming, O = outgoing.'),
+    ('[Reporting].[VwIngestionFileOverview]', 'FILE_PROCESSING', 'Tek dosya icin ozet operasyonel rapor: dosya kimligi, durum, mesaj ve kaynak/tip ozellikleri.', 'Per-file operational summary: file id, status, message, source/type.', 'Bu rapor ne diyor?', 'What does this report tell us?', 'Operasyonel ve finansal anlik durum gostergesidir; trend ile birlikte degerlendirilmelidir.', 'Operational and financial point-in-time indicator; evaluate together with the trend.', 'Gunluk ve haftalik takip.', 'Daily and weekly monitoring.', 'Operasyon, recon, finans.', 'Operations, recon, finance.', 'Anormal sapmalarda ilgili detay raporlarina dril edin; kalici sorunlarda runbook taki adimi izleyin.', 'On abnormal deviations drill into the related detail reports; for persistent issues follow the runbook step.', 'Bkz. view tanimi.', 'See view definition.', 'LIVE: anlik durum; ARCHIVE: tarihsel trend.', 'LIVE: point-in-time; ARCHIVE: historical trend.', 'MS SQL e ozgu eski (legacy) operasyonel view dur; PostgreSQL tarafinda karsiligi yoktur.', 'Legacy SQL Server-only operational view; no PostgreSQL counterpart.'),
+    ('[Reporting].[VwIngestionFileQuality]', 'FILE_PROCESSING', 'Dosya bazinda parse/validation hata orani, eksik satir, tekrar eden satir gibi kalite gostergeleri.', 'Per-file parse/validation failure rate, missing lines, duplicates.', 'Bu rapor ne diyor?', 'What does this report tell us?', 'Operasyonel ve finansal anlik durum gostergesidir; trend ile birlikte degerlendirilmelidir.', 'Operational and financial point-in-time indicator; evaluate together with the trend.', 'Gunluk ve haftalik takip.', 'Daily and weekly monitoring.', 'Operasyon, recon, finans.', 'Operations, recon, finance.', 'Anormal sapmalarda ilgili detay raporlarina dril edin; kalici sorunlarda runbook taki adimi izleyin.', 'On abnormal deviations drill into the related detail reports; for persistent issues follow the runbook step.', 'Bkz. view tanimi.', 'See view definition.', 'LIVE: anlik durum; ARCHIVE: tarihsel trend.', 'LIVE: point-in-time; ARCHIVE: historical trend.', 'MS SQL e ozgu eski (legacy) operasyonel view dur; PostgreSQL tarafinda karsiligi yoktur.', 'Legacy SQL Server-only operational view; no PostgreSQL counterpart.'),
+    ('[Reporting].[VwIngestionDailySummary]', 'FILE_PROCESSING', 'Gunluk dosya alim hacmi, basari/basarisiz dosya sayisi ve hata orani.', 'Daily ingestion volume, success/failure file counts, failure rate.', 'Bu rapor ne diyor?', 'What does this report tell us?', 'Operasyonel ve finansal anlik durum gostergesidir; trend ile birlikte degerlendirilmelidir.', 'Operational and financial point-in-time indicator; evaluate together with the trend.', 'Gunluk ve haftalik takip.', 'Daily and weekly monitoring.', 'Operasyon, recon, finans.', 'Operations, recon, finance.', 'Anormal sapmalarda ilgili detay raporlarina dril edin; kalici sorunlarda runbook taki adimi izleyin.', 'On abnormal deviations drill into the related detail reports; for persistent issues follow the runbook step.', 'Bkz. view tanimi.', 'See view definition.', 'LIVE: anlik durum; ARCHIVE: tarihsel trend.', 'LIVE: point-in-time; ARCHIVE: historical trend.', 'MS SQL e ozgu eski (legacy) operasyonel view dur; PostgreSQL tarafinda karsiligi yoktur.', 'Legacy SQL Server-only operational view; no PostgreSQL counterpart.'),
+    ('[Reporting].[VwIngestionNetworkMatrix]', 'FILE_PROCESSING', 'Network x dosya tipi matrisinde alim sayim ve tutarlari.', 'Counts and amounts in a network x file-type matrix.', 'Bu rapor ne diyor?', 'What does this report tell us?', 'Operasyonel ve finansal anlik durum gostergesidir; trend ile birlikte degerlendirilmelidir.', 'Operational and financial point-in-time indicator; evaluate together with the trend.', 'Gunluk ve haftalik takip.', 'Daily and weekly monitoring.', 'Operasyon, recon, finans.', 'Operations, recon, finance.', 'Anormal sapmalarda ilgili detay raporlarina dril edin; kalici sorunlarda runbook taki adimi izleyin.', 'On abnormal deviations drill into the related detail reports; for persistent issues follow the runbook step.', 'Bkz. view tanimi.', 'See view definition.', 'LIVE: anlik durum; ARCHIVE: tarihsel trend.', 'LIVE: point-in-time; ARCHIVE: historical trend.', 'MS SQL e ozgu eski (legacy) operasyonel view dur; PostgreSQL tarafinda karsiligi yoktur.', 'Legacy SQL Server-only operational view; no PostgreSQL counterpart.'),
+    ('[Reporting].[VwIngestionExceptionHotspots]', 'FILE_PROCESSING', 'Alim sirasinda en cok karsilasilan hata tipleri ve sayilari.', 'Top ingestion exception types with counts.', 'Bu rapor ne diyor?', 'What does this report tell us?', 'Operasyonel ve finansal anlik durum gostergesidir; trend ile birlikte degerlendirilmelidir.', 'Operational and financial point-in-time indicator; evaluate together with the trend.', 'Gunluk ve haftalik takip.', 'Daily and weekly monitoring.', 'Operasyon, recon, finans.', 'Operations, recon, finance.', 'Anormal sapmalarda ilgili detay raporlarina dril edin; kalici sorunlarda runbook taki adimi izleyin.', 'On abnormal deviations drill into the related detail reports; for persistent issues follow the runbook step.', 'Bkz. view tanimi.', 'See view definition.', 'LIVE: anlik durum; ARCHIVE: tarihsel trend.', 'LIVE: point-in-time; ARCHIVE: historical trend.', 'MS SQL e ozgu eski (legacy) operasyonel view dur; PostgreSQL tarafinda karsiligi yoktur.', 'Legacy SQL Server-only operational view; no PostgreSQL counterpart.'),
+    ('[Reporting].[VwReconDailyOverview]', 'RECONCILIATION', 'Gunluk reconciliation high-level: islenen, eslesen, eslesmemis, manuel inceleme gereken.', 'Daily reconciliation high-level: processed, matched, unmatched, manual-review.', 'Bu rapor ne diyor?', 'What does this report tell us?', 'Operasyonel ve finansal anlik durum gostergesidir; trend ile birlikte degerlendirilmelidir.', 'Operational and financial point-in-time indicator; evaluate together with the trend.', 'Gunluk ve haftalik takip.', 'Daily and weekly monitoring.', 'Operasyon, recon, finans.', 'Operations, recon, finance.', 'Anormal sapmalarda ilgili detay raporlarina dril edin; kalici sorunlarda runbook taki adimi izleyin.', 'On abnormal deviations drill into the related detail reports; for persistent issues follow the runbook step.', 'Bkz. view tanimi.', 'See view definition.', 'LIVE: anlik durum; ARCHIVE: tarihsel trend.', 'LIVE: point-in-time; ARCHIVE: historical trend.', 'MS SQL e ozgu eski (legacy) operasyonel view dur; PostgreSQL tarafinda karsiligi yoktur.', 'Legacy SQL Server-only operational view; no PostgreSQL counterpart.'),
+    ('[Reporting].[VwReconOpenItems]', 'RECONCILIATION', 'Acik kalan reconciliation kayitlari (ozet halinde).', 'Open reconciliation items (summary).', 'Bu rapor ne diyor?', 'What does this report tell us?', 'Operasyonel ve finansal anlik durum gostergesidir; trend ile birlikte degerlendirilmelidir.', 'Operational and financial point-in-time indicator; evaluate together with the trend.', 'Gunluk ve haftalik takip.', 'Daily and weekly monitoring.', 'Operasyon, recon, finans.', 'Operations, recon, finance.', 'Anormal sapmalarda ilgili detay raporlarina dril edin; kalici sorunlarda runbook taki adimi izleyin.', 'On abnormal deviations drill into the related detail reports; for persistent issues follow the runbook step.', 'Bkz. view tanimi.', 'See view definition.', 'LIVE: anlik durum; ARCHIVE: tarihsel trend.', 'LIVE: point-in-time; ARCHIVE: historical trend.', 'MS SQL e ozgu eski (legacy) operasyonel view dur; PostgreSQL tarafinda karsiligi yoktur.', 'Legacy SQL Server-only operational view; no PostgreSQL counterpart.'),
+    ('[Reporting].[VwReconOpenItemAging]', 'RECONCILIATION', 'Acik reconciliation kayitlarinin yas dagilimi.', 'Aging distribution of open reconciliation items.', 'Bu rapor ne diyor?', 'What does this report tell us?', 'Operasyonel ve finansal anlik durum gostergesidir; trend ile birlikte degerlendirilmelidir.', 'Operational and financial point-in-time indicator; evaluate together with the trend.', 'Gunluk ve haftalik takip.', 'Daily and weekly monitoring.', 'Operasyon, recon, finans.', 'Operations, recon, finance.', 'Anormal sapmalarda ilgili detay raporlarina dril edin; kalici sorunlarda runbook taki adimi izleyin.', 'On abnormal deviations drill into the related detail reports; for persistent issues follow the runbook step.', 'Bkz. view tanimi.', 'See view definition.', 'LIVE: anlik durum; ARCHIVE: tarihsel trend.', 'LIVE: point-in-time; ARCHIVE: historical trend.', 'MS SQL e ozgu eski (legacy) operasyonel view dur; PostgreSQL tarafinda karsiligi yoktur.', 'Legacy SQL Server-only operational view; no PostgreSQL counterpart.'),
+    ('[Reporting].[VwReconManualReviewQueue]', 'MANUAL_REVIEW', 'Manuel inceleme bekleyen kayitlarin kuyruk goruntusu.', 'Queue view of items awaiting manual review.', 'Bu rapor ne diyor?', 'What does this report tell us?', 'Operasyonel ve finansal anlik durum gostergesidir; trend ile birlikte degerlendirilmelidir.', 'Operational and financial point-in-time indicator; evaluate together with the trend.', 'Gunluk ve haftalik takip.', 'Daily and weekly monitoring.', 'Operasyon, recon, finans.', 'Operations, recon, finance.', 'Anormal sapmalarda ilgili detay raporlarina dril edin; kalici sorunlarda runbook taki adimi izleyin.', 'On abnormal deviations drill into the related detail reports; for persistent issues follow the runbook step.', 'Bkz. view tanimi.', 'See view definition.', 'LIVE: anlik durum; ARCHIVE: tarihsel trend.', 'LIVE: point-in-time; ARCHIVE: historical trend.', 'MS SQL e ozgu eski (legacy) operasyonel view dur; PostgreSQL tarafinda karsiligi yoktur.', 'Legacy SQL Server-only operational view; no PostgreSQL counterpart.'),
+    ('[Reporting].[VwReconAlertSummary]', 'ALERTS', 'Reconciliation kaynakli alarm gruplarinin ozeti.', 'Summary of reconciliation-originated alert groups.', 'Bu rapor ne diyor?', 'What does this report tell us?', 'Operasyonel ve finansal anlik durum gostergesidir; trend ile birlikte degerlendirilmelidir.', 'Operational and financial point-in-time indicator; evaluate together with the trend.', 'Gunluk ve haftalik takip.', 'Daily and weekly monitoring.', 'Operasyon, recon, finans.', 'Operations, recon, finance.', 'Anormal sapmalarda ilgili detay raporlarina dril edin; kalici sorunlarda runbook taki adimi izleyin.', 'On abnormal deviations drill into the related detail reports; for persistent issues follow the runbook step.', 'Bkz. view tanimi.', 'See view definition.', 'LIVE: anlik durum; ARCHIVE: tarihsel trend.', 'LIVE: point-in-time; ARCHIVE: historical trend.', 'MS SQL e ozgu eski (legacy) operasyonel view dur; PostgreSQL tarafinda karsiligi yoktur.', 'Legacy SQL Server-only operational view; no PostgreSQL counterpart.'),
+    ('[Reporting].[VwReconLiveCardContentDaily]', 'RECONCILIATION_CONTENT', 'LIVE card detay tablolari icin gunluk icerik metrikleri.', 'Daily content metrics for the LIVE card detail tables.', 'Bu rapor ne diyor?', 'What does this report tell us?', 'Operasyonel ve finansal anlik durum gostergesidir; trend ile birlikte degerlendirilmelidir.', 'Operational and financial point-in-time indicator; evaluate together with the trend.', 'Gunluk ve haftalik takip.', 'Daily and weekly monitoring.', 'Operasyon, recon, finans.', 'Operations, recon, finance.', 'Anormal sapmalarda ilgili detay raporlarina dril edin; kalici sorunlarda runbook taki adimi izleyin.', 'On abnormal deviations drill into the related detail reports; for persistent issues follow the runbook step.', 'Bkz. view tanimi.', 'See view definition.', 'LIVE: anlik durum; ARCHIVE: tarihsel trend.', 'LIVE: point-in-time; ARCHIVE: historical trend.', 'MS SQL e ozgu eski (legacy) operasyonel view dur; PostgreSQL tarafinda karsiligi yoktur.', 'Legacy SQL Server-only operational view; no PostgreSQL counterpart.'),
+    ('[Reporting].[VwReconLiveClearingContentDaily]', 'RECONCILIATION_CONTENT', 'LIVE clearing detay tablolari icin gunluk icerik metrikleri.', 'Daily content metrics for the LIVE clearing detail tables.', 'Bu rapor ne diyor?', 'What does this report tell us?', 'Operasyonel ve finansal anlik durum gostergesidir; trend ile birlikte degerlendirilmelidir.', 'Operational and financial point-in-time indicator; evaluate together with the trend.', 'Gunluk ve haftalik takip.', 'Daily and weekly monitoring.', 'Operasyon, recon, finans.', 'Operations, recon, finance.', 'Anormal sapmalarda ilgili detay raporlarina dril edin; kalici sorunlarda runbook taki adimi izleyin.', 'On abnormal deviations drill into the related detail reports; for persistent issues follow the runbook step.', 'Bkz. view tanimi.', 'See view definition.', 'LIVE: anlik durum; ARCHIVE: tarihsel trend.', 'LIVE: point-in-time; ARCHIVE: historical trend.', 'MS SQL e ozgu eski (legacy) operasyonel view dur; PostgreSQL tarafinda karsiligi yoktur.', 'Legacy SQL Server-only operational view; no PostgreSQL counterpart.'),
+    ('[Reporting].[VwReconArchiveCardContentDaily]', 'RECONCILIATION_CONTENT', 'ARCHIVE card detay tablolari icin gunluk icerik metrikleri.', 'Daily content metrics for the ARCHIVE card detail tables.', 'Bu rapor ne diyor?', 'What does this report tell us?', 'Operasyonel ve finansal anlik durum gostergesidir; trend ile birlikte degerlendirilmelidir.', 'Operational and financial point-in-time indicator; evaluate together with the trend.', 'Gunluk ve haftalik takip.', 'Daily and weekly monitoring.', 'Operasyon, recon, finans.', 'Operations, recon, finance.', 'Anormal sapmalarda ilgili detay raporlarina dril edin; kalici sorunlarda runbook taki adimi izleyin.', 'On abnormal deviations drill into the related detail reports; for persistent issues follow the runbook step.', 'Bkz. view tanimi.', 'See view definition.', 'LIVE: anlik durum; ARCHIVE: tarihsel trend.', 'LIVE: point-in-time; ARCHIVE: historical trend.', 'MS SQL e ozgu eski (legacy) operasyonel view dur; PostgreSQL tarafinda karsiligi yoktur.', 'Legacy SQL Server-only operational view; no PostgreSQL counterpart.'),
+    ('[Reporting].[VwReconArchiveClearingContentDaily]', 'RECONCILIATION_CONTENT', 'ARCHIVE clearing detay tablolari icin gunluk icerik metrikleri.', 'Daily content metrics for the ARCHIVE clearing detail tables.', 'Bu rapor ne diyor?', 'What does this report tell us?', 'Operasyonel ve finansal anlik durum gostergesidir; trend ile birlikte degerlendirilmelidir.', 'Operational and financial point-in-time indicator; evaluate together with the trend.', 'Gunluk ve haftalik takip.', 'Daily and weekly monitoring.', 'Operasyon, recon, finans.', 'Operations, recon, finance.', 'Anormal sapmalarda ilgili detay raporlarina dril edin; kalici sorunlarda runbook taki adimi izleyin.', 'On abnormal deviations drill into the related detail reports; for persistent issues follow the runbook step.', 'Bkz. view tanimi.', 'See view definition.', 'LIVE: anlik durum; ARCHIVE: tarihsel trend.', 'LIVE: point-in-time; ARCHIVE: historical trend.', 'MS SQL e ozgu eski (legacy) operasyonel view dur; PostgreSQL tarafinda karsiligi yoktur.', 'Legacy SQL Server-only operational view; no PostgreSQL counterpart.'),
+    ('[Reporting].[VwReconContentDaily]', 'RECONCILIATION_CONTENT', 'LIVE+ARCHIVE birlestirilmis gunluk icerik metrikleri.', 'Combined LIVE+ARCHIVE daily content metrics.', 'Bu rapor ne diyor?', 'What does this report tell us?', 'Operasyonel ve finansal anlik durum gostergesidir; trend ile birlikte degerlendirilmelidir.', 'Operational and financial point-in-time indicator; evaluate together with the trend.', 'Gunluk ve haftalik takip.', 'Daily and weekly monitoring.', 'Operasyon, recon, finans.', 'Operations, recon, finance.', 'Anormal sapmalarda ilgili detay raporlarina dril edin; kalici sorunlarda runbook taki adimi izleyin.', 'On abnormal deviations drill into the related detail reports; for persistent issues follow the runbook step.', 'Bkz. view tanimi.', 'See view definition.', 'LIVE: anlik durum; ARCHIVE: tarihsel trend.', 'LIVE: point-in-time; ARCHIVE: historical trend.', 'MS SQL e ozgu eski (legacy) operasyonel view dur; PostgreSQL tarafinda karsiligi yoktur.', 'Legacy SQL Server-only operational view; no PostgreSQL counterpart.'),
+    ('[Reporting].[VwReconClearingControlstatAnalysis]', 'RECONCILIATION', 'Clearing control_stat dagilimi ve etkileri.', 'Clearing control_stat distribution and impacts.', 'Bu rapor ne diyor?', 'What does this report tell us?', 'Operasyonel ve finansal anlik durum gostergesidir; trend ile birlikte degerlendirilmelidir.', 'Operational and financial point-in-time indicator; evaluate together with the trend.', 'Gunluk ve haftalik takip.', 'Daily and weekly monitoring.', 'Operasyon, recon, finans.', 'Operations, recon, finance.', 'Anormal sapmalarda ilgili detay raporlarina dril edin; kalici sorunlarda runbook taki adimi izleyin.', 'On abnormal deviations drill into the related detail reports; for persistent issues follow the runbook step.', 'Bkz. view tanimi.', 'See view definition.', 'LIVE: anlik durum; ARCHIVE: tarihsel trend.', 'LIVE: point-in-time; ARCHIVE: historical trend.', 'MS SQL e ozgu eski (legacy) operasyonel view dur; PostgreSQL tarafinda karsiligi yoktur.', 'Legacy SQL Server-only operational view; no PostgreSQL counterpart.'),
+    ('[Reporting].[VwReconFinancialSummary]', 'FINANCIAL_RECONCILIATION', 'Reconciliation in finansal ozetidir; matched/unmatched tutarlar.', 'Financial summary of reconciliation; matched/unmatched amounts.', 'Bu rapor ne diyor?', 'What does this report tell us?', 'Operasyonel ve finansal anlik durum gostergesidir; trend ile birlikte degerlendirilmelidir.', 'Operational and financial point-in-time indicator; evaluate together with the trend.', 'Gunluk ve haftalik takip.', 'Daily and weekly monitoring.', 'Operasyon, recon, finans.', 'Operations, recon, finance.', 'Anormal sapmalarda ilgili detay raporlarina dril edin; kalici sorunlarda runbook taki adimi izleyin.', 'On abnormal deviations drill into the related detail reports; for persistent issues follow the runbook step.', 'Bkz. view tanimi.', 'See view definition.', 'LIVE: anlik durum; ARCHIVE: tarihsel trend.', 'LIVE: point-in-time; ARCHIVE: historical trend.', 'MS SQL e ozgu eski (legacy) operasyonel view dur; PostgreSQL tarafinda karsiligi yoktur.', 'Legacy SQL Server-only operational view; no PostgreSQL counterpart.'),
+    ('[Reporting].[VwReconResponseStatusAnalysis]', 'AUTHORIZATION_HEALTH', 'Response/status kombinasyonlarinin reconciliation uzerine etkisi.', 'Effect of response/status combinations on reconciliation.', 'Bu rapor ne diyor?', 'What does this report tell us?', 'Operasyonel ve finansal anlik durum gostergesidir; trend ile birlikte degerlendirilmelidir.', 'Operational and financial point-in-time indicator; evaluate together with the trend.', 'Gunluk ve haftalik takip.', 'Daily and weekly monitoring.', 'Operasyon, recon, finans.', 'Operations, recon, finance.', 'Anormal sapmalarda ilgili detay raporlarina dril edin; kalici sorunlarda runbook taki adimi izleyin.', 'On abnormal deviations drill into the related detail reports; for persistent issues follow the runbook step.', 'Bkz. view tanimi.', 'See view definition.', 'LIVE: anlik durum; ARCHIVE: tarihsel trend.', 'LIVE: point-in-time; ARCHIVE: historical trend.', 'MS SQL e ozgu eski (legacy) operasyonel view dur; PostgreSQL tarafinda karsiligi yoktur.', 'Legacy SQL Server-only operational view; no PostgreSQL counterpart.'),
+    ('[Reporting].[VwArchiveRunOverview]', 'ARCHIVE', 'Arsiv kosumlarinin yuksek seviye ozeti.', 'High-level overview of archive runs.', 'Bu rapor ne diyor?', 'What does this report tell us?', 'Operasyonel ve finansal anlik durum gostergesidir; trend ile birlikte degerlendirilmelidir.', 'Operational and financial point-in-time indicator; evaluate together with the trend.', 'Gunluk ve haftalik takip.', 'Daily and weekly monitoring.', 'Operasyon, recon, finans.', 'Operations, recon, finance.', 'Anormal sapmalarda ilgili detay raporlarina dril edin; kalici sorunlarda runbook taki adimi izleyin.', 'On abnormal deviations drill into the related detail reports; for persistent issues follow the runbook step.', 'Bkz. view tanimi.', 'See view definition.', 'LIVE: anlik durum; ARCHIVE: tarihsel trend.', 'LIVE: point-in-time; ARCHIVE: historical trend.', 'MS SQL e ozgu eski (legacy) operasyonel view dur; PostgreSQL tarafinda karsiligi yoktur.', 'Legacy SQL Server-only operational view; no PostgreSQL counterpart.'),
+    ('[Reporting].[VwArchiveEligibility]', 'ARCHIVE', 'Arsivlenmeye uygun ama henuz arsivlenmemis dosyalar.', 'Files eligible for archiving but not yet archived.', 'Bu rapor ne diyor?', 'What does this report tell us?', 'Operasyonel ve finansal anlik durum gostergesidir; trend ile birlikte degerlendirilmelidir.', 'Operational and financial point-in-time indicator; evaluate together with the trend.', 'Gunluk ve haftalik takip.', 'Daily and weekly monitoring.', 'Operasyon, recon, finans.', 'Operations, recon, finance.', 'Anormal sapmalarda ilgili detay raporlarina dril edin; kalici sorunlarda runbook taki adimi izleyin.', 'On abnormal deviations drill into the related detail reports; for persistent issues follow the runbook step.', 'Bkz. view tanimi.', 'See view definition.', 'LIVE: anlik durum; ARCHIVE: tarihsel trend.', 'LIVE: point-in-time; ARCHIVE: historical trend.', 'MS SQL e ozgu eski (legacy) operasyonel view dur; PostgreSQL tarafinda karsiligi yoktur.', 'Legacy SQL Server-only operational view; no PostgreSQL counterpart.'),
+    ('[Reporting].[VwArchiveBacklogTrend]', 'ARCHIVE', 'Arsiv backlog trendi (gun bazinda).', 'Daily archive backlog trend.', 'Bu rapor ne diyor?', 'What does this report tell us?', 'Operasyonel ve finansal anlik durum gostergesidir; trend ile birlikte degerlendirilmelidir.', 'Operational and financial point-in-time indicator; evaluate together with the trend.', 'Gunluk ve haftalik takip.', 'Daily and weekly monitoring.', 'Operasyon, recon, finans.', 'Operations, recon, finance.', 'Anormal sapmalarda ilgili detay raporlarina dril edin; kalici sorunlarda runbook taki adimi izleyin.', 'On abnormal deviations drill into the related detail reports; for persistent issues follow the runbook step.', 'Bkz. view tanimi.', 'See view definition.', 'LIVE: anlik durum; ARCHIVE: tarihsel trend.', 'LIVE: point-in-time; ARCHIVE: historical trend.', 'MS SQL e ozgu eski (legacy) operasyonel view dur; PostgreSQL tarafinda karsiligi yoktur.', 'Legacy SQL Server-only operational view; no PostgreSQL counterpart.'),
+    ('[Reporting].[VwArchiveRetentionSnapshot]', 'ARCHIVE', 'Veri saklama politikasi anlik goruntusu (yas/kategori).', 'Retention policy snapshot (age/category).', 'Bu rapor ne diyor?', 'What does this report tell us?', 'Operasyonel ve finansal anlik durum gostergesidir; trend ile birlikte degerlendirilmelidir.', 'Operational and financial point-in-time indicator; evaluate together with the trend.', 'Gunluk ve haftalik takip.', 'Daily and weekly monitoring.', 'Operasyon, recon, finans.', 'Operations, recon, finance.', 'Anormal sapmalarda ilgili detay raporlarina dril edin; kalici sorunlarda runbook taki adimi izleyin.', 'On abnormal deviations drill into the related detail reports; for persistent issues follow the runbook step.', 'Bkz. view tanimi.', 'See view definition.', 'LIVE: anlik durum; ARCHIVE: tarihsel trend.', 'LIVE: point-in-time; ARCHIVE: historical trend.', 'MS SQL e ozgu eski (legacy) operasyonel view dur; PostgreSQL tarafinda karsiligi yoktur.', 'Legacy SQL Server-only operational view; no PostgreSQL counterpart.'),
+    ('[Reporting].[VwFileReconSummary]', 'FILE_PROCESSING', 'Dosya bazinda reconciliation sonucu (matched/unmatched/manual).', 'Per-file reconciliation outcome (matched/unmatched/manual).', 'Bu rapor ne diyor?', 'What does this report tell us?', 'Operasyonel ve finansal anlik durum gostergesidir; trend ile birlikte degerlendirilmelidir.', 'Operational and financial point-in-time indicator; evaluate together with the trend.', 'Gunluk ve haftalik takip.', 'Daily and weekly monitoring.', 'Operasyon, recon, finans.', 'Operations, recon, finance.', 'Anormal sapmalarda ilgili detay raporlarina dril edin; kalici sorunlarda runbook taki adimi izleyin.', 'On abnormal deviations drill into the related detail reports; for persistent issues follow the runbook step.', 'Bkz. view tanimi.', 'See view definition.', 'LIVE: anlik durum; ARCHIVE: tarihsel trend.', 'LIVE: point-in-time; ARCHIVE: historical trend.', 'MS SQL e ozgu eski (legacy) operasyonel view dur; PostgreSQL tarafinda karsiligi yoktur.', 'Legacy SQL Server-only operational view; no PostgreSQL counterpart.'),
+    ('[Reporting].[VwReconMatchRateTrend]', 'RECONCILIATION_KPI', 'Reconciliation match-rate trend grafigi (gunluk/haftalik).', 'Reconciliation match-rate trend chart (daily/weekly).', 'Bu rapor ne diyor?', 'What does this report tell us?', 'Operasyonel ve finansal anlik durum gostergesidir; trend ile birlikte degerlendirilmelidir.', 'Operational and financial point-in-time indicator; evaluate together with the trend.', 'Gunluk ve haftalik takip.', 'Daily and weekly monitoring.', 'Operasyon, recon, finans.', 'Operations, recon, finance.', 'Anormal sapmalarda ilgili detay raporlarina dril edin; kalici sorunlarda runbook taki adimi izleyin.', 'On abnormal deviations drill into the related detail reports; for persistent issues follow the runbook step.', 'Bkz. view tanimi.', 'See view definition.', 'LIVE: anlik durum; ARCHIVE: tarihsel trend.', 'LIVE: point-in-time; ARCHIVE: historical trend.', 'MS SQL e ozgu eski (legacy) operasyonel view dur; PostgreSQL tarafinda karsiligi yoktur.', 'Legacy SQL Server-only operational view; no PostgreSQL counterpart.'),
+    ('[Reporting].[VwReconGapAnalysis]', 'RECONCILIATION', 'Reconciliation gap (eksik/fazla) analizi.', 'Reconciliation gap (missing/extra) analysis.', 'Bu rapor ne diyor?', 'What does this report tell us?', 'Operasyonel ve finansal anlik durum gostergesidir; trend ile birlikte degerlendirilmelidir.', 'Operational and financial point-in-time indicator; evaluate together with the trend.', 'Gunluk ve haftalik takip.', 'Daily and weekly monitoring.', 'Operasyon, recon, finans.', 'Operations, recon, finance.', 'Anormal sapmalarda ilgili detay raporlarina dril edin; kalici sorunlarda runbook taki adimi izleyin.', 'On abnormal deviations drill into the related detail reports; for persistent issues follow the runbook step.', 'Bkz. view tanimi.', 'See view definition.', 'LIVE: anlik durum; ARCHIVE: tarihsel trend.', 'LIVE: point-in-time; ARCHIVE: historical trend.', 'MS SQL e ozgu eski (legacy) operasyonel view dur; PostgreSQL tarafinda karsiligi yoktur.', 'Legacy SQL Server-only operational view; no PostgreSQL counterpart.'),
+    ('[Reporting].[VwUnmatchedTransactionAging]', 'FINANCIAL_RISK', 'Eslesmesim is islemlerin yas dagilimi.', 'Aging distribution of unmatched transactions.', 'Bu rapor ne diyor?', 'What does this report tell us?', 'Operasyonel ve finansal anlik durum gostergesidir; trend ile birlikte degerlendirilmelidir.', 'Operational and financial point-in-time indicator; evaluate together with the trend.', 'Gunluk ve haftalik takip.', 'Daily and weekly monitoring.', 'Operasyon, recon, finans.', 'Operations, recon, finance.', 'Anormal sapmalarda ilgili detay raporlarina dril edin; kalici sorunlarda runbook taki adimi izleyin.', 'On abnormal deviations drill into the related detail reports; for persistent issues follow the runbook step.', 'Bkz. view tanimi.', 'See view definition.', 'LIVE: anlik durum; ARCHIVE: tarihsel trend.', 'LIVE: point-in-time; ARCHIVE: historical trend.', 'MS SQL e ozgu eski (legacy) operasyonel view dur; PostgreSQL tarafinda karsiligi yoktur.', 'Legacy SQL Server-only operational view; no PostgreSQL counterpart.'),
+    ('[Reporting].[VwNetworkReconScorecard]', 'RECONCILIATION_KPI', 'Network bazinda reconciliation puan karti.', 'Per-network reconciliation scorecard.', 'Bu rapor ne diyor?', 'What does this report tell us?', 'Operasyonel ve finansal anlik durum gostergesidir; trend ile birlikte degerlendirilmelidir.', 'Operational and financial point-in-time indicator; evaluate together with the trend.', 'Gunluk ve haftalik takip.', 'Daily and weekly monitoring.', 'Operasyon, recon, finans.', 'Operations, recon, finance.', 'Anormal sapmalarda ilgili detay raporlarina dril edin; kalici sorunlarda runbook taki adimi izleyin.', 'On abnormal deviations drill into the related detail reports; for persistent issues follow the runbook step.', 'Bkz. view tanimi.', 'See view definition.', 'LIVE: anlik durum; ARCHIVE: tarihsel trend.', 'LIVE: point-in-time; ARCHIVE: historical trend.', 'MS SQL e ozgu eski (legacy) operasyonel view dur; PostgreSQL tarafinda karsiligi yoktur.', 'Legacy SQL Server-only operational view; no PostgreSQL counterpart.'),
+    ('[Reporting].[VwCardClearingCorrelation]', 'FINANCIAL_RECONCILIATION', 'Card-Clearing korelasyon ve eslesme oranlari.', 'Card-Clearing correlation and match ratios.', 'Bu rapor ne diyor?', 'What does this report tell us?', 'Operasyonel ve finansal anlik durum gostergesidir; trend ile birlikte degerlendirilmelidir.', 'Operational and financial point-in-time indicator; evaluate together with the trend.', 'Gunluk ve haftalik takip.', 'Daily and weekly monitoring.', 'Operasyon, recon, finans.', 'Operations, recon, finance.', 'Anormal sapmalarda ilgili detay raporlarina dril edin; kalici sorunlarda runbook taki adimi izleyin.', 'On abnormal deviations drill into the related detail reports; for persistent issues follow the runbook step.', 'Bkz. view tanimi.', 'See view definition.', 'LIVE: anlik durum; ARCHIVE: tarihsel trend.', 'LIVE: point-in-time; ARCHIVE: historical trend.', 'MS SQL e ozgu eski (legacy) operasyonel view dur; PostgreSQL tarafinda karsiligi yoktur.', 'Legacy SQL Server-only operational view; no PostgreSQL counterpart.')
+) AS d(
+    ViewName, ReportGroup,
+    PurposeTr, PurposeEn,
+    BusinessQuestionTr, BusinessQuestionEn,
+    InterpretationTr, InterpretationEn,
+    UsageTimeTr, UsageTimeEn,
+    TargetUserTr, TargetUserEn,
+    ActionGuidanceTr, ActionGuidanceEn,
+    ImportantColumnsTr, ImportantColumnsEn,
+    LiveArchiveInterpretationTr, LiveArchiveInterpretationEn,
+    NotesTr, NotesEn
+);
+GO
+
+-- =====================================================================================
+-- Helper view: dynamic reporting catalog (SQL Server)
+-- Auto-discovers every view under the [Reporting] schema and produces JSON contracts
+-- consumed by the generic /api/reporting/dynamic endpoint.
+-- View name and column names mirror the PostgreSQL counterpart so the same Dapper
+-- query (`reporting.rep_contract_catalog`) works on both providers.
+-- =====================================================================================
+IF OBJECT_ID('[Reporting].[rep_contract_catalog]', 'V') IS NOT NULL
+    DROP VIEW [Reporting].[rep_contract_catalog];
+GO
+
+CREATE VIEW [Reporting].[rep_contract_catalog] AS
+WITH rep_views AS (
+    SELECT
+        v.name                                            AS report_name,
+        '[Reporting].[' + v.name + ']'                    AS full_view_name,
+        v.object_id                                       AS view_object_id
+    FROM sys.views v
+    JOIN sys.schemas s ON s.schema_id = v.schema_id
+    WHERE s.name = 'Reporting'
+      AND v.name <> 'rep_contract_catalog'
+),
+cols AS (
+    SELECT
+        v.report_name,
+        v.full_view_name,
+        c.name                                            AS column_name,
+        c.column_id                                       AS ordinal,
+        CAST(c.is_nullable AS bit)                        AS is_nullable,
+        t.name                                            AS sql_type,
+        CASE
+            WHEN t.name IN ('char','varchar','nchar','nvarchar','text','ntext','sysname','uniqueidentifier','xml')
+                THEN 'string'
+            WHEN t.name IN ('tinyint','smallint','int','bigint','decimal','numeric','smallmoney','money','real','float')
+                THEN 'number'
+            WHEN t.name = 'bit'
+                THEN 'boolean'
+            WHEN t.name IN ('date','datetime','datetime2','smalldatetime','datetimeoffset','time')
+                THEN 'datetime'
+            ELSE 'string'
+        END                                               AS api_type
+    FROM rep_views v
+    JOIN sys.columns c ON c.object_id    = v.view_object_id
+    JOIN sys.types   t ON t.user_type_id = c.user_type_id
+),
+cols_with_ops AS (
+    SELECT
+        c.*,
+        CASE c.api_type
+            WHEN 'string'   THEN N'["eq","neq","contains","startsWith","endsWith","in","isNull","isNotNull"]'
+            WHEN 'number'   THEN N'["eq","neq","gt","gte","lt","lte","between","in","isNull","isNotNull"]'
+            WHEN 'datetime' THEN N'["eq","neq","gt","gte","lt","lte","between","isNull","isNotNull"]'
+            WHEN 'boolean'  THEN N'["eq","neq","isNull","isNotNull"]'
+            ELSE                 N'["eq","neq","isNull","isNotNull"]'
+        END AS operators_json
+    FROM cols c
+)
+SELECT
+    v.report_name,
+    v.full_view_name,
+    -- request_contract_json: { "filters": [ { field, type, nullable, operators[] }, ... ] }
+    JSON_QUERY((
+        SELECT
+            JSON_QUERY(ISNULL((
+                SELECT
+                    c.column_name                       AS field,
+                    c.api_type                          AS [type],
+                    c.is_nullable                       AS nullable,
+                    JSON_QUERY(c.operators_json)        AS operators
+                FROM cols_with_ops c
+                WHERE c.report_name = v.report_name
+                ORDER BY c.ordinal
+                FOR JSON PATH
+            ), N'[]')) AS filters
+        FOR JSON PATH, WITHOUT_ARRAY_WRAPPER
+    )) AS request_contract_json,
+    -- response_contract_json: { "type": "Dictionary<string, object?>", "columns": [ { field, type, nullable, ordinal }, ... ] }
+    JSON_QUERY((
+        SELECT
+            'Dictionary<string, object?>' AS [type],
+            JSON_QUERY(ISNULL((
+                SELECT
+                    c.column_name                       AS field,
+                    c.api_type                          AS [type],
+                    c.is_nullable                       AS nullable,
+                    c.ordinal                           AS ordinal
+                FROM cols_with_ops c
+                WHERE c.report_name = v.report_name
+                ORDER BY c.ordinal
+                FOR JSON PATH
+            ), N'[]')) AS columns
+        FOR JSON PATH, WITHOUT_ARRAY_WRAPPER
+    )) AS response_contract_json
+FROM rep_views v;
+GO
+

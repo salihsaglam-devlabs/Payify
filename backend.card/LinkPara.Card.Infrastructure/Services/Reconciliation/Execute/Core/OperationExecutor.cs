@@ -2,7 +2,6 @@ using LinkPara.Card.Application.Commons.Exceptions;
 using LinkPara.Card.Application.Commons.Extensions;
 using LinkPara.Card.Domain.Entities;
 using LinkPara.Card.Domain.Entities.Reconciliation.Persistence;
-using LinkPara.Card.Domain.Enums.FileIngestion;
 using LinkPara.Card.Infrastructure.Persistence;
 using LinkPara.Card.Infrastructure.Services.Audit;
 using LinkPara.Card.Infrastructure.Services.Reconciliation.Integrations.Emoney;

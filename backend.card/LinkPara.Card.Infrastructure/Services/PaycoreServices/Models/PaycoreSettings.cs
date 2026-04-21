@@ -20,6 +20,7 @@ public class PaycoreSettings
     public string UpdateAddress { get; set; }
     public string UpdateLimit { get; set; }
     public string GetCardLastCourierActivity { get; set; }
+    public string GetCardEmbossStatus { get; set; }
     public string AddAdditionalLimitRestriction { get; set; }
     public string CardRenewal { get; set; }
     public string GetClearCardNo { get; set; }
@@ -28,6 +29,8 @@ public class PaycoreSettings
     public string ApiVersion { get; set; }
     public string Language { get; set; }
     public string Channel { get; set; }
+    public string GetCardTransactions { get; set; }
+
 }
 
 public class PaycoreVaultSettings

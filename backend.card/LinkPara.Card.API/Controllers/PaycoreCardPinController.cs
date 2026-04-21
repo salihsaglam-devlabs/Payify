@@ -14,7 +14,7 @@ namespace LinkPara.Card.API.Controllers
         /// <returns></returns>
         [AllowAnonymous]
         [HttpPut("set-card-pin")]
-        public async Task<SetCardBinResponse> SetCardPinAsync(SetCardPinCommand command)
+        public async Task<EncDecPinblockResponse> SetCardPinAsync(SetCardPinCommand command)
         {
             return await Mediator.Send(command);
         }

@@ -4,5 +4,5 @@ using LinkPara.Card.Application.Features.PaycoreServices.CardPinServices.Command
 namespace LinkPara.Card.Application.Commons.Interfaces;
 public interface IPaycoreSecurityService
 {
-    Task<SetCardBinResponse> SetCardPinAsync(SetCardPinCommand command);
+    Task<EncDecPinblockResponse> SetCardPinAsync(SetCardPinCommand command);
 }

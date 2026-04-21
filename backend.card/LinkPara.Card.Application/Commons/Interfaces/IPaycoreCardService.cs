@@ -8,6 +8,7 @@ using LinkPara.Card.Application.Features.PaycoreServices.CardServices.Queries.Ge
 using LinkPara.Card.Application.Features.PaycoreServices.CardServices.Queries.GetCardTransactions;
 using LinkPara.Card.Application.Features.PaycoreServices.CardServices.Queries.GetCardSensitiveData;
 using LinkPara.Card.Application.Features.PaycoreServices.CardServices.Queries.GetClearCardNo;
+using LinkPara.Card.Application.Features.PaycoreServices.CardServices.Queries.GetCardEmbossStatus;
 
 namespace LinkPara.Card.Application.Commons.Interfaces;
 
@@ -25,5 +26,5 @@ public interface IPaycoreCardService
     Task<PaycoreResponse> AddAdditionalLimitRestrictionAsync(AddAdditionalLimitRestrictionCommand command);
     Task<CardRenewalResponse> CardRenewalAsync(CardRenewalCommand command);
     Task<GetCardStatusResponse> GetCardStatusAsync(GetCardStatusQuery command);
-
+    Task<GetCardEmbossStatusResponse> GetCardEmbossStatusAsync(GetCardEmbossStatusQuery command);
 }

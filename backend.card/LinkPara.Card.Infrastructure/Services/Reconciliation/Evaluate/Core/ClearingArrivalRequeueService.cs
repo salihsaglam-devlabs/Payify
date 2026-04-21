@@ -1,5 +1,4 @@
 using LinkPara.Card.Application.Commons.Extensions;
-using LinkPara.Card.Domain.Entities.FileIngestion.Persistence;
 using LinkPara.Card.Domain.Enums.FileIngestion;
 using LinkPara.Card.Infrastructure.Persistence;
 using LinkPara.Card.Infrastructure.Services.Audit;

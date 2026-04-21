@@ -619,26 +619,78 @@
     <value>Dahili raporlama hatası oluştu.</value>
   </data>
 
-  <data name="Handler.Reporting.GetTransactionsFailed" xml:space="preserve">
-    <value>Mutabakat işlemleri alınamadı. Detaylar için hatalara bakın.</value>
+  <data name="Handler.Reporting.Financial.DailyTransactionVolumeFailed" xml:space="preserve">
+    <value>Günlük işlem hacim raporu alınamadı. Ayrıntılar için hatalara bakın.</value>
   </data>
-  <data name="Handler.Reporting.GetProblemsFailed" xml:space="preserve">
-    <value>Sorunlu kayıtlar alınamadı. Detaylar için hatalara bakın.</value>
+  <data name="Handler.Reporting.Financial.MccRevenueConcentrationFailed" xml:space="preserve">
+    <value>MCC gelir konsantrasyon raporu alınamadı. Ayrıntılar için hatalara bakın.</value>
   </data>
-  <data name="Handler.Reporting.GetUnmatchedFailed" xml:space="preserve">
-    <value>Eşleşmeyen kayıtlar alınamadı. Detaylar için hatalara bakın.</value>
+  <data name="Handler.Reporting.Financial.MerchantRiskHotspotsFailed" xml:space="preserve">
+    <value>Üye işyeri risk odakları raporu alınamadı. Ayrıntılar için hatalara bakın.</value>
   </data>
-  <data name="Handler.Reporting.GetSummaryDailyFailed" xml:space="preserve">
-    <value>Günlük özet alınamadı. Detaylar için hatalara bakın.</value>
+  <data name="Handler.Reporting.Financial.CountryCrossBorderExposureFailed" xml:space="preserve">
+    <value>Ülke sınır ötesi maruziyet raporu alınamadı. Ayrıntılar için hatalara bakın.</value>
   </data>
-  <data name="Handler.Reporting.GetSummaryNetworkFailed" xml:space="preserve">
-    <value>Ağ özeti alınamadı. Detaylar için hatalara bakın.</value>
+  <data name="Handler.Reporting.Financial.ResponseCodeDeclineHealthFailed" xml:space="preserve">
+    <value>Yanıt kodu reddetme sağlık raporu alınamadı. Ayrıntılar için hatalara bakın.</value>
   </data>
-  <data name="Handler.Reporting.GetSummaryFileFailed" xml:space="preserve">
-    <value>Dosya özeti alınamadı. Detaylar için hatalara bakın.</value>
+  <data name="Handler.Reporting.Financial.SettlementLagAnalysisFailed" xml:space="preserve">
+    <value>Mutabakat gecikme analiz raporu alınamadı. Ayrıntılar için hatalara bakın.</value>
   </data>
-  <data name="Handler.Reporting.GetSummaryOverallFailed" xml:space="preserve">
-    <value>Genel özet alınamadı. Detaylar için hatalara bakın.</value>
+  <data name="Handler.Reporting.Financial.CurrencyFxDriftFailed" xml:space="preserve">
+    <value>Döviz FX kayma raporu alınamadı. Ayrıntılar için hatalara bakın.</value>
+  </data>
+  <data name="Handler.Reporting.Financial.InstallmentPortfolioSummaryFailed" xml:space="preserve">
+    <value>Taksit portföy özet raporu alınamadı. Ayrıntılar için hatalara bakın.</value>
+  </data>
+  <data name="Handler.Reporting.Financial.LoyaltyPointsEconomyFailed" xml:space="preserve">
+    <value>Sadakat puan ekonomisi raporu alınamadı. Ayrıntılar için hatalara bakın.</value>
+  </data>
+  <data name="Handler.Reporting.Financial.ClearingDisputeSummaryFailed" xml:space="preserve">
+    <value>Takas itiraz özet raporu alınamadı. Ayrıntılar için hatalara bakın.</value>
+  </data>
+  <data name="Handler.Reporting.Financial.ClearingIoImbalanceFailed" xml:space="preserve">
+    <value>Takas giriş/çıkış dengesizlik raporu alınamadı. Ayrıntılar için hatalara bakın.</value>
+  </data>
+  <data name="Handler.Reporting.Financial.HighValueUnmatchedTransactionsFailed" xml:space="preserve">
+    <value>Yüksek tutarlı eşleşmeyen işlem raporu alınamadı. Ayrıntılar için hatalara bakın.</value>
+  </data>
+
+  <data name="Handler.Reporting.Operational.ActionRadarFailed" xml:space="preserve">
+    <value>Aksiyon radarı raporu alınamadı. Ayrıntılar için hatalara bakın.</value>
+  </data>
+  <data name="Handler.Reporting.Operational.UnhealthyFilesFailed" xml:space="preserve">
+    <value>Sağlıksız dosyalar raporu alınamadı. Ayrıntılar için hatalara bakın.</value>
+  </data>
+  <data name="Handler.Reporting.Operational.StuckPipelineItemsFailed" xml:space="preserve">
+    <value>Pipeline'da takılı kalan kayıt raporu alınamadı. Ayrıntılar için hatalara bakın.</value>
+  </data>
+  <data name="Handler.Reporting.Operational.ReconFailureCategorizationFailed" xml:space="preserve">
+    <value>Mutabakat hata sınıflandırma raporu alınamadı. Ayrıntılar için hatalara bakın.</value>
+  </data>
+  <data name="Handler.Reporting.Operational.ManualReviewPressureFailed" xml:space="preserve">
+    <value>Manuel inceleme baskısı raporu alınamadı. Ayrıntılar için hatalara bakın.</value>
+  </data>
+  <data name="Handler.Reporting.Operational.AlertDeliveryHealthFailed" xml:space="preserve">
+    <value>Uyarı teslim sağlığı raporu alınamadı. Ayrıntılar için hatalara bakın.</value>
+  </data>
+  <data name="Handler.Reporting.Operational.UnmatchedFinancialExposureFailed" xml:space="preserve">
+    <value>Eşleşmeyen finansal maruziyet raporu alınamadı. Ayrıntılar için hatalara bakın.</value>
+  </data>
+  <data name="Handler.Reporting.Operational.CardClearingImbalanceFailed" xml:space="preserve">
+    <value>Card-Clearing dengesizlik raporu alınamadı. Ayrıntılar için hatalara bakın.</value>
+  </data>
+  <data name="Handler.Reporting.Operational.ReconciliationQualityScoreFailed" xml:space="preserve">
+    <value>Mutabakat kalite skoru raporu alınamadı. Ayrıntılar için hatalara bakın.</value>
+  </data>
+  <data name="Handler.Reporting.Operational.MisleadingSuccessCasesFailed" xml:space="preserve">
+    <value>Yanıltıcı başarı vakaları raporu alınamadı. Ayrıntılar için hatalara bakın.</value>
+  </data>
+  <data name="Handler.Reporting.Operational.ArchivePipelineHealthFailed" xml:space="preserve">
+    <value>Arşiv pipeline sağlığı raporu alınamadı. Ayrıntılar için hatalara bakın.</value>
+  </data>
+  <data name="Handler.Reporting.Documentation.ReportingDocumentationFailed" xml:space="preserve">
+    <value>Raporlama dokümantasyonu alınamadı. Ayrıntılar için hatalara bakın.</value>
   </data>
 
   <data name="Reconciliation.OperationCancelled" xml:space="preserve">
@@ -1272,72 +1324,6 @@
     <value>Arşiv hatası [{0}].</value>
   </data>
   
-  <data name="Handler.Reporting.IngestionFileOverviewFailed" xml:space="preserve">
-    <value>Dosya alım genel görünümü alınamadı. Ayrıntılar için hatalara bakın.</value>
-  </data>
-  <data name="Handler.Reporting.IngestionFileQualityFailed" xml:space="preserve">
-    <value>Dosya alım kalite raporu alınamadı. Ayrıntılar için hatalara bakın.</value>
-  </data>
-  <data name="Handler.Reporting.IngestionDailySummaryFailed" xml:space="preserve">
-    <value>Dosya alım günlük özeti alınamadı. Ayrıntılar için hatalara bakın.</value>
-  </data>
-  <data name="Handler.Reporting.IngestionNetworkMatrixFailed" xml:space="preserve">
-    <value>Dosya alım ağ matrisi alınamadı. Ayrıntılar için hatalara bakın.</value>
-  </data>
-  <data name="Handler.Reporting.IngestionExceptionHotspotsFailed" xml:space="preserve">
-    <value>Dosya alım istisna odakları alınamadı. Ayrıntılar için hatalara bakın.</value>
-  </data>
-  <data name="Handler.Reporting.ReconDailyOverviewFailed" xml:space="preserve">
-    <value>Mutabakat günlük genel görünümü alınamadı. Ayrıntılar için hatalara bakın.</value>
-  </data>
-  <data name="Handler.Reporting.ReconOpenItemsFailed" xml:space="preserve">
-    <value>Mutabakat açık kalemleri alınamadı. Ayrıntılar için hatalara bakın.</value>
-  </data>
-  <data name="Handler.Reporting.ReconOpenItemAgingFailed" xml:space="preserve">
-    <value>Mutabakat açık kalem yaşlandırması alınamadı. Ayrıntılar için hatalara bakın.</value>
-  </data>
-  <data name="Handler.Reporting.ReconManualReviewQueueFailed" xml:space="preserve">
-    <value>Mutabakat manuel inceleme kuyruğu alınamadı. Ayrıntılar için hatalara bakın.</value>
-  </data>
-  <data name="Handler.Reporting.ReconAlertSummaryFailed" xml:space="preserve">
-    <value>Mutabakat uyarı özeti alınamadı. Ayrıntılar için hatalara bakın.</value>
-  </data>
-  <data name="Handler.Reporting.ReconLiveCardContentDailyFailed" xml:space="preserve">
-    <value>Canlı kart içerik günlük raporu alınamadı. Ayrıntılar için hatalara bakın.</value>
-  </data>
-  <data name="Handler.Reporting.ReconLiveClearingContentDailyFailed" xml:space="preserve">
-    <value>Canlı takas içerik günlük raporu alınamadı. Ayrıntılar için hatalara bakın.</value>
-  </data>
-  <data name="Handler.Reporting.ReconArchiveCardContentDailyFailed" xml:space="preserve">
-    <value>Arşiv kart içerik günlük raporu alınamadı. Ayrıntılar için hatalara bakın.</value>
-  </data>
-  <data name="Handler.Reporting.ReconArchiveClearingContentDailyFailed" xml:space="preserve">
-    <value>Arşiv takas içerik günlük raporu alınamadı. Ayrıntılar için hatalara bakın.</value>
-  </data>
-  <data name="Handler.Reporting.ReconContentDailyFailed" xml:space="preserve">
-    <value>Mutabakat içerik günlük raporu alınamadı. Ayrıntılar için hatalara bakın.</value>
-  </data>
-  <data name="Handler.Reporting.ReconClearingControlStatFailed" xml:space="preserve">
-    <value>Takas kontrol istatistik analizi alınamadı. Ayrıntılar için hatalara bakın.</value>
-  </data>
-  <data name="Handler.Reporting.ReconFinancialSummaryFailed" xml:space="preserve">
-    <value>Mutabakat finansal özeti alınamadı. Ayrıntılar için hatalara bakın.</value>
-  </data>
-  <data name="Handler.Reporting.ReconResponseStatusFailed" xml:space="preserve">
-    <value>Yanıt durumu analizi alınamadı. Ayrıntılar için hatalara bakın.</value>
-  </data>
-  <data name="Handler.Reporting.ArchiveRunOverviewFailed" xml:space="preserve">
-    <value>Arşiv çalıştırma genel görünümü alınamadı. Ayrıntılar için hatalara bakın.</value>
-  </data>
-  <data name="Handler.Reporting.ArchiveEligibilityFailed" xml:space="preserve">
-    <value>Arşiv uygunluk raporu alınamadı. Ayrıntılar için hatalara bakın.</value>
-  </data>
-  <data name="Handler.Reporting.ArchiveBacklogTrendFailed" xml:space="preserve">
-    <value>Arşiv birikim trendi alınamadı. Ayrıntılar için hatalara bakın.</value>
-  </data>
-  <data name="Handler.Reporting.ArchiveRetentionSnapshotFailed" xml:space="preserve">
-    <value>Arşiv saklama anlık görüntüsü alınamadı. Ayrıntılar için hatalara bakın.</value>
-  </data>
 
   <data name="Reconciliation.LateClearingRequeuedAtFinalize" xml:space="preserve">
     <value>Geç gelen clearing finalize aşamasında tespit edildi; yeniden değerlendirme için kuyruğa alındı.</value>

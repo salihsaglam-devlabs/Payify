@@ -22,6 +22,8 @@ using LinkPara.Card.Infrastructure.Services.Reconciliation;
 using LinkPara.Card.Infrastructure.Services.Reconciliation.Execute.Flow;
 using LinkPara.Card.Application.Commons.Interfaces.Reporting;
 using LinkPara.Card.Infrastructure.Services.Reporting;
+using LinkPara.Card.Infrastructure.Services.Reporting.Dynamic;
+using LinkPara.Card.Infrastructure.Services.Reporting.Dynamic.Dialects;
 using LinkPara.Card.Infrastructure.Services.Reconciliation.GetAlerts;
 using LinkPara.Card.Infrastructure.Services.Reconciliation.Integrations.Emoney;
 using LinkPara.Card.Infrastructure.Services.Reconciliation.Reviews;
@@ -194,6 +196,16 @@ public static class DependencyInjection
         services.AddScoped<ArchiveExecutor>();
         services.AddScoped<IArchiveSqlDialect, ArchiveSqlDialect>();
         services.AddScoped<IReportingService, ReportingService>();
+        
+        services.AddScoped<DynamicReportingSqlBuilder>();
+        services.AddScoped<IDynamicReportingDialect>(sp =>
+        {
+            var db = sp.GetRequiredService<CardDbContext>();
+            return db.Database.IsSqlServer()
+                ? new SqlServerDynamicReportingDialect()
+                : new PostgresDynamicReportingDialect();
+        });
+        services.AddScoped<IDynamicReportingService, DynamicReportingService>();
     }
 
     private static void ConfigureHttpClients(IServiceCollection services, IVaultClient vaultClient)

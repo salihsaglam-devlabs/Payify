@@ -1,7 +1,5 @@
 using LinkPara.Card.Application.Commons.Interfaces.Reporting;
 using LinkPara.Card.Application.Commons.Models.Reporting.Dtos;
-using LinkPara.Card.Domain.Enums.FileIngestion;
-using LinkPara.Card.Domain.Enums.Reconciliation;
 using LinkPara.Card.Domain.Enums.Reporting;
 using LinkPara.Card.Infrastructure.Persistence;
 using LinkPara.SharedModels.Pagination;
@@ -18,467 +16,372 @@ internal sealed class ReportingService : IReportingService
         _dbContext = dbContext;
     }
 
-    public async Task<PaginatedList<IngestionFileOverviewDto>> GetIngestionFileOverviewAsync(
-        SearchQueryParams paging, DataScope? dataScope, FileContentType? contentType, FileType? fileType, FileStatus? fileStatus,
+    public async Task<PaginatedList<DailyTransactionVolumeDto>> GetDailyTransactionVolumeAsync(
+        SearchQueryParams paging, DataScope? dataScope, string network, string currency,
+        string financialType, string txnEffect, DateTime? dateFrom, DateTime? dateTo,
+        string volumeFlag, string urgency, CancellationToken ct)
+    {
+        var q = _dbContext.DailyTransactionVolume.AsNoTracking();
+        if (dataScope.HasValue) q = q.Where(x => x.DataScope == dataScope.Value);
+        if (!string.IsNullOrWhiteSpace(network)) q = q.Where(x => x.Network == network);
+        if (!string.IsNullOrWhiteSpace(currency)) q = q.Where(x => x.Currency == currency);
+        if (!string.IsNullOrWhiteSpace(financialType)) q = q.Where(x => x.FinancialType == financialType);
+        if (!string.IsNullOrWhiteSpace(txnEffect)) q = q.Where(x => x.TxnEffect == txnEffect);
+        if (dateFrom.HasValue) q = q.Where(x => x.TransactionDate >= dateFrom.Value);
+        if (dateTo.HasValue) q = q.Where(x => x.TransactionDate <= dateTo.Value);
+        if (!string.IsNullOrWhiteSpace(volumeFlag)) q = q.Where(x => x.VolumeFlag == volumeFlag);
+        if (!string.IsNullOrWhiteSpace(urgency)) q = q.Where(x => x.Urgency == urgency);
+        q = q.OrderByDescending(x => x.TransactionDate).ThenBy(x => x.Network);
+        return await PaginateAsync(q, paging, ct);
+    }
+
+    public async Task<PaginatedList<MccRevenueConcentrationDto>> GetMccRevenueConcentrationAsync(
+        SearchQueryParams paging, DataScope? dataScope, string network, string mcc,
+        string concentrationRisk, string urgency, CancellationToken ct)
+    {
+        var q = _dbContext.MccRevenueConcentration.AsNoTracking();
+        if (dataScope.HasValue) q = q.Where(x => x.DataScope == dataScope.Value);
+        if (!string.IsNullOrWhiteSpace(network)) q = q.Where(x => x.Network == network);
+        if (!string.IsNullOrWhiteSpace(mcc)) q = q.Where(x => x.Mcc == mcc);
+        if (!string.IsNullOrWhiteSpace(concentrationRisk)) q = q.Where(x => x.ConcentrationRisk == concentrationRisk);
+        if (!string.IsNullOrWhiteSpace(urgency)) q = q.Where(x => x.Urgency == urgency);
+        q = q.OrderByDescending(x => x.TotalAmount);
+        return await PaginateAsync(q, paging, ct);
+    }
+
+    public async Task<PaginatedList<MerchantRiskHotspotDto>> GetMerchantRiskHotspotsAsync(
+        SearchQueryParams paging, DataScope? dataScope, string network, string merchantId,
+        string merchantCountry, string riskFlag, string urgency, CancellationToken ct)
+    {
+        var q = _dbContext.MerchantRiskHotspots.AsNoTracking();
+        if (dataScope.HasValue) q = q.Where(x => x.DataScope == dataScope.Value);
+        if (!string.IsNullOrWhiteSpace(network)) q = q.Where(x => x.Network == network);
+        if (!string.IsNullOrWhiteSpace(merchantId)) q = q.Where(x => x.MerchantId == merchantId);
+        if (!string.IsNullOrWhiteSpace(merchantCountry)) q = q.Where(x => x.MerchantCountry == merchantCountry);
+        if (!string.IsNullOrWhiteSpace(riskFlag)) q = q.Where(x => x.RiskFlag == riskFlag);
+        if (!string.IsNullOrWhiteSpace(urgency)) q = q.Where(x => x.Urgency == urgency);
+        q = q.OrderByDescending(x => x.UnmatchedAmount).ThenByDescending(x => x.UnmatchedRatePct);
+        return await PaginateAsync(q, paging, ct);
+    }
+
+    public async Task<PaginatedList<CountryCrossBorderExposureDto>> GetCountryCrossBorderExposureAsync(
+        SearchQueryParams paging, DataScope? dataScope, string network, string merchantCountry,
+        string fxPattern, string originalCurrency, string settlementCurrency,
+        string exposureFlag, string urgency, CancellationToken ct)
+    {
+        var q = _dbContext.CountryCrossBorderExposure.AsNoTracking();
+        if (dataScope.HasValue) q = q.Where(x => x.DataScope == dataScope.Value);
+        if (!string.IsNullOrWhiteSpace(network)) q = q.Where(x => x.Network == network);
+        if (!string.IsNullOrWhiteSpace(merchantCountry)) q = q.Where(x => x.MerchantCountry == merchantCountry);
+        if (!string.IsNullOrWhiteSpace(fxPattern)) q = q.Where(x => x.FxPattern == fxPattern);
+        if (!string.IsNullOrWhiteSpace(originalCurrency)) q = q.Where(x => x.OriginalCurrency == originalCurrency);
+        if (!string.IsNullOrWhiteSpace(settlementCurrency)) q = q.Where(x => x.SettlementCurrency == settlementCurrency);
+        if (!string.IsNullOrWhiteSpace(exposureFlag)) q = q.Where(x => x.ExposureFlag == exposureFlag);
+        if (!string.IsNullOrWhiteSpace(urgency)) q = q.Where(x => x.Urgency == urgency);
+        q = q.OrderByDescending(x => x.TotalOriginalAmount);
+        return await PaginateAsync(q, paging, ct);
+    }
+
+    public async Task<PaginatedList<ResponseCodeDeclineHealthDto>> GetResponseCodeDeclineHealthAsync(
+        SearchQueryParams paging, DataScope? dataScope, string network, string responseCode,
+        string healthFlag, string urgency, CancellationToken ct)
+    {
+        var q = _dbContext.ResponseCodeDeclineHealth.AsNoTracking();
+        if (dataScope.HasValue) q = q.Where(x => x.DataScope == dataScope.Value);
+        if (!string.IsNullOrWhiteSpace(network)) q = q.Where(x => x.Network == network);
+        if (!string.IsNullOrWhiteSpace(responseCode)) q = q.Where(x => x.ResponseCode == responseCode);
+        if (!string.IsNullOrWhiteSpace(healthFlag)) q = q.Where(x => x.HealthFlag == healthFlag);
+        if (!string.IsNullOrWhiteSpace(urgency)) q = q.Where(x => x.Urgency == urgency);
+        q = q.OrderByDescending(x => x.TransactionCount);
+        return await PaginateAsync(q, paging, ct);
+    }
+
+    public async Task<PaginatedList<SettlementLagAnalysisDto>> GetSettlementLagAnalysisAsync(
+        SearchQueryParams paging, DataScope? dataScope, string network,
+        DateTime? dateFrom, DateTime? dateTo, string lagHealth, string urgency, CancellationToken ct)
+    {
+        var q = _dbContext.SettlementLagAnalysis.AsNoTracking();
+        if (dataScope.HasValue) q = q.Where(x => x.DataScope == dataScope.Value);
+        if (!string.IsNullOrWhiteSpace(network)) q = q.Where(x => x.Network == network);
+        if (dateFrom.HasValue) q = q.Where(x => x.TransactionDate >= dateFrom.Value);
+        if (dateTo.HasValue) q = q.Where(x => x.TransactionDate <= dateTo.Value);
+        if (!string.IsNullOrWhiteSpace(lagHealth)) q = q.Where(x => x.LagHealth == lagHealth);
+        if (!string.IsNullOrWhiteSpace(urgency)) q = q.Where(x => x.Urgency == urgency);
+        q = q.OrderByDescending(x => x.TransactionDate).ThenBy(x => x.Network);
+        return await PaginateAsync(q, paging, ct);
+    }
+
+    public async Task<PaginatedList<CurrencyFxDriftDto>> GetCurrencyFxDriftAsync(
+        SearchQueryParams paging, DataScope? dataScope, string network, string originalCurrency,
+        string settlementCurrency, string billingCurrency, string fxDriftSeverity,
+        string urgency, CancellationToken ct)
+    {
+        var q = _dbContext.CurrencyFxDrift.AsNoTracking();
+        if (dataScope.HasValue) q = q.Where(x => x.DataScope == dataScope.Value);
+        if (!string.IsNullOrWhiteSpace(network)) q = q.Where(x => x.Network == network);
+        if (!string.IsNullOrWhiteSpace(originalCurrency)) q = q.Where(x => x.OriginalCurrency == originalCurrency);
+        if (!string.IsNullOrWhiteSpace(settlementCurrency)) q = q.Where(x => x.SettlementCurrency == settlementCurrency);
+        if (!string.IsNullOrWhiteSpace(billingCurrency)) q = q.Where(x => x.BillingCurrency == billingCurrency);
+        if (!string.IsNullOrWhiteSpace(fxDriftSeverity)) q = q.Where(x => x.FxDriftSeverity == fxDriftSeverity);
+        if (!string.IsNullOrWhiteSpace(urgency)) q = q.Where(x => x.Urgency == urgency);
+        q = q.OrderByDescending(x => x.SettlementDrift);
+        return await PaginateAsync(q, paging, ct);
+    }
+
+    public async Task<PaginatedList<InstallmentPortfolioSummaryDto>> GetInstallmentPortfolioSummaryAsync(
+        SearchQueryParams paging, DataScope? dataScope, string network, string installmentBucket,
+        string portfolioFlag, string urgency, CancellationToken ct)
+    {
+        var q = _dbContext.InstallmentPortfolioSummary.AsNoTracking();
+        if (dataScope.HasValue) q = q.Where(x => x.DataScope == dataScope.Value);
+        if (!string.IsNullOrWhiteSpace(network)) q = q.Where(x => x.Network == network);
+        if (!string.IsNullOrWhiteSpace(installmentBucket)) q = q.Where(x => x.InstallmentBucket == installmentBucket);
+        if (!string.IsNullOrWhiteSpace(portfolioFlag)) q = q.Where(x => x.PortfolioFlag == portfolioFlag);
+        if (!string.IsNullOrWhiteSpace(urgency)) q = q.Where(x => x.Urgency == urgency);
+        q = q.OrderBy(x => x.Network).ThenByDescending(x => x.TotalAmount);
+        return await PaginateAsync(q, paging, ct);
+    }
+
+    public async Task<PaginatedList<LoyaltyPointsEconomyDto>> GetLoyaltyPointsEconomyAsync(
+        SearchQueryParams paging, DataScope? dataScope, string network,
+        DateTime? dateFrom, DateTime? dateTo, string loyaltyIntensity, string urgency, CancellationToken ct)
+    {
+        var q = _dbContext.LoyaltyPointsEconomy.AsNoTracking();
+        if (dataScope.HasValue) q = q.Where(x => x.DataScope == dataScope.Value);
+        if (!string.IsNullOrWhiteSpace(network)) q = q.Where(x => x.Network == network);
+        if (dateFrom.HasValue) q = q.Where(x => x.TransactionDate >= dateFrom.Value);
+        if (dateTo.HasValue) q = q.Where(x => x.TransactionDate <= dateTo.Value);
+        if (!string.IsNullOrWhiteSpace(loyaltyIntensity)) q = q.Where(x => x.LoyaltyIntensity == loyaltyIntensity);
+        if (!string.IsNullOrWhiteSpace(urgency)) q = q.Where(x => x.Urgency == urgency);
+        q = q.OrderByDescending(x => x.TransactionDate).ThenBy(x => x.Network);
+        return await PaginateAsync(q, paging, ct);
+    }
+
+    public async Task<PaginatedList<ClearingDisputeSummaryDto>> GetClearingDisputeSummaryAsync(
+        SearchQueryParams paging, DataScope? dataScope, string network, string disputeCode,
+        string reasonCode, string controlStat, string disputeFlag, string urgency,
         DateTime? dateFrom, DateTime? dateTo, CancellationToken ct)
     {
-        var q = _dbContext.IngestionFileOverview.AsNoTracking();
-
-        if (dataScope.HasValue)
-            q = q.Where(x => x.DataScope == dataScope.Value);
-        if (contentType.HasValue)
-            q = q.Where(x => x.ContentType == contentType.Value);
-        if (fileType.HasValue)
-            q = q.Where(x => x.FileType == fileType.Value);
-        if (fileStatus.HasValue)
-            q = q.Where(x => x.FileStatus == fileStatus.Value);
-        if (dateFrom.HasValue)
-            q = q.Where(x => x.FileCreatedAt >= dateFrom.Value);
-        if (dateTo.HasValue)
-            q = q.Where(x => x.FileCreatedAt <= dateTo.Value);
-
-        q = q.OrderByDescending(x => x.FileCreatedAt);
+        var q = _dbContext.ClearingDisputeSummary.AsNoTracking();
+        if (dataScope.HasValue) q = q.Where(x => x.DataScope == dataScope.Value);
+        if (!string.IsNullOrWhiteSpace(network)) q = q.Where(x => x.Network == network);
+        if (!string.IsNullOrWhiteSpace(disputeCode)) q = q.Where(x => x.DisputeCode == disputeCode);
+        if (!string.IsNullOrWhiteSpace(reasonCode)) q = q.Where(x => x.ReasonCode == reasonCode);
+        if (!string.IsNullOrWhiteSpace(controlStat)) q = q.Where(x => x.ControlStat == controlStat);
+        if (!string.IsNullOrWhiteSpace(disputeFlag)) q = q.Where(x => x.DisputeFlag == disputeFlag);
+        if (!string.IsNullOrWhiteSpace(urgency)) q = q.Where(x => x.Urgency == urgency);
+        if (dateFrom.HasValue) q = q.Where(x => x.LastTxnDate >= dateFrom.Value);
+        if (dateTo.HasValue) q = q.Where(x => x.LastTxnDate <= dateTo.Value);
+        q = q.OrderByDescending(x => x.TotalReimbursementAmount);
         return await PaginateAsync(q, paging, ct);
     }
 
-    public async Task<PaginatedList<IngestionFileQualityDto>> GetIngestionFileQualityAsync(
-        SearchQueryParams paging, DataScope? dataScope, FileContentType? contentType, FileType? fileType, FileStatus? fileStatus,
+    public async Task<PaginatedList<ClearingIoImbalanceDto>> GetClearingIoImbalanceAsync(
+        SearchQueryParams paging, DataScope? dataScope, string network,
+        DateTime? dateFrom, DateTime? dateTo, string imbalanceFlag, string urgency, CancellationToken ct)
+    {
+        var q = _dbContext.ClearingIoImbalance.AsNoTracking();
+        if (dataScope.HasValue) q = q.Where(x => x.DataScope == dataScope.Value);
+        if (!string.IsNullOrWhiteSpace(network)) q = q.Where(x => x.Network == network);
+        if (dateFrom.HasValue) q = q.Where(x => x.TxnDate >= dateFrom.Value);
+        if (dateTo.HasValue) q = q.Where(x => x.TxnDate <= dateTo.Value);
+        if (!string.IsNullOrWhiteSpace(imbalanceFlag)) q = q.Where(x => x.ImbalanceFlag == imbalanceFlag);
+        if (!string.IsNullOrWhiteSpace(urgency)) q = q.Where(x => x.Urgency == urgency);
+        q = q.OrderByDescending(x => x.TxnDate).ThenBy(x => x.Network);
+        return await PaginateAsync(q, paging, ct);
+    }
+
+    public async Task<PaginatedList<HighValueUnmatchedTransactionDto>> GetHighValueUnmatchedTransactionsAsync(
+        SearchQueryParams paging, DataScope? dataScope, string network, string merchantCountry,
+        string currency, decimal? minAmount, string riskFlag, string urgency,
         DateTime? dateFrom, DateTime? dateTo, CancellationToken ct)
     {
-        var q = _dbContext.IngestionFileQuality.AsNoTracking();
-
-        if (dataScope.HasValue)
-            q = q.Where(x => x.DataScope == dataScope.Value);
-        if (contentType.HasValue)
-            q = q.Where(x => x.ContentType == contentType.Value);
-        if (fileType.HasValue)
-            q = q.Where(x => x.FileType == fileType.Value);
-        if (fileStatus.HasValue)
-            q = q.Where(x => x.FileStatus == fileStatus.Value);
-        if (dateFrom.HasValue)
-            q = q.Where(x => x.FileCreatedAt >= dateFrom.Value);
-        if (dateTo.HasValue)
-            q = q.Where(x => x.FileCreatedAt <= dateTo.Value);
-
-        q = q.OrderByDescending(x => x.FileCreatedAt);
+        var q = _dbContext.HighValueUnmatchedTransactions.AsNoTracking();
+        if (dataScope.HasValue) q = q.Where(x => x.DataScope == dataScope.Value);
+        if (!string.IsNullOrWhiteSpace(network)) q = q.Where(x => x.Network == network);
+        if (!string.IsNullOrWhiteSpace(merchantCountry)) q = q.Where(x => x.MerchantCountry == merchantCountry);
+        if (!string.IsNullOrWhiteSpace(currency)) q = q.Where(x => x.Currency == currency);
+        if (minAmount.HasValue) q = q.Where(x => x.OriginalAmount >= minAmount.Value);
+        if (!string.IsNullOrWhiteSpace(riskFlag)) q = q.Where(x => x.RiskFlag == riskFlag);
+        if (!string.IsNullOrWhiteSpace(urgency)) q = q.Where(x => x.Urgency == urgency);
+        if (dateFrom.HasValue) q = q.Where(x => x.TransactionDate >= dateFrom.Value);
+        if (dateTo.HasValue) q = q.Where(x => x.TransactionDate <= dateTo.Value);
+        q = q.OrderByDescending(x => x.OriginalAmount);
         return await PaginateAsync(q, paging, ct);
     }
 
-    public async Task<List<IngestionDailySummaryDto>> GetIngestionDailySummaryAsync(
-        DataScope? dataScope, FileContentType? contentType, FileType? fileType, DateTime? dateFrom, DateTime? dateTo, CancellationToken ct)
+    public async Task<PaginatedList<ActionRadarDto>> GetActionRadarAsync(
+        SearchQueryParams paging, DataScope? dataScope, string category, string issueType,
+        string urgency, CancellationToken ct)
     {
-        var q = _dbContext.IngestionDailySummary.AsNoTracking();
-
-        if (dataScope.HasValue)
-            q = q.Where(x => x.DataScope == dataScope.Value);
-        if (contentType.HasValue)
-            q = q.Where(x => x.ContentType == contentType.Value);
-        if (fileType.HasValue)
-            q = q.Where(x => x.FileType == fileType.Value);
-        if (dateFrom.HasValue)
-            q = q.Where(x => x.ReportDate >= dateFrom.Value);
-        if (dateTo.HasValue)
-            q = q.Where(x => x.ReportDate <= dateTo.Value);
-
-        return await q.OrderByDescending(x => x.ReportDate).ToListAsync(ct);
-    }
-
-    public async Task<List<IngestionNetworkMatrixDto>> GetIngestionNetworkMatrixAsync(DataScope? dataScope, CancellationToken ct)
-    {
-        var q = _dbContext.IngestionNetworkMatrix.AsNoTracking();
-
-        if (dataScope.HasValue)
-            q = q.Where(x => x.DataScope == dataScope.Value);
-
-        return await q.OrderBy(x => x.ContentType).ThenBy(x => x.FileType).ToListAsync(ct);
-    }
-
-    public async Task<PaginatedList<IngestionExceptionHotspotDto>> GetIngestionExceptionHotspotsAsync(
-        SearchQueryParams paging, DataScope? dataScope, FileContentType? contentType, FileType? fileType, SeverityLevel? severityLevel,
-        DateTime? dateFrom, DateTime? dateTo, CancellationToken ct)
-    {
-        var q = _dbContext.IngestionExceptionHotspot.AsNoTracking();
-
-        if (dataScope.HasValue)
-            q = q.Where(x => x.DataScope == dataScope.Value);
-        if (contentType.HasValue)
-            q = q.Where(x => x.ContentType == contentType.Value);
-        if (fileType.HasValue)
-            q = q.Where(x => x.FileType == fileType.Value);
-        if (severityLevel.HasValue)
-            q = q.Where(x => x.SeverityLevel == severityLevel.Value);
-        if (dateFrom.HasValue)
-            q = q.Where(x => x.FileCreatedAt >= dateFrom.Value);
-        if (dateTo.HasValue)
-            q = q.Where(x => x.FileCreatedAt <= dateTo.Value);
-
-        q = q.OrderByDescending(x => x.FileCreatedAt);
+        var q = _dbContext.ActionRadar.AsNoTracking();
+        if (dataScope.HasValue) q = q.Where(x => x.DataScope == dataScope.Value);
+        if (!string.IsNullOrWhiteSpace(category)) q = q.Where(x => x.Category == category);
+        if (!string.IsNullOrWhiteSpace(issueType)) q = q.Where(x => x.IssueType == issueType);
+        if (!string.IsNullOrWhiteSpace(urgency)) q = q.Where(x => x.Urgency == urgency);
+        q = q.OrderBy(x => x.Urgency).ThenByDescending(x => x.OpenCount);
         return await PaginateAsync(q, paging, ct);
     }
 
-    public async Task<List<ReconDailyOverviewDto>> GetReconDailyOverviewAsync(
-        DataScope? dataScope, DateTime? dateFrom, DateTime? dateTo, CancellationToken ct)
+    public async Task<PaginatedList<UnhealthyFileDto>> GetUnhealthyFilesAsync(
+        SearchQueryParams paging, DataScope? dataScope, string side, string network,
+        string fileStatus, string issueCategory, string urgency, CancellationToken ct)
     {
-        var q = _dbContext.ReconDailyOverview.AsNoTracking();
-
-        if (dataScope.HasValue)
-            q = q.Where(x => x.DataScope == dataScope.Value);
-        if (dateFrom.HasValue)
-            q = q.Where(x => x.ReportDate >= dateFrom.Value);
-        if (dateTo.HasValue)
-            q = q.Where(x => x.ReportDate <= dateTo.Value);
-
-        return await q.OrderByDescending(x => x.ReportDate).ToListAsync(ct);
-    }
-
-    public async Task<PaginatedList<ReconOpenItemDto>> GetReconOpenItemsAsync(
-        SearchQueryParams paging, OperationStatus? operationStatus, string branch, bool? isManual, CancellationToken ct)
-    {
-        var q = _dbContext.ReconOpenItem.AsNoTracking();
-
-        if (operationStatus.HasValue)
-            q = q.Where(x => x.OperationStatus == operationStatus.Value);
-        if (!string.IsNullOrWhiteSpace(branch))
-            q = q.Where(x => x.Branch == branch);
-        if (isManual.HasValue)
-            q = q.Where(x => x.IsManual == isManual.Value);
-
-        q = q.OrderByDescending(x => x.AgeHours);
+        var q = _dbContext.UnhealthyFiles.AsNoTracking();
+        if (dataScope.HasValue) q = q.Where(x => x.DataScope == dataScope.Value);
+        if (!string.IsNullOrWhiteSpace(side)) q = q.Where(x => x.Side == side);
+        if (!string.IsNullOrWhiteSpace(network)) q = q.Where(x => x.Network == network);
+        if (!string.IsNullOrWhiteSpace(fileStatus)) q = q.Where(x => x.FileStatus == fileStatus);
+        if (!string.IsNullOrWhiteSpace(issueCategory)) q = q.Where(x => x.IssueCategory == issueCategory);
+        if (!string.IsNullOrWhiteSpace(urgency)) q = q.Where(x => x.Urgency == urgency);
+        q = q.OrderBy(x => x.Urgency).ThenByDescending(x => x.AgeHours);
         return await PaginateAsync(q, paging, ct);
     }
 
-    public async Task<List<ReconOpenItemAgingDto>> GetReconOpenItemAgingAsync(CancellationToken ct)
+    public async Task<PaginatedList<StuckPipelineItemDto>> GetStuckPipelineItemsAsync(
+        SearchQueryParams paging, DataScope? dataScope, string stage, string stuckState,
+        string urgency, CancellationToken ct)
     {
-        return await _dbContext.ReconOpenItemAging.AsNoTracking()
-            .OrderBy(x => x.BucketName)
-            .ToListAsync(ct);
-    }
-
-    public async Task<PaginatedList<ReconManualReviewQueueDto>> GetReconManualReviewQueueAsync(
-        SearchQueryParams paging, UrgencyLevel? urgencyLevel, string operationBranch, CancellationToken ct)
-    {
-        var q = _dbContext.ReconManualReviewQueue.AsNoTracking();
-
-        if (urgencyLevel.HasValue)
-            q = q.Where(x => x.UrgencyLevel == urgencyLevel.Value);
-        if (!string.IsNullOrWhiteSpace(operationBranch))
-            q = q.Where(x => x.OperationBranch == operationBranch);
-
-        q = q.OrderByDescending(x => x.WaitingHours);
+        var q = _dbContext.StuckPipelineItems.AsNoTracking();
+        if (dataScope.HasValue) q = q.Where(x => x.DataScope == dataScope.Value);
+        if (!string.IsNullOrWhiteSpace(stage)) q = q.Where(x => x.Stage == stage);
+        if (!string.IsNullOrWhiteSpace(stuckState)) q = q.Where(x => x.StuckState == stuckState);
+        if (!string.IsNullOrWhiteSpace(urgency)) q = q.Where(x => x.Urgency == urgency);
+        q = q.OrderBy(x => x.Urgency).ThenByDescending(x => x.StuckMinutes);
         return await PaginateAsync(q, paging, ct);
     }
 
-    public async Task<List<ReconAlertSummaryDto>> GetReconAlertSummaryAsync(
-        DataScope? dataScope, string severity, string alertType, AlertStatus? alertStatus, CancellationToken ct)
+    public async Task<PaginatedList<ReconFailureCategorizationDto>> GetReconFailureCategorizationAsync(
+        SearchQueryParams paging, DataScope? dataScope, string operationCode, string branch,
+        string likelyRootCause, string urgency, CancellationToken ct)
     {
-        var q = _dbContext.ReconAlertSummary.AsNoTracking();
-
-        if (dataScope.HasValue)
-            q = q.Where(x => x.DataScope == dataScope.Value);
-        if (!string.IsNullOrWhiteSpace(severity))
-            q = q.Where(x => x.Severity == severity);
-        if (!string.IsNullOrWhiteSpace(alertType))
-            q = q.Where(x => x.AlertType == alertType);
-        if (alertStatus.HasValue)
-            q = q.Where(x => x.AlertStatus == alertStatus.Value);
-
-        return await q.OrderByDescending(x => x.AlertCount).ToListAsync(ct);
-    }
-
-    public async Task<PaginatedList<ReconCardContentDailyDto>> GetReconLiveCardContentDailyAsync(
-        SearchQueryParams paging, FileContentType? network, DateTime? dateFrom, DateTime? dateTo, CancellationToken ct)
-    {
-        var q = _dbContext.ReconCardContentDaily.AsNoTracking();
-
-        if (network.HasValue)
-            q = q.Where(x => x.Network == network.Value);
-        if (dateFrom.HasValue)
-            q = q.Where(x => x.ReportDate >= dateFrom.Value);
-        if (dateTo.HasValue)
-            q = q.Where(x => x.ReportDate <= dateTo.Value);
-
-        q = q.OrderByDescending(x => x.ReportDate);
+        var q = _dbContext.ReconFailureCategorization.AsNoTracking();
+        if (dataScope.HasValue) q = q.Where(x => x.DataScope == dataScope.Value);
+        if (!string.IsNullOrWhiteSpace(operationCode)) q = q.Where(x => x.OperationCode == operationCode);
+        if (!string.IsNullOrWhiteSpace(branch)) q = q.Where(x => x.Branch == branch);
+        if (!string.IsNullOrWhiteSpace(likelyRootCause)) q = q.Where(x => x.LikelyRootCause == likelyRootCause);
+        if (!string.IsNullOrWhiteSpace(urgency)) q = q.Where(x => x.Urgency == urgency);
+        q = q.OrderBy(x => x.Urgency).ThenByDescending(x => x.FailedCount);
         return await PaginateAsync(q, paging, ct);
     }
 
-    public async Task<PaginatedList<ReconClearingContentDailyDto>> GetReconLiveClearingContentDailyAsync(
-        SearchQueryParams paging, FileContentType? network, DateTime? dateFrom, DateTime? dateTo, CancellationToken ct)
+    public async Task<PaginatedList<ManualReviewPressureDto>> GetManualReviewPressureAsync(
+        SearchQueryParams paging, DataScope? dataScope, string slaBucket, string defaultOnExpiry,
+        string currency, string urgency, CancellationToken ct)
     {
-        var q = _dbContext.ReconClearingContentDaily.AsNoTracking();
-
-        if (network.HasValue)
-            q = q.Where(x => x.Network == network.Value);
-        if (dateFrom.HasValue)
-            q = q.Where(x => x.ReportDate >= dateFrom.Value);
-        if (dateTo.HasValue)
-            q = q.Where(x => x.ReportDate <= dateTo.Value);
-
-        q = q.OrderByDescending(x => x.ReportDate);
+        var q = _dbContext.ManualReviewPressure.AsNoTracking();
+        if (dataScope.HasValue) q = q.Where(x => x.DataScope == dataScope.Value);
+        if (!string.IsNullOrWhiteSpace(slaBucket)) q = q.Where(x => x.SlaBucket == slaBucket);
+        if (!string.IsNullOrWhiteSpace(defaultOnExpiry)) q = q.Where(x => x.DefaultOnExpiry == defaultOnExpiry);
+        if (!string.IsNullOrWhiteSpace(currency)) q = q.Where(x => x.Currency == currency);
+        if (!string.IsNullOrWhiteSpace(urgency)) q = q.Where(x => x.Urgency == urgency);
+        q = q.OrderBy(x => x.Urgency).ThenByDescending(x => x.ExposureAmount);
         return await PaginateAsync(q, paging, ct);
     }
 
-    public async Task<PaginatedList<ReconCardContentDailyDto>> GetReconArchiveCardContentDailyAsync(
-        SearchQueryParams paging, FileContentType? network, DateTime? dateFrom, DateTime? dateTo, CancellationToken ct)
+    public async Task<PaginatedList<AlertDeliveryHealthDto>> GetAlertDeliveryHealthAsync(
+        SearchQueryParams paging, DataScope? dataScope, string severity, string alertType,
+        string deliveryHealthStatus, string urgency, CancellationToken ct)
     {
-        var q = _dbContext.ReconArchiveCardContentDaily.AsNoTracking();
-
-        if (network.HasValue)
-            q = q.Where(x => x.Network == network.Value);
-        if (dateFrom.HasValue)
-            q = q.Where(x => x.ReportDate >= dateFrom.Value);
-        if (dateTo.HasValue)
-            q = q.Where(x => x.ReportDate <= dateTo.Value);
-
-        q = q.OrderByDescending(x => x.ReportDate);
+        var q = _dbContext.AlertDeliveryHealth.AsNoTracking();
+        if (dataScope.HasValue) q = q.Where(x => x.DataScope == dataScope.Value);
+        if (!string.IsNullOrWhiteSpace(severity)) q = q.Where(x => x.Severity == severity);
+        if (!string.IsNullOrWhiteSpace(alertType)) q = q.Where(x => x.AlertType == alertType);
+        if (!string.IsNullOrWhiteSpace(deliveryHealthStatus)) q = q.Where(x => x.DeliveryHealthStatus == deliveryHealthStatus);
+        if (!string.IsNullOrWhiteSpace(urgency)) q = q.Where(x => x.Urgency == urgency);
+        q = q.OrderBy(x => x.Urgency).ThenByDescending(x => x.FailedCount);
         return await PaginateAsync(q, paging, ct);
     }
 
-    public async Task<PaginatedList<ReconClearingContentDailyDto>> GetReconArchiveClearingContentDailyAsync(
-        SearchQueryParams paging, FileContentType? network, DateTime? dateFrom, DateTime? dateTo, CancellationToken ct)
+    public async Task<PaginatedList<UnmatchedFinancialExposureDto>> GetUnmatchedFinancialExposureAsync(
+        SearchQueryParams paging, DataScope? dataScope, string side, string network, string currency,
+        string agingBucket, string riskFlag, string urgency, CancellationToken ct)
     {
-        var q = _dbContext.ReconArchiveClearingContentDaily.AsNoTracking();
-
-        if (network.HasValue)
-            q = q.Where(x => x.Network == network.Value);
-        if (dateFrom.HasValue)
-            q = q.Where(x => x.ReportDate >= dateFrom.Value);
-        if (dateTo.HasValue)
-            q = q.Where(x => x.ReportDate <= dateTo.Value);
-
-        q = q.OrderByDescending(x => x.ReportDate);
+        var q = _dbContext.UnmatchedFinancialExposure.AsNoTracking();
+        if (dataScope.HasValue) q = q.Where(x => x.DataScope == dataScope.Value);
+        if (!string.IsNullOrWhiteSpace(side)) q = q.Where(x => x.Side == side);
+        if (!string.IsNullOrWhiteSpace(network)) q = q.Where(x => x.Network == network);
+        if (!string.IsNullOrWhiteSpace(currency)) q = q.Where(x => x.Currency == currency);
+        if (!string.IsNullOrWhiteSpace(agingBucket)) q = q.Where(x => x.AgingBucket == agingBucket);
+        if (!string.IsNullOrWhiteSpace(riskFlag)) q = q.Where(x => x.RiskFlag == riskFlag);
+        if (!string.IsNullOrWhiteSpace(urgency)) q = q.Where(x => x.Urgency == urgency);
+        q = q.OrderBy(x => x.Urgency).ThenByDescending(x => x.ExposureAmount);
         return await PaginateAsync(q, paging, ct);
     }
 
-    public async Task<PaginatedList<ReconContentDailyDto>> GetReconContentDailyAsync(
-        SearchQueryParams paging, DataScope? dataScope, FileContentType? network, ReconSide? side,
-        DateTime? dateFrom, DateTime? dateTo, CancellationToken ct)
+    public async Task<PaginatedList<CardClearingImbalanceDto>> GetCardClearingImbalanceAsync(
+        SearchQueryParams paging, DataScope? dataScope, string network, string currency,
+        DateTime? dateFrom, DateTime? dateTo, string imbalanceSeverity, string urgency, CancellationToken ct)
     {
-        var q = _dbContext.ReconContentDaily.AsNoTracking();
-
-        if (dataScope.HasValue)
-            q = q.Where(x => x.DataScope == dataScope.Value);
-        if (network.HasValue)
-            q = q.Where(x => x.Network == network.Value);
-        if (side.HasValue)
-            q = q.Where(x => x.Side == side.Value);
-        if (dateFrom.HasValue)
-            q = q.Where(x => x.ReportDate >= dateFrom.Value);
-        if (dateTo.HasValue)
-            q = q.Where(x => x.ReportDate <= dateTo.Value);
-
-        q = q.OrderByDescending(x => x.ReportDate);
+        var q = _dbContext.CardClearingImbalance.AsNoTracking();
+        if (dataScope.HasValue) q = q.Where(x => x.DataScope == dataScope.Value);
+        if (!string.IsNullOrWhiteSpace(network)) q = q.Where(x => x.Network == network);
+        if (!string.IsNullOrWhiteSpace(currency)) q = q.Where(x => x.Currency == currency);
+        if (dateFrom.HasValue) q = q.Where(x => x.ReportDate >= dateFrom.Value);
+        if (dateTo.HasValue) q = q.Where(x => x.ReportDate <= dateTo.Value);
+        if (!string.IsNullOrWhiteSpace(imbalanceSeverity)) q = q.Where(x => x.ImbalanceSeverity == imbalanceSeverity);
+        if (!string.IsNullOrWhiteSpace(urgency)) q = q.Where(x => x.Urgency == urgency);
+        q = q.OrderByDescending(x => x.ReportDate).ThenByDescending(x => x.AbsGap);
         return await PaginateAsync(q, paging, ct);
     }
 
-    public async Task<List<ReconClearingControlStatAnalysisDto>> GetReconClearingControlStatAnalysisAsync(
-        DataScope? dataScope, FileContentType? network, CancellationToken ct)
+    public async Task<PaginatedList<ReconciliationQualityScoreDto>> GetReconciliationQualityScoreAsync(
+        SearchQueryParams paging, DataScope? dataScope, string network,
+        DateTime? dateFrom, DateTime? dateTo, string qualityGrade, string weakestDimension,
+        string urgency, CancellationToken ct)
     {
-        var q = _dbContext.ReconClearingControlStatAnalysis.AsNoTracking();
-
-        if (dataScope.HasValue)
-            q = q.Where(x => x.DataScope == dataScope.Value);
-        if (network.HasValue)
-            q = q.Where(x => x.Network == network.Value);
-
-        return await q.OrderByDescending(x => x.TransactionCount).ToListAsync(ct);
-    }
-
-    public async Task<List<ReconFinancialSummaryDto>> GetReconFinancialSummaryAsync(
-        DataScope? dataScope, FileContentType? network, string financialType, string txnEffect,
-        int? originalCurrency, CancellationToken ct)
-    {
-        var q = _dbContext.ReconFinancialSummary.AsNoTracking();
-
-        if (dataScope.HasValue)
-            q = q.Where(x => x.DataScope == dataScope.Value);
-        if (network.HasValue)
-            q = q.Where(x => x.Network == network.Value);
-        if (!string.IsNullOrWhiteSpace(financialType))
-            q = q.Where(x => x.FinancialType == financialType);
-        if (!string.IsNullOrWhiteSpace(txnEffect))
-            q = q.Where(x => x.TxnEffect == txnEffect);
-        if (originalCurrency.HasValue)
-            q = q.Where(x => x.OriginalCurrency == originalCurrency.Value);
-
-        return await q.OrderByDescending(x => x.TransactionCount).ToListAsync(ct);
-    }
-
-    public async Task<List<ReconResponseStatusAnalysisDto>> GetReconResponseStatusAnalysisAsync(
-        DataScope? dataScope, FileContentType? network, ReconciliationStatus? reconciliationStatus, CancellationToken ct)
-    {
-        var q = _dbContext.ReconResponseStatusAnalysis.AsNoTracking();
-
-        if (dataScope.HasValue)
-            q = q.Where(x => x.DataScope == dataScope.Value);
-        if (network.HasValue)
-            q = q.Where(x => x.Network == network.Value);
-        if (reconciliationStatus.HasValue)
-            q = q.Where(x => x.ReconciliationStatus == reconciliationStatus.Value);
-
-        return await q.OrderByDescending(x => x.TransactionCount).ToListAsync(ct);
-    }
-
-    public async Task<PaginatedList<ArchiveRunOverviewDto>> GetArchiveRunOverviewAsync(
-        SearchQueryParams paging, string archiveStatus, FileContentType? contentType, FileType? fileType,
-        DateTime? dateFrom, DateTime? dateTo, CancellationToken ct)
-    {
-        var q = _dbContext.ArchiveRunOverview.AsNoTracking();
-
-        if (!string.IsNullOrWhiteSpace(archiveStatus))
-            q = q.Where(x => x.ArchiveStatus == archiveStatus);
-        if (contentType.HasValue)
-            q = q.Where(x => x.ContentType == contentType.Value);
-        if (fileType.HasValue)
-            q = q.Where(x => x.FileType == fileType.Value);
-        if (dateFrom.HasValue)
-            q = q.Where(x => x.ArchiveStartedAt >= dateFrom.Value);
-        if (dateTo.HasValue)
-            q = q.Where(x => x.ArchiveStartedAt <= dateTo.Value);
-
-        q = q.OrderByDescending(x => x.ArchiveStartedAt);
+        var q = _dbContext.ReconciliationQualityScore.AsNoTracking();
+        if (dataScope.HasValue) q = q.Where(x => x.DataScope == dataScope.Value);
+        if (!string.IsNullOrWhiteSpace(network)) q = q.Where(x => x.Network == network);
+        if (dateFrom.HasValue) q = q.Where(x => x.ReportDate >= dateFrom.Value);
+        if (dateTo.HasValue) q = q.Where(x => x.ReportDate <= dateTo.Value);
+        if (!string.IsNullOrWhiteSpace(qualityGrade)) q = q.Where(x => x.QualityGrade == qualityGrade);
+        if (!string.IsNullOrWhiteSpace(weakestDimension)) q = q.Where(x => x.WeakestDimension == weakestDimension);
+        if (!string.IsNullOrWhiteSpace(urgency)) q = q.Where(x => x.Urgency == urgency);
+        q = q.OrderByDescending(x => x.ReportDate).ThenBy(x => x.Network);
         return await PaginateAsync(q, paging, ct);
     }
 
-    public async Task<PaginatedList<ArchiveEligibilityDto>> GetArchiveEligibilityAsync(
-        SearchQueryParams paging, FileContentType? contentType, FileType? fileType,
-        ArchiveEligibilityStatus? archiveEligibilityStatus, CancellationToken ct)
+    public async Task<PaginatedList<MisleadingSuccessCaseDto>> GetMisleadingSuccessCasesAsync(
+        SearchQueryParams paging, DataScope? dataScope, string network, string side, string currency,
+        DateTime? dateFrom, DateTime? dateTo, string misleadingPattern, string urgency, CancellationToken ct)
     {
-        var q = _dbContext.ArchiveEligibility.AsNoTracking();
-
-        if (contentType.HasValue)
-            q = q.Where(x => x.ContentType == contentType.Value);
-        if (fileType.HasValue)
-            q = q.Where(x => x.FileType == fileType.Value);
-        if (archiveEligibilityStatus.HasValue)
-            q = q.Where(x => x.ArchiveEligibilityStatus == archiveEligibilityStatus.Value);
-
-        q = q.OrderByDescending(x => x.AgeDays);
+        var q = _dbContext.MisleadingSuccessCases.AsNoTracking();
+        if (dataScope.HasValue) q = q.Where(x => x.DataScope == dataScope.Value);
+        if (!string.IsNullOrWhiteSpace(network)) q = q.Where(x => x.Network == network);
+        if (!string.IsNullOrWhiteSpace(side)) q = q.Where(x => x.Side == side);
+        if (!string.IsNullOrWhiteSpace(currency)) q = q.Where(x => x.Currency == currency);
+        if (dateFrom.HasValue) q = q.Where(x => x.ReportDate >= dateFrom.Value);
+        if (dateTo.HasValue) q = q.Where(x => x.ReportDate <= dateTo.Value);
+        if (!string.IsNullOrWhiteSpace(misleadingPattern)) q = q.Where(x => x.MisleadingPattern == misleadingPattern);
+        if (!string.IsNullOrWhiteSpace(urgency)) q = q.Where(x => x.Urgency == urgency);
+        q = q.OrderByDescending(x => x.ReportDate).ThenBy(x => x.Network);
         return await PaginateAsync(q, paging, ct);
     }
 
-    public async Task<List<ArchiveBacklogTrendDto>> GetArchiveBacklogTrendAsync(
-        DateTime? dateFrom, DateTime? dateTo, CancellationToken ct)
+    public async Task<PaginatedList<ArchivePipelineHealthDto>> GetArchivePipelineHealthAsync(
+        SearchQueryParams paging, DataScope? dataScope, string perspective, string side, string network,
+        string archiveStatus, string pipelineHealth, string urgency, CancellationToken ct)
     {
-        var q = _dbContext.ArchiveBacklogTrend.AsNoTracking();
-
-        if (dateFrom.HasValue)
-            q = q.Where(x => x.ReportDate >= dateFrom.Value);
-        if (dateTo.HasValue)
-            q = q.Where(x => x.ReportDate <= dateTo.Value);
-
-        return await q.OrderByDescending(x => x.ReportDate).ToListAsync(ct);
-    }
-
-    public async Task<ArchiveRetentionSnapshotDto> GetArchiveRetentionSnapshotAsync(CancellationToken ct)
-    {
-        return await _dbContext.ArchiveRetentionSnapshot.AsNoTracking().FirstOrDefaultAsync(ct);
-    }
-
-    public async Task<PaginatedList<FileReconSummaryDto>> GetFileReconSummaryAsync(
-        SearchQueryParams paging, DataScope? dataScope, FileContentType? contentType, FileType? fileType,
-        DateTime? dateFrom, DateTime? dateTo, CancellationToken ct)
-    {
-        var q = _dbContext.FileReconSummary.AsNoTracking();
-
-        if (dataScope.HasValue)
-            q = q.Where(x => x.DataScope == dataScope.Value);
-        if (contentType.HasValue)
-            q = q.Where(x => x.ContentType == contentType.Value);
-        if (fileType.HasValue)
-            q = q.Where(x => x.FileType == fileType.Value);
-        if (dateFrom.HasValue)
-            q = q.Where(x => x.FileCreatedAt >= dateFrom.Value);
-        if (dateTo.HasValue)
-            q = q.Where(x => x.FileCreatedAt <= dateTo.Value);
-
-        q = q.OrderByDescending(x => x.FileCreatedAt);
+        var q = _dbContext.ArchivePipelineHealth.AsNoTracking();
+        if (dataScope.HasValue) q = q.Where(x => x.DataScope == dataScope.Value);
+        if (!string.IsNullOrWhiteSpace(perspective)) q = q.Where(x => x.Perspective == perspective);
+        if (!string.IsNullOrWhiteSpace(side)) q = q.Where(x => x.Side == side);
+        if (!string.IsNullOrWhiteSpace(network)) q = q.Where(x => x.Network == network);
+        if (!string.IsNullOrWhiteSpace(archiveStatus)) q = q.Where(x => x.ArchiveStatus == archiveStatus);
+        if (!string.IsNullOrWhiteSpace(pipelineHealth)) q = q.Where(x => x.PipelineHealth == pipelineHealth);
+        if (!string.IsNullOrWhiteSpace(urgency)) q = q.Where(x => x.Urgency == urgency);
+        q = q.OrderBy(x => x.Urgency).ThenByDescending(x => x.AgeDays);
         return await PaginateAsync(q, paging, ct);
     }
 
-    public async Task<List<ReconMatchRateTrendDto>> GetReconMatchRateTrendAsync(
-        DataScope? dataScope, FileContentType? network, ReconSide? side,
-        DateTime? dateFrom, DateTime? dateTo, CancellationToken ct)
+    public async Task<PaginatedList<ReportingDocumentationDto>> GetReportingDocumentationAsync(
+        SearchQueryParams paging, string viewName, string reportGroup, CancellationToken ct)
     {
-        var q = _dbContext.ReconMatchRateTrend.AsNoTracking();
-
-        if (dataScope.HasValue)
-            q = q.Where(x => x.DataScope == dataScope.Value);
-        if (network.HasValue)
-            q = q.Where(x => x.Network == network.Value);
-        if (side.HasValue)
-            q = q.Where(x => x.Side == side.Value);
-        if (dateFrom.HasValue)
-            q = q.Where(x => x.ReportDate >= dateFrom.Value);
-        if (dateTo.HasValue)
-            q = q.Where(x => x.ReportDate <= dateTo.Value);
-
-        return await q.OrderByDescending(x => x.ReportDate).ToListAsync(ct);
-    }
-
-    public async Task<List<ReconGapAnalysisDto>> GetReconGapAnalysisAsync(
-        DataScope? dataScope, FileContentType? network,
-        DateTime? dateFrom, DateTime? dateTo, CancellationToken ct)
-    {
-        var q = _dbContext.ReconGapAnalysis.AsNoTracking();
-
-        if (dataScope.HasValue)
-            q = q.Where(x => x.DataScope == dataScope.Value);
-        if (network.HasValue)
-            q = q.Where(x => x.Network == network.Value);
-        if (dateFrom.HasValue)
-            q = q.Where(x => x.ReportDate >= dateFrom.Value);
-        if (dateTo.HasValue)
-            q = q.Where(x => x.ReportDate <= dateTo.Value);
-
-        return await q.OrderByDescending(x => x.ReportDate).ToListAsync(ct);
-    }
-
-    public async Task<List<UnmatchedTransactionAgingDto>> GetUnmatchedTransactionAgingAsync(
-        DataScope? dataScope, FileContentType? network, ReconSide? side, CancellationToken ct)
-    {
-        var q = _dbContext.UnmatchedTransactionAging.AsNoTracking();
-
-        if (dataScope.HasValue)
-            q = q.Where(x => x.DataScope == dataScope.Value);
-        if (network.HasValue)
-            q = q.Where(x => x.Network == network.Value);
-        if (side.HasValue)
-            q = q.Where(x => x.Side == side.Value);
-
-        return await q.OrderBy(x => x.AgeBucket).ToListAsync(ct);
-    }
-
-    public async Task<List<NetworkReconScorecardDto>> GetNetworkReconScorecardAsync(
-        DataScope? dataScope, FileContentType? network, CancellationToken ct)
-    {
-        var q = _dbContext.NetworkReconScorecard.AsNoTracking();
-
-        if (dataScope.HasValue)
-            q = q.Where(x => x.DataScope == dataScope.Value);
-        if (network.HasValue)
-            q = q.Where(x => x.Network == network.Value);
-
-        return await q.OrderBy(x => x.Network).ToListAsync(ct);
-    }
-
-    public async Task<PaginatedList<CardClearingCorrelationDto>> GetCardClearingCorrelationAsync(
-        SearchQueryParams paging, DataScope? dataScope, string cardTable,
-        Guid? fileId, Guid? fileLineId, Guid? cardId, CancellationToken ct)
-    {
-        var q = _dbContext.CardClearingCorrelation.AsNoTracking();
-
-        if (dataScope.HasValue)
-            q = q.Where(x => x.DataScope == dataScope.Value);
-        if (!string.IsNullOrWhiteSpace(cardTable))
-            q = q.Where(x => x.CardTable == cardTable);
-        if (fileId.HasValue)
-            q = q.Where(x => x.FileId == fileId.Value);
-        if (fileLineId.HasValue)
-            q = q.Where(x => x.FileLineId == fileLineId.Value);
-        if (cardId.HasValue)
-            q = q.Where(x => x.CardId == cardId.Value);
-
-        q = q.OrderBy(x => x.RowNumber);
+        var q = _dbContext.ReportingDocumentation.AsNoTracking();
+        if (!string.IsNullOrWhiteSpace(viewName)) q = q.Where(x => x.ViewName == viewName);
+        if (!string.IsNullOrWhiteSpace(reportGroup)) q = q.Where(x => x.ReportGroup == reportGroup);
+        q = q.OrderBy(x => x.ReportGroup).ThenBy(x => x.ViewName);
         return await PaginateAsync(q, paging, ct);
     }
 
@@ -495,3 +398,4 @@ internal sealed class ReportingService : IReportingService
         return new PaginatedList<T>(items, total, page, pageSize, paging.OrderBy, paging.SortBy);
     }
 }
+
