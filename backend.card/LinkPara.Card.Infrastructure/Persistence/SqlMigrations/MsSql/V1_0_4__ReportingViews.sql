@@ -1232,10 +1232,10 @@ FROM (
              SUM(d.OriginalAmount) AS TotalCardOriginalAmount,
              SUM(d.SettlementAmount) AS TotalCardSettlementAmount,
              SUM(d.BillingAmount) AS TotalCardBillingAmount,
-             SUM(CASE WHEN d.IsTxnSettle = 'Y' THEN 1 ELSE 0 END) AS SettledCount,
-             SUM(CASE WHEN d.IsTxnSettle = 'N' THEN 1 ELSE 0 END) AS UnsettledCount,
-             SUM(CASE WHEN d.TxnEffect = 'D' THEN d.OriginalAmount ELSE 0 END) AS DebitAmount,
-             SUM(CASE WHEN d.TxnEffect = 'C' THEN d.OriginalAmount ELSE 0 END) AS CreditAmount,
+             SUM(CASE WHEN d.IsTxnSettle = 'Settled'   THEN 1 ELSE 0 END) AS SettledCount,
+             SUM(CASE WHEN d.IsTxnSettle = 'Unsettled' THEN 1 ELSE 0 END) AS UnsettledCount,
+             SUM(CASE WHEN d.TxnEffect   = 'Debit'  THEN d.OriginalAmount ELSE 0 END) AS DebitAmount,
+             SUM(CASE WHEN d.TxnEffect   = 'Credit' THEN d.OriginalAmount ELSE 0 END) AS CreditAmount,
              SUM(CASE WHEN fl.MatchedClearingLineId IS NOT NULL THEN 1 ELSE 0 END) AS MatchedCount,
              SUM(CASE WHEN fl.MatchedClearingLineId IS NULL THEN 1 ELSE 0 END) AS UnmatchedCount
          FROM [Ingestion].[FileLine] fl
@@ -1266,10 +1266,10 @@ FROM (
              SUM(ISNULL(d.OriginalAmount, 0)),
              SUM(ISNULL(d.SettlementAmount, 0)),
              SUM(ISNULL(d.BillingAmount, 0)),
-             SUM(CASE WHEN d.IsTxnSettle = 'Y' THEN 1 ELSE 0 END),
-             SUM(CASE WHEN d.IsTxnSettle = 'N' THEN 1 ELSE 0 END),
-             SUM(CASE WHEN d.TxnEffect = 'D' THEN ISNULL(d.OriginalAmount, 0) ELSE 0 END),
-             SUM(CASE WHEN d.TxnEffect = 'C' THEN ISNULL(d.OriginalAmount, 0) ELSE 0 END),
+             SUM(CASE WHEN d.IsTxnSettle = 'Settled'   THEN 1 ELSE 0 END),
+             SUM(CASE WHEN d.IsTxnSettle = 'Unsettled' THEN 1 ELSE 0 END),
+             SUM(CASE WHEN d.TxnEffect   = 'Debit'  THEN ISNULL(d.OriginalAmount, 0) ELSE 0 END),
+             SUM(CASE WHEN d.TxnEffect   = 'Credit' THEN ISNULL(d.OriginalAmount, 0) ELSE 0 END),
              SUM(CASE WHEN fl.MatchedClearingLineId IS NOT NULL THEN 1 ELSE 0 END),
              SUM(CASE WHEN fl.MatchedClearingLineId IS NULL THEN 1 ELSE 0 END)
          FROM [Archive].[IngestionFileLine] fl
@@ -1429,9 +1429,9 @@ CREATE OR ALTER VIEW [Reporting].[VwArchiveBacklogTrend] AS
 SELECT
     CAST(log.CreateDate AS DATE) AS ReportDate,
     COUNT(*) AS ArchiveRunCount,
-    SUM(CASE WHEN log.Status = 'Success' THEN 1 ELSE 0 END) AS SuccessRunCount,
+    SUM(CASE WHEN log.Status = 'Archived' THEN 1 ELSE 0 END) AS SuccessRunCount,
     SUM(CASE WHEN log.Status = 'Failed' THEN 1 ELSE 0 END) AS FailedRunCount,
-    SUM(CASE WHEN log.Status NOT IN ('Success', 'Failed') THEN 1 ELSE 0 END) AS OtherRunCount
+    SUM(CASE WHEN log.Status NOT IN ('Archived', 'Failed') THEN 1 ELSE 0 END) AS OtherRunCount
 FROM [Archive].[ArchiveLog] log
 GROUP BY CAST(log.CreateDate AS DATE);
 GO
@@ -2179,7 +2179,7 @@ WITH Src AS (
            ISNULL(MerchantName, 'UNKNOWN')    AS MerchantName,
            ISNULL(MerchantCountry, 'UNKNOWN') AS MerchantCountry,
            COUNT(*)                                                                                                  AS TransactionCount,
-           SUM(CASE WHEN IsSuccessfulTxn = 'N' OR (ResponseCode IS NOT NULL AND ResponseCode <> '00') THEN 1 ELSE 0 END) AS DeclinedCount,
+           SUM(CASE WHEN IsSuccessfulTxn = 'Unsuccessful' OR (ResponseCode IS NOT NULL AND ResponseCode <> '00') THEN 1 ELSE 0 END) AS DeclinedCount,
            SUM(IsUnmatched)                                                                                            AS UnmatchedCount,
            SUM(OriginalAmount)                                                                                          AS TotalAmount,
            SUM(CASE WHEN IsUnmatched = 1 THEN OriginalAmount ELSE 0 END)                                                AS UnmatchedAmount
@@ -2265,8 +2265,8 @@ WITH Src AS (
     SELECT Scope, Network, ISNULL(ResponseCode, 'NONE') AS ResponseCode,
            COUNT(*)                                                  AS TransactionCount,
            SUM(OriginalAmount)                                       AS TotalAmount,
-           SUM(CASE WHEN IsSuccessfulTxn = 'Y' THEN 1 ELSE 0 END)    AS SuccessfulCount,
-           SUM(CASE WHEN IsSuccessfulTxn = 'N' THEN 1 ELSE 0 END)    AS FailedCount
+           SUM(CASE WHEN IsSuccessfulTxn = 'Successful'   THEN 1 ELSE 0 END)    AS SuccessfulCount,
+           SUM(CASE WHEN IsSuccessfulTxn = 'Unsuccessful' THEN 1 ELSE 0 END)    AS FailedCount
     FROM Src
     GROUP BY Scope, Network, ISNULL(ResponseCode, 'NONE')
 )
@@ -2523,29 +2523,29 @@ WITH Src AS (
 SELECT
     Scope AS DataScope, Network,
     TRY_CONVERT(DATE, CAST(TxnDate AS VARCHAR(8)), 112) AS TxnDate,
-    SUM(CASE WHEN IoFlag = 'In'  THEN 1 ELSE 0 END)                  AS IncomingCount,
-    SUM(CASE WHEN IoFlag = 'Out' THEN 1 ELSE 0 END)                  AS OutgoingCount,
-    SUM(CASE WHEN IoFlag = 'In'  THEN SourceAmount ELSE 0 END)       AS IncomingAmount,
-    SUM(CASE WHEN IoFlag = 'Out' THEN SourceAmount ELSE 0 END)       AS OutgoingAmount,
-    SUM(CASE WHEN IoFlag = 'In'  THEN SourceAmount ELSE 0 END)
-        - SUM(CASE WHEN IoFlag = 'Out' THEN SourceAmount ELSE 0 END) AS NetImbalanceAmount,
+    SUM(CASE WHEN IoFlag = 'Incoming' THEN 1 ELSE 0 END)             AS IncomingCount,
+    SUM(CASE WHEN IoFlag = 'Outgoing' THEN 1 ELSE 0 END)             AS OutgoingCount,
+    SUM(CASE WHEN IoFlag = 'Incoming' THEN SourceAmount ELSE 0 END)  AS IncomingAmount,
+    SUM(CASE WHEN IoFlag = 'Outgoing' THEN SourceAmount ELSE 0 END)  AS OutgoingAmount,
+    SUM(CASE WHEN IoFlag = 'Incoming' THEN SourceAmount ELSE 0 END)
+        - SUM(CASE WHEN IoFlag = 'Outgoing' THEN SourceAmount ELSE 0 END) AS NetImbalanceAmount,
     CASE WHEN Scope = 'ARCHIVE' THEN 'HISTORICAL'
-         WHEN ABS(SUM(CASE WHEN IoFlag = 'In' THEN SourceAmount ELSE 0 END)
-                  - SUM(CASE WHEN IoFlag = 'Out' THEN SourceAmount ELSE 0 END)) >= 1000000 THEN 'CRITICAL_IMBALANCE'
-         WHEN ABS(SUM(CASE WHEN IoFlag = 'In' THEN SourceAmount ELSE 0 END)
-                  - SUM(CASE WHEN IoFlag = 'Out' THEN SourceAmount ELSE 0 END)) >= 100000  THEN 'NOTABLE_IMBALANCE'
+         WHEN ABS(SUM(CASE WHEN IoFlag = 'Incoming' THEN SourceAmount ELSE 0 END)
+                  - SUM(CASE WHEN IoFlag = 'Outgoing' THEN SourceAmount ELSE 0 END)) >= 1000000 THEN 'CRITICAL_IMBALANCE'
+         WHEN ABS(SUM(CASE WHEN IoFlag = 'Incoming' THEN SourceAmount ELSE 0 END)
+                  - SUM(CASE WHEN IoFlag = 'Outgoing' THEN SourceAmount ELSE 0 END)) >= 100000  THEN 'NOTABLE_IMBALANCE'
          ELSE 'BALANCED' END AS ImbalanceFlag,
     CASE WHEN Scope = 'ARCHIVE' THEN 'P5'
-         WHEN ABS(SUM(CASE WHEN IoFlag = 'In' THEN SourceAmount ELSE 0 END)
-                  - SUM(CASE WHEN IoFlag = 'Out' THEN SourceAmount ELSE 0 END)) >= 1000000 THEN 'P1'
-         WHEN ABS(SUM(CASE WHEN IoFlag = 'In' THEN SourceAmount ELSE 0 END)
-                  - SUM(CASE WHEN IoFlag = 'Out' THEN SourceAmount ELSE 0 END)) >= 100000  THEN 'P3'
+         WHEN ABS(SUM(CASE WHEN IoFlag = 'Incoming' THEN SourceAmount ELSE 0 END)
+                  - SUM(CASE WHEN IoFlag = 'Outgoing' THEN SourceAmount ELSE 0 END)) >= 1000000 THEN 'P1'
+         WHEN ABS(SUM(CASE WHEN IoFlag = 'Incoming' THEN SourceAmount ELSE 0 END)
+                  - SUM(CASE WHEN IoFlag = 'Outgoing' THEN SourceAmount ELSE 0 END)) >= 100000  THEN 'P3'
          ELSE 'P5' END AS Urgency,
     CASE WHEN Scope = 'ARCHIVE' THEN 'HISTORICAL_TREND_ANALYSIS_ONLY'
-         WHEN ABS(SUM(CASE WHEN IoFlag = 'In' THEN SourceAmount ELSE 0 END)
-                  - SUM(CASE WHEN IoFlag = 'Out' THEN SourceAmount ELSE 0 END)) >= 1000000 THEN 'ESCALATE_CLEARING_RECONCILIATION'
-         WHEN ABS(SUM(CASE WHEN IoFlag = 'In' THEN SourceAmount ELSE 0 END)
-                  - SUM(CASE WHEN IoFlag = 'Out' THEN SourceAmount ELSE 0 END)) >= 100000  THEN 'INVESTIGATE_DAILY_IMBALANCE'
+         WHEN ABS(SUM(CASE WHEN IoFlag = 'Incoming' THEN SourceAmount ELSE 0 END)
+                  - SUM(CASE WHEN IoFlag = 'Outgoing' THEN SourceAmount ELSE 0 END)) >= 1000000 THEN 'ESCALATE_CLEARING_RECONCILIATION'
+         WHEN ABS(SUM(CASE WHEN IoFlag = 'Incoming' THEN SourceAmount ELSE 0 END)
+                  - SUM(CASE WHEN IoFlag = 'Outgoing' THEN SourceAmount ELSE 0 END)) >= 100000  THEN 'INVESTIGATE_DAILY_IMBALANCE'
          ELSE 'NONE' END AS RecommendedAction
 FROM Src
 WHERE TxnDate BETWEEN 19000101 AND 99991231
@@ -2612,11 +2612,1871 @@ GO
 
 -- =====================================================================================
 -- [Reporting].[VwReportingDocumentation] source (parallel to reporting.rep_documentation).
--- Contains entries for every [Reporting].[Vw*] view present in this migration; column
--- names are PascalCase per project convention.
+-- For each [Reporting].[Vw*] view we publish:
+--   * purpose / business question / interpretation / usage_time / target_user / action_guidance
+--   * ImportantColumns* : FULL column catalogue with type + every possible value
+--                         (status, flag, bucket, urgency, recommended_action lookups)
+--   * Notes*            : source tables + shared enumerations (DataScope/Urgency/Network)
+--   * LiveArchiveInterpretation* : how to read LIVE vs ARCHIVE rows
 -- =====================================================================================
 IF OBJECT_ID('[Reporting].[VwReportingDocumentation]', 'V') IS NOT NULL
     DROP VIEW [Reporting].[VwReportingDocumentation];
+GO
+
+CREATE VIEW [Reporting].[VwReportingDocumentation] AS
+SELECT d.ViewName, d.ReportGroup,
+       d.PurposeTr, d.PurposeEn,
+       d.BusinessQuestionTr, d.BusinessQuestionEn,
+       d.InterpretationTr, d.InterpretationEn,
+       d.UsageTimeTr, d.UsageTimeEn,
+       d.TargetUserTr, d.TargetUserEn,
+       d.ActionGuidanceTr, d.ActionGuidanceEn,
+       d.ImportantColumnsTr, d.ImportantColumnsEn,
+       d.LiveArchiveInterpretationTr, d.LiveArchiveInterpretationEn,
+       d.NotesTr, d.NotesEn
+FROM (VALUES
+    (
+        N'[Reporting].[VwIngestionFileOverview]',
+        N'FILE_PROCESSING',
+        N'Tek dosya icin ozet operasyonel rapor: dosya kimligi, durum, mesaj, kaynak/tip ozellikleri.',
+        N'Per-file operational summary: file id, status, message, source/type.',
+        N'Tek dosya hakkinda ne biliyoruz?',
+        N'What do we know about a single file?',
+        N'FileStatus + Message ile dosyanin son durumu okunur; FailedLineCount > 0 icerik kalitesini sorgular.',
+        N'Read the latest file state via FileStatus + Message; FailedLineCount > 0 questions content quality.',
+        N'Dosya seviyesi inceleme; alarm sonrasi.',
+        N'File-level inspection; after an alert.',
+        N'Operasyon, support.',
+        N'Operations, support.',
+        N'Failed dosyalarda yeniden isleme; partial dosyalarda hatali satirlara dril.',
+        N'Reprocess Failed files; drill into failed lines for partial files.',
+        N'[KOLONLAR]
+- TotalLineCount (bigint).
+- SuccessLineCount (bigint).
+- FailedLineCount (bigint).
+- ProcessingLineCount (bigint).
+- DuplicateLineCount (bigint).
+- ReconReadyCount (bigint).
+- ReconSuccessCount (bigint).
+- ReconFailedCount (bigint).',
+        N'[COLUMNS]
+- TotalLineCount (bigint).
+- SuccessLineCount (bigint).
+- FailedLineCount (bigint).
+- ProcessingLineCount (bigint).
+- DuplicateLineCount (bigint).
+- ReconReadyCount (bigint).
+- ReconSuccessCount (bigint).
+- ReconFailedCount (bigint).',
+        N'LIVE: anlik durum. ARCHIVE: tarihsel trend (urgency genellikle P4/P5).',
+        N'LIVE: point-in-time. ARCHIVE: historical trend (urgency usually P4/P5).',
+        N'[KAYNAK] [Ingestion].* / [Reconciliation].* / [Archive].* tablolari.
+[ORTAK ENUM TABLOSU]
+DataScope: LIVE | ARCHIVE.
+Urgency: P1 (kritik, dakikalar icinde) | P2 (yuksek, saat icinde) | P3 (orta, vardiya icinde) | P4 (dusuk, gunluk) | P5 (bilgi, izleme).
+Network: BKM | VISA | MSC; Visa MS view''lerinde ''Visa'', ''Msc'', ''Bkm''.
+Side / FileType: Card | Clearing.
+ContentType: Visa | Msc | Bkm.
+',
+        N'[SOURCES] [Ingestion].* / [Reconciliation].* / [Archive].* tables.
+[SHARED ENUM TABLE]
+DataScope: LIVE | ARCHIVE.
+Urgency: P1 (critical, minutes) | P2 (high, hours) | P3 (medium, within shift) | P4 (low, daily) | P5 (info, watch).
+Network: BKM | VISA | MSC; ''Visa'', ''Msc'', ''Bkm'' in MS variants.
+Side / FileType: Card | Clearing.
+ContentType: Visa | Msc | Bkm.
+'
+    ),
+    (
+        N'[Reporting].[VwIngestionFileQuality]',
+        N'FILE_PROCESSING',
+        N'Dosya bazinda parse/validation hata orani, eksik satir, tekrar eden satir kalite gostergeleri.',
+        N'Per-file parse/validation failure rate, missing lines, duplicates.',
+        N'Bir dosyanin icerik kalitesi nedir?',
+        N'What is the content quality of a file?',
+        N'QualityFlag DEGRADED veya CRITICAL kayit kalitesinde dususu gosterir; trend takibi gerekir.',
+        N'QualityFlag DEGRADED or CRITICAL signals quality drop; needs trend monitoring.',
+        N'Gunluk; ozellikle yuksek hata orani uyarisi sonrasi.',
+        N'Daily; especially after high failure-rate alerts.',
+        N'Operasyon, kanal sahibi.',
+        N'Operations, channel owner.',
+        N'DEGRADED dosyalarda parser/mapping; CRITICAL dosyalarda upstream kanalla temas.',
+        N'DEGRADED -> parser/mapping; CRITICAL -> contact upstream channel.',
+        N'[KOLONLAR]
+- TotalLineCount (bigint).
+- SuccessLineCount (bigint).
+- FailedLineCount (bigint).
+- ProcessingLineCount (bigint).
+- UniqueCount (bigint).
+- PrimaryCount (bigint).
+- SecondaryCount (bigint).
+- ConflictCount (bigint).
+- TotalRetryCount (bigint).
+- LinesWithRetryCount (bigint).',
+        N'[COLUMNS]
+- TotalLineCount (bigint).
+- SuccessLineCount (bigint).
+- FailedLineCount (bigint).
+- ProcessingLineCount (bigint).
+- UniqueCount (bigint).
+- PrimaryCount (bigint).
+- SecondaryCount (bigint).
+- ConflictCount (bigint).
+- TotalRetryCount (bigint).
+- LinesWithRetryCount (bigint).',
+        N'LIVE: anlik durum. ARCHIVE: tarihsel trend (urgency genellikle P4/P5).',
+        N'LIVE: point-in-time. ARCHIVE: historical trend (urgency usually P4/P5).',
+        N'[KAYNAK] [Ingestion].* / [Reconciliation].* / [Archive].* tablolari.
+[ORTAK ENUM TABLOSU]
+DataScope: LIVE | ARCHIVE.
+Urgency: P1 (kritik, dakikalar icinde) | P2 (yuksek, saat icinde) | P3 (orta, vardiya icinde) | P4 (dusuk, gunluk) | P5 (bilgi, izleme).
+Network: BKM | VISA | MSC; Visa MS view''lerinde ''Visa'', ''Msc'', ''Bkm''.
+Side / FileType: Card | Clearing.
+ContentType: Visa | Msc | Bkm.
+',
+        N'[SOURCES] [Ingestion].* / [Reconciliation].* / [Archive].* tables.
+[SHARED ENUM TABLE]
+DataScope: LIVE | ARCHIVE.
+Urgency: P1 (critical, minutes) | P2 (high, hours) | P3 (medium, within shift) | P4 (low, daily) | P5 (info, watch).
+Network: BKM | VISA | MSC; ''Visa'', ''Msc'', ''Bkm'' in MS variants.
+Side / FileType: Card | Clearing.
+ContentType: Visa | Msc | Bkm.
+'
+    ),
+    (
+        N'[Reporting].[VwIngestionDailySummary]',
+        N'FILE_PROCESSING',
+        N'Gunluk dosya alim hacmi, basari/basarisiz dosya sayisi ve hata orani.',
+        N'Daily ingestion volume, success/failure file counts, failure rate.',
+        N'Bugunku alim profilimiz nedir?',
+        N'What is today ingestion profile?',
+        N'DailyStatus DEGRADED veya CRITICAL gunluk alim sagligini bozdugumuzu gosterir.',
+        N'DailyStatus DEGRADED or CRITICAL means daily ingestion health is broken.',
+        N'Gunluk operasyonel takip; yonetim ozet.',
+        N'Daily operational monitoring; management summary.',
+        N'Operasyon, yonetim.',
+        N'Operations, management.',
+        N'CRITICAL gunlerde alim altyapisi gozden gecirilir.',
+        N'On CRITICAL days review the ingestion stack.',
+        N'[KOLONLAR]
+- DATE (date/datetime).',
+        N'[COLUMNS]
+- DATE (date/datetime).',
+        N'LIVE: anlik durum. ARCHIVE: tarihsel trend (urgency genellikle P4/P5).',
+        N'LIVE: point-in-time. ARCHIVE: historical trend (urgency usually P4/P5).',
+        N'[KAYNAK] [Ingestion].* / [Reconciliation].* / [Archive].* tablolari.
+[ORTAK ENUM TABLOSU]
+DataScope: LIVE | ARCHIVE.
+Urgency: P1 (kritik, dakikalar icinde) | P2 (yuksek, saat icinde) | P3 (orta, vardiya icinde) | P4 (dusuk, gunluk) | P5 (bilgi, izleme).
+Network: BKM | VISA | MSC; Visa MS view''lerinde ''Visa'', ''Msc'', ''Bkm''.
+Side / FileType: Card | Clearing.
+ContentType: Visa | Msc | Bkm.
+',
+        N'[SOURCES] [Ingestion].* / [Reconciliation].* / [Archive].* tables.
+[SHARED ENUM TABLE]
+DataScope: LIVE | ARCHIVE.
+Urgency: P1 (critical, minutes) | P2 (high, hours) | P3 (medium, within shift) | P4 (low, daily) | P5 (info, watch).
+Network: BKM | VISA | MSC; ''Visa'', ''Msc'', ''Bkm'' in MS variants.
+Side / FileType: Card | Clearing.
+ContentType: Visa | Msc | Bkm.
+'
+    ),
+    (
+        N'[Reporting].[VwIngestionNetworkMatrix]',
+        N'FILE_PROCESSING',
+        N'Network x dosya tipi matrisinde alim sayim ve tutarlari.',
+        N'Counts and amounts in a network x file-type matrix.',
+        N'Hangi network x file_type kombinasyonlari calisiyor?',
+        N'Which network x file_type combinations are active?',
+        N'MatrixFlag MISSING bir kombinasyon icin alim olmadigini gosterir; UNDER_PERFORMING dususe isaret eder.',
+        N'MatrixFlag MISSING means no ingestion for the combination; UNDER_PERFORMING signals decline.',
+        N'Haftalik trend incelemesi.',
+        N'Weekly trend review.',
+        N'Operasyon, urun, kanal sahibi.',
+        N'Operations, product, channel owner.',
+        N'MISSING kombinasyonlar kanalla teyit; UNDER_PERFORMING icin trend incele.',
+        N'Verify MISSING combinations with the channel; review trend on UNDER_PERFORMING.',
+        N'[KOLONLAR]',
+        N'[COLUMNS]',
+        N'LIVE: anlik durum. ARCHIVE: tarihsel trend (urgency genellikle P4/P5).',
+        N'LIVE: point-in-time. ARCHIVE: historical trend (urgency usually P4/P5).',
+        N'[KAYNAK] [Ingestion].* / [Reconciliation].* / [Archive].* tablolari.
+[ORTAK ENUM TABLOSU]
+DataScope: LIVE | ARCHIVE.
+Urgency: P1 (kritik, dakikalar icinde) | P2 (yuksek, saat icinde) | P3 (orta, vardiya icinde) | P4 (dusuk, gunluk) | P5 (bilgi, izleme).
+Network: BKM | VISA | MSC; Visa MS view''lerinde ''Visa'', ''Msc'', ''Bkm''.
+Side / FileType: Card | Clearing.
+ContentType: Visa | Msc | Bkm.
+',
+        N'[SOURCES] [Ingestion].* / [Reconciliation].* / [Archive].* tables.
+[SHARED ENUM TABLE]
+DataScope: LIVE | ARCHIVE.
+Urgency: P1 (critical, minutes) | P2 (high, hours) | P3 (medium, within shift) | P4 (low, daily) | P5 (info, watch).
+Network: BKM | VISA | MSC; ''Visa'', ''Msc'', ''Bkm'' in MS variants.
+Side / FileType: Card | Clearing.
+ContentType: Visa | Msc | Bkm.
+'
+    ),
+    (
+        N'[Reporting].[VwIngestionExceptionHotspots]',
+        N'FILE_PROCESSING',
+        N'Alim sirasinda en cok karsilasilan hata tipleri ve sayilari.',
+        N'Top ingestion exception types with counts.',
+        N'En cok hangi exception turunden hata aliyoruz?',
+        N'Which exception types occur most?',
+        N'HotspotFlag SPIKE ani artisi, RECURRING surekli tekrar eden hatayi isaret eder.',
+        N'HotspotFlag SPIKE indicates a sudden surge, RECURRING means continuously repeated errors.',
+        N'Gunluk; ayrica spike alarmi sonrasi.',
+        N'Daily; also after a spike alert.',
+        N'Operasyon, gelistirme.',
+        N'Operations, engineering.',
+        N'SPIKE turlerini hemen kok-neden analizine al; RECURRING icin kalici fix planla.',
+        N'Take SPIKE types into immediate root-cause analysis; plan permanent fix for RECURRING.',
+        N'[KOLONLAR]
+- TotalRetryCount (bigint).
+- MaxRetryCount (bigint).
+- ErrorMessageCount (bigint).',
+        N'[COLUMNS]
+- TotalRetryCount (bigint).
+- MaxRetryCount (bigint).
+- ErrorMessageCount (bigint).',
+        N'LIVE: anlik durum. ARCHIVE: tarihsel trend (urgency genellikle P4/P5).',
+        N'LIVE: point-in-time. ARCHIVE: historical trend (urgency usually P4/P5).',
+        N'[KAYNAK] [Ingestion].* / [Reconciliation].* / [Archive].* tablolari.
+[ORTAK ENUM TABLOSU]
+DataScope: LIVE | ARCHIVE.
+Urgency: P1 (kritik, dakikalar icinde) | P2 (yuksek, saat icinde) | P3 (orta, vardiya icinde) | P4 (dusuk, gunluk) | P5 (bilgi, izleme).
+Network: BKM | VISA | MSC; Visa MS view''lerinde ''Visa'', ''Msc'', ''Bkm''.
+Side / FileType: Card | Clearing.
+ContentType: Visa | Msc | Bkm.
+',
+        N'[SOURCES] [Ingestion].* / [Reconciliation].* / [Archive].* tables.
+[SHARED ENUM TABLE]
+DataScope: LIVE | ARCHIVE.
+Urgency: P1 (critical, minutes) | P2 (high, hours) | P3 (medium, within shift) | P4 (low, daily) | P5 (info, watch).
+Network: BKM | VISA | MSC; ''Visa'', ''Msc'', ''Bkm'' in MS variants.
+Side / FileType: Card | Clearing.
+ContentType: Visa | Msc | Bkm.
+'
+    ),
+    (
+        N'[Reporting].[VwReconDailyOverview]',
+        N'RECONCILIATION',
+        N'Gunluk reconciliation high-level: islenen, eslesen, eslesmemis, manuel inceleme gereken.',
+        N'Daily reconciliation high-level: processed, matched, unmatched, manual-review.',
+        N'Bugunku reconciliation duzeyi nasil?',
+        N'What is today reconciliation level?',
+        N'DailyHealth DEGRADED match-rate dususunu, CRITICAL %80 alti match yi isaret eder.',
+        N'DailyHealth DEGRADED indicates match-rate drop, CRITICAL means <80% match.',
+        N'Gunluk yonetim takibi.',
+        N'Daily management monitoring.',
+        N'Recon, yonetim.',
+        N'Recon, management.',
+        N'CRITICAL gunlerde root-cause; DEGRADED gunlerde rule tuning.',
+        N'Root-cause on CRITICAL days; rule tuning on DEGRADED days.',
+        N'[KOLONLAR]
+- DATE (date/datetime).',
+        N'[COLUMNS]
+- DATE (date/datetime).',
+        N'LIVE: anlik durum. ARCHIVE: tarihsel trend (urgency genellikle P4/P5).',
+        N'LIVE: point-in-time. ARCHIVE: historical trend (urgency usually P4/P5).',
+        N'[KAYNAK] [Ingestion].* / [Reconciliation].* / [Archive].* tablolari.
+[ORTAK ENUM TABLOSU]
+DataScope: LIVE | ARCHIVE.
+Urgency: P1 (kritik, dakikalar icinde) | P2 (yuksek, saat icinde) | P3 (orta, vardiya icinde) | P4 (dusuk, gunluk) | P5 (bilgi, izleme).
+Network: BKM | VISA | MSC; Visa MS view''lerinde ''Visa'', ''Msc'', ''Bkm''.
+Side / FileType: Card | Clearing.
+ContentType: Visa | Msc | Bkm.
+',
+        N'[SOURCES] [Ingestion].* / [Reconciliation].* / [Archive].* tables.
+[SHARED ENUM TABLE]
+DataScope: LIVE | ARCHIVE.
+Urgency: P1 (critical, minutes) | P2 (high, hours) | P3 (medium, within shift) | P4 (low, daily) | P5 (info, watch).
+Network: BKM | VISA | MSC; ''Visa'', ''Msc'', ''Bkm'' in MS variants.
+Side / FileType: Card | Clearing.
+ContentType: Visa | Msc | Bkm.
+'
+    ),
+    (
+        N'[Reporting].[VwReconOpenItems]',
+        N'RECONCILIATION',
+        N'Acik kalan reconciliation kayitlari ozeti.',
+        N'Summary of open reconciliation items.',
+        N'Acik reconciliation kayitlarinin profili nedir?',
+        N'What is the open reconciliation profile?',
+        N'OpenItemFlag CRITICAL acik adet patlamasidir; izlenmesi gerekir.',
+        N'OpenItemFlag CRITICAL means open-item explosion; needs monitoring.',
+        N'Surekli izleme.',
+        N'Continuous monitoring.',
+        N'Recon ekibi.',
+        N'Recon team.',
+        N'CRITICAL durumlarda is yuku redagaitlar ve kapasite arttirilir.',
+        N'Re-distribute workload and add capacity on CRITICAL.',
+        N'[KOLONLAR]
+- OperationId (text).
+- FileLineId (text).
+- EvaluationId (text).
+- GroupId (text).
+- SequenceNumber (text).
+- ParentSequenceNumber (text).
+- OperationCode (text).
+- Branch (text).
+- IsManual (text).
+- OperationStatus (text).
+- RetryCount (bigint).
+- MaxRetryCount (bigint).
+- NextAttemptAt (date/datetime).
+- LeaseOwner (text).
+- LeaseExpiresAt (date/datetime).
+- LastError (text).
+- OperationCreatedAt (date/datetime).
+- OperationUpdatedAt (date/datetime).
+- EvaluationStatus (text).
+- EvaluationOperationCount (bigint).
+- DECIMAL (text).
+- AgeHours (text).',
+        N'[COLUMNS]
+- OperationId (text).
+- FileLineId (text).
+- EvaluationId (text).
+- GroupId (text).
+- SequenceNumber (text).
+- ParentSequenceNumber (text).
+- OperationCode (text).
+- Branch (text).
+- IsManual (text).
+- OperationStatus (text).
+- RetryCount (bigint).
+- MaxRetryCount (bigint).
+- NextAttemptAt (date/datetime).
+- LeaseOwner (text).
+- LeaseExpiresAt (date/datetime).
+- LastError (text).
+- OperationCreatedAt (date/datetime).
+- OperationUpdatedAt (date/datetime).
+- EvaluationStatus (text).
+- EvaluationOperationCount (bigint).
+- DECIMAL (text).
+- AgeHours (text).',
+        N'LIVE: anlik durum. ARCHIVE: tarihsel trend (urgency genellikle P4/P5).',
+        N'LIVE: point-in-time. ARCHIVE: historical trend (urgency usually P4/P5).',
+        N'[KAYNAK] [Ingestion].* / [Reconciliation].* / [Archive].* tablolari.
+[ORTAK ENUM TABLOSU]
+DataScope: LIVE | ARCHIVE.
+Urgency: P1 (kritik, dakikalar icinde) | P2 (yuksek, saat icinde) | P3 (orta, vardiya icinde) | P4 (dusuk, gunluk) | P5 (bilgi, izleme).
+Network: BKM | VISA | MSC; Visa MS view''lerinde ''Visa'', ''Msc'', ''Bkm''.
+Side / FileType: Card | Clearing.
+ContentType: Visa | Msc | Bkm.
+',
+        N'[SOURCES] [Ingestion].* / [Reconciliation].* / [Archive].* tables.
+[SHARED ENUM TABLE]
+DataScope: LIVE | ARCHIVE.
+Urgency: P1 (critical, minutes) | P2 (high, hours) | P3 (medium, within shift) | P4 (low, daily) | P5 (info, watch).
+Network: BKM | VISA | MSC; ''Visa'', ''Msc'', ''Bkm'' in MS variants.
+Side / FileType: Card | Clearing.
+ContentType: Visa | Msc | Bkm.
+'
+    ),
+    (
+        N'[Reporting].[VwReconOpenItemAging]',
+        N'RECONCILIATION',
+        N'Acik reconciliation kayitlarinin yas dagilimi.',
+        N'Aging distribution of open reconciliation items.',
+        N'Acik kayitlar ne kadar yaslandi?',
+        N'How aged are open items?',
+        N'AgingFlag CRITICAL_AGING 30 gun ustu bekleyen kayitlardir; finansal ve denetim riski.',
+        N'CRITICAL_AGING means items waiting >30 days; financial and audit risk.',
+        N'Haftalik denetim, ay sonu kontrol.',
+        N'Weekly audit, month-end check.',
+        N'Recon, denetim, finans.',
+        N'Recon, audit, finance.',
+        N'CRITICAL_AGING kayitlari manuel olarak kapatilir.',
+        N'Manually close CRITICAL_AGING items.',
+        N'[KOLONLAR]
+- OperationStatus (text).
+- IsManual (text).
+- BucketName: 0-1h | 1-4h | 4-24h | 1-3d | 3-7d.',
+        N'[COLUMNS]
+- OperationStatus (text).
+- IsManual (text).
+- BucketName: 0-1h | 1-4h | 4-24h | 1-3d | 3-7d.',
+        N'LIVE: anlik durum. ARCHIVE: tarihsel trend (urgency genellikle P4/P5).',
+        N'LIVE: point-in-time. ARCHIVE: historical trend (urgency usually P4/P5).',
+        N'[KAYNAK] [Ingestion].* / [Reconciliation].* / [Archive].* tablolari.
+[ORTAK ENUM TABLOSU]
+DataScope: LIVE | ARCHIVE.
+Urgency: P1 (kritik, dakikalar icinde) | P2 (yuksek, saat icinde) | P3 (orta, vardiya icinde) | P4 (dusuk, gunluk) | P5 (bilgi, izleme).
+Network: BKM | VISA | MSC; Visa MS view''lerinde ''Visa'', ''Msc'', ''Bkm''.
+Side / FileType: Card | Clearing.
+ContentType: Visa | Msc | Bkm.
+',
+        N'[SOURCES] [Ingestion].* / [Reconciliation].* / [Archive].* tables.
+[SHARED ENUM TABLE]
+DataScope: LIVE | ARCHIVE.
+Urgency: P1 (critical, minutes) | P2 (high, hours) | P3 (medium, within shift) | P4 (low, daily) | P5 (info, watch).
+Network: BKM | VISA | MSC; ''Visa'', ''Msc'', ''Bkm'' in MS variants.
+Side / FileType: Card | Clearing.
+ContentType: Visa | Msc | Bkm.
+'
+    ),
+    (
+        N'[Reporting].[VwReconManualReviewQueue]',
+        N'MANUAL_REVIEW',
+        N'Manuel inceleme bekleyen kayitlarin kuyruk goruntusu (MS karsiligi: rep_manual_review_pressure benzeri).',
+        N'Queue view of items awaiting manual review (MS counterpart of rep_manual_review_pressure).',
+        N'Hangi review kararlari kuyrukta bekliyor?',
+        N'Which review decisions are queued?',
+        N'QueueFlag EXPIRED veya EXPIRING_SOON acildir; OVERDUE 24 saat ustudur.',
+        N'QueueFlag EXPIRED or EXPIRING_SOON is urgent; OVERDUE >24h.',
+        N'Vardiya basi/sonu.',
+        N'Shift start/end.',
+        N'Backoffice review ekibi.',
+        N'Backoffice review team.',
+        N'EXPIRED/OVERDUE kuyrukta hemen islem alir.',
+        N'EXPIRED/OVERDUE go to immediate action.',
+        N'[KOLONLAR]',
+        N'[COLUMNS]',
+        N'LIVE: anlik durum. ARCHIVE: tarihsel trend (urgency genellikle P4/P5).',
+        N'LIVE: point-in-time. ARCHIVE: historical trend (urgency usually P4/P5).',
+        N'[KAYNAK] [Ingestion].* / [Reconciliation].* / [Archive].* tablolari.
+[ORTAK ENUM TABLOSU]
+DataScope: LIVE | ARCHIVE.
+Urgency: P1 (kritik, dakikalar icinde) | P2 (yuksek, saat icinde) | P3 (orta, vardiya icinde) | P4 (dusuk, gunluk) | P5 (bilgi, izleme).
+Network: BKM | VISA | MSC; Visa MS view''lerinde ''Visa'', ''Msc'', ''Bkm''.
+Side / FileType: Card | Clearing.
+ContentType: Visa | Msc | Bkm.
+',
+        N'[SOURCES] [Ingestion].* / [Reconciliation].* / [Archive].* tables.
+[SHARED ENUM TABLE]
+DataScope: LIVE | ARCHIVE.
+Urgency: P1 (critical, minutes) | P2 (high, hours) | P3 (medium, within shift) | P4 (low, daily) | P5 (info, watch).
+Network: BKM | VISA | MSC; ''Visa'', ''Msc'', ''Bkm'' in MS variants.
+Side / FileType: Card | Clearing.
+ContentType: Visa | Msc | Bkm.
+'
+    ),
+    (
+        N'[Reporting].[VwReconAlertSummary]',
+        N'ALERTS',
+        N'Reconciliation kaynakli alarm gruplarinin ozeti (MS karsiligi: rep_alert_delivery_health benzeri).',
+        N'Summary of reconciliation-originated alert groups (MS counterpart of rep_alert_delivery_health).',
+        N'Hangi alarm grubu yogun?',
+        N'Which alert group is busy?',
+        N'AlertGroupFlag CRITICAL > yuksek hata orani; DEGRADED > uzun pending.',
+        N'AlertGroupFlag CRITICAL > high failure ratio; DEGRADED > long pending.',
+        N'Gunluk takip.',
+        N'Daily monitoring.',
+        N'Operasyon, alarm sahibi.',
+        N'Operations, alert owner.',
+        N'CRITICAL alarmlar oncelikli incelenir; DEGRADED tarafta pipeline kontrol edilir.',
+        N'Critical groups get priority investigation; check pipeline for DEGRADED.',
+        N'[KOLONLAR]',
+        N'[COLUMNS]',
+        N'LIVE: anlik durum. ARCHIVE: tarihsel trend (urgency genellikle P4/P5).',
+        N'LIVE: point-in-time. ARCHIVE: historical trend (urgency usually P4/P5).',
+        N'[KAYNAK] [Ingestion].* / [Reconciliation].* / [Archive].* tablolari.
+[ORTAK ENUM TABLOSU]
+DataScope: LIVE | ARCHIVE.
+Urgency: P1 (kritik, dakikalar icinde) | P2 (yuksek, saat icinde) | P3 (orta, vardiya icinde) | P4 (dusuk, gunluk) | P5 (bilgi, izleme).
+Network: BKM | VISA | MSC; Visa MS view''lerinde ''Visa'', ''Msc'', ''Bkm''.
+Side / FileType: Card | Clearing.
+ContentType: Visa | Msc | Bkm.
+',
+        N'[SOURCES] [Ingestion].* / [Reconciliation].* / [Archive].* tables.
+[SHARED ENUM TABLE]
+DataScope: LIVE | ARCHIVE.
+Urgency: P1 (critical, minutes) | P2 (high, hours) | P3 (medium, within shift) | P4 (low, daily) | P5 (info, watch).
+Network: BKM | VISA | MSC; ''Visa'', ''Msc'', ''Bkm'' in MS variants.
+Side / FileType: Card | Clearing.
+ContentType: Visa | Msc | Bkm.
+'
+    ),
+    (
+        N'[Reporting].[VwReconLiveCardContentDaily]',
+        N'RECONCILIATION_CONTENT',
+        N'LIVE card detay tablolari icin gunluk icerik metrikleri.',
+        N'Daily content metrics for the LIVE card detail tables.',
+        N'LIVE card iceriginin gunluk profili nedir?',
+        N'What is the daily profile of LIVE card content?',
+        N'ContentFlag drift veya anomaliyi gosterir.',
+        N'ContentFlag indicates drift or anomaly.',
+        N'Gunluk operasyonel takip.',
+        N'Daily operational monitoring.',
+        N'Recon, veri kalitesi ekibi.',
+        N'Recon, data quality team.',
+        N'Anomalik gunlerde detay tablo bazinda inceleme yapilir.',
+        N'Investigate per-detail-table on anomalous days.',
+        N'[KOLONLAR]',
+        N'[COLUMNS]',
+        N'LIVE: anlik durum. ARCHIVE: tarihsel trend (urgency genellikle P4/P5).',
+        N'LIVE: point-in-time. ARCHIVE: historical trend (urgency usually P4/P5).',
+        N'[KAYNAK] [Ingestion].* / [Reconciliation].* / [Archive].* tablolari.
+[ORTAK ENUM TABLOSU]
+DataScope: LIVE | ARCHIVE.
+Urgency: P1 (kritik, dakikalar icinde) | P2 (yuksek, saat icinde) | P3 (orta, vardiya icinde) | P4 (dusuk, gunluk) | P5 (bilgi, izleme).
+Network: BKM | VISA | MSC; Visa MS view''lerinde ''Visa'', ''Msc'', ''Bkm''.
+Side / FileType: Card | Clearing.
+ContentType: Visa | Msc | Bkm.
+',
+        N'[SOURCES] [Ingestion].* / [Reconciliation].* / [Archive].* tables.
+[SHARED ENUM TABLE]
+DataScope: LIVE | ARCHIVE.
+Urgency: P1 (critical, minutes) | P2 (high, hours) | P3 (medium, within shift) | P4 (low, daily) | P5 (info, watch).
+Network: BKM | VISA | MSC; ''Visa'', ''Msc'', ''Bkm'' in MS variants.
+Side / FileType: Card | Clearing.
+ContentType: Visa | Msc | Bkm.
+'
+    ),
+    (
+        N'[Reporting].[VwReconLiveClearingContentDaily]',
+        N'RECONCILIATION_CONTENT',
+        N'LIVE clearing detay tablolari icin gunluk icerik metrikleri.',
+        N'Daily content metrics for the LIVE clearing detail tables.',
+        N'LIVE clearing icerigi gunluk olarak nasil?',
+        N'What is the daily profile of LIVE clearing content?',
+        N'ContentFlag drift veya anomaliyi gosterir.',
+        N'ContentFlag indicates drift or anomaly.',
+        N'Gunluk operasyonel takip.',
+        N'Daily operational monitoring.',
+        N'Recon, veri kalitesi ekibi.',
+        N'Recon, data quality team.',
+        N'Anomalik gunlerde detay tablo bazinda inceleme yapilir.',
+        N'Investigate per-detail-table on anomalous days.',
+        N'[KOLONLAR]',
+        N'[COLUMNS]',
+        N'LIVE: anlik durum. ARCHIVE: tarihsel trend (urgency genellikle P4/P5).',
+        N'LIVE: point-in-time. ARCHIVE: historical trend (urgency usually P4/P5).',
+        N'[KAYNAK] [Ingestion].* / [Reconciliation].* / [Archive].* tablolari.
+[ORTAK ENUM TABLOSU]
+DataScope: LIVE | ARCHIVE.
+Urgency: P1 (kritik, dakikalar icinde) | P2 (yuksek, saat icinde) | P3 (orta, vardiya icinde) | P4 (dusuk, gunluk) | P5 (bilgi, izleme).
+Network: BKM | VISA | MSC; Visa MS view''lerinde ''Visa'', ''Msc'', ''Bkm''.
+Side / FileType: Card | Clearing.
+ContentType: Visa | Msc | Bkm.
+',
+        N'[SOURCES] [Ingestion].* / [Reconciliation].* / [Archive].* tables.
+[SHARED ENUM TABLE]
+DataScope: LIVE | ARCHIVE.
+Urgency: P1 (critical, minutes) | P2 (high, hours) | P3 (medium, within shift) | P4 (low, daily) | P5 (info, watch).
+Network: BKM | VISA | MSC; ''Visa'', ''Msc'', ''Bkm'' in MS variants.
+Side / FileType: Card | Clearing.
+ContentType: Visa | Msc | Bkm.
+'
+    ),
+    (
+        N'[Reporting].[VwReconArchiveCardContentDaily]',
+        N'RECONCILIATION_CONTENT',
+        N'ARCHIVE card detay tablolari icin gunluk icerik metrikleri.',
+        N'Daily content metrics for the ARCHIVE card detail tables.',
+        N'ARCHIVE card iceriginin gunluk profili nedir?',
+        N'What is the daily profile of ARCHIVE card content?',
+        N'Tarihsel trend ve mevsimsellik analizleri icin kullanilir.',
+        N'Used for historical trend and seasonality analysis.',
+        N'Aylik retrospektif.',
+        N'Monthly retrospective.',
+        N'Recon, finans, denetim.',
+        N'Recon, finance, audit.',
+        N'Trend ve karsilastirma; gercek aksiyon LIVE muadilinden gelir.',
+        N'Trend and comparison; real action comes from LIVE counterpart.',
+        N'[KOLONLAR]',
+        N'[COLUMNS]',
+        N'LIVE: anlik durum. ARCHIVE: tarihsel trend (urgency genellikle P4/P5).',
+        N'LIVE: point-in-time. ARCHIVE: historical trend (urgency usually P4/P5).',
+        N'[KAYNAK] [Ingestion].* / [Reconciliation].* / [Archive].* tablolari.
+[ORTAK ENUM TABLOSU]
+DataScope: LIVE | ARCHIVE.
+Urgency: P1 (kritik, dakikalar icinde) | P2 (yuksek, saat icinde) | P3 (orta, vardiya icinde) | P4 (dusuk, gunluk) | P5 (bilgi, izleme).
+Network: BKM | VISA | MSC; Visa MS view''lerinde ''Visa'', ''Msc'', ''Bkm''.
+Side / FileType: Card | Clearing.
+ContentType: Visa | Msc | Bkm.
+',
+        N'[SOURCES] [Ingestion].* / [Reconciliation].* / [Archive].* tables.
+[SHARED ENUM TABLE]
+DataScope: LIVE | ARCHIVE.
+Urgency: P1 (critical, minutes) | P2 (high, hours) | P3 (medium, within shift) | P4 (low, daily) | P5 (info, watch).
+Network: BKM | VISA | MSC; ''Visa'', ''Msc'', ''Bkm'' in MS variants.
+Side / FileType: Card | Clearing.
+ContentType: Visa | Msc | Bkm.
+'
+    ),
+    (
+        N'[Reporting].[VwReconArchiveClearingContentDaily]',
+        N'RECONCILIATION_CONTENT',
+        N'ARCHIVE clearing detay tablolari icin gunluk icerik metrikleri.',
+        N'Daily content metrics for the ARCHIVE clearing detail tables.',
+        N'ARCHIVE clearing iceriginin gunluk profili nedir?',
+        N'What is the daily profile of ARCHIVE clearing content?',
+        N'Tarihsel trend ve mevsimsellik analizleri icin kullanilir.',
+        N'Used for historical trend and seasonality analysis.',
+        N'Aylik retrospektif.',
+        N'Monthly retrospective.',
+        N'Recon, finans, denetim.',
+        N'Recon, finance, audit.',
+        N'Trend ve karsilastirma; gercek aksiyon LIVE muadilinden gelir.',
+        N'Trend and comparison; real action comes from LIVE counterpart.',
+        N'[KOLONLAR]',
+        N'[COLUMNS]',
+        N'LIVE: anlik durum. ARCHIVE: tarihsel trend (urgency genellikle P4/P5).',
+        N'LIVE: point-in-time. ARCHIVE: historical trend (urgency usually P4/P5).',
+        N'[KAYNAK] [Ingestion].* / [Reconciliation].* / [Archive].* tablolari.
+[ORTAK ENUM TABLOSU]
+DataScope: LIVE | ARCHIVE.
+Urgency: P1 (kritik, dakikalar icinde) | P2 (yuksek, saat icinde) | P3 (orta, vardiya icinde) | P4 (dusuk, gunluk) | P5 (bilgi, izleme).
+Network: BKM | VISA | MSC; Visa MS view''lerinde ''Visa'', ''Msc'', ''Bkm''.
+Side / FileType: Card | Clearing.
+ContentType: Visa | Msc | Bkm.
+',
+        N'[SOURCES] [Ingestion].* / [Reconciliation].* / [Archive].* tables.
+[SHARED ENUM TABLE]
+DataScope: LIVE | ARCHIVE.
+Urgency: P1 (critical, minutes) | P2 (high, hours) | P3 (medium, within shift) | P4 (low, daily) | P5 (info, watch).
+Network: BKM | VISA | MSC; ''Visa'', ''Msc'', ''Bkm'' in MS variants.
+Side / FileType: Card | Clearing.
+ContentType: Visa | Msc | Bkm.
+'
+    ),
+    (
+        N'[Reporting].[VwReconContentDaily]',
+        N'RECONCILIATION_CONTENT',
+        N'LIVE+ARCHIVE birlestirilmis gunluk icerik metrikleri.',
+        N'Combined LIVE+ARCHIVE daily content metrics.',
+        N'Toplam icerik akisi gunluk olarak nasil?',
+        N'How does total content flow look daily?',
+        N'Birlesik trend; LIVE/ARCHIVE ayrimini DataScope ile yapin.',
+        N'Combined trend; split LIVE/ARCHIVE via DataScope.',
+        N'Yonetim ozet.',
+        N'Management summary.',
+        N'Yonetim, recon.',
+        N'Management, recon.',
+        N'Anormal gunlerde alt detay raporlarina dril yapilir.',
+        N'Drill into detail reports on abnormal days.',
+        N'[KOLONLAR]',
+        N'[COLUMNS]',
+        N'LIVE: anlik durum. ARCHIVE: tarihsel trend (urgency genellikle P4/P5).',
+        N'LIVE: point-in-time. ARCHIVE: historical trend (urgency usually P4/P5).',
+        N'[KAYNAK] [Ingestion].* / [Reconciliation].* / [Archive].* tablolari.
+[ORTAK ENUM TABLOSU]
+DataScope: LIVE | ARCHIVE.
+Urgency: P1 (kritik, dakikalar icinde) | P2 (yuksek, saat icinde) | P3 (orta, vardiya icinde) | P4 (dusuk, gunluk) | P5 (bilgi, izleme).
+Network: BKM | VISA | MSC; Visa MS view''lerinde ''Visa'', ''Msc'', ''Bkm''.
+Side / FileType: Card | Clearing.
+ContentType: Visa | Msc | Bkm.
+',
+        N'[SOURCES] [Ingestion].* / [Reconciliation].* / [Archive].* tables.
+[SHARED ENUM TABLE]
+DataScope: LIVE | ARCHIVE.
+Urgency: P1 (critical, minutes) | P2 (high, hours) | P3 (medium, within shift) | P4 (low, daily) | P5 (info, watch).
+Network: BKM | VISA | MSC; ''Visa'', ''Msc'', ''Bkm'' in MS variants.
+Side / FileType: Card | Clearing.
+ContentType: Visa | Msc | Bkm.
+'
+    ),
+    (
+        N'[Reporting].[VwReconClearingControlstatAnalysis]',
+        N'RECONCILIATION',
+        N'Clearing ControlStat dagilimi ve etkileri.',
+        N'Clearing ControlStat distribution and impacts.',
+        N'Hangi ControlStat baskin?',
+        N'Which ControlStat dominates?',
+        N'ControlStatFlag IMBALANCE control_stat dagiliminda anomaliyi gosterir.',
+        N'ControlStatFlag IMBALANCE indicates anomaly in distribution.',
+        N'Haftalik takip.',
+        N'Weekly monitoring.',
+        N'Recon ekibi.',
+        N'Recon team.',
+        N'IMBALANCE durumlarda kaynak dosyalar incelenir.',
+        N'Investigate source files on IMBALANCE.',
+        N'[KOLONLAR]',
+        N'[COLUMNS]',
+        N'LIVE: anlik durum. ARCHIVE: tarihsel trend (urgency genellikle P4/P5).',
+        N'LIVE: point-in-time. ARCHIVE: historical trend (urgency usually P4/P5).',
+        N'[KAYNAK] [Ingestion].* / [Reconciliation].* / [Archive].* tablolari.
+[ORTAK ENUM TABLOSU]
+DataScope: LIVE | ARCHIVE.
+Urgency: P1 (kritik, dakikalar icinde) | P2 (yuksek, saat icinde) | P3 (orta, vardiya icinde) | P4 (dusuk, gunluk) | P5 (bilgi, izleme).
+Network: BKM | VISA | MSC; Visa MS view''lerinde ''Visa'', ''Msc'', ''Bkm''.
+Side / FileType: Card | Clearing.
+ContentType: Visa | Msc | Bkm.
+',
+        N'[SOURCES] [Ingestion].* / [Reconciliation].* / [Archive].* tables.
+[SHARED ENUM TABLE]
+DataScope: LIVE | ARCHIVE.
+Urgency: P1 (critical, minutes) | P2 (high, hours) | P3 (medium, within shift) | P4 (low, daily) | P5 (info, watch).
+Network: BKM | VISA | MSC; ''Visa'', ''Msc'', ''Bkm'' in MS variants.
+Side / FileType: Card | Clearing.
+ContentType: Visa | Msc | Bkm.
+'
+    ),
+    (
+        N'[Reporting].[VwReconFinancialSummary]',
+        N'FINANCIAL_RECONCILIATION',
+        N'Reconciliation in finansal ozetidir; matched/unmatched tutarlar.',
+        N'Financial summary of reconciliation; matched/unmatched amounts.',
+        N'Finansal recon dengesi nedir?',
+        N'What is the financial recon balance?',
+        N'FinancialFlag IMBALANCE veya MATERIAL_GAP finansal denetim gerektirir.',
+        N'FinancialFlag IMBALANCE or MATERIAL_GAP needs financial review.',
+        N'Gunluk T+1, ay sonu.',
+        N'Daily T+1, month-end.',
+        N'Finans, denetim.',
+        N'Finance, audit.',
+        N'IMBALANCE de hemen kapanis akisi denetlenir.',
+        N'On IMBALANCE inspect the close flow immediately.',
+        N'[KOLONLAR]',
+        N'[COLUMNS]',
+        N'LIVE: anlik durum. ARCHIVE: tarihsel trend (urgency genellikle P4/P5).',
+        N'LIVE: point-in-time. ARCHIVE: historical trend (urgency usually P4/P5).',
+        N'[KAYNAK] [Ingestion].* / [Reconciliation].* / [Archive].* tablolari.
+[ORTAK ENUM TABLOSU]
+DataScope: LIVE | ARCHIVE.
+Urgency: P1 (kritik, dakikalar icinde) | P2 (yuksek, saat icinde) | P3 (orta, vardiya icinde) | P4 (dusuk, gunluk) | P5 (bilgi, izleme).
+Network: BKM | VISA | MSC; Visa MS view''lerinde ''Visa'', ''Msc'', ''Bkm''.
+Side / FileType: Card | Clearing.
+ContentType: Visa | Msc | Bkm.
+',
+        N'[SOURCES] [Ingestion].* / [Reconciliation].* / [Archive].* tables.
+[SHARED ENUM TABLE]
+DataScope: LIVE | ARCHIVE.
+Urgency: P1 (critical, minutes) | P2 (high, hours) | P3 (medium, within shift) | P4 (low, daily) | P5 (info, watch).
+Network: BKM | VISA | MSC; ''Visa'', ''Msc'', ''Bkm'' in MS variants.
+Side / FileType: Card | Clearing.
+ContentType: Visa | Msc | Bkm.
+'
+    ),
+    (
+        N'[Reporting].[VwReconResponseStatusAnalysis]',
+        N'AUTHORIZATION_HEALTH',
+        N'Response/Status kombinasyonlarinin reconciliation uzerine etkisi.',
+        N'Effect of Response/Status combinations on reconciliation.',
+        N'Hangi Response/Status birlikteligi recon u boz uyor?',
+        N'Which Response/Status combinations break recon?',
+        N'StatusFlag PROBLEMATIC sorunlu birlestirme demektir.',
+        N'StatusFlag PROBLEMATIC marks problematic combinations.',
+        N'Haftalik takip.',
+        N'Weekly monitoring.',
+        N'Recon, urun, risk.',
+        N'Recon, product, risk.',
+        N'PROBLEMATIC kombinasyonlar icin kural revizyonu yapilir.',
+        N'Revise rules for PROBLEMATIC combinations.',
+        N'[KOLONLAR]',
+        N'[COLUMNS]',
+        N'LIVE: anlik durum. ARCHIVE: tarihsel trend (urgency genellikle P4/P5).',
+        N'LIVE: point-in-time. ARCHIVE: historical trend (urgency usually P4/P5).',
+        N'[KAYNAK] [Ingestion].* / [Reconciliation].* / [Archive].* tablolari.
+[ORTAK ENUM TABLOSU]
+DataScope: LIVE | ARCHIVE.
+Urgency: P1 (kritik, dakikalar icinde) | P2 (yuksek, saat icinde) | P3 (orta, vardiya icinde) | P4 (dusuk, gunluk) | P5 (bilgi, izleme).
+Network: BKM | VISA | MSC; Visa MS view''lerinde ''Visa'', ''Msc'', ''Bkm''.
+Side / FileType: Card | Clearing.
+ContentType: Visa | Msc | Bkm.
+',
+        N'[SOURCES] [Ingestion].* / [Reconciliation].* / [Archive].* tables.
+[SHARED ENUM TABLE]
+DataScope: LIVE | ARCHIVE.
+Urgency: P1 (critical, minutes) | P2 (high, hours) | P3 (medium, within shift) | P4 (low, daily) | P5 (info, watch).
+Network: BKM | VISA | MSC; ''Visa'', ''Msc'', ''Bkm'' in MS variants.
+Side / FileType: Card | Clearing.
+ContentType: Visa | Msc | Bkm.
+'
+    ),
+    (
+        N'[Reporting].[VwArchiveRunOverview]',
+        N'ARCHIVE',
+        N'Arsiv kosumlarinin yuksek seviye ozeti.',
+        N'High-level overview of archive runs.',
+        N'Arsiv kosumlarimiz nasil ilerliyor?',
+        N'How are archive runs progressing?',
+        N'RunFlag FAILED veya STUCK kosum sorunudur.',
+        N'RunFlag FAILED or STUCK indicates run trouble.',
+        N'Gunluk; backlog buyurken surekli.',
+        N'Daily; continuously while backlog grows.',
+        N'Operasyon, veri yonetimi.',
+        N'Operations, data management.',
+        N'FAILED/STUCK kosumlar yeniden tetiklenir veya sonlandirilir.',
+        N'Re-trigger or terminate FAILED/STUCK runs.',
+        N'[KOLONLAR]
+- ArchiveLogId (text).
+- IngestionFileId (text).
+- FileName (text).
+- FileType: Card | Clearing.
+- ContentType: Visa | Msc | Bkm.
+- ArchiveStatus: Pending | Archived | Failed.
+- ArchiveMessage (text).
+- FailureReasonsJson (text).
+- FilterJson (text).
+- ArchiveStartedAt (date/datetime).
+- ArchiveUpdatedAt (date/datetime).
+- ArchiveDurationSeconds (text).',
+        N'[COLUMNS]
+- ArchiveLogId (text).
+- IngestionFileId (text).
+- FileName (text).
+- FileType: Card | Clearing.
+- ContentType: Visa | Msc | Bkm.
+- ArchiveStatus: Pending | Archived | Failed.
+- ArchiveMessage (text).
+- FailureReasonsJson (text).
+- FilterJson (text).
+- ArchiveStartedAt (date/datetime).
+- ArchiveUpdatedAt (date/datetime).
+- ArchiveDurationSeconds (text).',
+        N'LIVE: anlik durum. ARCHIVE: tarihsel trend (urgency genellikle P4/P5).',
+        N'LIVE: point-in-time. ARCHIVE: historical trend (urgency usually P4/P5).',
+        N'[KAYNAK] [Ingestion].* / [Reconciliation].* / [Archive].* tablolari.
+[ORTAK ENUM TABLOSU]
+DataScope: LIVE | ARCHIVE.
+Urgency: P1 (kritik, dakikalar icinde) | P2 (yuksek, saat icinde) | P3 (orta, vardiya icinde) | P4 (dusuk, gunluk) | P5 (bilgi, izleme).
+Network: BKM | VISA | MSC; Visa MS view''lerinde ''Visa'', ''Msc'', ''Bkm''.
+Side / FileType: Card | Clearing.
+ContentType: Visa | Msc | Bkm.
+',
+        N'[SOURCES] [Ingestion].* / [Reconciliation].* / [Archive].* tables.
+[SHARED ENUM TABLE]
+DataScope: LIVE | ARCHIVE.
+Urgency: P1 (critical, minutes) | P2 (high, hours) | P3 (medium, within shift) | P4 (low, daily) | P5 (info, watch).
+Network: BKM | VISA | MSC; ''Visa'', ''Msc'', ''Bkm'' in MS variants.
+Side / FileType: Card | Clearing.
+ContentType: Visa | Msc | Bkm.
+'
+    ),
+    (
+        N'[Reporting].[VwArchiveEligibility]',
+        N'ARCHIVE',
+        N'Arsivlenmeye uygun ama henuz arsivlenmemis dosyalar.',
+        N'Files eligible for archiving but not yet archived.',
+        N'Hangi dosyalar arsiv kuyrugunda bekliyor?',
+        N'Which files are waiting in the archive queue?',
+        N'EligibilityFlag BACKLOG_AGED 7+ gun bekleyen dosyalardir.',
+        N'EligibilityFlag BACKLOG_AGED means files waiting >7 days.',
+        N'Gunluk arsiv operasyonu.',
+        N'Daily archive operations.',
+        N'Operasyon, compliance.',
+        N'Operations, compliance.',
+        N'BACKLOG_AGED dosyalar icin arsiv isi tetiklenir.',
+        N'Trigger archive job for BACKLOG_AGED files.',
+        N'[KOLONLAR]
+- TotalReconLineCount (bigint).
+- ReconSuccessLineCount (bigint).
+- ReconOpenLineCount (bigint).',
+        N'[COLUMNS]
+- TotalReconLineCount (bigint).
+- ReconSuccessLineCount (bigint).
+- ReconOpenLineCount (bigint).',
+        N'LIVE: anlik durum. ARCHIVE: tarihsel trend (urgency genellikle P4/P5).',
+        N'LIVE: point-in-time. ARCHIVE: historical trend (urgency usually P4/P5).',
+        N'[KAYNAK] [Ingestion].* / [Reconciliation].* / [Archive].* tablolari.
+[ORTAK ENUM TABLOSU]
+DataScope: LIVE | ARCHIVE.
+Urgency: P1 (kritik, dakikalar icinde) | P2 (yuksek, saat icinde) | P3 (orta, vardiya icinde) | P4 (dusuk, gunluk) | P5 (bilgi, izleme).
+Network: BKM | VISA | MSC; Visa MS view''lerinde ''Visa'', ''Msc'', ''Bkm''.
+Side / FileType: Card | Clearing.
+ContentType: Visa | Msc | Bkm.
+',
+        N'[SOURCES] [Ingestion].* / [Reconciliation].* / [Archive].* tables.
+[SHARED ENUM TABLE]
+DataScope: LIVE | ARCHIVE.
+Urgency: P1 (critical, minutes) | P2 (high, hours) | P3 (medium, within shift) | P4 (low, daily) | P5 (info, watch).
+Network: BKM | VISA | MSC; ''Visa'', ''Msc'', ''Bkm'' in MS variants.
+Side / FileType: Card | Clearing.
+ContentType: Visa | Msc | Bkm.
+'
+    ),
+    (
+        N'[Reporting].[VwArchiveBacklogTrend]',
+        N'ARCHIVE',
+        N'Arsiv backlog trendi (gun bazinda).',
+        N'Daily archive backlog trend.',
+        N'Backlog buyuyor mu?',
+        N'Is the backlog growing?',
+        N'TrendFlag GROWING veya CRITICAL kapasite riskidir.',
+        N'TrendFlag GROWING or CRITICAL is a capacity risk.',
+        N'Haftalik trend incelemesi.',
+        N'Weekly trend review.',
+        N'Veri yonetimi, operasyon.',
+        N'Data management, operations.',
+        N'CRITICAL te kapasite ekleyin veya arsiv frekansini arttirin.',
+        N'Add capacity or increase archive frequency on CRITICAL.',
+        N'[KOLONLAR]
+- DATE (date/datetime).
+- ReportDate (date/datetime).
+- ArchiveRunCount (bigint).
+- SuccessRunCount (bigint).
+- FailedRunCount (bigint).
+- OtherRunCount (bigint).',
+        N'[COLUMNS]
+- DATE (date/datetime).
+- ReportDate (date/datetime).
+- ArchiveRunCount (bigint).
+- SuccessRunCount (bigint).
+- FailedRunCount (bigint).
+- OtherRunCount (bigint).',
+        N'LIVE: anlik durum. ARCHIVE: tarihsel trend (urgency genellikle P4/P5).',
+        N'LIVE: point-in-time. ARCHIVE: historical trend (urgency usually P4/P5).',
+        N'[KAYNAK] [Ingestion].* / [Reconciliation].* / [Archive].* tablolari.
+[ORTAK ENUM TABLOSU]
+DataScope: LIVE | ARCHIVE.
+Urgency: P1 (kritik, dakikalar icinde) | P2 (yuksek, saat icinde) | P3 (orta, vardiya icinde) | P4 (dusuk, gunluk) | P5 (bilgi, izleme).
+Network: BKM | VISA | MSC; Visa MS view''lerinde ''Visa'', ''Msc'', ''Bkm''.
+Side / FileType: Card | Clearing.
+ContentType: Visa | Msc | Bkm.
+',
+        N'[SOURCES] [Ingestion].* / [Reconciliation].* / [Archive].* tables.
+[SHARED ENUM TABLE]
+DataScope: LIVE | ARCHIVE.
+Urgency: P1 (critical, minutes) | P2 (high, hours) | P3 (medium, within shift) | P4 (low, daily) | P5 (info, watch).
+Network: BKM | VISA | MSC; ''Visa'', ''Msc'', ''Bkm'' in MS variants.
+Side / FileType: Card | Clearing.
+ContentType: Visa | Msc | Bkm.
+'
+    ),
+    (
+        N'[Reporting].[VwArchiveRetentionSnapshot]',
+        N'ARCHIVE',
+        N'Veri saklama politikasi anlik goruntusu (yas/kategori).',
+        N'Retention policy snapshot (age/category).',
+        N'Saklama politikasi karsilaniyor mu?',
+        N'Is the retention policy honoured?',
+        N'RetentionFlag VIOLATION saklama suresi asilmis demektir; compliance riski.',
+        N'RetentionFlag VIOLATION means retention exceeded; compliance risk.',
+        N'Aylik denetim.',
+        N'Monthly audit.',
+        N'Compliance, veri yonetimi.',
+        N'Compliance, data management.',
+        N'VIOLATION kayitlar arsivden kaldirilir veya soft-delete edilir.',
+        N'Remove or soft-delete VIOLATION records.',
+        N'[KOLONLAR]
+- ActiveFileCount (bigint).
+- ArchivedMarkedFileCount (bigint).
+- ArchiveTableFileCount (bigint).
+- ArchiveTableFileLineCount (bigint).
+- ArchiveTableEvaluationCount (bigint).
+- ArchiveTableOperationCount (bigint).
+- ArchiveTableReviewCount (bigint).
+- ArchiveTableAlertCount (bigint).
+- ArchiveTableExecutionCount (bigint).
+- OldestUnarchivedFileDate (date/datetime).',
+        N'[COLUMNS]
+- ActiveFileCount (bigint).
+- ArchivedMarkedFileCount (bigint).
+- ArchiveTableFileCount (bigint).
+- ArchiveTableFileLineCount (bigint).
+- ArchiveTableEvaluationCount (bigint).
+- ArchiveTableOperationCount (bigint).
+- ArchiveTableReviewCount (bigint).
+- ArchiveTableAlertCount (bigint).
+- ArchiveTableExecutionCount (bigint).
+- OldestUnarchivedFileDate (date/datetime).',
+        N'LIVE: anlik durum. ARCHIVE: tarihsel trend (urgency genellikle P4/P5).',
+        N'LIVE: point-in-time. ARCHIVE: historical trend (urgency usually P4/P5).',
+        N'[KAYNAK] [Ingestion].* / [Reconciliation].* / [Archive].* tablolari.
+[ORTAK ENUM TABLOSU]
+DataScope: LIVE | ARCHIVE.
+Urgency: P1 (kritik, dakikalar icinde) | P2 (yuksek, saat icinde) | P3 (orta, vardiya icinde) | P4 (dusuk, gunluk) | P5 (bilgi, izleme).
+Network: BKM | VISA | MSC; Visa MS view''lerinde ''Visa'', ''Msc'', ''Bkm''.
+Side / FileType: Card | Clearing.
+ContentType: Visa | Msc | Bkm.
+',
+        N'[SOURCES] [Ingestion].* / [Reconciliation].* / [Archive].* tables.
+[SHARED ENUM TABLE]
+DataScope: LIVE | ARCHIVE.
+Urgency: P1 (critical, minutes) | P2 (high, hours) | P3 (medium, within shift) | P4 (low, daily) | P5 (info, watch).
+Network: BKM | VISA | MSC; ''Visa'', ''Msc'', ''Bkm'' in MS variants.
+Side / FileType: Card | Clearing.
+ContentType: Visa | Msc | Bkm.
+'
+    ),
+    (
+        N'[Reporting].[VwFileReconSummary]',
+        N'FILE_PROCESSING',
+        N'Dosya bazinda reconciliation sonucu (matched/unmatched/manual).',
+        N'Per-file reconciliation outcome (matched/unmatched/manual).',
+        N'Bir dosyanin recon sonuclari nedir?',
+        N'What is a file recon outcome?',
+        N'ReconOutcome COMPLETE_FAIL veya MIXED dosya bazli inceleme gerektirir.',
+        N'ReconOutcome COMPLETE_FAIL or MIXED needs file-level review.',
+        N'Recon kapanis sonrasi.',
+        N'After recon close.',
+        N'Recon, operasyon.',
+        N'Recon, operations.',
+        N'COMPLETE_FAIL dosyalar yeniden recon a sokulur.',
+        N'Re-run recon for COMPLETE_FAIL files.',
+        N'[KOLONLAR]
+- Amt (text).
+- Sett (text).',
+        N'[COLUMNS]
+- Amt (text).
+- Sett (text).',
+        N'LIVE: anlik durum. ARCHIVE: tarihsel trend (urgency genellikle P4/P5).',
+        N'LIVE: point-in-time. ARCHIVE: historical trend (urgency usually P4/P5).',
+        N'[KAYNAK] [Ingestion].* / [Reconciliation].* / [Archive].* tablolari.
+[ORTAK ENUM TABLOSU]
+DataScope: LIVE | ARCHIVE.
+Urgency: P1 (kritik, dakikalar icinde) | P2 (yuksek, saat icinde) | P3 (orta, vardiya icinde) | P4 (dusuk, gunluk) | P5 (bilgi, izleme).
+Network: BKM | VISA | MSC; Visa MS view''lerinde ''Visa'', ''Msc'', ''Bkm''.
+Side / FileType: Card | Clearing.
+ContentType: Visa | Msc | Bkm.
+',
+        N'[SOURCES] [Ingestion].* / [Reconciliation].* / [Archive].* tables.
+[SHARED ENUM TABLE]
+DataScope: LIVE | ARCHIVE.
+Urgency: P1 (critical, minutes) | P2 (high, hours) | P3 (medium, within shift) | P4 (low, daily) | P5 (info, watch).
+Network: BKM | VISA | MSC; ''Visa'', ''Msc'', ''Bkm'' in MS variants.
+Side / FileType: Card | Clearing.
+ContentType: Visa | Msc | Bkm.
+'
+    ),
+    (
+        N'[Reporting].[VwReconMatchRateTrend]',
+        N'RECONCILIATION_KPI',
+        N'Reconciliation match-rate trend grafigi (gunluk/haftalik).',
+        N'Reconciliation match-rate trend chart (daily/weekly).',
+        N'Match-rate trendimiz nasil?',
+        N'How is our match-rate trending?',
+        N'TrendFlag DECLINING surekli dususu, RECOVERING toparlanmayi gosterir.',
+        N'TrendFlag DECLINING means continued drop, RECOVERING means recovery.',
+        N'Haftalik trend, aylik review.',
+        N'Weekly trend, monthly review.',
+        N'Yonetim, recon.',
+        N'Management, recon.',
+        N'DECLINING durumunda root-cause incelemesi baslatilir.',
+        N'Start root-cause investigation on DECLINING.',
+        N'[KOLONLAR]',
+        N'[COLUMNS]',
+        N'LIVE: anlik durum. ARCHIVE: tarihsel trend (urgency genellikle P4/P5).',
+        N'LIVE: point-in-time. ARCHIVE: historical trend (urgency usually P4/P5).',
+        N'[KAYNAK] [Ingestion].* / [Reconciliation].* / [Archive].* tablolari.
+[ORTAK ENUM TABLOSU]
+DataScope: LIVE | ARCHIVE.
+Urgency: P1 (kritik, dakikalar icinde) | P2 (yuksek, saat icinde) | P3 (orta, vardiya icinde) | P4 (dusuk, gunluk) | P5 (bilgi, izleme).
+Network: BKM | VISA | MSC; Visa MS view''lerinde ''Visa'', ''Msc'', ''Bkm''.
+Side / FileType: Card | Clearing.
+ContentType: Visa | Msc | Bkm.
+',
+        N'[SOURCES] [Ingestion].* / [Reconciliation].* / [Archive].* tables.
+[SHARED ENUM TABLE]
+DataScope: LIVE | ARCHIVE.
+Urgency: P1 (critical, minutes) | P2 (high, hours) | P3 (medium, within shift) | P4 (low, daily) | P5 (info, watch).
+Network: BKM | VISA | MSC; ''Visa'', ''Msc'', ''Bkm'' in MS variants.
+Side / FileType: Card | Clearing.
+ContentType: Visa | Msc | Bkm.
+'
+    ),
+    (
+        N'[Reporting].[VwReconGapAnalysis]',
+        N'RECONCILIATION',
+        N'Reconciliation gap (eksik/fazla) analizi.',
+        N'Reconciliation gap (missing/extra) analysis.',
+        N'Iki taraf arasinda nerede eksik/fazla var?',
+        N'Where are missing/extra items between the two sides?',
+        N'GapFlag MISSING_CARD veya MISSING_CLEARING tek tarafli kayit bos olusunu gosterir.',
+        N'GapFlag MISSING_CARD or MISSING_CLEARING means a one-sided record is missing.',
+        N'Gunluk recon kapanis.',
+        N'Daily recon close.',
+        N'Recon, finans.',
+        N'Recon, finance.',
+        N'MISSING gap''i ureten kanalla iletisime gec.',
+        N'Contact the channel producing the MISSING gap.',
+        N'[KOLONLAR]',
+        N'[COLUMNS]',
+        N'LIVE: anlik durum. ARCHIVE: tarihsel trend (urgency genellikle P4/P5).',
+        N'LIVE: point-in-time. ARCHIVE: historical trend (urgency usually P4/P5).',
+        N'[KAYNAK] [Ingestion].* / [Reconciliation].* / [Archive].* tablolari.
+[ORTAK ENUM TABLOSU]
+DataScope: LIVE | ARCHIVE.
+Urgency: P1 (kritik, dakikalar icinde) | P2 (yuksek, saat icinde) | P3 (orta, vardiya icinde) | P4 (dusuk, gunluk) | P5 (bilgi, izleme).
+Network: BKM | VISA | MSC; Visa MS view''lerinde ''Visa'', ''Msc'', ''Bkm''.
+Side / FileType: Card | Clearing.
+ContentType: Visa | Msc | Bkm.
+',
+        N'[SOURCES] [Ingestion].* / [Reconciliation].* / [Archive].* tables.
+[SHARED ENUM TABLE]
+DataScope: LIVE | ARCHIVE.
+Urgency: P1 (critical, minutes) | P2 (high, hours) | P3 (medium, within shift) | P4 (low, daily) | P5 (info, watch).
+Network: BKM | VISA | MSC; ''Visa'', ''Msc'', ''Bkm'' in MS variants.
+Side / FileType: Card | Clearing.
+ContentType: Visa | Msc | Bkm.
+'
+    ),
+    (
+        N'[Reporting].[VwUnmatchedTransactionAging]',
+        N'FINANCIAL_RISK',
+        N'Eslesmemis is islemlerinin yas dagilimi (MS karsiligi: rep_unmatched_financial_exposure benzeri).',
+        N'Aging distribution of unmatched transactions (MS counterpart of rep_unmatched_financial_exposure).',
+        N'Eslesmemis kayitlar nerede yaslaniyor?',
+        N'Where are unmatched records aging?',
+        N'AgingFlag CRITICAL 7+ gun bekleyen kayitlardir; finansal risk.',
+        N'AgingFlag CRITICAL = items waiting 7+ days; financial risk.',
+        N'Gunluk finansal kapanis.',
+        N'Daily financial close.',
+        N'Recon, finans, risk.',
+        N'Recon, finance, risk.',
+        N'CRITICAL kayitlar manuel kapatilir veya rezerv ayrilir.',
+        N'Manually close CRITICAL items or set aside reserve.',
+        N'[KOLONLAR]',
+        N'[COLUMNS]',
+        N'LIVE: anlik durum. ARCHIVE: tarihsel trend (urgency genellikle P4/P5).',
+        N'LIVE: point-in-time. ARCHIVE: historical trend (urgency usually P4/P5).',
+        N'[KAYNAK] [Ingestion].* / [Reconciliation].* / [Archive].* tablolari.
+[ORTAK ENUM TABLOSU]
+DataScope: LIVE | ARCHIVE.
+Urgency: P1 (kritik, dakikalar icinde) | P2 (yuksek, saat icinde) | P3 (orta, vardiya icinde) | P4 (dusuk, gunluk) | P5 (bilgi, izleme).
+Network: BKM | VISA | MSC; Visa MS view''lerinde ''Visa'', ''Msc'', ''Bkm''.
+Side / FileType: Card | Clearing.
+ContentType: Visa | Msc | Bkm.
+',
+        N'[SOURCES] [Ingestion].* / [Reconciliation].* / [Archive].* tables.
+[SHARED ENUM TABLE]
+DataScope: LIVE | ARCHIVE.
+Urgency: P1 (critical, minutes) | P2 (high, hours) | P3 (medium, within shift) | P4 (low, daily) | P5 (info, watch).
+Network: BKM | VISA | MSC; ''Visa'', ''Msc'', ''Bkm'' in MS variants.
+Side / FileType: Card | Clearing.
+ContentType: Visa | Msc | Bkm.
+'
+    ),
+    (
+        N'[Reporting].[VwNetworkReconScorecard]',
+        N'RECONCILIATION_KPI',
+        N'Network bazinda reconciliation puan karti.',
+        N'Per-network reconciliation scorecard.',
+        N'Hangi network reconciliation tarafinda kotu?',
+        N'Which network is bad at reconciliation?',
+        N'NetworkScore D-F kalite kaybi; A-B saglikli.',
+        N'NetworkScore D-F is quality loss; A-B is healthy.',
+        N'Aylik yonetim.',
+        N'Monthly management.',
+        N'Yonetim, recon, urun.',
+        N'Management, recon, product.',
+        N'D-F olan network ler oncelikli iyilestirmeye alinir.',
+        N'Prioritise improvements for D-F networks.',
+        N'[KOLONLAR]',
+        N'[COLUMNS]',
+        N'LIVE: anlik durum. ARCHIVE: tarihsel trend (urgency genellikle P4/P5).',
+        N'LIVE: point-in-time. ARCHIVE: historical trend (urgency usually P4/P5).',
+        N'[KAYNAK] [Ingestion].* / [Reconciliation].* / [Archive].* tablolari.
+[ORTAK ENUM TABLOSU]
+DataScope: LIVE | ARCHIVE.
+Urgency: P1 (kritik, dakikalar icinde) | P2 (yuksek, saat icinde) | P3 (orta, vardiya icinde) | P4 (dusuk, gunluk) | P5 (bilgi, izleme).
+Network: BKM | VISA | MSC; Visa MS view''lerinde ''Visa'', ''Msc'', ''Bkm''.
+Side / FileType: Card | Clearing.
+ContentType: Visa | Msc | Bkm.
+',
+        N'[SOURCES] [Ingestion].* / [Reconciliation].* / [Archive].* tables.
+[SHARED ENUM TABLE]
+DataScope: LIVE | ARCHIVE.
+Urgency: P1 (critical, minutes) | P2 (high, hours) | P3 (medium, within shift) | P4 (low, daily) | P5 (info, watch).
+Network: BKM | VISA | MSC; ''Visa'', ''Msc'', ''Bkm'' in MS variants.
+Side / FileType: Card | Clearing.
+ContentType: Visa | Msc | Bkm.
+'
+    ),
+    (
+        N'[Reporting].[VwCardClearingCorrelation]',
+        N'FINANCIAL_RECONCILIATION',
+        N'Card-Clearing korelasyon ve eslesme oranlari.',
+        N'Card-Clearing correlation and match ratios.',
+        N'Card ve Clearing taraflari ne kadar tutarli?',
+        N'How consistent are Card and Clearing sides?',
+        N'CorrelationFlag LOW_CORRELATION ciddi sapma; MATCH yuksek tutarlilik.',
+        N'CorrelationFlag LOW_CORRELATION is serious drift; MATCH is high consistency.',
+        N'Gunluk T+1.',
+        N'Daily T+1.',
+        N'Recon, finans.',
+        N'Recon, finance.',
+        N'LOW_CORRELATION durumlarinda anlik finansal denetim.',
+        N'Immediate financial review on LOW_CORRELATION.',
+        N'[KOLONLAR]',
+        N'[COLUMNS]',
+        N'LIVE: anlik durum. ARCHIVE: tarihsel trend (urgency genellikle P4/P5).',
+        N'LIVE: point-in-time. ARCHIVE: historical trend (urgency usually P4/P5).',
+        N'[KAYNAK] [Ingestion].* / [Reconciliation].* / [Archive].* tablolari.
+[ORTAK ENUM TABLOSU]
+DataScope: LIVE | ARCHIVE.
+Urgency: P1 (kritik, dakikalar icinde) | P2 (yuksek, saat icinde) | P3 (orta, vardiya icinde) | P4 (dusuk, gunluk) | P5 (bilgi, izleme).
+Network: BKM | VISA | MSC; Visa MS view''lerinde ''Visa'', ''Msc'', ''Bkm''.
+Side / FileType: Card | Clearing.
+ContentType: Visa | Msc | Bkm.
+',
+        N'[SOURCES] [Ingestion].* / [Reconciliation].* / [Archive].* tables.
+[SHARED ENUM TABLE]
+DataScope: LIVE | ARCHIVE.
+Urgency: P1 (critical, minutes) | P2 (high, hours) | P3 (medium, within shift) | P4 (low, daily) | P5 (info, watch).
+Network: BKM | VISA | MSC; ''Visa'', ''Msc'', ''Bkm'' in MS variants.
+Side / FileType: Card | Clearing.
+ContentType: Visa | Msc | Bkm.
+'
+    ),
+    (
+        N'[Reporting].[VwDailyTransactionVolume]',
+        N'FINANCIAL_VOLUME',
+        N'Gercek TransactionDate bazinda Network/Currency/Scope dagiliminda gunluk hacim, debit/credit ve net akis (PG: rep_daily_transaction_volume karsiligi).',
+        N'Daily volume per Network/Currency/Scope using real TransactionDate with debit, credit and net flow (PG counterpart: rep_daily_transaction_volume).',
+        N'Hangi guneki finansal hacim ne kadardi, anormal bir tepe ya da cukur var mi?',
+        N'What was the daily financial volume, are there abnormal peaks or troughs?',
+        N'VolumeFlag PEAK_VOLUME_DAY (>=10M) ve HIGH_VOLUME_DAY (>=1M) kapasite/anomali sinyalidir; HISTORICAL ARCHIVE satiri.',
+        N'VolumeFlag PEAK_VOLUME_DAY (>=10M) and HIGH_VOLUME_DAY (>=1M) signal capacity/anomaly; HISTORICAL is for ARCHIVE rows.',
+        N'Gunluk finansal kapanis ve haftalik trend incelemesi.',
+        N'Daily financial close and weekly trend review.',
+        N'Finans, recon, yonetim.',
+        N'Finance, recon, management.',
+        N'PEAK_VOLUME_DAY tespit edilirse kapasite plani gozden gecirilir; HIGH_VOLUME_DAY trend takibine alinir.',
+        N'On PEAK_VOLUME_DAY review capacity planning; HIGH_VOLUME_DAY enters trend monitoring.',
+        N'[KOLONLAR]
+- DataScope: LIVE | ARCHIVE.
+- VARCHAR (text).
+- TransactionDate (date/datetime).
+- OriginalCurrency (text).
+- TransactionCount (bigint).
+- GrossAmount (numeric).
+- DebitAmount (numeric).
+- CreditAmount (numeric).
+- NetFlowAmount (numeric).
+- TotalTaxAmount (numeric).
+- TotalSurchargeAmount (numeric).
+- TotalCashbackAmount (numeric).
+- VolumeFlag: HISTORICAL | PEAK_VOLUME_DAY | HIGH_VOLUME_DAY.
+- Urgency: HISTORICAL | PEAK_VOLUME_DAY | HIGH_VOLUME_DAY | P5 | P2 | P3.
+- RecommendedAction: HISTORICAL | PEAK_VOLUME_DAY | HIGH_VOLUME_DAY | P5 | P2 | P3 | HISTORICAL_TREND_ANALYSIS_ONLY | CAPACITY_PLANNING_REVIEW | MONITOR_VOLUME_TREND.',
+        N'[COLUMNS]
+- DataScope: LIVE | ARCHIVE.
+- VARCHAR (text).
+- TransactionDate (date/datetime).
+- OriginalCurrency (text).
+- TransactionCount (bigint).
+- GrossAmount (numeric).
+- DebitAmount (numeric).
+- CreditAmount (numeric).
+- NetFlowAmount (numeric).
+- TotalTaxAmount (numeric).
+- TotalSurchargeAmount (numeric).
+- TotalCashbackAmount (numeric).
+- VolumeFlag: HISTORICAL | PEAK_VOLUME_DAY | HIGH_VOLUME_DAY.
+- Urgency: HISTORICAL | PEAK_VOLUME_DAY | HIGH_VOLUME_DAY | P5 | P2 | P3.
+- RecommendedAction: HISTORICAL | PEAK_VOLUME_DAY | HIGH_VOLUME_DAY | P5 | P2 | P3 | HISTORICAL_TREND_ANALYSIS_ONLY | CAPACITY_PLANNING_REVIEW | MONITOR_VOLUME_TREND.',
+        N'LIVE: anlik durum. ARCHIVE: tarihsel trend (urgency genellikle P4/P5).',
+        N'LIVE: point-in-time. ARCHIVE: historical trend (urgency usually P4/P5).',
+        N'[KAYNAK] [Ingestion].* / [Reconciliation].* / [Archive].* tablolari.
+[ORTAK ENUM TABLOSU]
+DataScope: LIVE | ARCHIVE.
+Urgency: P1 (kritik, dakikalar icinde) | P2 (yuksek, saat icinde) | P3 (orta, vardiya icinde) | P4 (dusuk, gunluk) | P5 (bilgi, izleme).
+Network: BKM | VISA | MSC; Visa MS view''lerinde ''Visa'', ''Msc'', ''Bkm''.
+Side / FileType: Card | Clearing.
+ContentType: Visa | Msc | Bkm.
+',
+        N'[SOURCES] [Ingestion].* / [Reconciliation].* / [Archive].* tables.
+[SHARED ENUM TABLE]
+DataScope: LIVE | ARCHIVE.
+Urgency: P1 (critical, minutes) | P2 (high, hours) | P3 (medium, within shift) | P4 (low, daily) | P5 (info, watch).
+Network: BKM | VISA | MSC; ''Visa'', ''Msc'', ''Bkm'' in MS variants.
+Side / FileType: Card | Clearing.
+ContentType: Visa | Msc | Bkm.
+'
+    ),
+    (
+        N'[Reporting].[VwMccRevenueConcentration]',
+        N'FINANCIAL_CONCENTRATION',
+        N'MCC bazinda hacim payi ve konsantrasyon riski (PG: rep_mcc_revenue_concentration karsiligi).',
+        N'Per-MCC volume share and concentration risk (PG counterpart: rep_mcc_revenue_concentration).',
+        N'Hacmimiz hangi MCC lere bagli, tek bir MCC ye asiri bagimliyiz?',
+        N'Which MCCs drive our volume, are we over-dependent on a single one?',
+        N'ConcentrationFlag HIGH_CONCENTRATION (%30+) is surekliligi riski; MEDIUM_CONCENTRATION (%15+) izleme; DIVERSIFIED saglikli.',
+        N'HIGH_CONCENTRATION (>=30%) is a continuity risk; MEDIUM_CONCENTRATION (>=15%) needs monitoring; DIVERSIFIED is healthy.',
+        N'Aylik portfoy degerlendirmesi.',
+        N'Monthly portfolio review.',
+        N'Risk, finans, ticari ekipler.',
+        N'Risk, finance, commercial teams.',
+        N'HIGH_CONCENTRATION MCC ler diversifikasyon calismasina alinir.',
+        N'HIGH_CONCENTRATION MCCs enter diversification work.',
+        N'[KOLONLAR]
+- DataScope: LIVE | ARCHIVE.
+- DECIMAL (text).
+- NetworkSharePct (numeric).
+- ConcentrationFlag: HISTORICAL | HIGH_CONCENTRATION | MEDIUM_CONCENTRATION.
+- Urgency: HISTORICAL | HIGH_CONCENTRATION | MEDIUM_CONCENTRATION | P5 | P2 | P3.
+- RecommendedAction: HISTORICAL | HIGH_CONCENTRATION | MEDIUM_CONCENTRATION | P5 | P2 | P3 | HISTORICAL_TREND_ANALYSIS_ONLY | REVIEW_MCC_CONCENTRATION_RISK | MONITOR_MCC_DEPENDENCY.',
+        N'[COLUMNS]
+- DataScope: LIVE | ARCHIVE.
+- DECIMAL (text).
+- NetworkSharePct (numeric).
+- ConcentrationFlag: HISTORICAL | HIGH_CONCENTRATION | MEDIUM_CONCENTRATION.
+- Urgency: HISTORICAL | HIGH_CONCENTRATION | MEDIUM_CONCENTRATION | P5 | P2 | P3.
+- RecommendedAction: HISTORICAL | HIGH_CONCENTRATION | MEDIUM_CONCENTRATION | P5 | P2 | P3 | HISTORICAL_TREND_ANALYSIS_ONLY | REVIEW_MCC_CONCENTRATION_RISK | MONITOR_MCC_DEPENDENCY.',
+        N'LIVE: anlik durum. ARCHIVE: tarihsel trend (urgency genellikle P4/P5).',
+        N'LIVE: point-in-time. ARCHIVE: historical trend (urgency usually P4/P5).',
+        N'[KAYNAK] [Ingestion].* / [Reconciliation].* / [Archive].* tablolari.
+[ORTAK ENUM TABLOSU]
+DataScope: LIVE | ARCHIVE.
+Urgency: P1 (kritik, dakikalar icinde) | P2 (yuksek, saat icinde) | P3 (orta, vardiya icinde) | P4 (dusuk, gunluk) | P5 (bilgi, izleme).
+Network: BKM | VISA | MSC; Visa MS view''lerinde ''Visa'', ''Msc'', ''Bkm''.
+Side / FileType: Card | Clearing.
+ContentType: Visa | Msc | Bkm.
+',
+        N'[SOURCES] [Ingestion].* / [Reconciliation].* / [Archive].* tables.
+[SHARED ENUM TABLE]
+DataScope: LIVE | ARCHIVE.
+Urgency: P1 (critical, minutes) | P2 (high, hours) | P3 (medium, within shift) | P4 (low, daily) | P5 (info, watch).
+Network: BKM | VISA | MSC; ''Visa'', ''Msc'', ''Bkm'' in MS variants.
+Side / FileType: Card | Clearing.
+ContentType: Visa | Msc | Bkm.
+'
+    ),
+    (
+        N'[Reporting].[VwMerchantRiskHotspots]',
+        N'FINANCIAL_RISK',
+        N'Merchant bazinda decline orani, eslesmemis is orani ve risk siniflandirmasi (PG: rep_merchant_risk_hotspots karsiligi).',
+        N'Per-merchant decline/unmatched rate and risk classification (PG counterpart: rep_merchant_risk_hotspots).',
+        N'Hangi merchant lar yuksek risk tasiyor, hangi merchant da decline patlamasi var?',
+        N'Which merchants carry high risk, where is decline spiking?',
+        N'HIGH_RISK_MERCHANT %20+ unmatched ve 100k+ tutar; HIGH_DECLINE_MERCHANT decline %30+.',
+        N'HIGH_RISK_MERCHANT means 20%+ unmatched and 100k+ amount; HIGH_DECLINE_MERCHANT means decline 30%+.',
+        N'Haftalik merchant risk degerlendirmesi.',
+        N'Weekly merchant risk review.',
+        N'Risk, ticari, finans.',
+        N'Risk, commercial, finance.',
+        N'HIGH_RISK_MERCHANT ler risk ekibine eskale; HIGH_DECLINE_MERCHANT lar icin decline pattern incelenir.',
+        N'Escalate HIGH_RISK_MERCHANT to risk team; for HIGH_DECLINE_MERCHANT investigate decline pattern.',
+        N'[KOLONLAR]
+- DataScope: LIVE | ARCHIVE.
+- DECIMAL (text).
+- DeclineRatePct (numeric).
+- UnmatchedRatePct (numeric).
+- RiskFlag: HISTORICAL | HIGH_RISK_MERCHANT | HIGH_DECLINE_MERCHANT | NEEDS_INVESTIGATION.
+- Urgency: HISTORICAL | HIGH_RISK_MERCHANT | HIGH_DECLINE_MERCHANT | NEEDS_INVESTIGATION | P5 | P1 | P2 | P3.
+- RecommendedAction: HISTORICAL | HIGH_RISK_MERCHANT | HIGH_DECLINE_MERCHANT | NEEDS_INVESTIGATION | P5 | P1 | P2 | P3 | HISTORICAL_TREND_ANALYSIS_ONLY | ESCALATE_TO_RISK_TEAM | INVESTIGATE_DECLINE_PATTERN | INVESTIGATE_UNMATCHED.',
+        N'[COLUMNS]
+- DataScope: LIVE | ARCHIVE.
+- DECIMAL (text).
+- DeclineRatePct (numeric).
+- UnmatchedRatePct (numeric).
+- RiskFlag: HISTORICAL | HIGH_RISK_MERCHANT | HIGH_DECLINE_MERCHANT | NEEDS_INVESTIGATION.
+- Urgency: HISTORICAL | HIGH_RISK_MERCHANT | HIGH_DECLINE_MERCHANT | NEEDS_INVESTIGATION | P5 | P1 | P2 | P3.
+- RecommendedAction: HISTORICAL | HIGH_RISK_MERCHANT | HIGH_DECLINE_MERCHANT | NEEDS_INVESTIGATION | P5 | P1 | P2 | P3 | HISTORICAL_TREND_ANALYSIS_ONLY | ESCALATE_TO_RISK_TEAM | INVESTIGATE_DECLINE_PATTERN | INVESTIGATE_UNMATCHED.',
+        N'LIVE: anlik durum. ARCHIVE: tarihsel trend (urgency genellikle P4/P5).',
+        N'LIVE: point-in-time. ARCHIVE: historical trend (urgency usually P4/P5).',
+        N'[KAYNAK] [Ingestion].* / [Reconciliation].* / [Archive].* tablolari.
+[ORTAK ENUM TABLOSU]
+DataScope: LIVE | ARCHIVE.
+Urgency: P1 (kritik, dakikalar icinde) | P2 (yuksek, saat icinde) | P3 (orta, vardiya icinde) | P4 (dusuk, gunluk) | P5 (bilgi, izleme).
+Network: BKM | VISA | MSC; Visa MS view''lerinde ''Visa'', ''Msc'', ''Bkm''.
+Side / FileType: Card | Clearing.
+ContentType: Visa | Msc | Bkm.
+',
+        N'[SOURCES] [Ingestion].* / [Reconciliation].* / [Archive].* tables.
+[SHARED ENUM TABLE]
+DataScope: LIVE | ARCHIVE.
+Urgency: P1 (critical, minutes) | P2 (high, hours) | P3 (medium, within shift) | P4 (low, daily) | P5 (info, watch).
+Network: BKM | VISA | MSC; ''Visa'', ''Msc'', ''Bkm'' in MS variants.
+Side / FileType: Card | Clearing.
+ContentType: Visa | Msc | Bkm.
+'
+    ),
+    (
+        N'[Reporting].[VwCountryCrossBorderExposure]',
+        N'FINANCIAL_RISK',
+        N'Merchant ulkesi ve original/settlement currency esitsizligine gore yurt disi/FX maruziyeti (PG: rep_country_cross_border_exposure karsiligi).',
+        N'Cross-border / FX exposure by merchant country and original-vs-settlement currency (PG counterpart: rep_country_cross_border_exposure).',
+        N'Yurt disi ve farkli para birimi islemlerine ne kadar maruziz?',
+        N'How exposed are we to cross-border and cross-currency transactions?',
+        N'HIGH_FX_EXPOSURE 1M+ FX maruziyeti, hedge degerlendirilmelidir; FX_EXPOSURE izleme; DOMESTIC normal.',
+        N'HIGH_FX_EXPOSURE indicates 1M+ FX exposure, consider hedging; FX_EXPOSURE for monitoring; DOMESTIC is normal.',
+        N'Aylik FX risk degerlendirmesi.',
+        N'Monthly FX risk review.',
+        N'Hazine, finans, risk.',
+        N'Treasury, finance, risk.',
+        N'HIGH_FX_EXPOSURE icin hedging politikasi gozden gecirilir.',
+        N'Review hedging policy on HIGH_FX_EXPOSURE.',
+        N'[KOLONLAR]
+- DataScope: LIVE | ARCHIVE.
+- ExposureFlag: CROSS_CURRENCY | HISTORICAL | HIGH_FX_EXPOSURE | FX_EXPOSURE.
+- Urgency: CROSS_CURRENCY | HISTORICAL | HIGH_FX_EXPOSURE | FX_EXPOSURE | P5 | P2 | P3.
+- RecommendedAction: CROSS_CURRENCY | HISTORICAL | HIGH_FX_EXPOSURE | FX_EXPOSURE | P5 | P2 | P3 | HISTORICAL_TREND_ANALYSIS_ONLY | HEDGE_OR_REVIEW_FX_EXPOSURE | MONITOR_FX_EXPOSURE.',
+        N'[COLUMNS]
+- DataScope: LIVE | ARCHIVE.
+- ExposureFlag: CROSS_CURRENCY | HISTORICAL | HIGH_FX_EXPOSURE | FX_EXPOSURE.
+- Urgency: CROSS_CURRENCY | HISTORICAL | HIGH_FX_EXPOSURE | FX_EXPOSURE | P5 | P2 | P3.
+- RecommendedAction: CROSS_CURRENCY | HISTORICAL | HIGH_FX_EXPOSURE | FX_EXPOSURE | P5 | P2 | P3 | HISTORICAL_TREND_ANALYSIS_ONLY | HEDGE_OR_REVIEW_FX_EXPOSURE | MONITOR_FX_EXPOSURE.',
+        N'LIVE: anlik durum. ARCHIVE: tarihsel trend (urgency genellikle P4/P5).',
+        N'LIVE: point-in-time. ARCHIVE: historical trend (urgency usually P4/P5).',
+        N'[KAYNAK] [Ingestion].* / [Reconciliation].* / [Archive].* tablolari.
+[ORTAK ENUM TABLOSU]
+DataScope: LIVE | ARCHIVE.
+Urgency: P1 (kritik, dakikalar icinde) | P2 (yuksek, saat icinde) | P3 (orta, vardiya icinde) | P4 (dusuk, gunluk) | P5 (bilgi, izleme).
+Network: BKM | VISA | MSC; Visa MS view''lerinde ''Visa'', ''Msc'', ''Bkm''.
+Side / FileType: Card | Clearing.
+ContentType: Visa | Msc | Bkm.
+',
+        N'[SOURCES] [Ingestion].* / [Reconciliation].* / [Archive].* tables.
+[SHARED ENUM TABLE]
+DataScope: LIVE | ARCHIVE.
+Urgency: P1 (critical, minutes) | P2 (high, hours) | P3 (medium, within shift) | P4 (low, daily) | P5 (info, watch).
+Network: BKM | VISA | MSC; ''Visa'', ''Msc'', ''Bkm'' in MS variants.
+Side / FileType: Card | Clearing.
+ContentType: Visa | Msc | Bkm.
+'
+    ),
+    (
+        N'[Reporting].[VwResponseCodeDeclineHealth]',
+        N'AUTHORIZATION_HEALTH',
+        N'Network bazinda ResponseCode dagilimi, basarisizlik orani ve baskin red sebepleri (PG: rep_response_code_decline_health karsiligi).',
+        N'Per-network ResponseCode distribution with failure rate and dominant decline reasons (PG counterpart: rep_response_code_decline_health).',
+        N'Iadeler ve redler hangi ResponseCode dan geliyor?',
+        N'Which ResponseCodes are driving declines and refusals?',
+        N'DOMINANT_FAILURE_REASON %5 ustu paya sahip bir red sebebidir; SUCCESS_OR_UNKNOWN normaldir.',
+        N'DOMINANT_FAILURE_REASON means a decline reason exceeds 5% share; SUCCESS_OR_UNKNOWN is normal.',
+        N'Gunluk operasyonel takip.',
+        N'Daily operational monitoring.',
+        N'Operasyon, urun, risk.',
+        N'Operations, product, risk.',
+        N'DOMINANT_FAILURE_REASON satirlari icin kaynak (issuer/network/limit) arastirilir; gerekirse 3DS/limit ayarlari guncellenir.',
+        N'Investigate the source (issuer/network/limit) for DOMINANT_FAILURE_REASON rows; update 3DS/limit settings if needed.',
+        N'[KOLONLAR]
+- DataScope: LIVE | ARCHIVE.
+- DECIMAL (text).
+- FailureRatePct (numeric).
+- NetworkSharePct (numeric).
+- HealthFlag: HISTORICAL | DOMINANT_FAILURE_REASON | NORMAL_FAILURE.
+- Urgency: HISTORICAL | DOMINANT_FAILURE_REASON | NORMAL_FAILURE | P5 | P2 | P4.
+- RecommendedAction: HISTORICAL | DOMINANT_FAILURE_REASON | NORMAL_FAILURE | P5 | P2 | P4 | HISTORICAL_TREND_ANALYSIS_ONLY | INVESTIGATE_DOMINANT_DECLINE_REASON | TRACK_DECLINE_REASON.',
+        N'[COLUMNS]
+- DataScope: LIVE | ARCHIVE.
+- DECIMAL (text).
+- FailureRatePct (numeric).
+- NetworkSharePct (numeric).
+- HealthFlag: HISTORICAL | DOMINANT_FAILURE_REASON | NORMAL_FAILURE.
+- Urgency: HISTORICAL | DOMINANT_FAILURE_REASON | NORMAL_FAILURE | P5 | P2 | P4.
+- RecommendedAction: HISTORICAL | DOMINANT_FAILURE_REASON | NORMAL_FAILURE | P5 | P2 | P4 | HISTORICAL_TREND_ANALYSIS_ONLY | INVESTIGATE_DOMINANT_DECLINE_REASON | TRACK_DECLINE_REASON.',
+        N'LIVE: anlik durum. ARCHIVE: tarihsel trend (urgency genellikle P4/P5).',
+        N'LIVE: point-in-time. ARCHIVE: historical trend (urgency usually P4/P5).',
+        N'[KAYNAK] [Ingestion].* / [Reconciliation].* / [Archive].* tablolari.
+[ORTAK ENUM TABLOSU]
+DataScope: LIVE | ARCHIVE.
+Urgency: P1 (kritik, dakikalar icinde) | P2 (yuksek, saat icinde) | P3 (orta, vardiya icinde) | P4 (dusuk, gunluk) | P5 (bilgi, izleme).
+Network: BKM | VISA | MSC; Visa MS view''lerinde ''Visa'', ''Msc'', ''Bkm''.
+Side / FileType: Card | Clearing.
+ContentType: Visa | Msc | Bkm.
+',
+        N'[SOURCES] [Ingestion].* / [Reconciliation].* / [Archive].* tables.
+[SHARED ENUM TABLE]
+DataScope: LIVE | ARCHIVE.
+Urgency: P1 (critical, minutes) | P2 (high, hours) | P3 (medium, within shift) | P4 (low, daily) | P5 (info, watch).
+Network: BKM | VISA | MSC; ''Visa'', ''Msc'', ''Bkm'' in MS variants.
+Side / FileType: Card | Clearing.
+ContentType: Visa | Msc | Bkm.
+'
+    ),
+    (
+        N'[Reporting].[VwSettlementLagAnalysis]',
+        N'OPERATIONS_KPI',
+        N'TransactionDate ile EndOfDayDate, ValueDate ve dosya alim tarihi arasindaki gecikmeler (PG: rep_settlement_lag_analysis karsiligi).',
+        N'Lag between TransactionDate and EndOfDayDate, ValueDate, and file ingestion date (PG counterpart: rep_settlement_lag_analysis).',
+        N'Islemler ne kadar zamaninda sisteme dusuyor, hangi noktada gecikme olusuyor?',
+        N'How timely are transactions arriving, where does the delay accumulate?',
+        N'LagHealth CHRONIC_INGEST_DELAY yapisal bir alim gecikmesidir; SPORADIC_LATE_INGEST izole gecikme; TIMELY SLA icindedir.',
+        N'LagHealth CHRONIC_INGEST_DELAY means structural ingestion lag; SPORADIC_LATE_INGEST is isolated; TIMELY is within SLA.',
+        N'Gunluk SLA takibi.',
+        N'Daily SLA monitoring.',
+        N'Operasyon, SRE, recon.',
+        N'Operations, SRE, recon.',
+        N'CHRONIC_INGEST_DELAY de upstream provider/kanal ile temas kurulur; transport ya da batch zamanlamasi degistirilir.',
+        N'On CHRONIC_INGEST_DELAY contact upstream provider; change transport or batch schedule.',
+        N'[KOLONLAR]
+- DataScope: LIVE | ARCHIVE.
+- TransactionCount (bigint).
+- TotalAmount (numeric).
+- DECIMAL (text).
+- AvgIngestLagDays (text).
+- AvgValueLagDays (text).
+- AvgEodLagDays (text).
+- MaxIngestLagDays (text).
+- MaxValueLagDays (text).
+- LateIngestCount (bigint).
+- LateValueCount (bigint).
+- LagFlag: HISTORICAL | CRITICAL_SETTLEMENT_DELAY | ELEVATED_LAG.
+- Urgency: HISTORICAL | CRITICAL_SETTLEMENT_DELAY | ELEVATED_LAG | P5 | P1 | P3.
+- RecommendedAction: HISTORICAL | CRITICAL_SETTLEMENT_DELAY | ELEVATED_LAG | P5 | P1 | P3 | HISTORICAL_TREND_ANALYSIS_ONLY | ESCALATE_SETTLEMENT_PIPELINE_BREACH | REVIEW_INGEST_OR_VALUE_LAG_TREND.',
+        N'[COLUMNS]
+- DataScope: LIVE | ARCHIVE.
+- TransactionCount (bigint).
+- TotalAmount (numeric).
+- DECIMAL (text).
+- AvgIngestLagDays (text).
+- AvgValueLagDays (text).
+- AvgEodLagDays (text).
+- MaxIngestLagDays (text).
+- MaxValueLagDays (text).
+- LateIngestCount (bigint).
+- LateValueCount (bigint).
+- LagFlag: HISTORICAL | CRITICAL_SETTLEMENT_DELAY | ELEVATED_LAG.
+- Urgency: HISTORICAL | CRITICAL_SETTLEMENT_DELAY | ELEVATED_LAG | P5 | P1 | P3.
+- RecommendedAction: HISTORICAL | CRITICAL_SETTLEMENT_DELAY | ELEVATED_LAG | P5 | P1 | P3 | HISTORICAL_TREND_ANALYSIS_ONLY | ESCALATE_SETTLEMENT_PIPELINE_BREACH | REVIEW_INGEST_OR_VALUE_LAG_TREND.',
+        N'LIVE: anlik durum. ARCHIVE: tarihsel trend (urgency genellikle P4/P5).',
+        N'LIVE: point-in-time. ARCHIVE: historical trend (urgency usually P4/P5).',
+        N'[KAYNAK] [Ingestion].* / [Reconciliation].* / [Archive].* tablolari.
+[ORTAK ENUM TABLOSU]
+DataScope: LIVE | ARCHIVE.
+Urgency: P1 (kritik, dakikalar icinde) | P2 (yuksek, saat icinde) | P3 (orta, vardiya icinde) | P4 (dusuk, gunluk) | P5 (bilgi, izleme).
+Network: BKM | VISA | MSC; Visa MS view''lerinde ''Visa'', ''Msc'', ''Bkm''.
+Side / FileType: Card | Clearing.
+ContentType: Visa | Msc | Bkm.
+',
+        N'[SOURCES] [Ingestion].* / [Reconciliation].* / [Archive].* tables.
+[SHARED ENUM TABLE]
+DataScope: LIVE | ARCHIVE.
+Urgency: P1 (critical, minutes) | P2 (high, hours) | P3 (medium, within shift) | P4 (low, daily) | P5 (info, watch).
+Network: BKM | VISA | MSC; ''Visa'', ''Msc'', ''Bkm'' in MS variants.
+Side / FileType: Card | Clearing.
+ContentType: Visa | Msc | Bkm.
+'
+    ),
+    (
+        N'[Reporting].[VwCurrencyFxDrift]',
+        N'FINANCIAL_RISK',
+        N'Cross-currency islemlerde original ve settlement (ve billing) tutar farklarini toplayarak FX drift i (kazanc/kayip) gosterir (PG: rep_currency_fx_drift).',
+        N'For cross-currency transactions aggregates original-vs-settlement (and billing) drift (PG: rep_currency_fx_drift).',
+        N'FX donusumlerinde sistematik bir kayip ya da kazanc var mi?',
+        N'Is there systematic FX gain/loss in our currency conversions?',
+        N'MATERIAL_DRIFT 100k+ kumulatif drift; settlement mantigi ve kur kaynagi denetlenmelidir.',
+        N'MATERIAL_DRIFT means cumulative drift exceeds 100k; review settlement logic and FX rate source.',
+        N'Aylik FX denetimi.',
+        N'Monthly FX audit.',
+        N'Hazine, finans, denetim.',
+        N'Treasury, finance, audit.',
+        N'MATERIAL_DRIFT te kur kaynagi (Reuters/issuer rate) ve settlement formulu denetlenir.',
+        N'On MATERIAL_DRIFT audit the FX rate source and settlement formula.',
+        N'[KOLONLAR]
+- DataScope: LIVE | ARCHIVE.
+- VARCHAR (text).
+- OriginalCurrency (text).
+- SettlementCurrency (text).
+- TransactionCount (bigint).
+- TotalOriginalAmount (numeric).
+- TotalSettlementAmount (numeric).
+- DriftAmount (numeric).
+- DriftPct (numeric).
+- DriftFlag: HISTORICAL | NO_FX | HIGH_FX_DRIFT | MODERATE_FX_DRIFT.
+- Urgency: HISTORICAL | NO_FX | HIGH_FX_DRIFT | MODERATE_FX_DRIFT | P5 | P2 | P3.
+- RecommendedAction: HISTORICAL | NO_FX | HIGH_FX_DRIFT | MODERATE_FX_DRIFT | P5 | P2 | P3 | HISTORICAL_TREND_ANALYSIS_ONLY | NONE | INVESTIGATE_FX_RATE_OR_HEDGING | MONITOR_FX_DRIFT.',
+        N'[COLUMNS]
+- DataScope: LIVE | ARCHIVE.
+- VARCHAR (text).
+- OriginalCurrency (text).
+- SettlementCurrency (text).
+- TransactionCount (bigint).
+- TotalOriginalAmount (numeric).
+- TotalSettlementAmount (numeric).
+- DriftAmount (numeric).
+- DriftPct (numeric).
+- DriftFlag: HISTORICAL | NO_FX | HIGH_FX_DRIFT | MODERATE_FX_DRIFT.
+- Urgency: HISTORICAL | NO_FX | HIGH_FX_DRIFT | MODERATE_FX_DRIFT | P5 | P2 | P3.
+- RecommendedAction: HISTORICAL | NO_FX | HIGH_FX_DRIFT | MODERATE_FX_DRIFT | P5 | P2 | P3 | HISTORICAL_TREND_ANALYSIS_ONLY | NONE | INVESTIGATE_FX_RATE_OR_HEDGING | MONITOR_FX_DRIFT.',
+        N'LIVE: anlik durum. ARCHIVE: tarihsel trend (urgency genellikle P4/P5).',
+        N'LIVE: point-in-time. ARCHIVE: historical trend (urgency usually P4/P5).',
+        N'[KAYNAK] [Ingestion].* / [Reconciliation].* / [Archive].* tablolari.
+[ORTAK ENUM TABLOSU]
+DataScope: LIVE | ARCHIVE.
+Urgency: P1 (kritik, dakikalar icinde) | P2 (yuksek, saat icinde) | P3 (orta, vardiya icinde) | P4 (dusuk, gunluk) | P5 (bilgi, izleme).
+Network: BKM | VISA | MSC; Visa MS view''lerinde ''Visa'', ''Msc'', ''Bkm''.
+Side / FileType: Card | Clearing.
+ContentType: Visa | Msc | Bkm.
+',
+        N'[SOURCES] [Ingestion].* / [Reconciliation].* / [Archive].* tables.
+[SHARED ENUM TABLE]
+DataScope: LIVE | ARCHIVE.
+Urgency: P1 (critical, minutes) | P2 (high, hours) | P3 (medium, within shift) | P4 (low, daily) | P5 (info, watch).
+Network: BKM | VISA | MSC; ''Visa'', ''Msc'', ''Bkm'' in MS variants.
+Side / FileType: Card | Clearing.
+ContentType: Visa | Msc | Bkm.
+'
+    ),
+    (
+        N'[Reporting].[VwInstallmentPortfolioSummary]',
+        N'PORTFOLIO_RISK',
+        N'Network bazinda taksit kovasi (1, 2-3, 4-6, 7-12, 13+) ve uzun vadeli maruziyet bayragi (PG: rep_installment_portfolio_summary).',
+        N'Per-network installment buckets with long-term exposure flag (PG: rep_installment_portfolio_summary).',
+        N'Taksitli portfoyumuz ne kadar uzun vadeye yayilmis?',
+        N'How much of our portfolio is in long-term installments?',
+        N'HIGH_LONG_TERM_INSTALLMENT_EXPOSURE 13+ taksit %10 unu astigini gosterir, kredi riski artmistir.',
+        N'HIGH_LONG_TERM_INSTALLMENT_EXPOSURE means 13+ installment exceeds 10%, increasing credit risk.',
+        N'Aylik portfoy degerlendirmesi.',
+        N'Monthly portfolio review.',
+        N'Risk, kredi, finans.',
+        N'Risk, credit, finance.',
+        N'HIGH_LONG_TERM_INSTALLMENT_EXPOSURE durumunda taksit politikasi/skorlama incelenmelidir.',
+        N'Review installment policy/scoring on HIGH_LONG_TERM_INSTALLMENT_EXPOSURE.',
+        N'[KOLONLAR]
+- DataScope: LIVE | ARCHIVE.
+- InstallmentBucket: SINGLE_PAYMENT | SHORT_TERM_2_3 | MEDIUM_TERM_4_6 | LONG_TERM_7_12.
+- TransactionCount (bigint).
+- TotalAmount (numeric).
+- DECIMAL (text).
+- AvgAmount (numeric).
+- PortfolioFlag: SINGLE_PAYMENT | SHORT_TERM_2_3 | MEDIUM_TERM_4_6 | LONG_TERM_7_12 | HISTORICAL | HIGH_EXTENDED_INSTALLMENT_RISK | EXTENDED_INSTALLMENT_PRESENT | LONG_TERM_PRESENT.
+- Urgency: SINGLE_PAYMENT | SHORT_TERM_2_3 | MEDIUM_TERM_4_6 | LONG_TERM_7_12 | HISTORICAL | HIGH_EXTENDED_INSTALLMENT_RISK | EXTENDED_INSTALLMENT_PRESENT | LONG_TERM_PRESENT | P5 | P2 | P3 | P4.
+- RecommendedAction: SINGLE_PAYMENT | SHORT_TERM_2_3 | MEDIUM_TERM_4_6 | LONG_TERM_7_12 | HISTORICAL | HIGH_EXTENDED_INSTALLMENT_RISK | EXTENDED_INSTALLMENT_PRESENT | LONG_TERM_PRESENT | P5 | P2 | P3 | P4 | HISTORICAL_TREND_ANALYSIS_ONLY | REVIEW_EXTENDED_INSTALLMENT_RISK | MONITOR_EXTENDED_INSTALLMENT_PORTFOLIO | TRACK_LONG_TERM_INSTALLMENT_GROWTH.',
+        N'[COLUMNS]
+- DataScope: LIVE | ARCHIVE.
+- InstallmentBucket: SINGLE_PAYMENT | SHORT_TERM_2_3 | MEDIUM_TERM_4_6 | LONG_TERM_7_12.
+- TransactionCount (bigint).
+- TotalAmount (numeric).
+- DECIMAL (text).
+- AvgAmount (numeric).
+- PortfolioFlag: SINGLE_PAYMENT | SHORT_TERM_2_3 | MEDIUM_TERM_4_6 | LONG_TERM_7_12 | HISTORICAL | HIGH_EXTENDED_INSTALLMENT_RISK | EXTENDED_INSTALLMENT_PRESENT | LONG_TERM_PRESENT.
+- Urgency: SINGLE_PAYMENT | SHORT_TERM_2_3 | MEDIUM_TERM_4_6 | LONG_TERM_7_12 | HISTORICAL | HIGH_EXTENDED_INSTALLMENT_RISK | EXTENDED_INSTALLMENT_PRESENT | LONG_TERM_PRESENT | P5 | P2 | P3 | P4.
+- RecommendedAction: SINGLE_PAYMENT | SHORT_TERM_2_3 | MEDIUM_TERM_4_6 | LONG_TERM_7_12 | HISTORICAL | HIGH_EXTENDED_INSTALLMENT_RISK | EXTENDED_INSTALLMENT_PRESENT | LONG_TERM_PRESENT | P5 | P2 | P3 | P4 | HISTORICAL_TREND_ANALYSIS_ONLY | REVIEW_EXTENDED_INSTALLMENT_RISK | MONITOR_EXTENDED_INSTALLMENT_PORTFOLIO | TRACK_LONG_TERM_INSTALLMENT_GROWTH.',
+        N'LIVE: anlik durum. ARCHIVE: tarihsel trend (urgency genellikle P4/P5).',
+        N'LIVE: point-in-time. ARCHIVE: historical trend (urgency usually P4/P5).',
+        N'[KAYNAK] [Ingestion].* / [Reconciliation].* / [Archive].* tablolari.
+[ORTAK ENUM TABLOSU]
+DataScope: LIVE | ARCHIVE.
+Urgency: P1 (kritik, dakikalar icinde) | P2 (yuksek, saat icinde) | P3 (orta, vardiya icinde) | P4 (dusuk, gunluk) | P5 (bilgi, izleme).
+Network: BKM | VISA | MSC; Visa MS view''lerinde ''Visa'', ''Msc'', ''Bkm''.
+Side / FileType: Card | Clearing.
+ContentType: Visa | Msc | Bkm.
+',
+        N'[SOURCES] [Ingestion].* / [Reconciliation].* / [Archive].* tables.
+[SHARED ENUM TABLE]
+DataScope: LIVE | ARCHIVE.
+Urgency: P1 (critical, minutes) | P2 (high, hours) | P3 (medium, within shift) | P4 (low, daily) | P5 (info, watch).
+Network: BKM | VISA | MSC; ''Visa'', ''Msc'', ''Bkm'' in MS variants.
+Side / FileType: Card | Clearing.
+ContentType: Visa | Msc | Bkm.
+'
+    ),
+    (
+        N'[Reporting].[VwLoyaltyPointsEconomy]',
+        N'PROGRAM_ECONOMICS',
+        N'Gunluk BC/MC/CC puan tutarlari ile orijinal islem tutarinin orani (PG: rep_loyalty_points_economy).',
+        N'Daily BC/MC/CC point amounts vs original transaction amount (PG: rep_loyalty_points_economy).',
+        N'Sadakat programi gunluk olarak ne kadara mal oluyor?',
+        N'How much does the loyalty program cost daily?',
+        N'HIGH_LOYALTY_USAGE %10+ subvansiyondur; program maliyeti gozden gecirilmelidir.',
+        N'HIGH_LOYALTY_USAGE means subsidy >= 10%; review program cost.',
+        N'Aylik program degerlendirmesi.',
+        N'Monthly program review.',
+        N'Sadakat, urun, finans.',
+        N'Loyalty, product, finance.',
+        N'HIGH_LOYALTY_USAGE gunlerinde puan kazanim/harcama kurallari ve kampanyalar gozden gecirilir.',
+        N'On HIGH_LOYALTY_USAGE days review point earning/burning rules and campaigns.',
+        N'[KOLONLAR]
+- DataScope: LIVE | ARCHIVE.
+- TransactionCount (bigint).
+- TotalBcPoints (text).
+- TotalMcPoints (text).
+- TotalCcPoints (text).
+- TotalPointAmount (numeric).
+- TotalSpendAmount (numeric).
+- PointToSpendRatioPct (numeric).
+- LoyaltyFlag: HISTORICAL | HIGH_POINT_LIABILITY | ACTIVE_LOYALTY_PROGRAM.
+- Urgency: HISTORICAL | HIGH_POINT_LIABILITY | ACTIVE_LOYALTY_PROGRAM | P5 | P2 | P4.
+- RecommendedAction: HISTORICAL | HIGH_POINT_LIABILITY | ACTIVE_LOYALTY_PROGRAM | P5 | P2 | P4 | HISTORICAL_TREND_ANALYSIS_ONLY | REVIEW_LOYALTY_LIABILITY_AND_BURN_RATE | TRACK_LOYALTY_PROGRAM_HEALTH.',
+        N'[COLUMNS]
+- DataScope: LIVE | ARCHIVE.
+- TransactionCount (bigint).
+- TotalBcPoints (text).
+- TotalMcPoints (text).
+- TotalCcPoints (text).
+- TotalPointAmount (numeric).
+- TotalSpendAmount (numeric).
+- PointToSpendRatioPct (numeric).
+- LoyaltyFlag: HISTORICAL | HIGH_POINT_LIABILITY | ACTIVE_LOYALTY_PROGRAM.
+- Urgency: HISTORICAL | HIGH_POINT_LIABILITY | ACTIVE_LOYALTY_PROGRAM | P5 | P2 | P4.
+- RecommendedAction: HISTORICAL | HIGH_POINT_LIABILITY | ACTIVE_LOYALTY_PROGRAM | P5 | P2 | P4 | HISTORICAL_TREND_ANALYSIS_ONLY | REVIEW_LOYALTY_LIABILITY_AND_BURN_RATE | TRACK_LOYALTY_PROGRAM_HEALTH.',
+        N'LIVE: anlik durum. ARCHIVE: tarihsel trend (urgency genellikle P4/P5).',
+        N'LIVE: point-in-time. ARCHIVE: historical trend (urgency usually P4/P5).',
+        N'[KAYNAK] [Ingestion].* / [Reconciliation].* / [Archive].* tablolari.
+[ORTAK ENUM TABLOSU]
+DataScope: LIVE | ARCHIVE.
+Urgency: P1 (kritik, dakikalar icinde) | P2 (yuksek, saat icinde) | P3 (orta, vardiya icinde) | P4 (dusuk, gunluk) | P5 (bilgi, izleme).
+Network: BKM | VISA | MSC; Visa MS view''lerinde ''Visa'', ''Msc'', ''Bkm''.
+Side / FileType: Card | Clearing.
+ContentType: Visa | Msc | Bkm.
+',
+        N'[SOURCES] [Ingestion].* / [Reconciliation].* / [Archive].* tables.
+[SHARED ENUM TABLE]
+DataScope: LIVE | ARCHIVE.
+Urgency: P1 (critical, minutes) | P2 (high, hours) | P3 (medium, within shift) | P4 (low, daily) | P5 (info, watch).
+Network: BKM | VISA | MSC; ''Visa'', ''Msc'', ''Bkm'' in MS variants.
+Side / FileType: Card | Clearing.
+ContentType: Visa | Msc | Bkm.
+'
+    ),
+    (
+        N'[Reporting].[VwClearingDisputeSummary]',
+        N'DISPUTES',
+        N'Clearing tarafindaki DisputeCode/ReasonCode/ControlStat bazinda islem ve reimbursement tutarlari (PG: rep_clearing_dispute_summary).',
+        N'Clearing dispute aggregations by DisputeCode/ReasonCode/ControlStat with reimbursement amount (PG: rep_clearing_dispute_summary).',
+        N'Itiraz/chargeback yuku ne kadar, hangi reason kodlari baskin?',
+        N'What is our chargeback load, which reason codes dominate?',
+        N'HIGH_DISPUTE_EXPOSURE reimbursement 100k uzeridir, eskale edilmelidir; ACTIVE_DISPUTE kuyrukta.',
+        N'HIGH_DISPUTE_EXPOSURE means reimbursement >= 100k, escalate; ACTIVE_DISPUTE in queue.',
+        N'Haftalik dispute degerlendirmesi.',
+        N'Weekly dispute review.',
+        N'Dispute ekibi, finans, denetim.',
+        N'Dispute team, finance, audit.',
+        N'HIGH_DISPUTE_EXPOSURE icin musteri/issuer ile temas plani; ReasonCode bazinda root cause incelenir.',
+        N'For HIGH_DISPUTE_EXPOSURE create a contact plan with customer/issuer; investigate root cause per ReasonCode.',
+        N'[KOLONLAR]
+- DataScope: LIVE | ARCHIVE.
+- DisputeFlag: HISTORICAL | HIGH_DISPUTE_EXPOSURE | ACTIVE_DISPUTE.
+- Urgency: HISTORICAL | HIGH_DISPUTE_EXPOSURE | ACTIVE_DISPUTE | P5 | P1 | P3.
+- RecommendedAction: HISTORICAL | HIGH_DISPUTE_EXPOSURE | ACTIVE_DISPUTE | P5 | P1 | P3 | HISTORICAL_TREND_ANALYSIS_ONLY | ESCALATE_DISPUTE_RESOLUTION | WORK_DISPUTE_QUEUE.',
+        N'[COLUMNS]
+- DataScope: LIVE | ARCHIVE.
+- DisputeFlag: HISTORICAL | HIGH_DISPUTE_EXPOSURE | ACTIVE_DISPUTE.
+- Urgency: HISTORICAL | HIGH_DISPUTE_EXPOSURE | ACTIVE_DISPUTE | P5 | P1 | P3.
+- RecommendedAction: HISTORICAL | HIGH_DISPUTE_EXPOSURE | ACTIVE_DISPUTE | P5 | P1 | P3 | HISTORICAL_TREND_ANALYSIS_ONLY | ESCALATE_DISPUTE_RESOLUTION | WORK_DISPUTE_QUEUE.',
+        N'LIVE: anlik durum. ARCHIVE: tarihsel trend (urgency genellikle P4/P5).',
+        N'LIVE: point-in-time. ARCHIVE: historical trend (urgency usually P4/P5).',
+        N'[KAYNAK] [Ingestion].* / [Reconciliation].* / [Archive].* tablolari.
+[ORTAK ENUM TABLOSU]
+DataScope: LIVE | ARCHIVE.
+Urgency: P1 (kritik, dakikalar icinde) | P2 (yuksek, saat icinde) | P3 (orta, vardiya icinde) | P4 (dusuk, gunluk) | P5 (bilgi, izleme).
+Network: BKM | VISA | MSC; Visa MS view''lerinde ''Visa'', ''Msc'', ''Bkm''.
+Side / FileType: Card | Clearing.
+ContentType: Visa | Msc | Bkm.
+',
+        N'[SOURCES] [Ingestion].* / [Reconciliation].* / [Archive].* tables.
+[SHARED ENUM TABLE]
+DataScope: LIVE | ARCHIVE.
+Urgency: P1 (critical, minutes) | P2 (high, hours) | P3 (medium, within shift) | P4 (low, daily) | P5 (info, watch).
+Network: BKM | VISA | MSC; ''Visa'', ''Msc'', ''Bkm'' in MS variants.
+Side / FileType: Card | Clearing.
+ContentType: Visa | Msc | Bkm.
+'
+    ),
+    (
+        N'[Reporting].[VwClearingIoImbalance]',
+        N'CLEARING_FLOW',
+        N'Gunluk clearing Incoming/Outgoing tutarlari ve net akis dengesizligi (PG: rep_clearing_io_imbalance).',
+        N'Daily clearing Incoming/Outgoing amounts and net flow imbalance (PG: rep_clearing_io_imbalance).',
+        N'Clearing incoming/outgoing dengemiz nasil, net akis ne yonde?',
+        N'How is our incoming/outgoing clearing balance, in which direction is the net flow?',
+        N'MATERIAL_NET_IMBALANCE 1M+ net akis; recon gecikmesi gostergesidir. NOTABLE_NET_IMBALANCE 100k+.',
+        N'MATERIAL_NET_IMBALANCE means 1M+ net flow; indicates recon delay. NOTABLE_NET_IMBALANCE 100k+.',
+        N'Gunluk T+1 takibi.',
+        N'Daily T+1 monitoring.',
+        N'Recon, finans.',
+        N'Recon, finance.',
+        N'MATERIAL_NET_IMBALANCE icin gunluk reconciliation kapanis akisi denetlenir.',
+        N'On MATERIAL_NET_IMBALANCE check the daily reconciliation close flow.',
+        N'[KOLONLAR]
+- DataScope: LIVE | ARCHIVE.
+- VARCHAR (text).
+- TxnDate (date/datetime).
+- IncomingCount (bigint).
+- OutgoingCount (bigint).
+- IncomingAmount (numeric).
+- OutgoingAmount (numeric).
+- NetImbalanceAmount (numeric).
+- ImbalanceFlag: HISTORICAL | CRITICAL_IMBALANCE | NOTABLE_IMBALANCE.
+- Urgency: HISTORICAL | CRITICAL_IMBALANCE | NOTABLE_IMBALANCE | P5 | P1 | P3.
+- RecommendedAction: HISTORICAL | CRITICAL_IMBALANCE | NOTABLE_IMBALANCE | P5 | P1 | P3 | HISTORICAL_TREND_ANALYSIS_ONLY | ESCALATE_CLEARING_RECONCILIATION | INVESTIGATE_DAILY_IMBALANCE.',
+        N'[COLUMNS]
+- DataScope: LIVE | ARCHIVE.
+- VARCHAR (text).
+- TxnDate (date/datetime).
+- IncomingCount (bigint).
+- OutgoingCount (bigint).
+- IncomingAmount (numeric).
+- OutgoingAmount (numeric).
+- NetImbalanceAmount (numeric).
+- ImbalanceFlag: HISTORICAL | CRITICAL_IMBALANCE | NOTABLE_IMBALANCE.
+- Urgency: HISTORICAL | CRITICAL_IMBALANCE | NOTABLE_IMBALANCE | P5 | P1 | P3.
+- RecommendedAction: HISTORICAL | CRITICAL_IMBALANCE | NOTABLE_IMBALANCE | P5 | P1 | P3 | HISTORICAL_TREND_ANALYSIS_ONLY | ESCALATE_CLEARING_RECONCILIATION | INVESTIGATE_DAILY_IMBALANCE.',
+        N'LIVE: anlik durum. ARCHIVE: tarihsel trend (urgency genellikle P4/P5).',
+        N'LIVE: point-in-time. ARCHIVE: historical trend (urgency usually P4/P5).',
+        N'[KAYNAK] [Ingestion].* / [Reconciliation].* / [Archive].* tablolari.
+[ORTAK ENUM TABLOSU]
+DataScope: LIVE | ARCHIVE.
+Urgency: P1 (kritik, dakikalar icinde) | P2 (yuksek, saat icinde) | P3 (orta, vardiya icinde) | P4 (dusuk, gunluk) | P5 (bilgi, izleme).
+Network: BKM | VISA | MSC; Visa MS view''lerinde ''Visa'', ''Msc'', ''Bkm''.
+Side / FileType: Card | Clearing.
+ContentType: Visa | Msc | Bkm.
+',
+        N'[SOURCES] [Ingestion].* / [Reconciliation].* / [Archive].* tables.
+[SHARED ENUM TABLE]
+DataScope: LIVE | ARCHIVE.
+Urgency: P1 (critical, minutes) | P2 (high, hours) | P3 (medium, within shift) | P4 (low, daily) | P5 (info, watch).
+Network: BKM | VISA | MSC; ''Visa'', ''Msc'', ''Bkm'' in MS variants.
+Side / FileType: Card | Clearing.
+ContentType: Visa | Msc | Bkm.
+'
+    ),
+    (
+        N'[Reporting].[VwHighValueUnmatchedTransactions]',
+        N'FINANCIAL_RISK',
+        N'Tek tek 100k+ tutarli eslesmemis islemleri merchant adi, ulke ve PAN-mask edilmis kart bilgisi ile listeler (PG: rep_high_value_unmatched_transactions).',
+        N'Lists individual unmatched transactions of 100k+ with merchant name, country and PAN-masked card (PG: rep_high_value_unmatched_transactions).',
+        N'Yuksek tutarli hangi tek tek islemler hala beklemede?',
+        N'Which individual high-value transactions are still pending match?',
+        N'RiskFlag CRITICAL_HIGH_VALUE_UNMATCHED 1M+ derhal incelenmelidir; HIGH_VALUE_UNMATCHED 500k+; NOTABLE_VALUE_UNMATCHED 100k-500k.',
+        N'RiskFlag CRITICAL_HIGH_VALUE_UNMATCHED is 1M+ inspect immediately; HIGH_VALUE_UNMATCHED is 500k+; NOTABLE_VALUE_UNMATCHED is 100k-500k.',
+        N'Gunluk finansal kapanis sonrasi.',
+        N'After the daily financial close.',
+        N'Recon, finans, risk, KYC ekibi.',
+        N'Recon, finance, risk, KYC team.',
+        N'CRITICAL_HIGH_VALUE_UNMATCHED satirlari risk komitesine eskale; HIGH_VALUE_UNMATCHED operasyon ekibinde isleme alinir.',
+        N'Escalate CRITICAL_HIGH_VALUE_UNMATCHED to risk committee; HIGH_VALUE_UNMATCHED is processed by operations.',
+        N'[KOLONLAR]
+- DataScope: LIVE | ARCHIVE.
+- VARCHAR (text).
+- OriginalCurrency (text).
+- MerchantId (text).
+- MerchantName (text).
+- MerchantCountry (text).
+- TransactionDate (date/datetime).
+- CardLast4: ****.
+- IngestedAt (date/datetime).
+- DATE (date/datetime).
+- AgeDays (text).
+- AlarmFlag: **** | HISTORICAL | CRITICAL_UNMATCHED | HIGH_VALUE_UNMATCHED.
+- Urgency: **** | HISTORICAL | CRITICAL_UNMATCHED | HIGH_VALUE_UNMATCHED | P5 | P1 | P2.
+- RecommendedAction: **** | HISTORICAL | CRITICAL_UNMATCHED | HIGH_VALUE_UNMATCHED | P5 | P1 | P2 | HISTORICAL_TREND_ANALYSIS_ONLY | IMMEDIATE_RECONCILIATION_REQUIRED | PRIORITY_RECONCILIATION_REQUIRED.',
+        N'[COLUMNS]
+- DataScope: LIVE | ARCHIVE.
+- VARCHAR (text).
+- OriginalCurrency (text).
+- MerchantId (text).
+- MerchantName (text).
+- MerchantCountry (text).
+- TransactionDate (date/datetime).
+- CardLast4: ****.
+- IngestedAt (date/datetime).
+- DATE (date/datetime).
+- AgeDays (text).
+- AlarmFlag: **** | HISTORICAL | CRITICAL_UNMATCHED | HIGH_VALUE_UNMATCHED.
+- Urgency: **** | HISTORICAL | CRITICAL_UNMATCHED | HIGH_VALUE_UNMATCHED | P5 | P1 | P2.
+- RecommendedAction: **** | HISTORICAL | CRITICAL_UNMATCHED | HIGH_VALUE_UNMATCHED | P5 | P1 | P2 | HISTORICAL_TREND_ANALYSIS_ONLY | IMMEDIATE_RECONCILIATION_REQUIRED | PRIORITY_RECONCILIATION_REQUIRED.',
+        N'LIVE: anlik durum. ARCHIVE: tarihsel trend (urgency genellikle P4/P5).',
+        N'LIVE: point-in-time. ARCHIVE: historical trend (urgency usually P4/P5).',
+        N'[KAYNAK] [Ingestion].* / [Reconciliation].* / [Archive].* tablolari.
+[ORTAK ENUM TABLOSU]
+DataScope: LIVE | ARCHIVE.
+Urgency: P1 (kritik, dakikalar icinde) | P2 (yuksek, saat icinde) | P3 (orta, vardiya icinde) | P4 (dusuk, gunluk) | P5 (bilgi, izleme).
+Network: BKM | VISA | MSC; Visa MS view''lerinde ''Visa'', ''Msc'', ''Bkm''.
+Side / FileType: Card | Clearing.
+ContentType: Visa | Msc | Bkm.
+',
+        N'[SOURCES] [Ingestion].* / [Reconciliation].* / [Archive].* tables.
+[SHARED ENUM TABLE]
+DataScope: LIVE | ARCHIVE.
+Urgency: P1 (critical, minutes) | P2 (high, hours) | P3 (medium, within shift) | P4 (low, daily) | P5 (info, watch).
+Network: BKM | VISA | MSC; ''Visa'', ''Msc'', ''Bkm'' in MS variants.
+Side / FileType: Card | Clearing.
+ContentType: Visa | Msc | Bkm.
+'
+    )
+) AS d(
+    ViewName, ReportGroup,
+    PurposeTr, PurposeEn,
+    BusinessQuestionTr, BusinessQuestionEn,
+    InterpretationTr, InterpretationEn,
+    UsageTimeTr, UsageTimeEn,
+    TargetUserTr, TargetUserEn,
+    ActionGuidanceTr, ActionGuidanceEn,
+    ImportantColumnsTr, ImportantColumnsEn,
+    LiveArchiveInterpretationTr, LiveArchiveInterpretationEn,
+    NotesTr, NotesEn
+);
 GO
 
 CREATE VIEW [Reporting].[VwReportingDocumentation] AS

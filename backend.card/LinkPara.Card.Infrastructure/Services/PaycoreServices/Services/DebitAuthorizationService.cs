@@ -191,7 +191,9 @@ namespace LinkPara.Card.Infrastructure.Services.PaycoreServices.Services
             {
                 if(txnResponse != null && txnResponse.ResponseCode != null)
                 {
-                    responseCode = txnResponse.ResponseCode;
+                    DebitAuthorizationTxnResponse paycoreResponse =  MapPaycoreResponseCodes(txnResponse.ResponseCode.ToString());
+                    responseCode = paycoreResponse.ResponseCode;
+                    responseMsg = paycoreResponse.ResponseDescription;
                 }
 
                 response.ResponseCode = responseCode;
