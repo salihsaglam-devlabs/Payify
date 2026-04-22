@@ -10,6 +10,7 @@ public class ProcessingOptions
     public const bool DefaultUseBulkInsert = true;
     public const bool DefaultEnableParallelProcessing = true;
     public const int DefaultMaxDegreeOfParallelism = 8;
+    public const int DefaultCheckpointEveryNBatches = 1;
 
     public int? BatchSize { get; set; }
     public int? RetryBatchSize { get; set; }
@@ -17,6 +18,7 @@ public class ProcessingOptions
     public bool? UseBulkInsert { get; set; }
     public bool? EnableParallelProcessing { get; set; }
     public int? MaxDegreeOfParallelism { get; set; }
+    public int? CheckpointEveryNBatches { get; set; }
 
     public void ValidateAndApplyDefaults()
     {
@@ -26,6 +28,7 @@ public class ProcessingOptions
         UseBulkInsert ??= DefaultUseBulkInsert;
         EnableParallelProcessing ??= DefaultEnableParallelProcessing;
         MaxDegreeOfParallelism ??= DefaultMaxDegreeOfParallelism;
+        CheckpointEveryNBatches ??= DefaultCheckpointEveryNBatches;
 
         if (BatchSize <= 0)
             throw new FileIngestionProcessingBatchSizeInvalidException($"FileIngestion.Processing.BatchSize must be positive. Current: {BatchSize}");
@@ -33,6 +36,8 @@ public class ProcessingOptions
             throw new FileIngestionProcessingRetryBatchSizeInvalidException($"FileIngestion.Processing.RetryBatchSize must be positive. Current: {RetryBatchSize}");
         if (MaxDegreeOfParallelism <= 0)
             throw new FileIngestionProcessingMaxParallelismInvalidException($"FileIngestion.Processing.MaxDegreeOfParallelism must be positive. Current: {MaxDegreeOfParallelism}");
+        if (CheckpointEveryNBatches <= 0)
+            CheckpointEveryNBatches = DefaultCheckpointEveryNBatches;
     }
 
     [Obsolete("Use ValidateAndApplyDefaults() instead")]

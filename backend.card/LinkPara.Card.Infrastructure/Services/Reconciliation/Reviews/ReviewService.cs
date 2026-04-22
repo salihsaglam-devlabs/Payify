@@ -383,7 +383,7 @@ internal sealed class ReviewService
             invalidMsg,
             "REVIEW_DECISION",
             operationId: operationId,
-            detail: $"Operation status: {operation.Status}"));
+            detail: _localizer.Get("Reconciliation.OperationStatusDetail", operation.Status)));
         return ("Invalid", invalidMsg);
     }
 

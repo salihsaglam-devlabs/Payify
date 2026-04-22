@@ -1,13 +1,16 @@
 using System.Data;
 using System.Text.Json;
 using Dapper;
+using LinkPara.Card.Application.Commons.Extensions;
 using LinkPara.Card.Application.Commons.Helpers.Reporting;
 using LinkPara.Card.Application.Commons.Interfaces.Reporting;
+using LinkPara.Card.Application.Commons.Localization;
 using LinkPara.Card.Application.Commons.Models.Reconciliation.Shared;
 using LinkPara.Card.Application.Commons.Models.Reporting.Dynamic;
 using LinkPara.Card.Application.Features.Reporting.Queries.Dynamic;
 using LinkPara.Card.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Localization;
 
 namespace LinkPara.Card.Infrastructure.Services.Reporting.Dynamic;
 
@@ -18,15 +21,21 @@ internal sealed class DynamicReportingService : IDynamicReportingService
     private readonly CardDbContext _db;
     private readonly IDynamicReportingDialect _dialect;
     private readonly DynamicReportingSqlBuilder _builder;
+    private readonly IDynamicReportingValidator _validator;
+    private readonly IStringLocalizer _localizer;
 
     public DynamicReportingService(
         CardDbContext db,
         IDynamicReportingDialect dialect,
-        DynamicReportingSqlBuilder builder)
+        DynamicReportingSqlBuilder builder,
+        IDynamicReportingValidator validator,
+        Func<LocalizerResource, IStringLocalizer> localizerFactory)
     {
         _db = db;
         _dialect = dialect;
         _builder = builder;
+        _validator = validator;
+        _localizer = localizerFactory(LocalizerResource.Messages);
     }
 
     public async Task<DynamicReportingResponse> ExecuteAsync(GetDynamicReportingQuery query, CancellationToken ct)
@@ -49,13 +58,13 @@ internal sealed class DynamicReportingService : IDynamicReportingService
         
         var entry = catalog.FirstOrDefault(c => c.ReportName == query.ReportName);
         if (entry is null)
-            return Fail(query.ReportName, $"Unknown reportName '{query.ReportName}'");
+            return Fail(query.ReportName, _localizer.Get("Reporting.Dynamic.UnknownReportName", query.ReportName!));
 
         var contracts = ParseContracts(entry);
         
-        var filterErrors = DynamicReportingValidator.Validate(contracts.Request!, query.Filters);
+        var filterErrors = _validator.Validate(contracts.Request!, query.Filters);
         if (filterErrors.Count > 0)
-            return Fail(query.ReportName, "Invalid filters", filterErrors);
+            return Fail(query.ReportName, _localizer.Get("Reporting.Dynamic.InvalidFilters"), filterErrors);
 
         var response = new DynamicReportingResponse
         {

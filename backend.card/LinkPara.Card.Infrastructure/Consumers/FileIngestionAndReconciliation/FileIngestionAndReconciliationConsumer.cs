@@ -3,8 +3,8 @@ using LinkPara.Card.Application.Features.Reconciliation.Commands.Evaluate;
 using LinkPara.Card.Application.Features.Reconciliation.Commands.Execute;
 using LinkPara.Card.Application.Commons.Extensions;
 using LinkPara.Card.Application.Commons.Helpers;
+using LinkPara.Card.Application.Commons.Models.AppConfiguration;
 using LinkPara.Card.Application.Commons.Models.FileIngestion.Contracts.Responses;
-using LinkPara.Card.Application.Commons.Models.Reconciliation.Configuration;
 using LinkPara.Card.Application.Commons.Models.Reconciliation.Contracts.Requests;
 using LinkPara.Card.Application.Commons.Models.Reconciliation.Contracts.Responses;
 using Microsoft.Extensions.Localization;
@@ -27,7 +27,7 @@ public class FileIngestionAndReconciliationConsumer : IConsumer<FileIngestionAnd
     public FileIngestionAndReconciliationConsumer(
         ISender mediator,
         IAuditStampService auditStampService,
-        IOptions<ReconciliationOptions> reconciliationOptions,
+        IOptions<CardConfigOptions> cardConfigOptions,
         ILogger<FileIngestionAndReconciliationConsumer> logger,
         Func<LinkPara.Card.Application.Commons.Localization.LocalizerResource, IStringLocalizer> localizerFactory)
     {
@@ -35,7 +35,7 @@ public class FileIngestionAndReconciliationConsumer : IConsumer<FileIngestionAnd
         _auditStampService = auditStampService;
         _localizer = localizerFactory(LinkPara.Card.Application.Commons.Localization.LocalizerResource.Messages);
         _logger = logger;
-        _respondToContext = reconciliationOptions.Value.Consumer.RespondToContext.Value;
+        _respondToContext = cardConfigOptions.Value.Endpoints.Reconciliation.Evaluate.Consumer.RespondToContext.Value;
     }
 
     public async Task Consume(ConsumeContext<FileIngestionAndReconciliationJobRequest> context)

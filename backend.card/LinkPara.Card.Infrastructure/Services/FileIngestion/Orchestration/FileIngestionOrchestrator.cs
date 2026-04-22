@@ -17,14 +17,18 @@ using Microsoft.Extensions.Options;
 using Npgsql;
 using NpgsqlTypes;
 using System.Buffers;
+using System.Collections.Concurrent;
 using System.Data;
 using System.Globalization;
+using System.Linq.Expressions;
+using System.Reflection;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using LinkPara.Card.Application.Commons.Extensions;
 using LinkPara.Card.Application.Commons.Helpers;
+using LinkPara.Card.Application.Commons.Models.AppConfiguration;
 using LinkPara.Card.Application.Commons.Models.FileIngestion.Configuration;
 using LinkPara.Card.Application.Commons.Models.FileIngestion.Contracts.Requests;
 using LinkPara.Card.Application.Commons.Models.FileIngestion.Contracts.Responses;
@@ -39,13 +43,28 @@ namespace LinkPara.Card.Infrastructure.Services.FileIngestion.Orchestration;
 public class FileIngestionOrchestrator : IFileIngestionService
 {
     private const int QueryBatchSize = 10_000;
+    private const int BulkCopyInternalBatchSize = 10_000;
+    private const int BulkCopyTimeoutSeconds = 600;
+    private const int MaxRetryErrorsPerAttempt = 1000;
+    private static readonly ConcurrentDictionary<string, Regex> _profileRegexCache = new();
+    private static readonly ConcurrentDictionary<(Type EntityType, string PropertyName), Func<object, object?>>
+        _propertyGetterCache = new();
+    private static readonly ConcurrentDictionary<Type, Func<object, string>> _enumToStringCache = new();
+    private static readonly JsonSerializerOptions _parsedContentJsonOptions = new();
+    private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<ProfileOptions, Regex>
+        _profileRegexByInstance = new();
+    private static readonly ConcurrentDictionary<Type, IReadOnlyList<IProperty>> _ingestionBulkPropertyCache = new();
+    private static (string Schema, string LineTable, string FileTable)? _cachedLineTableNames;
+    private static (Dictionary<string, string> LineCols, Dictionary<string, string> FileCols)? _cachedColumnNames;
+    private static readonly object _modelCacheLock = new();
+
     private readonly CardDbContext _dbContext;
     private readonly IAuditStampService _auditStampService;
     private readonly IFileTransferClientResolver _fileTransferClientResolver;
     private readonly IFixedWidthRecordParser _fixedWidthRecordParser;
     private readonly IParsedRecordModelMapper _parsedRecordModelMapper;
     private readonly IIngestionDetailEntityMapper _detailEntityMapper;
-    private readonly FileIngestionOptions _options;
+    private readonly CardConfigOptions.IngestEndpoint _options;
     private readonly IServiceScopeFactory _serviceScopeFactory;
     private readonly IIngestionErrorMapper _ingestionErrorMapper;
     private readonly ILogger<FileIngestionOrchestrator> _logger;
@@ -59,7 +78,7 @@ public class FileIngestionOrchestrator : IFileIngestionService
         IFixedWidthRecordParser fixedWidthRecordParser,
         IParsedRecordModelMapper parsedRecordModelMapper,
         IIngestionDetailEntityMapper detailEntityMapper,
-        IOptions<FileIngestionOptions> options,
+        IOptions<CardConfigOptions> options,
         IServiceScopeFactory serviceScopeFactory,
         IIngestionErrorMapper ingestionErrorMapper,
         ILogger<FileIngestionOrchestrator> logger,
@@ -72,7 +91,7 @@ public class FileIngestionOrchestrator : IFileIngestionService
         _fixedWidthRecordParser = fixedWidthRecordParser;
         _parsedRecordModelMapper = parsedRecordModelMapper;
         _detailEntityMapper = detailEntityMapper;
-        _options = options.Value;
+        _options = options.Value.Endpoints.FileIngestion.Ingest;
         _serviceScopeFactory = serviceScopeFactory;
         _ingestionErrorMapper = ingestionErrorMapper;
         _logger = logger;
@@ -118,7 +137,8 @@ public class FileIngestionOrchestrator : IFileIngestionService
                 var error = _ingestionErrorMapper.MapException(ex, "CONFIGURATION", fileName: request.FilePath);
                 error.Step = "CONFIGURATION";
                 globalErrors.Add(error);
-                return new List<FileIngestionResponse> { CreateErrorResponse(request.FilePath ?? "unknown", globalErrors) };
+                return new List<FileIngestionResponse>
+                    { CreateErrorResponse(request.FilePath ?? "unknown", globalErrors) };
             }
 
             IReadOnlyCollection<FileReference> files;
@@ -131,7 +151,8 @@ public class FileIngestionOrchestrator : IFileIngestionService
                 var error = _ingestionErrorMapper.MapIOError(ex, request.FilePath ?? "unknown");
                 error.Step = "FILE_RESOLUTION";
                 globalErrors.Add(error);
-                return new List<FileIngestionResponse> { CreateErrorResponse(error.FileName ?? request.FilePath ?? "unknown", globalErrors) };
+                return new List<FileIngestionResponse>
+                    { CreateErrorResponse(error.FileName ?? request.FilePath ?? "unknown", globalErrors) };
             }
 
             if (files.Count == 0)
@@ -140,13 +161,15 @@ public class FileIngestionOrchestrator : IFileIngestionService
                 {
                     Code = "FILE_NOT_FOUND",
                     Message = _localizer.Get("FileIngestion.NoFileMatchedProfile", profileKey),
-                    Detail = $"Profile: {profileKey}, FileSourceType: {request.FileSourceType}, FilePath: {request.FilePath}",
+                    Detail =
+                        $"Profile: {profileKey}, FileSourceType: {request.FileSourceType}, FilePath: {request.FilePath}",
                     Step = "FILE_RESOLUTION",
                     FileName = request.FilePath ?? "unknown",
                     Severity = "Error"
                 };
                 globalErrors.Add(error);
-                return new List<FileIngestionResponse> { CreateErrorResponse(request.FilePath ?? "unknown", globalErrors) };
+                return new List<FileIngestionResponse>
+                    { CreateErrorResponse(request.FilePath ?? "unknown", globalErrors) };
             }
 
             var fileList = files.ToList();
@@ -174,7 +197,9 @@ public class FileIngestionOrchestrator : IFileIngestionService
                             try
                             {
                                 using var scope = _serviceScopeFactory.CreateScope();
-                                var scopedOrchestrator = (FileIngestionOrchestrator)scope.ServiceProvider.GetRequiredService<IFileIngestionService>();
+                                var scopedOrchestrator =
+                                    (FileIngestionOrchestrator)scope.ServiceProvider
+                                        .GetRequiredService<IFileIngestionService>();
 
                                 fileEntity = await scopedOrchestrator.ImportSingleFileAsync(
                                     file,
@@ -328,12 +353,14 @@ public class FileIngestionOrchestrator : IFileIngestionService
                 Severity = "Warning"
             };
 
-            return new List<FileIngestionResponse> { CreateErrorResponse(request?.FilePath ?? "unknown", new List<IngestionErrorDetail> { error }) };
+            return new List<FileIngestionResponse>
+                { CreateErrorResponse(request?.FilePath ?? "unknown", new List<IngestionErrorDetail> { error }) };
         }
         catch (Exception ex)
         {
             var error = _ingestionErrorMapper.MapException(ex, "INGESTION", fileName: request?.FilePath);
-            return new List<FileIngestionResponse> { CreateErrorResponse(request?.FilePath ?? "unknown", new List<IngestionErrorDetail> { error }) };
+            return new List<FileIngestionResponse>
+                { CreateErrorResponse(request?.FilePath ?? "unknown", new List<IngestionErrorDetail> { error }) };
         }
     }
 
@@ -367,7 +394,8 @@ public class FileIngestionOrchestrator : IFileIngestionService
         {
             var error = _ingestionErrorMapper.MapException(ex, "BOUNDARY_READ", fileName: file.Name);
             error.Code = ResolveBoundaryReadErrorCode(ex);
-            error.Detail = _localizer.Get("FileIngestion.Detail.BoundaryReadFailed", ExceptionDetailHelper.BuildDetailMessage(ex));
+            error.Detail = _localizer.Get("FileIngestion.Detail.BoundaryReadFailed",
+                ExceptionDetailHelper.BuildDetailMessage(ex));
             errors.Add(error);
             throw;
         }
@@ -391,10 +419,10 @@ public class FileIngestionOrchestrator : IFileIngestionService
             existing = await _dbContext.IngestionFiles
                 .AsNoTracking()
                 .FirstOrDefaultAsync(x =>
-                    x.FileKey == fileKey &&
-                    x.FileName == file.Name &&
-                    x.SourceType == sourceType &&
-                    x.FileType == fileType,
+                        x.FileKey == fileKey &&
+                        x.FileName == file.Name &&
+                        x.SourceType == sourceType &&
+                        x.FileType == fileType,
                     cancellationToken);
         }
         catch (Exception ex)
@@ -445,7 +473,8 @@ public class FileIngestionOrchestrator : IFileIngestionService
 
             try
             {
-                await UpdateFileMessageAsync(existing.Id, _localizer.Get("FileIngestion.DuplicateFileReceived"), cancellationToken);
+                await UpdateFileMessageAsync(existing.Id, _localizer.Get("FileIngestion.DuplicateFileReceived"),
+                    cancellationToken);
             }
             catch (Exception ex)
             {
@@ -515,7 +544,7 @@ public class FileIngestionOrchestrator : IFileIngestionService
 
         try
         {
-            await _dbContext.IngestionFiles.AddAsync(transactionFile, cancellationToken);
+            _dbContext.IngestionFiles.Add(transactionFile);
             await _dbContext.SaveChangesAsync(cancellationToken);
         }
         catch (DbUpdateException ex) when (IsUniqueConstraintViolation(ex))
@@ -623,13 +652,15 @@ public class FileIngestionOrchestrator : IFileIngestionService
                     cancellationToken);
 
                 if (batch.Count > 0)
-                    await PersistBatchAsync(transactionFileId, batch, progress, cancellationToken);
+                    await PersistBatchAsync(transactionFileId, batch, progress, cancellationToken,
+                        forceCheckpoint: true);
             }
         }
         catch (Exception ex)
         {
             var error = _ingestionErrorMapper.MapException(ex, "FILE_PROCESSING", fileName: file.Name);
-            error.Detail = _localizer.Get("FileIngestion.Detail.FileProcessingError", progress.LastProcessedLineNumber, ExceptionDetailHelper.BuildDetailMessage(ex));
+            error.Detail = _localizer.Get("FileIngestion.Detail.FileProcessingError", progress.LastProcessedLineNumber,
+                ExceptionDetailHelper.BuildDetailMessage(ex));
             if (progress.LastProcessedLineNumber > 0)
                 error.LineNumber = progress.LastProcessedLineNumber;
             errors.Add(error);
@@ -804,7 +835,8 @@ public class FileIngestionOrchestrator : IFileIngestionService
         {
             try
             {
-                file = await RetryArchiveOnlyAsync(transactionFileId, sourceFile, sourceTransferClient, errors, cancellationToken);
+                file = await RetryArchiveOnlyAsync(transactionFileId, sourceFile, sourceTransferClient, errors,
+                    cancellationToken);
             }
             catch (Exception ex)
             {
@@ -921,12 +953,13 @@ public class FileIngestionOrchestrator : IFileIngestionService
                 file.LastProcessedByteOffset);
 
             if (batch.Count > 0)
-                await PersistBatchAsync(file.Id, batch, progress, cancellationToken);
+                await PersistBatchAsync(file.Id, batch, progress, cancellationToken, forceCheckpoint: true);
         }
         catch (Exception ex)
         {
             var error = _ingestionErrorMapper.MapException(ex, "RECOVERY_MISSING_ROWS", fileName: sourceFile.Name);
-            error.Detail = _localizer.Get("FileIngestion.Detail.RecoveryMissingRowsProcessingError", progress.LastProcessedLineNumber, ExceptionDetailHelper.BuildDetailMessage(ex));
+            error.Detail = _localizer.Get("FileIngestion.Detail.RecoveryMissingRowsProcessingError",
+                progress.LastProcessedLineNumber, ExceptionDetailHelper.BuildDetailMessage(ex));
             if (progress.LastProcessedLineNumber > 0)
                 error.LineNumber = progress.LastProcessedLineNumber;
             errors.Add(error);
@@ -946,90 +979,173 @@ public class FileIngestionOrchestrator : IFileIngestionService
     {
         try
         {
-            while (true)
+            Stream? sharedStream = null;
+            try
             {
-                var failedRows = await _dbContext.IngestionFileLines
-                    .AsTracking()
+                sharedStream = await sourceTransferClient.OpenReadAsync(sourceFile, cancellationToken);
+                if (!sharedStream.CanSeek)
+                {
+                    await sharedStream.DisposeAsync();
+                    sharedStream = null;
+                }
+            }
+            catch
+            {
+                sharedStream = null;
+            }
+
+            var encoding = ResolveEncoding(profile.DefaultEncoding);
+
+            try
+            {
+                while (true)
+                {
+                    var failedRows = await _dbContext.IngestionFileLines
+                        .AsTracking()
+                        .Where(x => x.FileId == transactionFileId && x.Status == FileRowStatus.Failed)
+                        .Where(x => x.RetryCount < GetFailedRowMaxRetryCount())
+                        .OrderBy(x => x.LineNumber)
+                        .Take(GetRetryBatchSize())
+                        .ToListAsync(cancellationToken);
+
+                    if (failedRows.Count == 0)
+                        break;
+
+                    foreach (var row in failedRows)
+                    {
+                        try
+                        {
+                            if (row.ReconciliationStatus == ReconciliationStatus.Success)
+                                continue;
+
+                            string rawLine;
+                            if (sharedStream is not null)
+                            {
+                                try
+                                {
+                                    rawLine = await ReadRangeFromStreamAsync(
+                                        sharedStream, row.ByteOffset, row.ByteLength, encoding, cancellationToken);
+                                }
+                                catch
+                                {
+                                    try
+                                    {
+                                        await sharedStream.DisposeAsync();
+                                    }
+                                    catch
+                                    {
+                                        /* ignore */
+                                    }
+
+                                    sharedStream = null;
+                                    rawLine = await sourceTransferClient.ReadRangeAsync(
+                                        sourceFile, row.ByteOffset, row.ByteLength, encoding, cancellationToken);
+                                }
+                            }
+                            else
+                            {
+                                rawLine = await sourceTransferClient.ReadRangeAsync(
+                                    sourceFile, row.ByteOffset, row.ByteLength, encoding, cancellationToken);
+                            }
+
+                            var parsed = _fixedWidthRecordParser.Parse(rawLine, parsingRule);
+                            parsed.ParsedDataModel = _parsedRecordModelMapper.Create(profileKey, parsed);
+
+                            row.RawContent = rawLine;
+                            row.LineType = parsed.RecordType;
+                            row.ParsedContent =
+                                JsonSerializer.Serialize(parsed.ParsedDataModel, _parsedContentJsonOptions);
+                            row.Status = FileRowStatus.Success;
+                            row.RetryCount += 1;
+                            row.Message = _localizer.Get("FileIngestion.ReprocessedSuccessfully");
+                            ApplyCorrelation(row, profileKey, GetFileTypeFromProfileKey(profileKey),
+                                parsed.ParsedDataModel);
+                            _detailEntityMapper.AttachTypedDetail(row, profileKey, parsed.ParsedDataModel);
+                        }
+                        catch (Exception ex)
+                        {
+                            var exceptionDetail = ExceptionDetailHelper.BuildDetailMessage(ex, 2000);
+                            if (errors.Count < MaxRetryErrorsPerAttempt)
+                            {
+                                var error = _ingestionErrorMapper.MapException(ex, "ROW_RETRY",
+                                    fileName: sourceFile.Name);
+                                error.LineNumber = row.LineNumber;
+                                error.Detail = _localizer.Get("FileIngestion.Detail.RowRetryFailed", row.LineNumber,
+                                    exceptionDetail);
+                                errors.Add(error);
+                            }
+
+                            row.Status = FileRowStatus.Failed;
+                            row.Message = exceptionDetail;
+                            row.RetryCount += 1;
+                            if (row.ReconciliationStatus != ReconciliationStatus.Success)
+                                row.ReconciliationStatus = ReconciliationStatus.Failed;
+                        }
+                    }
+
+                    _auditStampService.StampForUpdate(failedRows.Cast<AuditEntity>());
+                    StampTypedDetails(failedRows);
+                    await _dbContext.SaveChangesAsync(cancellationToken);
+                    _dbContext.ChangeTracker.Clear();
+                }
+                
+                const int maxExhaustedToReport = 10_000;
+                var exhaustedRows = await _dbContext.IngestionFileLines
+                    .AsNoTracking()
                     .Where(x => x.FileId == transactionFileId && x.Status == FileRowStatus.Failed)
-                    .Where(x => x.RetryCount < GetFailedRowMaxRetryCount())
+                    .Where(x => x.RetryCount >= GetFailedRowMaxRetryCount())
                     .OrderBy(x => x.LineNumber)
-                    .Take(GetRetryBatchSize())
+                    .Take(maxExhaustedToReport + 1)
+                    .Select(x => new { x.LineNumber, x.Message })
                     .ToListAsync(cancellationToken);
 
-                if (failedRows.Count == 0)
-                    break;
+                var truncated = exhaustedRows.Count > maxExhaustedToReport;
+                var reportLimit = truncated ? maxExhaustedToReport : exhaustedRows.Count;
 
-                foreach (var row in failedRows)
+                for (var er = 0; er < reportLimit; er++)
+                {
+                    var exhaustedRow = exhaustedRows[er];
+                    errors.Add(new IngestionErrorDetail
+                    {
+                        Code = "ROW_RETRY_LIMIT",
+                        Message = _localizer.Get("FileIngestion.RowRetryLimitExceeded", exhaustedRow.LineNumber),
+                        Detail = exhaustedRow.Message,
+                        Step = "ROW_RETRY",
+                        LineNumber = exhaustedRow.LineNumber,
+                        FileName = sourceFile.Name,
+                        Severity = "Error"
+                    });
+                }
+
+                if (truncated)
+                {
+                    errors.Add(new IngestionErrorDetail
+                    {
+                        Code = "ROW_RETRY_LIMIT_TRUNCATED",
+                        Message = _localizer.Get("FileIngestion.RowRetryLimitExceeded", $">{maxExhaustedToReport}"),
+                        Detail = _localizer.Get("FileIngestion.RowRetryLimitTruncatedDetail", maxExhaustedToReport),
+                        Step = "ROW_RETRY",
+                        FileName = sourceFile.Name,
+                        Severity = "Warning"
+                    });
+                }
+
+                await FinalizeFileStateAsync(transactionFileId, null, cancellationToken);
+            }
+            finally
+            {
+                if (sharedStream is not null)
                 {
                     try
                     {
-                        if (row.ReconciliationStatus == ReconciliationStatus.Success)
-                            continue;
-
-                        var rawLine = await sourceTransferClient.ReadRangeAsync(
-                            sourceFile,
-                            row.ByteOffset,
-                            row.ByteLength,
-                            ResolveEncoding(profile.DefaultEncoding),
-                            cancellationToken);
-
-                        var parsed = _fixedWidthRecordParser.Parse(rawLine, parsingRule);
-                        parsed.ParsedDataModel = _parsedRecordModelMapper.Create(profileKey, parsed);
-
-                        row.RawContent = rawLine;
-                        row.LineType = parsed.RecordType;
-                        row.ParsedContent = JsonSerializer.Serialize(parsed.ParsedDataModel);
-                        row.Status = FileRowStatus.Success;
-                        row.RetryCount += 1;
-                        row.Message = _localizer.Get("FileIngestion.ReprocessedSuccessfully");
-                        ApplyCorrelation(row, profileKey, GetFileTypeFromProfileKey(profileKey), parsed.ParsedDataModel);
-                        _detailEntityMapper.AttachTypedDetail(row, profileKey, parsed.ParsedDataModel);
+                        await sharedStream.DisposeAsync();
                     }
-                    catch (Exception ex)
+                    catch
                     {
-                        var exceptionDetail = ExceptionDetailHelper.BuildDetailMessage(ex, 2000);
-                        var error = _ingestionErrorMapper.MapException(ex, "ROW_RETRY", fileName: sourceFile.Name);
-                        error.LineNumber = row.LineNumber;
-                        error.Detail = _localizer.Get("FileIngestion.Detail.RowRetryFailed", row.LineNumber, exceptionDetail);
-                        errors.Add(error);
-                        
-                        row.Status = FileRowStatus.Failed;
-                        row.Message = exceptionDetail;
-                        row.RetryCount += 1;
-                        if (row.ReconciliationStatus != ReconciliationStatus.Success)
-                            row.ReconciliationStatus = ReconciliationStatus.Failed;
+                        /* ignore */
                     }
                 }
-
-                _auditStampService.StampForUpdate(failedRows.Cast<AuditEntity>());
-                StampTypedDetails(failedRows);
-                await _dbContext.SaveChangesAsync(cancellationToken);
-                _dbContext.ChangeTracker.Clear();
             }
-
-            var exhaustedRows = await _dbContext.IngestionFileLines
-                .AsNoTracking()
-                .Where(x => x.FileId == transactionFileId && x.Status == FileRowStatus.Failed)
-                .Where(x => x.RetryCount >= GetFailedRowMaxRetryCount())
-                .OrderBy(x => x.LineNumber)
-                .Select(x => new { x.LineNumber, x.Message })
-                .ToListAsync(cancellationToken);
-
-            foreach (var exhaustedRow in exhaustedRows)
-            {
-                errors.Add(new IngestionErrorDetail
-                {
-                    Code = "ROW_RETRY_LIMIT",
-                    Message = _localizer.Get("FileIngestion.RowRetryLimitExceeded", exhaustedRow.LineNumber),
-                    Detail = exhaustedRow.Message,
-                    Step = "ROW_RETRY",
-                    LineNumber = exhaustedRow.LineNumber,
-                    FileName = sourceFile.Name,
-                    Severity = "Error"
-                });
-            }
-
-            await FinalizeFileStateAsync(transactionFileId, null, cancellationToken);
         }
         catch (Exception ex)
         {
@@ -1037,6 +1153,32 @@ public class FileIngestionOrchestrator : IFileIngestionService
             error.Detail = _localizer.Get("FileIngestion.Detail.FailedRowBatchRetryFailed");
             errors.Add(error);
             throw;
+        }
+    }
+
+    private static async Task<string> ReadRangeFromStreamAsync(
+        Stream stream, long byteOffset, int byteLength, Encoding encoding, CancellationToken cancellationToken)
+    {
+        if (stream.Position != byteOffset)
+            stream.Seek(byteOffset, SeekOrigin.Begin);
+
+        var buffer = ArrayPool<byte>.Shared.Rent(byteLength);
+        try
+        {
+            var totalRead = 0;
+            while (totalRead < byteLength)
+            {
+                var read = await stream.ReadAsync(buffer.AsMemory(totalRead, byteLength - totalRead),
+                    cancellationToken);
+                if (read == 0) break;
+                totalRead += read;
+            }
+
+            return encoding.GetString(buffer, 0, totalRead);
+        }
+        finally
+        {
+            ArrayPool<byte>.Shared.Return(buffer);
         }
     }
 
@@ -1144,7 +1286,8 @@ public class FileIngestionOrchestrator : IFileIngestionService
                     if (affectedRows != 1)
                     {
                         throw new FileIngestionArchiveStatusUpdateRowMismatchException(
-                            _localizer.Get("FileIngestion.ArchiveStatusUpdateRowMismatch", affectedRows, transactionFileId));
+                            _localizer.Get("FileIngestion.ArchiveStatusUpdateRowMismatch", affectedRows,
+                                transactionFileId));
                     }
 
                     _dbContext.ChangeTracker.Clear();
@@ -1262,7 +1405,8 @@ public class FileIngestionOrchestrator : IFileIngestionService
         Guid transactionFileId,
         List<IngestionFileLineEntity> batch,
         ProcessingProgress progress,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        bool forceCheckpoint = false)
     {
         var strategy = _dbContext.Database.CreateExecutionStrategy();
 
@@ -1271,17 +1415,23 @@ public class FileIngestionOrchestrator : IFileIngestionService
             await using var transaction = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
 
             await PersistIngestionFileLineBatchAsync(batch, cancellationToken);
-
-            var auditStamp = _auditStampService.CreateStamp();
-            await _dbContext.IngestionFiles
-                .Where(x => x.Id == transactionFileId)
-                .ExecuteUpdateAsync(
-                    setters => setters
-                        .SetProperty(x => x.LastProcessedLineNumber, progress.LastProcessedLineNumber)
-                        .SetProperty(x => x.LastProcessedByteOffset, progress.LastProcessedByteOffset)
-                        .SetProperty(x => x.UpdateDate, auditStamp.Timestamp)
-                        .SetProperty(x => x.LastModifiedBy, auditStamp.UserId),
-                    cancellationToken);
+            
+            progress.BatchSequence++;
+            var checkpointEvery = _options.Processing.CheckpointEveryNBatches ??
+                                  ProcessingOptions.DefaultCheckpointEveryNBatches;
+            if (forceCheckpoint || (progress.BatchSequence % checkpointEvery) == 0)
+            {
+                var auditStamp = _auditStampService.CreateStamp();
+                await _dbContext.IngestionFiles
+                    .Where(x => x.Id == transactionFileId)
+                    .ExecuteUpdateAsync(
+                        setters => setters
+                            .SetProperty(x => x.LastProcessedLineNumber, progress.LastProcessedLineNumber)
+                            .SetProperty(x => x.LastProcessedByteOffset, progress.LastProcessedByteOffset)
+                            .SetProperty(x => x.UpdateDate, auditStamp.Timestamp)
+                            .SetProperty(x => x.LastModifiedBy, auditStamp.UserId),
+                        cancellationToken);
+            }
 
             await transaction.CommitAsync(cancellationToken);
         });
@@ -1327,37 +1477,289 @@ public class FileIngestionOrchestrator : IFileIngestionService
         await _dbContext.IngestionFileLines.AddRangeAsync(rows, cancellationToken);
         await _dbContext.SaveChangesAsync(cancellationToken);
     }
-    
+
     private async Task PersistTypedDetailEntitiesAsync(
         IReadOnlyList<IngestionFileLineEntity> rows,
         CancellationToken cancellationToken)
     {
-        var details = new List<AuditEntity>();
+        var detailsByType = new Dictionary<Type, List<AuditEntity>>();
         foreach (var row in rows)
         {
             var detail = ExtractTypedDetail(row);
             if (detail is null) continue;
             ((IIngestionTypedDetail)detail).FileLineId = row.Id;
-            details.Add(detail);
+
+            var t = detail.GetType();
+            if (!detailsByType.TryGetValue(t, out var list))
+            {
+                list = new List<AuditEntity>();
+                detailsByType[t] = list;
+            }
+
+            list.Add(detail);
         }
 
-        if (details.Count == 0)
+        if (detailsByType.Count == 0)
             return;
+        
+        var providerName = _dbContext.Database.ProviderName ?? string.Empty;
+        var isPostgres = providerName.Contains("Npgsql", StringComparison.OrdinalIgnoreCase);
+        var isSqlServer = providerName.Contains("SqlServer", StringComparison.OrdinalIgnoreCase);
+        var bulkEnabled = _options.Processing.UseBulkInsert == true;
 
-        _auditStampService.StampForCreate(details);
-        _dbContext.AddRange(details);
-        await _dbContext.SaveChangesAsync(cancellationToken);
+        foreach (var kvp in detailsByType)
+        {
+            var typedDetails = kvp.Value;
+            _auditStampService.StampForCreate(typedDetails);
+
+            if (!bulkEnabled || (!isPostgres && !isSqlServer))
+            {
+                const int fallbackChunk = 1000;
+                for (var off = 0; off < typedDetails.Count; off += fallbackChunk)
+                {
+                    var len = Math.Min(fallbackChunk, typedDetails.Count - off);
+                    _dbContext.AddRange(typedDetails.GetRange(off, len));
+                    await _dbContext.SaveChangesAsync(cancellationToken);
+                    _dbContext.ChangeTracker.Clear();
+                }
+
+                continue;
+            }
+
+            if (isSqlServer)
+                await BulkInsertGenericSqlServerAsync(kvp.Key, typedDetails, cancellationToken);
+            else
+                await BulkInsertGenericPostgresAsync(kvp.Key, typedDetails, cancellationToken);
+        }
     }
     
+    private static readonly ConcurrentDictionary<Type, IReadOnlyList<IProperty>> _genericBulkPropertyCache = new();
+
+    private static IReadOnlyList<IProperty> GetGenericBulkProperties(IEntityType entityType,
+        StoreObjectIdentifier storeObject)
+    {
+        return _genericBulkPropertyCache.GetOrAdd(entityType.ClrType, _ => entityType.GetProperties()
+            .Where(p => !p.IsShadowProperty() && p.GetColumnName(storeObject) is not null)
+            .ToArray());
+    }
+
+    private async Task BulkInsertGenericSqlServerAsync(
+        Type entityClrType,
+        IReadOnlyList<AuditEntity> rows,
+        CancellationToken cancellationToken)
+    {
+        var entityType = _dbContext.Model.FindEntityType(entityClrType)
+                         ?? throw new FileIngestionEntityTypeNotMappedException(
+                             _localizer.Get("FileIngestion.EntityTypeNotMapped"));
+        var storeObject = StoreObjectIdentifier.Table(entityType.GetTableName()!, entityType.GetSchema());
+        var properties = GetGenericBulkProperties(entityType, storeObject);
+
+        var connection = (SqlConnection)_dbContext.Database.GetDbConnection();
+        if (connection.State != ConnectionState.Open)
+            await connection.OpenAsync(cancellationToken);
+        var transaction = (SqlTransaction?)_dbContext.Database.CurrentTransaction?.GetDbTransaction();
+
+        var destinationTableName = string.IsNullOrWhiteSpace(entityType.GetSchema())
+            ? $"[{entityType.GetTableName()}]"
+            : $"[{entityType.GetSchema()}].[{entityType.GetTableName()}]";
+        
+        using var bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.Default, transaction)
+        {
+            DestinationTableName = destinationTableName,
+            BatchSize = Math.Min(rows.Count, BulkCopyInternalBatchSize),
+            BulkCopyTimeout = BulkCopyTimeoutSeconds,
+            EnableStreaming = true
+        };
+        for (var i = 0; i < properties.Count; i++)
+            bulkCopy.ColumnMappings.Add(i, properties[i].GetColumnName(storeObject)!);
+
+        using var reader = new GenericPropertyDataReader(rows, properties);
+        await bulkCopy.WriteToServerAsync(reader, cancellationToken);
+    }
+
+    private async Task BulkInsertGenericPostgresAsync(
+        Type entityClrType,
+        IReadOnlyList<AuditEntity> rows,
+        CancellationToken cancellationToken)
+    {
+        var entityType = _dbContext.Model.FindEntityType(entityClrType)
+                         ?? throw new FileIngestionEntityTypeNotMappedException(
+                             _localizer.Get("FileIngestion.EntityTypeNotMapped"));
+        var storeObject = StoreObjectIdentifier.Table(entityType.GetTableName()!, entityType.GetSchema());
+        var properties = GetGenericBulkProperties(entityType, storeObject);
+
+        var connection = (NpgsqlConnection)_dbContext.Database.GetDbConnection();
+        if (connection.State != ConnectionState.Open)
+            await connection.OpenAsync(cancellationToken);
+
+        var schema = string.IsNullOrWhiteSpace(entityType.GetSchema())
+            ? string.Empty
+            : $"\"{entityType.GetSchema()}\".";
+        var table = $"\"{entityType.GetTableName()}\"";
+        var columnNames = string.Join(", ", properties.Select(p => $"\"{p.GetColumnName(storeObject)}\""));
+        var copyCommand = $"COPY {schema}{table} ({columnNames}) FROM STDIN (FORMAT BINARY)";
+
+        await using var importer = await connection.BeginBinaryImportAsync(copyCommand, cancellationToken);
+        foreach (var row in rows)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            importer.StartRow();
+            foreach (var property in properties)
+            {
+                var value = GetDatabaseValue(property, row);
+                if (value is null)
+                {
+                    importer.WriteNull();
+                    continue;
+                }
+
+                WriteNpgsqlValue(importer, value, property.ClrType);
+            }
+        }
+
+        await importer.CompleteAsync(cancellationToken);
+    }
+    
+    private sealed class GenericPropertyDataReader : IDataReader
+    {
+        private readonly IReadOnlyList<AuditEntity> _rows;
+        private readonly IReadOnlyList<IProperty> _properties;
+        private readonly Func<object, object?>[] _getters;
+        private readonly bool[] _isEnum;
+        private readonly Type[] _fieldTypes;
+        private readonly object?[] _currentValues;
+        private int _index = -1;
+
+        public GenericPropertyDataReader(IReadOnlyList<AuditEntity> rows, IReadOnlyList<IProperty> properties)
+        {
+            _rows = rows;
+            _properties = properties;
+            var count = properties.Count;
+            _getters = new Func<object, object?>[count];
+            _isEnum = new bool[count];
+            _fieldTypes = new Type[count];
+            _currentValues = new object?[count];
+            
+            var entityClr = rows.Count > 0 ? rows[0].GetType() : typeof(AuditEntity);
+            for (var i = 0; i < count; i++)
+            {
+                var p = properties[i];
+                var clr = Nullable.GetUnderlyingType(p.ClrType) ?? p.ClrType;
+                _isEnum[i] = clr.IsEnum;
+                _fieldTypes[i] = clr.IsEnum ? typeof(string) : clr;
+                _getters[i] = BuildGetter(entityClr, p.PropertyInfo!.Name);
+            }
+        }
+
+        public int FieldCount => _properties.Count;
+
+        public bool Read()
+        {
+            _index++;
+            if (_index >= _rows.Count) return false;
+            var row = _rows[_index];
+            for (var i = 0; i < _getters.Length; i++)
+            {
+                var raw = _getters[i](row);
+                if (raw is null)
+                {
+                    _currentValues[i] = null;
+                    continue;
+                }
+
+                if (_isEnum[i])
+                {
+                    var serializer = _enumToStringCache.GetOrAdd(raw.GetType(), static t =>
+                    {
+                        var p = Expression.Parameter(typeof(object), "v");
+                        var cast = Expression.Convert(p, t);
+                        var toStr = Expression.Call(cast, t.GetMethod(nameof(object.ToString), Type.EmptyTypes)!);
+                        return Expression.Lambda<Func<object, string>>(toStr, p).Compile();
+                    });
+                    _currentValues[i] = serializer(raw);
+                }
+                else
+                {
+                    _currentValues[i] = raw;
+                }
+            }
+
+            return true;
+        }
+
+        public object GetValue(int i) => _currentValues[i] ?? DBNull.Value;
+
+        public int GetValues(object[] values)
+        {
+            var n = Math.Min(values.Length, _properties.Count);
+            for (var i = 0; i < n; i++) values[i] = _currentValues[i] ?? DBNull.Value;
+            return n;
+        }
+
+        public bool IsDBNull(int i) => _currentValues[i] is null;
+        public string GetName(int i) => _properties[i].Name;
+
+        public int GetOrdinal(string name)
+        {
+            for (var i = 0; i < _properties.Count; i++)
+                if (string.Equals(_properties[i].Name, name, StringComparison.Ordinal))
+                    return i;
+            return -1;
+        }
+
+        public Type GetFieldType(int i) => _fieldTypes[i];
+
+        public void Close()
+        {
+        }
+
+        public void Dispose()
+        {
+        }
+
+        public int Depth => 0;
+        public bool IsClosed => false;
+        public int RecordsAffected => -1;
+        public bool NextResult() => false;
+        public DataTable? GetSchemaTable() => null;
+        public string GetDataTypeName(int i) => GetFieldType(i).Name;
+        public bool GetBoolean(int i) => (bool)GetValue(i);
+        public byte GetByte(int i) => (byte)GetValue(i);
+
+        public long GetBytes(int i, long fieldOffset, byte[]? buffer, int bufferoffset, int length) =>
+            throw new NotSupportedException();
+
+        public char GetChar(int i) => (char)GetValue(i);
+
+        public long GetChars(int i, long fieldoffset, char[]? buffer, int bufferoffset, int length) =>
+            throw new NotSupportedException();
+
+        public IDataReader GetData(int i) => throw new NotSupportedException();
+        public DateTime GetDateTime(int i) => (DateTime)GetValue(i);
+        public decimal GetDecimal(int i) => (decimal)GetValue(i);
+        public double GetDouble(int i) => (double)GetValue(i);
+        public float GetFloat(int i) => (float)GetValue(i);
+        public Guid GetGuid(int i) => (Guid)GetValue(i);
+        public short GetInt16(int i) => (short)GetValue(i);
+        public int GetInt32(int i) => (int)GetValue(i);
+        public long GetInt64(int i) => (long)GetValue(i);
+        public string GetString(int i) => (string)GetValue(i);
+        public object this[int i] => GetValue(i);
+        public object this[string name] => GetValue(GetOrdinal(name));
+    }
+
     private void StampTypedDetails(IReadOnlyList<IngestionFileLineEntity> rows)
     {
-        var details = rows
-            .Select(ExtractTypedDetail)
-            .Where(d => d is not null)
-            .Cast<AuditEntity>()
-            .ToList();
+        List<AuditEntity>? details = null;
+        for (var i = 0; i < rows.Count; i++)
+        {
+            var d = ExtractTypedDetail(rows[i]);
+            if (d is null) continue;
+            details ??= new List<AuditEntity>(rows.Count);
+            details.Add(d);
+        }
 
-        if (details.Count > 0)
+        if (details is { Count: > 0 })
             _auditStampService.StampForCreate(details);
     }
 
@@ -1379,31 +1781,13 @@ public class FileIngestionOrchestrator : IFileIngestionService
         try
         {
             var entityType = _dbContext.Model.FindEntityType(typeof(IngestionFileLineEntity))
-                ?? throw new FileIngestionEntityTypeNotMappedException(_localizer.Get("FileIngestion.EntityTypeNotMapped"));
+                             ?? throw new FileIngestionEntityTypeNotMappedException(
+                                 _localizer.Get("FileIngestion.EntityTypeNotMapped"));
 
             var storeObject = StoreObjectIdentifier.Table(entityType.GetTableName()!, entityType.GetSchema());
             var properties = GetBulkProperties(entityType, storeObject);
 
-            var dataTable = new DataTable();
-
-            foreach (var property in properties)
-            {
-                var columnType = Nullable.GetUnderlyingType(property.ClrType) ?? property.ClrType;
-                if (columnType.IsEnum)
-                    columnType = typeof(string);
-
-                dataTable.Columns.Add(property.GetColumnName(storeObject)!, columnType);
-            }
-
             _auditStampService.StampForCreate(rows.Cast<AuditEntity>());
-            foreach (var row in rows)
-            {
-                var values = properties
-                    .Select(property => GetDatabaseValue(property, row) ?? DBNull.Value)
-                    .ToArray();
-
-                dataTable.Rows.Add(values);
-            }
 
             var connection = (SqlConnection)_dbContext.Database.GetDbConnection();
             if (connection.State != ConnectionState.Open)
@@ -1418,17 +1802,19 @@ public class FileIngestionOrchestrator : IFileIngestionService
             using var bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.Default, transaction)
             {
                 DestinationTableName = destinationTableName,
-                BatchSize = rows.Count,
-                BulkCopyTimeout = 600
+                BatchSize = Math.Min(rows.Count, BulkCopyInternalBatchSize),
+                BulkCopyTimeout = BulkCopyTimeoutSeconds,
+                EnableStreaming = true
             };
 
-            foreach (var property in properties)
+            for (var ordinal = 0; ordinal < properties.Count; ordinal++)
             {
-                var columnName = property.GetColumnName(storeObject)!;
-                bulkCopy.ColumnMappings.Add(columnName, columnName);
+                var columnName = properties[ordinal].GetColumnName(storeObject)!;
+                bulkCopy.ColumnMappings.Add(ordinal, columnName);
             }
-
-            await bulkCopy.WriteToServerAsync(dataTable, cancellationToken);
+            
+            using var reader = new BulkPropertyDataReader(rows, properties);
+            await bulkCopy.WriteToServerAsync(reader, cancellationToken);
         }
         catch (Exception ex)
         {
@@ -1436,6 +1822,152 @@ public class FileIngestionOrchestrator : IFileIngestionService
                 _localizer.Get("FileIngestion.SqlBulkInsertFailed", ex.Message),
                 ex);
         }
+    }
+    
+    private sealed class BulkPropertyDataReader : IDataReader
+    {
+        private readonly IReadOnlyList<IngestionFileLineEntity> _rows;
+        private readonly IReadOnlyList<IProperty> _properties;
+        private readonly Func<object, object?>[] _getters;
+        private readonly bool[] _isEnum;
+        private readonly string[] _names;
+        private readonly Type[] _fieldTypes;
+        private readonly object?[] _currentValues;
+        private int _index = -1;
+
+        public BulkPropertyDataReader(
+            IReadOnlyList<IngestionFileLineEntity> rows,
+            IReadOnlyList<IProperty> properties)
+        {
+            _rows = rows;
+            _properties = properties;
+
+            var count = properties.Count;
+            _getters = new Func<object, object?>[count];
+            _isEnum = new bool[count];
+            _names = new string[count];
+            _fieldTypes = new Type[count];
+            _currentValues = new object?[count];
+
+            for (var i = 0; i < count; i++)
+            {
+                var p = properties[i];
+                _names[i] = p.Name;
+                var clr = Nullable.GetUnderlyingType(p.ClrType) ?? p.ClrType;
+                _isEnum[i] = clr.IsEnum;
+                _fieldTypes[i] = clr.IsEnum ? typeof(string) : clr;
+                _getters[i] = BuildGetter(typeof(IngestionFileLineEntity), p.PropertyInfo!.Name);
+            }
+        }
+
+        public int FieldCount => _properties.Count;
+
+        public bool Read()
+        {
+            _index++;
+            if (_index >= _rows.Count) return false;
+            var row = _rows[_index];
+            for (var i = 0; i < _getters.Length; i++)
+            {
+                var raw = _getters[i](row);
+                if (raw is null)
+                {
+                    _currentValues[i] = null;
+                    continue;
+                }
+
+                if (_isEnum[i])
+                {
+                    var serializer = _enumToStringCache.GetOrAdd(raw.GetType(), static t =>
+                    {
+                        var p = Expression.Parameter(typeof(object), "v");
+                        var cast = Expression.Convert(p, t);
+                        var toStr = Expression.Call(cast, t.GetMethod(nameof(object.ToString), Type.EmptyTypes)!);
+                        return Expression.Lambda<Func<object, string>>(toStr, p).Compile();
+                    });
+                    _currentValues[i] = serializer(raw);
+                }
+                else
+                {
+                    _currentValues[i] = raw;
+                }
+            }
+
+            return true;
+        }
+
+        public object GetValue(int i) => _currentValues[i] ?? DBNull.Value;
+
+        public int GetValues(object[] values)
+        {
+            var count = Math.Min(values.Length, _properties.Count);
+            for (var i = 0; i < count; i++)
+                values[i] = _currentValues[i] ?? DBNull.Value;
+            return count;
+        }
+
+        public bool IsDBNull(int i) => _currentValues[i] is null;
+        public string GetName(int i) => _names[i];
+
+        public int GetOrdinal(string name)
+        {
+            for (var i = 0; i < _names.Length; i++)
+                if (string.Equals(_names[i], name, StringComparison.Ordinal))
+                    return i;
+            return -1;
+        }
+
+        public Type GetFieldType(int i) => _fieldTypes[i];
+
+        public void Close()
+        {
+        }
+
+        public void Dispose()
+        {
+        }
+
+        public int Depth => 0;
+        public bool IsClosed => false;
+        public int RecordsAffected => -1;
+        public bool NextResult() => false;
+        public DataTable? GetSchemaTable() => null;
+        public string GetDataTypeName(int i) => GetFieldType(i).Name;
+        public bool GetBoolean(int i) => (bool)GetValue(i);
+        public byte GetByte(int i) => (byte)GetValue(i);
+
+        public long GetBytes(int i, long fieldOffset, byte[]? buffer, int bufferoffset, int length) =>
+            throw new NotSupportedException();
+
+        public char GetChar(int i) => (char)GetValue(i);
+
+        public long GetChars(int i, long fieldoffset, char[]? buffer, int bufferoffset, int length) =>
+            throw new NotSupportedException();
+
+        public IDataReader GetData(int i) => throw new NotSupportedException();
+        public DateTime GetDateTime(int i) => (DateTime)GetValue(i);
+        public decimal GetDecimal(int i) => (decimal)GetValue(i);
+        public double GetDouble(int i) => (double)GetValue(i);
+        public float GetFloat(int i) => (float)GetValue(i);
+        public Guid GetGuid(int i) => (Guid)GetValue(i);
+        public short GetInt16(int i) => (short)GetValue(i);
+        public int GetInt32(int i) => (int)GetValue(i);
+        public long GetInt64(int i) => (long)GetValue(i);
+        public string GetString(int i) => (string)GetValue(i);
+        public object this[int i] => GetValue(i);
+        public object this[string name] => GetValue(GetOrdinal(name));
+    }
+
+    private static Func<object, object?> BuildGetter(Type entityType, string propertyName)
+    {
+        return _propertyGetterCache.GetOrAdd((entityType, propertyName), static k =>
+        {
+            var paramExpr = Expression.Parameter(typeof(object), "instance");
+            var castExpr = Expression.Convert(paramExpr, k.Item1);
+            var propExpr = Expression.Property(castExpr, k.Item2);
+            var boxExpr = Expression.Convert(propExpr, typeof(object));
+            return Expression.Lambda<Func<object, object?>>(boxExpr, paramExpr).Compile();
+        });
     }
 
     private async Task BulkInsertPostgreSqlAsync(
@@ -1445,7 +1977,8 @@ public class FileIngestionOrchestrator : IFileIngestionService
         try
         {
             var entityType = _dbContext.Model.FindEntityType(typeof(IngestionFileLineEntity))
-                ?? throw new FileIngestionEntityTypeNotMappedException(_localizer.Get("FileIngestion.EntityTypeNotMapped"));
+                             ?? throw new FileIngestionEntityTypeNotMappedException(
+                                 _localizer.Get("FileIngestion.EntityTypeNotMapped"));
 
             var storeObject = StoreObjectIdentifier.Table(entityType.GetTableName()!, entityType.GetSchema());
             var properties = GetBulkProperties(entityType, storeObject);
@@ -1459,9 +1992,9 @@ public class FileIngestionOrchestrator : IFileIngestionService
                 await connection.OpenAsync(cancellationToken);
 
             var efTransaction = _dbContext.Database.CurrentTransaction
-                ?? throw new FileIngestionPostgreBulkInsertFailedException(
-                    _localizer.Get("FileIngestion.PostgreBulkInsertFailed",
-                        _localizer.Get("FileIngestion.Detail.NoActiveEfTransactionForCopy")));
+                                ?? throw new FileIngestionPostgreBulkInsertFailedException(
+                                    _localizer.Get("FileIngestion.PostgreBulkInsertFailed",
+                                        _localizer.Get("FileIngestion.Detail.NoActiveEfTransactionForCopy")));
             var npgsqlTransaction = (NpgsqlTransaction)efTransaction.GetDbTransaction();
 
             var schema = string.IsNullOrWhiteSpace(entityType.GetSchema())
@@ -1475,18 +2008,19 @@ public class FileIngestionOrchestrator : IFileIngestionService
             _auditStampService.StampForCreate(rows.Cast<AuditEntity>());
             foreach (var row in rows)
             {
-                await importer.StartRowAsync(cancellationToken);
+                cancellationToken.ThrowIfCancellationRequested();
+                importer.StartRow();
 
                 foreach (var property in properties)
                 {
                     var value = GetDatabaseValue(property, row);
                     if (value is null)
                     {
-                        await importer.WriteNullAsync(cancellationToken);
+                        importer.WriteNull();
                         continue;
                     }
 
-                    await WriteNpgsqlValueAsync(importer, value, property.ClrType, cancellationToken);
+                    WriteNpgsqlValue(importer, value, property.ClrType);
                 }
             }
 
@@ -1501,11 +2035,13 @@ public class FileIngestionOrchestrator : IFileIngestionService
     }
 
 
-
     private IReadOnlyList<IProperty> GetBulkProperties(
         IEntityType entityType,
         StoreObjectIdentifier storeObject)
     {
+        if (_ingestionBulkPropertyCache.TryGetValue(entityType.ClrType, out var cached))
+            return cached;
+
         string[] propertyNames;
 
         if (entityType.ClrType == typeof(IngestionFileLineEntity))
@@ -1570,48 +2106,171 @@ public class FileIngestionOrchestrator : IFileIngestionService
                 _localizer.Get("FileIngestion.BulkPropertyMappingNotDefined", entityType.ClrType.Name));
         }
 
-        return propertyNames
+        var resolved = propertyNames
             .Select(name => entityType.FindProperty(name)
-                ?? throw new FileIngestionPropertyNotMappedException(
-                    _localizer.Get("FileIngestion.PropertyNotMapped", name, entityType.Name)))            .Where(property => property.GetColumnName(storeObject) is not null)
+                            ?? throw new FileIngestionPropertyNotMappedException(
+                                _localizer.Get("FileIngestion.PropertyNotMapped", name, entityType.Name)))
+            .Where(property => property.GetColumnName(storeObject) is not null)
             .ToArray();
+        
+        _ingestionBulkPropertyCache[entityType.ClrType] = resolved;
+        return resolved;
     }
 
     private static object? GetDatabaseValue(IProperty property, object entity)
     {
-        var value = property.PropertyInfo?.GetValue(entity);
+        var propInfo = property.PropertyInfo;
+        if (propInfo is null)
+            return null;
+
+        var key = (entity.GetType(), propInfo.Name);
+        var getter = _propertyGetterCache.GetOrAdd(key, static k =>
+        {
+            var paramExpr = Expression.Parameter(typeof(object), "instance");
+            var castExpr = Expression.Convert(paramExpr, k.Item1);
+            var propExpr = Expression.Property(castExpr, k.Item2);
+            var boxExpr = Expression.Convert(propExpr, typeof(object));
+            return Expression.Lambda<Func<object, object?>>(boxExpr, paramExpr).Compile();
+        });
+
+        var value = getter(entity);
         if (value is null)
             return null;
 
         var clrType = Nullable.GetUnderlyingType(property.ClrType) ?? property.ClrType;
-        return clrType.IsEnum ? value.ToString() : value;
+        if (!clrType.IsEnum)
+            return value;
+        
+        var enumSerializer = _enumToStringCache.GetOrAdd(clrType, static t =>
+        {
+            var p = Expression.Parameter(typeof(object), "v");
+            var cast = Expression.Convert(p, t);
+            var toStr = Expression.Call(cast, t.GetMethod(nameof(object.ToString), Type.EmptyTypes)!);
+            return Expression.Lambda<Func<object, string>>(toStr, p).Compile();
+        });
+        return enumSerializer(value);
     }
 
-    private Task WriteNpgsqlValueAsync(
+    private void WriteNpgsqlValue(
         NpgsqlBinaryImporter importer,
         object value,
-        Type clrType,
-        CancellationToken cancellationToken)
+        Type clrType)
     {
         var effectiveType = Nullable.GetUnderlyingType(clrType) ?? clrType;
 
         if (effectiveType.IsEnum)
-            return importer.WriteAsync(value.ToString(), NpgsqlDbType.Text, cancellationToken);
+        {
+            importer.Write(value is string s ? s : value.ToString()!, NpgsqlDbType.Text);
+            return;
+        }
 
         if (effectiveType == typeof(Guid))
-            return importer.WriteAsync((Guid)value, NpgsqlDbType.Uuid, cancellationToken);
+        {
+            importer.Write((Guid)value, NpgsqlDbType.Uuid);
+            return;
+        }
+
         if (effectiveType == typeof(string))
-            return importer.WriteAsync((string)value, NpgsqlDbType.Text, cancellationToken);
+        {
+            importer.Write((string)value, NpgsqlDbType.Text);
+            return;
+        }
+
         if (effectiveType == typeof(long))
-            return importer.WriteAsync((long)value, NpgsqlDbType.Bigint, cancellationToken);
+        {
+            importer.Write((long)value, NpgsqlDbType.Bigint);
+            return;
+        }
+
         if (effectiveType == typeof(int))
-            return importer.WriteAsync((int)value, NpgsqlDbType.Integer, cancellationToken);
+        {
+            importer.Write((int)value, NpgsqlDbType.Integer);
+            return;
+        }
+
         if (effectiveType == typeof(short))
-            return importer.WriteAsync((short)value, NpgsqlDbType.Smallint, cancellationToken);
+        {
+            importer.Write((short)value, NpgsqlDbType.Smallint);
+            return;
+        }
+
         if (effectiveType == typeof(bool))
-            return importer.WriteAsync((bool)value, NpgsqlDbType.Boolean, cancellationToken);
+        {
+            importer.Write((bool)value, NpgsqlDbType.Boolean);
+            return;
+        }
+
         if (effectiveType == typeof(DateTime))
-            return importer.WriteAsync((DateTime)value, NpgsqlDbType.Timestamp, cancellationToken);
+        {
+            importer.Write((DateTime)value, NpgsqlDbType.Timestamp);
+            return;
+        }
+
+        if (effectiveType == typeof(decimal))
+        {
+            importer.Write((decimal)value, NpgsqlDbType.Numeric);
+            return;
+        }
+
+        if (effectiveType == typeof(double))
+        {
+            importer.Write((double)value, NpgsqlDbType.Double);
+            return;
+        }
+
+        if (effectiveType == typeof(float))
+        {
+            importer.Write((float)value, NpgsqlDbType.Real);
+            return;
+        }
+
+        if (effectiveType == typeof(byte))
+        {
+            importer.Write((short)(byte)value, NpgsqlDbType.Smallint);
+            return;
+        }
+
+        if (effectiveType == typeof(sbyte))
+        {
+            importer.Write((short)(sbyte)value, NpgsqlDbType.Smallint);
+            return;
+        }
+
+        if (effectiveType == typeof(char))
+        {
+            importer.Write(((char)value).ToString(), NpgsqlDbType.Text);
+            return;
+        }
+
+        if (effectiveType == typeof(DateTimeOffset))
+        {
+            importer.Write((DateTimeOffset)value, NpgsqlDbType.TimestampTz);
+            return;
+        }
+
+        if (effectiveType == typeof(DateOnly))
+        {
+            importer.Write(((DateOnly)value).ToDateTime(TimeOnly.MinValue), NpgsqlDbType.Date);
+            return;
+        }
+
+        if (effectiveType == typeof(TimeOnly))
+        {
+            importer.Write(((TimeOnly)value).ToTimeSpan(), NpgsqlDbType.Time);
+            return;
+        }
+
+        if (effectiveType == typeof(TimeSpan))
+        {
+            importer.Write((TimeSpan)value, NpgsqlDbType.Interval);
+            return;
+        }
+
+        if (effectiveType == typeof(byte[]))
+        {
+            importer.Write((byte[])value, NpgsqlDbType.Bytea);
+            return;
+        }
 
         throw new FileIngestionUnsupportedBulkTypeException(
             _localizer.Get("FileIngestion.UnsupportedBulkType", effectiveType.Name));
@@ -1646,7 +2305,7 @@ public class FileIngestionOrchestrator : IFileIngestionService
                 ByteLength = lineReadResult.ByteLength,
                 LineType = parsed.RecordType,
                 RawContent = lineReadResult.Line,
-                ParsedContent = JsonSerializer.Serialize(parsed.ParsedDataModel),
+                ParsedContent = JsonSerializer.Serialize(parsed.ParsedDataModel, _parsedContentJsonOptions),
                 Status = FileRowStatus.Success,
                 Message = _localizer.Get("FileIngestion.ParsedAndPersistedSuccessfully"),
                 RetryCount = 0
@@ -1667,7 +2326,7 @@ public class FileIngestionOrchestrator : IFileIngestionService
                 LineType = recordType,
                 RawContent = lineReadResult.Line,
                 Status = FileRowStatus.Failed,
-                Message = ExceptionDetailHelper.BuildDetailMessage(ex, 2000),
+                Message = ExceptionDetailHelper.BuildDetailMessage(ex, 500),
                 RetryCount = 0,
                 ReconciliationStatus = recordType == "D" ? ReconciliationStatus.Failed : null
             };
@@ -1702,34 +2361,43 @@ public class FileIngestionOrchestrator : IFileIngestionService
         }
 
         row.CorrelationKey = "Rrn:CardNo:ProvisionCode:Arn:Mcc:Amount:Currency";
-
-        var correlationValues = fileType switch
+        string v0, v1, v2, v3, v4, v5, v6;
+        switch (fileType)
         {
-            FileType.Card => new[]
-            {
-                GetStringValue(parsedDataModel, "Rrn"),
-                GetStringValue(parsedDataModel, "CardNo"),
-                GetStringValue(parsedDataModel, "ProvisionCode"),
-                GetStringValue(parsedDataModel, "Arn"),
-                GetNormalizedValue(parsedDataModel, "Mcc"),
-                GetNormalizedValue(parsedDataModel, "CardHolderBillingAmount"),
-                GetNormalizedValue(parsedDataModel, "CardHolderBillingCurrency")
-            },
-            FileType.Clearing => new[]
-            {
-                GetStringValue(parsedDataModel, "Rrn"),
-                GetStringValue(parsedDataModel, "CardNo"),
-                GetStringValue(parsedDataModel, "ProvisionCode"),
-                GetStringValue(parsedDataModel, "Arn"),
-                GetNormalizedValue(parsedDataModel, "MccCode"),
-                GetNormalizedValue(parsedDataModel, "SourceAmount"),
-                GetNormalizedValue(parsedDataModel, "SourceCurrency")
-            },
-            _ => Array.Empty<string>()
-        };
+            case FileType.Card:
+                v0 = GetStringValue(parsedDataModel, "Rrn");
+                v1 = GetStringValue(parsedDataModel, "CardNo");
+                v2 = GetStringValue(parsedDataModel, "ProvisionCode");
+                v3 = GetStringValue(parsedDataModel, "Arn");
+                v4 = GetNormalizedValue(parsedDataModel, "Mcc");
+                v5 = GetNormalizedValue(parsedDataModel, "CardHolderBillingAmount");
+                v6 = GetNormalizedValue(parsedDataModel, "CardHolderBillingCurrency");
+                break;
+            case FileType.Clearing:
+                v0 = GetStringValue(parsedDataModel, "Rrn");
+                v1 = GetStringValue(parsedDataModel, "CardNo");
+                v2 = GetStringValue(parsedDataModel, "ProvisionCode");
+                v3 = GetStringValue(parsedDataModel, "Arn");
+                v4 = GetNormalizedValue(parsedDataModel, "MccCode");
+                v5 = GetNormalizedValue(parsedDataModel, "SourceAmount");
+                v6 = GetNormalizedValue(parsedDataModel, "SourceCurrency");
+                break;
+            default:
+                row.CorrelationValue = string.Empty;
+                row.ReconciliationStatus = ReconciliationStatus.Failed;
+                row.Message = _localizer.Get("FileIngestion.ReconciliationKeyNotGenerated", row.Message).Trim();
+                return;
+        }
 
-        row.CorrelationValue = string.Join(":", correlationValues);
-        row.ReconciliationStatus = correlationValues.Length == 0 || correlationValues.Any(string.IsNullOrWhiteSpace)
+        var anyEmpty =
+            string.IsNullOrWhiteSpace(v0) || string.IsNullOrWhiteSpace(v1) ||
+            string.IsNullOrWhiteSpace(v2) || string.IsNullOrWhiteSpace(v3) ||
+            string.IsNullOrWhiteSpace(v4) || string.IsNullOrWhiteSpace(v5) ||
+            string.IsNullOrWhiteSpace(v6);
+        
+        row.CorrelationValue = $"{v0}:{v1}:{v2}:{v3}:{v4}:{v5}:{v6}";
+
+        row.ReconciliationStatus = anyEmpty
             ? ReconciliationStatus.Failed
             : ReconciliationStatus.Ready;
 
@@ -1824,7 +2492,7 @@ public class FileIngestionOrchestrator : IFileIngestionService
                 cancellationToken);
 
         _dbContext.ChangeTracker.Clear();
-        
+
         if (file.FileType == FileType.Clearing && status == FileStatus.Success)
         {
             try
@@ -1841,9 +2509,6 @@ public class FileIngestionOrchestrator : IFileIngestionService
             }
             catch (Exception ex)
             {
-                // Requeue başarısızlığı dosyanın Success marklanmasını geri almaz;
-                // ancak monitoring/alert için loglanmalıdır. Bir sonraki clearing
-                // ingestion ya da scheduled re-evaluation bu satırları yakalar.
                 _logger.LogError(ex,
                     "Failed to requeue awaiting-clearing rows for clearing file {FileId}.",
                     transactionFileId);
@@ -1873,23 +2538,69 @@ public class FileIngestionOrchestrator : IFileIngestionService
                     .SetProperty(x => x.UpdateDate, auditStamp.Timestamp)
                     .SetProperty(x => x.LastModifiedBy, auditStamp.UserId),
                 cancellationToken);
-
-        List<IngestionFileLineEntity> rowsToUpdate;
-        rowsToUpdate = await LoadDuplicateRowsAsync(transactionFileId, cancellationToken);
-
-        if (file.FileType == FileType.Card)
+        
+        string? lastKey = null;
+        while (true)
         {
-            ApplyCardDuplicateOutcomes(rowsToUpdate);
-        }
-        else
-        {
-            ApplyClearingDuplicateOutcomes(rowsToUpdate);
-        }
+            cancellationToken.ThrowIfCancellationRequested();
 
-        if (rowsToUpdate.Count > 0)
-        {
-            _auditStampService.StampForUpdate(rowsToUpdate.Cast<AuditEntity>());
-            await _dbContext.SaveChangesAsync(cancellationToken);
+            var keyPage = await _dbContext.IngestionFileLines
+                .AsNoTracking()
+                .Where(x => x.FileId == transactionFileId &&
+                            x.LineType == "D" &&
+                            x.Status == FileRowStatus.Success &&
+                            x.DuplicateDetectionKey != null &&
+                            (lastKey == null || x.DuplicateDetectionKey!.CompareTo(lastKey) > 0))
+                .GroupBy(x => x.DuplicateDetectionKey!)
+                .Where(g => g.Count() > 1)
+                .Select(g => g.Key)
+                .OrderBy(k => k)
+                .Take(QueryBatchSize)
+                .ToListAsync(cancellationToken);
+
+            if (keyPage.Count == 0)
+                break;
+
+            lastKey = keyPage[^1];
+
+            var slimRows = await _dbContext.IngestionFileLines
+                .AsNoTracking()
+                .Where(x => x.FileId == transactionFileId &&
+                            x.LineType == "D" &&
+                            x.Status == FileRowStatus.Success &&
+                            keyPage.Contains(x.DuplicateDetectionKey!))
+                .OrderBy(x => x.LineNumber)
+                .ThenBy(x => x.Id)
+                .Select(x => new DuplicateRowSlim
+                {
+                    Id = x.Id,
+                    LineNumber = x.LineNumber,
+                    DuplicateDetectionKey = x.DuplicateDetectionKey!,
+                    ParsedContent = x.ParsedContent ?? string.Empty,
+                    OriginalReconciliationStatus = x.ReconciliationStatus,
+                })
+                .ToListAsync(cancellationToken);
+
+            if (slimRows.Count == 0)
+            {
+                if (keyPage.Count < QueryBatchSize) break;
+                continue;
+            }
+
+            foreach (var r in slimRows)
+                r.ReconciliationStatus = r.OriginalReconciliationStatus;
+
+            if (file.FileType == FileType.Card)
+                ApplyCardDuplicateOutcomes(slimRows);
+            else
+                ApplyClearingDuplicateOutcomes(slimRows);
+
+            await PersistDuplicateOutcomesAsync(slimRows, auditStamp, cancellationToken);
+
+            slimRows.Clear(); // Eager release for GC
+
+            if (keyPage.Count < QueryBatchSize)
+                break;
         }
 
         var uniqueStatus = DuplicateStatus.Unique.ToString();
@@ -1918,189 +2629,384 @@ public class FileIngestionOrchestrator : IFileIngestionService
             return;
 
         var auditStamp = _auditStampService.CreateStamp();
+        
+        var (schema, table, fileTable) = ResolveLineTableNames();
+        var providerName = _dbContext.Database.ProviderName ?? string.Empty;
+        var isPostgres = providerName.Contains("Npgsql", StringComparison.OrdinalIgnoreCase);
+
+        var (lineCols, fileCols) = ResolveLineAndFileColumnNames();
 
         if (file.FileType == FileType.Clearing)
         {
-            var clearingLines = await _dbContext.IngestionFileLines
-                .AsNoTracking()
-                .Where(x => x.FileId == transactionFileId
-                            && x.LineType == "D"
-                            && x.Status == FileRowStatus.Success
-                            && x.CorrelationKey != null
-                            && x.CorrelationValue != null)
-                .Select(x => new { x.Id, x.CorrelationKey, x.CorrelationValue })
-                .ToListAsync(cancellationToken);
+            var sql = isPostgres
+                ? BuildPostgresClearingToCardMatchSql(schema, table, fileTable, lineCols, fileCols)
+                : BuildSqlServerClearingToCardMatchSql(schema, table, fileTable, lineCols, fileCols);
 
-            foreach (var clearingLine in clearingLines)
+            await _dbContext.Database.ExecuteSqlRawAsync(
+                sql,
+                new object[]
+                {
+                    transactionFileId,
+                    FileRowStatus.Success.ToString(),
+                    FileType.Card.ToString(),
+                    auditStamp.Timestamp,
+                    (object?)auditStamp.UserId ?? DBNull.Value
+                },
+                cancellationToken);
+        }
+        else // FileType.Card
+        {
+            var sql = isPostgres
+                ? BuildPostgresCardToClearingMatchSql(schema, table, fileTable, lineCols, fileCols)
+                : BuildSqlServerCardToClearingMatchSql(schema, table, fileTable, lineCols, fileCols);
+
+            await _dbContext.Database.ExecuteSqlRawAsync(
+                sql,
+                new object[]
+                {
+                    transactionFileId,
+                    FileRowStatus.Success.ToString(),
+                    FileType.Clearing.ToString(),
+                    auditStamp.Timestamp,
+                    (object?)auditStamp.UserId ?? DBNull.Value
+                },
+                cancellationToken);
+        }
+
+        _dbContext.ChangeTracker.Clear();
+    }
+    
+    private (string Schema, string LineTable, string FileTable) ResolveLineTableNames()
+    {
+        if (_cachedLineTableNames is { } cached)
+            return cached;
+
+        lock (_modelCacheLock)
+        {
+            if (_cachedLineTableNames is { } cachedInner)
+                return cachedInner;
+
+            var lineEt = _dbContext.Model.FindEntityType(typeof(IngestionFileLineEntity))!;
+            var fileEt = _dbContext.Model.FindEntityType(typeof(IngestionFileEntity))!;
+            var result = (lineEt.GetSchema() ?? string.Empty, lineEt.GetTableName()!, fileEt.GetTableName()!);
+            _cachedLineTableNames = result;
+            return result;
+        }
+    }
+
+    private (Dictionary<string, string> LineCols, Dictionary<string, string> FileCols) ResolveLineAndFileColumnNames()
+    {
+        if (_cachedColumnNames is { } cached)
+            return cached;
+
+        lock (_modelCacheLock)
+        {
+            if (_cachedColumnNames is { } cachedInner)
+                return cachedInner;
+
+            var lineEt = _dbContext.Model.FindEntityType(typeof(IngestionFileLineEntity))!;
+            var lineSo = StoreObjectIdentifier.Table(lineEt.GetTableName()!, lineEt.GetSchema());
+            var lineCols = lineEt.GetProperties().ToDictionary(p => p.Name, p => p.GetColumnName(lineSo)!);
+
+            var fileEt = _dbContext.Model.FindEntityType(typeof(IngestionFileEntity))!;
+            var fileSo = StoreObjectIdentifier.Table(fileEt.GetTableName()!, fileEt.GetSchema());
+            var fileCols = fileEt.GetProperties().ToDictionary(p => p.Name, p => p.GetColumnName(fileSo)!);
+
+            var result = (lineCols, fileCols);
+            _cachedColumnNames = result;
+            return result;
+        }
+    }
+
+    private static string Quote(bool isPostgres, string identifier)
+        => isPostgres ? $"\"{identifier}\"" : $"[{identifier}]";
+
+    private static string QualifiedTable(bool isPostgres, string schema, string table)
+    {
+        if (string.IsNullOrEmpty(schema))
+            return Quote(isPostgres, table);
+        return $"{Quote(isPostgres, schema)}.{Quote(isPostgres, table)}";
+    }
+
+    private static string BuildPostgresClearingToCardMatchSql(
+        string schema, string lineTable, string fileTable,
+        Dictionary<string, string> lc, Dictionary<string, string> fc)
+    {
+        var fl = QualifiedTable(true, schema, lineTable);
+        var ff = QualifiedTable(true, schema, fileTable);
+        return $@"
+WITH src AS (
+    SELECT DISTINCT ON (""{lc[nameof(IngestionFileLineEntity.CorrelationKey)]}"",
+                        ""{lc[nameof(IngestionFileLineEntity.CorrelationValue)]}"")
+           ""{lc[nameof(IngestionFileLineEntity.CorrelationKey)]}"" AS ck,
+           ""{lc[nameof(IngestionFileLineEntity.CorrelationValue)]}"" AS cv,
+           ""{lc[nameof(IngestionFileLineEntity.Id)]}"" AS clr_id
+    FROM {fl}
+    WHERE ""{lc[nameof(IngestionFileLineEntity.FileId)]}"" = @p0
+      AND ""{lc[nameof(IngestionFileLineEntity.LineType)]}"" = 'D'
+      AND ""{lc[nameof(IngestionFileLineEntity.Status)]}"" = @p1
+      AND ""{lc[nameof(IngestionFileLineEntity.CorrelationKey)]}"" IS NOT NULL
+      AND ""{lc[nameof(IngestionFileLineEntity.CorrelationValue)]}"" IS NOT NULL
+    ORDER BY ""{lc[nameof(IngestionFileLineEntity.CorrelationKey)]}"",
+             ""{lc[nameof(IngestionFileLineEntity.CorrelationValue)]}"",
+             ""{lc[nameof(IngestionFileLineEntity.Id)]}"" DESC
+)
+UPDATE {fl} card
+SET ""{lc[nameof(IngestionFileLineEntity.MatchedClearingLineId)]}"" = src.clr_id,
+    ""{lc[nameof(IngestionFileLineEntity.UpdateDate)]}"" = @p3,
+    ""{lc[nameof(IngestionFileLineEntity.LastModifiedBy)]}"" = @p4
+FROM src, {ff} cf
+WHERE cf.""{fc[nameof(IngestionFileEntity.Id)]}"" = card.""{lc[nameof(IngestionFileLineEntity.FileId)]}""
+  AND card.""{lc[nameof(IngestionFileLineEntity.LineType)]}"" = 'D'
+  AND cf.""{fc[nameof(IngestionFileEntity.FileType)]}"" = @p2
+  AND card.""{lc[nameof(IngestionFileLineEntity.CorrelationKey)]}"" = src.ck
+  AND card.""{lc[nameof(IngestionFileLineEntity.CorrelationValue)]}"" = src.cv;
+";
+    }
+
+    private static string BuildSqlServerClearingToCardMatchSql(
+        string schema, string lineTable, string fileTable,
+        Dictionary<string, string> lc, Dictionary<string, string> fc)
+    {
+        var fl = QualifiedTable(false, schema, lineTable);
+        var ff = QualifiedTable(false, schema, fileTable);
+        return $@"
+WITH src AS (
+    SELECT [{lc[nameof(IngestionFileLineEntity.CorrelationKey)]}] AS ck,
+           [{lc[nameof(IngestionFileLineEntity.CorrelationValue)]}] AS cv,
+           MAX([{lc[nameof(IngestionFileLineEntity.Id)]}]) AS clr_id
+    FROM {fl}
+    WHERE [{lc[nameof(IngestionFileLineEntity.FileId)]}] = @p0
+      AND [{lc[nameof(IngestionFileLineEntity.LineType)]}] = 'D'
+      AND [{lc[nameof(IngestionFileLineEntity.Status)]}] = @p1
+      AND [{lc[nameof(IngestionFileLineEntity.CorrelationKey)]}] IS NOT NULL
+      AND [{lc[nameof(IngestionFileLineEntity.CorrelationValue)]}] IS NOT NULL
+    GROUP BY [{lc[nameof(IngestionFileLineEntity.CorrelationKey)]}],
+             [{lc[nameof(IngestionFileLineEntity.CorrelationValue)]}]
+)
+UPDATE card
+SET [{lc[nameof(IngestionFileLineEntity.MatchedClearingLineId)]}] = src.clr_id,
+    [{lc[nameof(IngestionFileLineEntity.UpdateDate)]}] = @p3,
+    [{lc[nameof(IngestionFileLineEntity.LastModifiedBy)]}] = @p4
+FROM {fl} card
+INNER JOIN src ON card.[{lc[nameof(IngestionFileLineEntity.CorrelationKey)]}] = src.ck
+              AND card.[{lc[nameof(IngestionFileLineEntity.CorrelationValue)]}] = src.cv
+INNER JOIN {ff} cf ON cf.[{fc[nameof(IngestionFileEntity.Id)]}] = card.[{lc[nameof(IngestionFileLineEntity.FileId)]}]
+WHERE card.[{lc[nameof(IngestionFileLineEntity.LineType)]}] = 'D'
+  AND cf.[{fc[nameof(IngestionFileEntity.FileType)]}] = @p2;
+";
+    }
+
+    private static string BuildPostgresCardToClearingMatchSql(
+        string schema, string lineTable, string fileTable,
+        Dictionary<string, string> lc, Dictionary<string, string> fc)
+    {
+        var fl = QualifiedTable(true, schema, lineTable);
+        var ff = QualifiedTable(true, schema, fileTable);
+        return $@"
+WITH src AS (
+    SELECT DISTINCT ON (clr.""{lc[nameof(IngestionFileLineEntity.CorrelationKey)]}"",
+                        clr.""{lc[nameof(IngestionFileLineEntity.CorrelationValue)]}"")
+           clr.""{lc[nameof(IngestionFileLineEntity.CorrelationKey)]}"" AS ck,
+           clr.""{lc[nameof(IngestionFileLineEntity.CorrelationValue)]}"" AS cv,
+           clr.""{lc[nameof(IngestionFileLineEntity.Id)]}"" AS clr_id
+    FROM {fl} clr
+    JOIN {ff} cf ON cf.""{fc[nameof(IngestionFileEntity.Id)]}"" = clr.""{lc[nameof(IngestionFileLineEntity.FileId)]}""
+    WHERE clr.""{lc[nameof(IngestionFileLineEntity.LineType)]}"" = 'D'
+      AND cf.""{fc[nameof(IngestionFileEntity.FileType)]}"" = @p2
+    ORDER BY clr.""{lc[nameof(IngestionFileLineEntity.CorrelationKey)]}"",
+             clr.""{lc[nameof(IngestionFileLineEntity.CorrelationValue)]}"",
+             clr.""{lc[nameof(IngestionFileLineEntity.CreateDate)]}"" DESC,
+             clr.""{lc[nameof(IngestionFileLineEntity.Id)]}"" DESC
+)
+UPDATE {fl} card
+SET ""{lc[nameof(IngestionFileLineEntity.MatchedClearingLineId)]}"" = src.clr_id,
+    ""{lc[nameof(IngestionFileLineEntity.UpdateDate)]}"" = @p3,
+    ""{lc[nameof(IngestionFileLineEntity.LastModifiedBy)]}"" = @p4
+FROM src
+WHERE card.""{lc[nameof(IngestionFileLineEntity.FileId)]}"" = @p0
+  AND card.""{lc[nameof(IngestionFileLineEntity.LineType)]}"" = 'D'
+  AND card.""{lc[nameof(IngestionFileLineEntity.Status)]}"" = @p1
+  AND card.""{lc[nameof(IngestionFileLineEntity.CorrelationKey)]}"" = src.ck
+  AND card.""{lc[nameof(IngestionFileLineEntity.CorrelationValue)]}"" = src.cv;
+";
+    }
+
+    private static string BuildSqlServerCardToClearingMatchSql(
+        string schema, string lineTable, string fileTable,
+        Dictionary<string, string> lc, Dictionary<string, string> fc)
+    {
+        var fl = QualifiedTable(false, schema, lineTable);
+        var ff = QualifiedTable(false, schema, fileTable);
+        return $@"
+WITH src AS (
+    SELECT clr.[{lc[nameof(IngestionFileLineEntity.CorrelationKey)]}] AS ck,
+           clr.[{lc[nameof(IngestionFileLineEntity.CorrelationValue)]}] AS cv,
+           clr.[{lc[nameof(IngestionFileLineEntity.Id)]}] AS clr_id,
+           ROW_NUMBER() OVER (
+               PARTITION BY clr.[{lc[nameof(IngestionFileLineEntity.CorrelationKey)]}],
+                            clr.[{lc[nameof(IngestionFileLineEntity.CorrelationValue)]}]
+               ORDER BY clr.[{lc[nameof(IngestionFileLineEntity.CreateDate)]}] DESC,
+                        clr.[{lc[nameof(IngestionFileLineEntity.Id)]}] DESC) AS rn
+    FROM {fl} clr
+    INNER JOIN {ff} cf ON cf.[{fc[nameof(IngestionFileEntity.Id)]}] = clr.[{lc[nameof(IngestionFileLineEntity.FileId)]}]
+    WHERE clr.[{lc[nameof(IngestionFileLineEntity.LineType)]}] = 'D'
+      AND cf.[{fc[nameof(IngestionFileEntity.FileType)]}] = @p2
+)
+UPDATE card
+SET [{lc[nameof(IngestionFileLineEntity.MatchedClearingLineId)]}] = src.clr_id,
+    [{lc[nameof(IngestionFileLineEntity.UpdateDate)]}] = @p3,
+    [{lc[nameof(IngestionFileLineEntity.LastModifiedBy)]}] = @p4
+FROM {fl} card
+INNER JOIN src ON src.rn = 1
+              AND card.[{lc[nameof(IngestionFileLineEntity.CorrelationKey)]}] = src.ck
+              AND card.[{lc[nameof(IngestionFileLineEntity.CorrelationValue)]}] = src.cv
+WHERE card.[{lc[nameof(IngestionFileLineEntity.FileId)]}] = @p0
+  AND card.[{lc[nameof(IngestionFileLineEntity.LineType)]}] = 'D'
+  AND card.[{lc[nameof(IngestionFileLineEntity.Status)]}] = @p1;
+";
+    }
+    
+    private sealed class DuplicateRowSlim
+    {
+        public Guid Id { get; init; }
+        public long LineNumber { get; init; }
+        public string DuplicateDetectionKey { get; init; } = string.Empty;
+        public string ParsedContent { get; init; } = string.Empty;
+        public ReconciliationStatus? OriginalReconciliationStatus { get; init; }
+        public string? DuplicateStatus { get; set; }
+        public Guid? DuplicateGroupId { get; set; }
+        public ReconciliationStatus? ReconciliationStatus { get; set; }
+    }
+
+    private async Task PersistDuplicateOutcomesAsync(
+        List<DuplicateRowSlim> rows,
+        AuditStamp auditStamp,
+        CancellationToken cancellationToken)
+    {
+        var buckets = rows
+            .Where(r => r.DuplicateStatus is not null && r.DuplicateGroupId is not null)
+            .GroupBy(r => (r.DuplicateStatus, r.DuplicateGroupId, r.ReconciliationStatus));
+
+        foreach (var bucket in buckets)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var (dupStatus, dupGroupId, reconStatus) = bucket.Key;
+            var ids = bucket.Select(r => r.Id).ToArray();
+            if (ids.Length == 0) continue;
+            
+            foreach (var idBatch in Batch(ids, 1000))
             {
                 await _dbContext.IngestionFileLines
-                    .Where(x => x.CorrelationKey == clearingLine.CorrelationKey
-                                && x.CorrelationValue == clearingLine.CorrelationValue
-                                && x.LineType == "D"
-                                && x.IngestionFile.FileType == FileType.Card)
+                    .Where(x => idBatch.Contains(x.Id))
                     .ExecuteUpdateAsync(update => update
-                            .SetProperty(x => x.MatchedClearingLineId, clearingLine.Id)
+                            .SetProperty(x => x.DuplicateStatus, dupStatus)
+                            .SetProperty(x => x.DuplicateGroupId, dupGroupId)
+                            .SetProperty(x => x.ReconciliationStatus, reconStatus)
                             .SetProperty(x => x.UpdateDate, auditStamp.Timestamp)
                             .SetProperty(x => x.LastModifiedBy, auditStamp.UserId),
                         cancellationToken);
             }
         }
-        else if (file.FileType == FileType.Card)
+    }
+
+    private static void ApplyCardDuplicateOutcomes(List<DuplicateRowSlim> detailRows)
+    {
+        ProcessDuplicateGroups(detailRows, isCard: true);
+    }
+
+    private static void ApplyClearingDuplicateOutcomes(List<DuplicateRowSlim> detailRows)
+    {
+        ProcessDuplicateGroups(detailRows, isCard: false);
+    }
+
+    private static void ProcessDuplicateGroups(List<DuplicateRowSlim> detailRows, bool isCard)
+    {
+        var withKey = new List<DuplicateRowSlim>(detailRows.Count);
+        foreach (var r in detailRows)
+            if (!string.IsNullOrWhiteSpace(r.DuplicateDetectionKey))
+                withKey.Add(r);
+
+        if (withKey.Count < 2) return;
+
+        withKey.Sort(static (a, b) => string.CompareOrdinal(a.DuplicateDetectionKey, b.DuplicateDetectionKey));
+
+        var i = 0;
+        while (i < withKey.Count)
         {
-            var cardLines = await _dbContext.IngestionFileLines
-                .AsNoTracking()
-                .Where(x => x.FileId == transactionFileId
-                            && x.LineType == "D"
-                            && x.Status == FileRowStatus.Success
-                            && x.CorrelationKey != null
-                            && x.CorrelationValue != null)
-                .Select(x => new { x.Id, x.CorrelationKey, x.CorrelationValue })
-                .ToListAsync(cancellationToken);
+            var key = withKey[i].DuplicateDetectionKey;
+            var j = i + 1;
+            while (j < withKey.Count && string.Equals(withKey[j].DuplicateDetectionKey, key, StringComparison.Ordinal))
+                j++;
 
-            foreach (var cardLine in cardLines)
+            var groupCount = j - i;
+            if (groupCount > 1)
             {
-                var latestClearingLineId = await _dbContext.IngestionFileLines
-                    .AsNoTracking()
-                    .Where(x => x.CorrelationKey == cardLine.CorrelationKey
-                                && x.CorrelationValue == cardLine.CorrelationValue
-                                && x.LineType == "D"
-                                && x.IngestionFile.FileType == FileType.Clearing)
-                    .OrderByDescending(x => x.CreateDate)
-                    .Select(x => (Guid?)x.Id)
-                    .FirstOrDefaultAsync(cancellationToken);
+                var primary = withKey[i];
+                var allEquivalent = true;
 
-                if (latestClearingLineId.HasValue)
+                if (isCard)
                 {
-                    await _dbContext.IngestionFileLines
-                        .Where(x => x.Id == cardLine.Id)
-                        .ExecuteUpdateAsync(update => update
-                                .SetProperty(x => x.MatchedClearingLineId, latestClearingLineId.Value)
-                                .SetProperty(x => x.UpdateDate, auditStamp.Timestamp)
-                                .SetProperty(x => x.LastModifiedBy, auditStamp.UserId),
-                            cancellationToken);
+                    var primarySig = BuildCardDuplicateSignature(primary.ParsedContent);
+                    for (var k = i + 1; k < j; k++)
+                    {
+                        var sig = BuildCardDuplicateSignature(withKey[k].ParsedContent);
+                        if (!CardDuplicateSignatureEquals(primarySig, sig))
+                        {
+                            allEquivalent = false;
+                            break;
+                        }
+                    }
                 }
-            }
-        }
-
-        _dbContext.ChangeTracker.Clear();
-    }
-
-    private async Task<List<IngestionFileLineEntity>> LoadDuplicateRowsAsync(
-        Guid transactionFileId,
-        CancellationToken cancellationToken)
-    {
-        var duplicateKeys = await _dbContext.IngestionFileLines
-            .AsNoTracking()
-            .Where(x => x.FileId == transactionFileId &&
-                        x.LineType == "D" &&
-                        x.Status == FileRowStatus.Success &&
-                        x.DuplicateDetectionKey != null)
-            .GroupBy(x => x.DuplicateDetectionKey!)
-            .Where(x => x.Count() > 1)
-            .Select(x => x.Key)
-            .ToListAsync(cancellationToken);
-
-        if (duplicateKeys.Count == 0)
-        {
-            return new List<IngestionFileLineEntity>();
-        }
-
-        var rows = new List<IngestionFileLineEntity>();
-        foreach (var batch in Batch(duplicateKeys.ToArray(), QueryBatchSize))
-        {
-            var batchRows = await _dbContext.IngestionFileLines
-                .Where(x => x.FileId == transactionFileId &&
-                            x.LineType == "D" &&
-                            x.Status == FileRowStatus.Success &&
-                            batch.Contains(x.DuplicateDetectionKey!))
-                .OrderBy(x => x.LineNumber)
-                .ThenBy(x => x.Id)
-                .ToListAsync(cancellationToken);
-
-            rows.AddRange(batchRows);
-        }
-
-        return rows;
-    }
-
-    private static void ApplyCardDuplicateOutcomes(List<IngestionFileLineEntity> detailRows)
-    {
-        var duplicateGroups = detailRows
-            .Where(x => !string.IsNullOrWhiteSpace(x.DuplicateDetectionKey))
-            .GroupBy(x => x.DuplicateDetectionKey, StringComparer.Ordinal)
-            .Where(x => x.Count() > 1);
-
-        foreach (var group in duplicateGroups)
-        {
-            var rows = group.ToList();
-            var primary = rows[0];
-            var primarySignature = BuildCardDuplicateSignature(primary.ParsedContent);
-            var allEquivalent = rows.All(x => CardDuplicateSignatureEquals(primarySignature, BuildCardDuplicateSignature(x.ParsedContent)));
-
-            if (allEquivalent)
-            {
-                MarkEquivalentDuplicateGroup(
-                    rows,
-                    primary);
-                continue;
+                else
+                {
+                    var primaryPayload = primary.ParsedContent;
+                    for (var k = i + 1; k < j; k++)
+                    {
+                        if (!string.Equals(withKey[k].ParsedContent, primaryPayload, StringComparison.Ordinal))
+                        {
+                            allEquivalent = false;
+                            break;
+                        }
+                    }
+                }
+                
+                var groupRows = withKey.GetRange(i, groupCount);
+                if (allEquivalent)
+                    MarkEquivalentDuplicateGroup(groupRows, primary);
+                else
+                    MarkConflictingDuplicateGroup(groupRows);
             }
 
-            MarkConflictingDuplicateGroup(
-                rows);
-        }
-    }
-
-    private static void ApplyClearingDuplicateOutcomes(List<IngestionFileLineEntity> detailRows)
-    {
-        var duplicateGroups = detailRows
-            .Where(x => !string.IsNullOrWhiteSpace(x.DuplicateDetectionKey))
-            .GroupBy(x => x.DuplicateDetectionKey, StringComparer.Ordinal)
-            .Where(x => x.Count() > 1);
-
-        foreach (var group in duplicateGroups)
-        {
-            var rows = group.ToList();
-            var primary = rows[0];
-            var primaryPayload = primary.ParsedContent;
-            var allEquivalent = rows.All(x => string.Equals(x.ParsedContent, primaryPayload, StringComparison.Ordinal));
-
-            if (allEquivalent)
-            {
-                MarkEquivalentDuplicateGroup(
-                    rows,
-                    primary);
-                continue;
-            }
-
-            MarkConflictingDuplicateGroup(
-                rows);
+            i = j;
         }
     }
 
     private static void MarkEquivalentDuplicateGroup(
-        List<IngestionFileLineEntity> rows,
-        IngestionFileLineEntity primary)
+        List<DuplicateRowSlim> rows,
+        DuplicateRowSlim primary)
     {
         var duplicateGroupId = Guid.NewGuid();
-        primary.DuplicateStatus = DuplicateStatus.Primary.ToString();
+        primary.DuplicateStatus = LinkPara.Card.Domain.Enums.FileIngestion.DuplicateStatus.Primary.ToString();
         primary.DuplicateGroupId = duplicateGroupId;
         primary.ReconciliationStatus ??= ReconciliationStatus.Ready;
 
-        foreach (var secondary in rows.Skip(1))
+        foreach (var secondary in rows)
         {
-            secondary.DuplicateStatus = DuplicateStatus.Secondary.ToString();
+            if (ReferenceEquals(secondary, primary)) continue;
+            secondary.DuplicateStatus = LinkPara.Card.Domain.Enums.FileIngestion.DuplicateStatus.Secondary.ToString();
             secondary.DuplicateGroupId = duplicateGroupId;
             secondary.ReconciliationStatus = ReconciliationStatus.Failed;
         }
     }
 
     private static void MarkConflictingDuplicateGroup(
-        IEnumerable<IngestionFileLineEntity> rows)
+        IEnumerable<DuplicateRowSlim> rows)
     {
         var duplicateGroupId = Guid.NewGuid();
         foreach (var row in rows)
         {
-            row.DuplicateStatus = DuplicateStatus.Conflict.ToString();
+            row.DuplicateStatus = LinkPara.Card.Domain.Enums.FileIngestion.DuplicateStatus.Conflict.ToString();
             row.DuplicateGroupId = duplicateGroupId;
             row.ReconciliationStatus = ReconciliationStatus.Failed;
         }
@@ -2135,7 +3041,8 @@ public class FileIngestionOrchestrator : IFileIngestionService
 
     private static int GetInt(JsonElement element, string propertyName)
     {
-        if (!element.TryGetProperty(propertyName, out var value) || value.ValueKind is JsonValueKind.Null or JsonValueKind.Undefined)
+        if (!element.TryGetProperty(propertyName, out var value) ||
+            value.ValueKind is JsonValueKind.Null or JsonValueKind.Undefined)
             return 0;
 
         return value.ValueKind switch
@@ -2148,7 +3055,8 @@ public class FileIngestionOrchestrator : IFileIngestionService
 
     private static decimal GetDecimal(JsonElement element, string propertyName)
     {
-        if (!element.TryGetProperty(propertyName, out var value) || value.ValueKind is JsonValueKind.Null or JsonValueKind.Undefined)
+        if (!element.TryGetProperty(propertyName, out var value) ||
+            value.ValueKind is JsonValueKind.Null or JsonValueKind.Undefined)
             return 0m;
 
         return value.ValueKind switch
@@ -2201,42 +3109,48 @@ public class FileIngestionOrchestrator : IFileIngestionService
     {
         try
         {
-            await using var stream = await transferClient.OpenReadAsync(file, cancellationToken);
-            using var reader = new StreamReader(stream, encoding, detectEncodingFromByteOrderMarks: true, leaveOpen: true);
-
-            string? headerLine = null;
-            string? footerLine = null;
-
-            while (await reader.ReadLineAsync(cancellationToken) is { } line)
+            string headerLine;
+            try
             {
-                if (headerLine is null && line.StartsWith(parsingRule.HeaderPrefix, StringComparison.OrdinalIgnoreCase))
-                {
-                    headerLine = line;
-                }
-
-                if (line.StartsWith(parsingRule.FooterPrefix, StringComparison.OrdinalIgnoreCase))
-                {
-                    footerLine = line;
-                }
+                await using var headerStream = await transferClient.OpenReadAsync(file, cancellationToken);
+                headerLine = await ReadFirstMatchingLineAsync(headerStream, encoding, parsingRule.HeaderPrefix,
+                    cancellationToken);
+            }
+            catch (FileIngestionRecordNotFoundFromStartException)
+            {
+                throw new FileIngestionHeaderNotResolvedException(_localizer.Get("FileIngestion.HeaderNotResolved",
+                    file.Name));
             }
 
-            if (headerLine is null)
+            string footerLine;
+            try
             {
-                throw new FileIngestionHeaderNotResolvedException( _localizer.Get("FileIngestion.HeaderNotResolved", file.Name));
+                await using var footerStream = await transferClient.OpenReadAsync(file, cancellationToken);
+                footerLine = await ReadLastMatchingLineAsync(footerStream, encoding, parsingRule.FooterPrefix,
+                    cancellationToken);
             }
-
-            if (footerLine is null)
+            catch (FileIngestionRecordNotFoundFromEndException)
             {
-                throw new FileIngestionFooterNotResolvedException( _localizer.Get("FileIngestion.FooterNotResolved", file.Name));
+                throw new FileIngestionFooterNotResolvedException(_localizer.Get("FileIngestion.FooterNotResolved",
+                    file.Name));
             }
 
             return (
                 ParseBoundaryRecord(profileKey, parsingRule, headerLine, parsingRule.HeaderPrefix),
                 ParseBoundaryRecord(profileKey, parsingRule, footerLine, parsingRule.FooterPrefix));
         }
+        catch (FileIngestionHeaderNotResolvedException)
+        {
+            throw;
+        }
+        catch (FileIngestionFooterNotResolvedException)
+        {
+            throw;
+        }
         catch (Exception ex)
         {
-            throw new FileIngestionBoundaryRecordReadFailedException( _localizer.Get("FileIngestion.BoundaryRecordReadFailed", file.Name, ex.Message), ex);
+            throw new FileIngestionBoundaryRecordReadFailedException(
+                _localizer.Get("FileIngestion.BoundaryRecordReadFailed", file.Name, ex.Message), ex);
         }
     }
 
@@ -2247,7 +3161,8 @@ public class FileIngestionOrchestrator : IFileIngestionService
         string expectedRecordType)
     {
         if (string.IsNullOrWhiteSpace(line))
-            throw new FileIngestionBoundaryRecordEmptyException( _localizer.Get("FileIngestion.BoundaryRecordEmpty", expectedRecordType));
+            throw new FileIngestionBoundaryRecordEmptyException(_localizer.Get("FileIngestion.BoundaryRecordEmpty",
+                expectedRecordType));
 
         var parsed = _fixedWidthRecordParser.Parse(line, parsingRule);
         if (!string.Equals(parsed.RecordType, expectedRecordType, StringComparison.OrdinalIgnoreCase))
@@ -2280,14 +3195,15 @@ public class FileIngestionOrchestrator : IFileIngestionService
     private string GetRequiredProperty(object instance, string propertyName)
     {
         var property = instance.GetType().GetProperty(propertyName)
-            ?? throw new FileIngestionPropertyNotDefinedException(
-                _localizer.Get("FileIngestion.PropertyNotDefined", propertyName, instance.GetType().Name));
+                       ?? throw new FileIngestionPropertyNotDefinedException(
+                           _localizer.Get("FileIngestion.PropertyNotDefined", propertyName, instance.GetType().Name));
 
         var value = property.GetValue(instance);
         var stringValue = Convert.ToString(value, CultureInfo.InvariantCulture);
 
         if (string.IsNullOrWhiteSpace(stringValue))
-            throw new FileIngestionPropertyEmptyException( _localizer.Get("FileIngestion.PropertyEmpty", propertyName, instance.GetType().Name));
+            throw new FileIngestionPropertyEmptyException(_localizer.Get("FileIngestion.PropertyEmpty", propertyName,
+                instance.GetType().Name));
 
         return stringValue;
     }
@@ -2311,8 +3227,8 @@ public class FileIngestionOrchestrator : IFileIngestionService
     private long GetFooterTxnCount(object footerModel)
     {
         var property = footerModel.GetType().GetProperty("TxnCount")
-            ?? throw new FileIngestionFooterTxnCountMissingException(
-                _localizer.Get("FileIngestion.FooterTxnCountMissing", footerModel.GetType().Name));
+                       ?? throw new FileIngestionFooterTxnCountMissingException(
+                           _localizer.Get("FileIngestion.FooterTxnCountMissing", footerModel.GetType().Name));
 
         return Convert.ToInt64(property.GetValue(footerModel), CultureInfo.InvariantCulture);
     }
@@ -2375,7 +3291,8 @@ public class FileIngestionOrchestrator : IFileIngestionService
 
             var explicitFileName = Path.GetFileName(request.FilePath);
             if (!MatchesProfileFileName(profile, explicitFileName))
-                throw new FileIngestionFilePatternMismatchException(_localizer.Get("FileIngestion.FilePatternMismatch", explicitFileName));
+                throw new FileIngestionFilePatternMismatchException(_localizer.Get("FileIngestion.FilePatternMismatch",
+                    explicitFileName));
 
             return
             [
@@ -2397,7 +3314,8 @@ public class FileIngestionOrchestrator : IFileIngestionService
     private ProfileOptions GetProfile(string profileKey)
     {
         if (!_options.Profiles.TryGetValue(profileKey, out var profile))
-            throw new FileIngestionProfileNotConfiguredException(_localizer.Get("FileIngestion.ProfileNotConfigured", profileKey));
+            throw new FileIngestionProfileNotConfiguredException(_localizer.Get("FileIngestion.ProfileNotConfigured",
+                profileKey));
 
         return profile;
     }
@@ -2405,7 +3323,7 @@ public class FileIngestionOrchestrator : IFileIngestionService
     private ParsingOptions GetParsingRule(ProfileOptions profile)
     {
         return profile.Parsing
-            ?? throw new FileIngestionParsingNotDefinedException(_localizer.Get("FileIngestion.ParsingNotDefined"));
+               ?? throw new FileIngestionParsingNotDefinedException(_localizer.Get("FileIngestion.ParsingNotDefined"));
     }
 
     private int GetBatchSize() => Math.Max(1, _options.Processing.BatchSize ?? 1);
@@ -2428,6 +3346,9 @@ public class FileIngestionOrchestrator : IFileIngestionService
 
     private static bool MatchesProfileFileName(ProfileOptions profile, string fileName)
     {
+        if (_profileRegexByInstance.TryGetValue(profile, out var cachedRegex))
+            return cachedRegex.IsMatch(fileName);
+
         var allowedExtensions = new HashSet<string>(
             (profile.FileExtensions ?? Enumerable.Empty<string>())
             .Where(x => !string.IsNullOrWhiteSpace(x))
@@ -2438,18 +3359,38 @@ public class FileIngestionOrchestrator : IFileIngestionService
         var pattern = profile.Pattern ?? string.Empty;
         if (pattern.EndsWith("$", StringComparison.Ordinal))
             pattern = pattern[..^1];
+        
+        var sortedExtensions = allowedExtensions
+            .OrderBy(x => x, StringComparer.Ordinal)
+            .ToArray();
+        var cacheKey = pattern + "||" + string.Join(",", sortedExtensions);
 
-        if (allowedExtensions.Count > 0)
+        var regex = _profileRegexCache.GetOrAdd(cacheKey, _ =>
         {
-            var extensionPattern = string.Join("|", allowedExtensions.Select(Regex.Escape));
-            pattern = $"{pattern}(?:{extensionPattern})$";
+            string finalPattern;
+            if (sortedExtensions.Length > 0)
+            {
+                var extensionPattern = string.Join("|", sortedExtensions.Select(Regex.Escape));
+                finalPattern = $"{pattern}(?:{extensionPattern})$";
+            }
+            else
+            {
+                finalPattern = $"{pattern}$";
+            }
+
+            return new Regex(finalPattern,
+                RegexOptions.Compiled | RegexOptions.CultureInvariant | RegexOptions.IgnoreCase);
+        });
+        
+        try
+        {
+            _profileRegexByInstance.Add(profile, regex);
         }
-        else
+        catch (ArgumentException)
         {
-            pattern = $"{pattern}$";
+            /* already added by another thread */
         }
 
-        var regex = new Regex(pattern, RegexOptions.Compiled | RegexOptions.CultureInvariant | RegexOptions.IgnoreCase);
         return regex.IsMatch(fileName);
     }
 
@@ -2476,23 +3417,41 @@ public class FileIngestionOrchestrator : IFileIngestionService
             ? FileSourceType.Local
             : FileSourceType.Remote;
     }
+    
+    private static readonly ConcurrentDictionary<(Type, string), Func<object, object?>?> _modelGetterCache = new();
+
+    private static Func<object, object?>? GetModelGetter(Type modelType, string propertyName)
+    {
+        return _modelGetterCache.GetOrAdd((modelType, propertyName), static k =>
+        {
+            var prop = k.Item1.GetProperty(k.Item2);
+            if (prop is null)
+                return null;
+
+            var p = Expression.Parameter(typeof(object), "m");
+            var cast = Expression.Convert(p, k.Item1);
+            var access = Expression.Property(cast, prop);
+            var box = Expression.Convert(access, typeof(object));
+            return Expression.Lambda<Func<object, object?>>(box, p).Compile();
+        });
+    }
 
     private static string GetStringValue(object model, string propertyName)
     {
-        var property = model.GetType().GetProperty(propertyName);
-        if (property is null)
+        var getter = GetModelGetter(model.GetType(), propertyName);
+        if (getter is null)
             return string.Empty;
 
-        return Convert.ToString(property.GetValue(model), CultureInfo.InvariantCulture)?.Trim() ?? string.Empty;
+        return Convert.ToString(getter(model), CultureInfo.InvariantCulture)?.Trim() ?? string.Empty;
     }
 
     private static string GetNormalizedValue(object model, string propertyName)
     {
-        var property = model.GetType().GetProperty(propertyName);
-        if (property is null)
+        var getter = GetModelGetter(model.GetType(), propertyName);
+        if (getter is null)
             return string.Empty;
 
-        var value = property.GetValue(model);
+        var value = getter(model);
 
         return value switch
         {
@@ -2509,11 +3468,11 @@ public class FileIngestionOrchestrator : IFileIngestionService
     {
         value = 0;
 
-        var property = model.GetType().GetProperty(propertyName);
-        if (property is null)
+        var getter = GetModelGetter(model.GetType(), propertyName);
+        if (getter is null)
             return false;
 
-        var rawValue = property.GetValue(model);
+        var rawValue = getter(model);
         if (rawValue is null)
             return false;
 
@@ -2565,7 +3524,7 @@ public class FileIngestionOrchestrator : IFileIngestionService
             ArrayPool<byte>.Shared.Return(buffer);
         }
     }
-
+    
     private static async Task ReadLinesWithByteOffsetsAsync(
         Stream stream,
         Encoding encoding,
@@ -2576,6 +3535,7 @@ public class FileIngestionOrchestrator : IFileIngestionService
         long startingByteOffset = 0)
     {
         const int ioBufferSize = 128 * 1024;
+        const int initialLineBufferSize = 4 * 1024;
 
         var preamble = encoding.GetPreamble();
         if (preamble.Length > 0 && stream.CanSeek && stream.Position == 0 && stream.Length >= preamble.Length)
@@ -2595,7 +3555,8 @@ public class FileIngestionOrchestrator : IFileIngestionService
         }
 
         var buffer = ArrayPool<byte>.Shared.Rent(ioBufferSize);
-        await using var lineBuffer = new MemoryStream();
+        var lineBuffer = ArrayPool<byte>.Shared.Rent(initialLineBufferSize);
+        var lineLen = 0;
 
         var lineNumber = startingLineNumber;
         var lineStartOffset = stream.CanSeek ? stream.Position : startingByteOffset;
@@ -2605,6 +3566,8 @@ public class FileIngestionOrchestrator : IFileIngestionService
         {
             while (true)
             {
+                cancellationToken.ThrowIfCancellationRequested();
+
                 var bytesRead = await stream.ReadAsync(buffer.AsMemory(0, buffer.Length), cancellationToken);
                 if (bytesRead == 0)
                     break;
@@ -2612,65 +3575,98 @@ public class FileIngestionOrchestrator : IFileIngestionService
                 if (onBytesAsync is not null)
                     await onBytesAsync(buffer.AsMemory(0, bytesRead), cancellationToken);
 
-                for (var index = 0; index < bytesRead; index++)
+                var pos = 0;
+                while (pos < bytesRead)
                 {
-                    cancellationToken.ThrowIfCancellationRequested();
-                    var currentByte = buffer[index];
+                    var remaining = bytesRead - pos;
+                    var nlAbs = Array.IndexOf(buffer, (byte)'\n', pos, remaining);
 
-                    if (currentByte == (byte)'\n')
+                    if (nlAbs < 0)
                     {
-                        await EmitLineAsync(
-                            lineBuffer,
-                            encoding,
-                            onLineAsync,
-                            ++lineNumber,
-                            lineStartOffset,
-                            currentOffset + 1);
-
-                        lineStartOffset = currentOffset + 1;
-                    }
-                    else
-                    {
-                        lineBuffer.WriteByte(currentByte);
+                        EnsureLineBufferCapacity(ref lineBuffer, lineLen, remaining);
+                        Buffer.BlockCopy(buffer, pos, lineBuffer, lineLen, remaining);
+                        lineLen += remaining;
+                        currentOffset += remaining;
+                        break;
                     }
 
-                    currentOffset++;
+                    var lineSegmentLen = nlAbs - pos;
+                    if (lineSegmentLen > 0)
+                    {
+                        EnsureLineBufferCapacity(ref lineBuffer, lineLen, lineSegmentLen);
+                        Buffer.BlockCopy(buffer, pos, lineBuffer, lineLen, lineSegmentLen);
+                        lineLen += lineSegmentLen;
+                    }
+
+                    currentOffset += lineSegmentLen + 1;
+                    await EmitLineAsync(lineBuffer, lineLen, encoding, onLineAsync, ++lineNumber, lineStartOffset,
+                        currentOffset);
+                    lineLen = 0;
+                    lineStartOffset = currentOffset;
+                    pos = nlAbs + 1;
                 }
             }
 
-            if (lineBuffer.Length > 0)
-                await EmitLineAsync(lineBuffer, encoding, onLineAsync, ++lineNumber, lineStartOffset, currentOffset);
+            if (lineLen > 0)
+                await EmitLineAsync(lineBuffer, lineLen, encoding, onLineAsync, ++lineNumber, lineStartOffset,
+                    currentOffset);
         }
         finally
         {
             ArrayPool<byte>.Shared.Return(buffer);
+            ArrayPool<byte>.Shared.Return(lineBuffer);
         }
     }
 
+    private static void EnsureLineBufferCapacity(ref byte[] lineBuffer, int currentLen, int additional)
+    {
+        var required = currentLen + additional;
+        if (required <= lineBuffer.Length)
+            return;
+
+        var newSize = lineBuffer.Length;
+        while (newSize < required)
+            newSize *= 2;
+
+        var newBuffer = ArrayPool<byte>.Shared.Rent(newSize);
+        if (currentLen > 0)
+            Buffer.BlockCopy(lineBuffer, 0, newBuffer, 0, currentLen);
+        ArrayPool<byte>.Shared.Return(lineBuffer);
+        lineBuffer = newBuffer;
+    }
+
     private static async Task EmitLineAsync(
-        MemoryStream lineBuffer,
+        byte[] lineBuffer,
+        int lineLen,
         Encoding encoding,
         Func<FileLineReadResult, Task> onLineAsync,
         long lineNumber,
         long lineStartOffset,
         long nextByteOffset)
     {
-        var lineBytes = lineBuffer.ToArray();
-        var lineLength = lineBytes.Length;
-
-        if (lineLength > 0 && lineBytes[^1] == (byte)'\r')
-            lineLength--;
+        var (effectiveLen, lineString) = DecodeLine(lineBuffer, lineLen, encoding);
 
         await onLineAsync(new FileLineReadResult
         {
             LineNumber = lineNumber,
             ByteOffset = lineStartOffset,
-            ByteLength = lineLength,
+            ByteLength = effectiveLen,
             ConsumedByteLength = (int)(nextByteOffset - lineStartOffset),
-            Line = encoding.GetString(lineBytes, 0, lineLength)
+            Line = lineString
         });
+    }
 
-        lineBuffer.SetLength(0);
+    private static (int EffectiveLen, string LineString) DecodeLine(byte[] lineBuffer, int lineLen, Encoding encoding)
+    {
+        var effectiveLen = lineLen;
+        if (effectiveLen > 0 && lineBuffer[effectiveLen - 1] == (byte)'\r')
+            effectiveLen--;
+
+        var lineString = effectiveLen == 0
+            ? string.Empty
+            : encoding.GetString(new ReadOnlySpan<byte>(lineBuffer, 0, effectiveLen));
+
+        return (effectiveLen, lineString);
     }
 
     private async Task<string> ReadFirstMatchingLineAsync(
@@ -2681,11 +3677,12 @@ public class FileIngestionOrchestrator : IFileIngestionService
     {
         await foreach (var line in ReadLinesAsync(stream, encoding, cancellationToken))
         {
-            if (line.StartsWith(recordPrefix, StringComparison.Ordinal))
+            if (line.StartsWith(recordPrefix, StringComparison.OrdinalIgnoreCase))
                 return line;
         }
 
-        throw new FileIngestionRecordNotFoundFromStartException(_localizer.Get("FileIngestion.RecordNotFoundFromStart", recordPrefix));
+        throw new FileIngestionRecordNotFoundFromStartException(_localizer.Get("FileIngestion.RecordNotFoundFromStart",
+            recordPrefix));
     }
 
     private async Task<string> ReadLastMatchingLineAsync(
@@ -2700,54 +3697,99 @@ public class FileIngestionOrchestrator : IFileIngestionService
 
             await foreach (var line in ReadLinesAsync(stream, encoding, cancellationToken))
             {
-                if (line.StartsWith(recordPrefix, StringComparison.Ordinal))
+                if (line.StartsWith(recordPrefix, StringComparison.OrdinalIgnoreCase))
                     lastMatchingLine = line;
             }
 
             return lastMatchingLine
-                ?? throw new FileIngestionRecordNotFoundFromEndException(_localizer.Get("FileIngestion.RecordNotFoundFromEnd", recordPrefix));
+                   ?? throw new FileIngestionRecordNotFoundFromEndException(
+                       _localizer.Get("FileIngestion.RecordNotFoundFromEnd", recordPrefix));
         }
 
-        const int blockSize = 8192;
+        const int blockSize = 64 * 1024; 
         var position = stream.Length;
-        var carry = Array.Empty<byte>();
-
-        while (position > 0)
+        var buffer = ArrayPool<byte>.Shared.Rent(blockSize);
+        var carry = ArrayPool<byte>.Shared.Rent(blockSize);
+        var carryLen = 0;
+        try
         {
-            cancellationToken.ThrowIfCancellationRequested();
-
-            var readSize = (int)Math.Min(blockSize, position);
-            position -= readSize;
-            stream.Seek(position, SeekOrigin.Begin);
-
-            var buffer = new byte[readSize];
-            var bytesRead = await stream.ReadAsync(buffer.AsMemory(0, readSize), cancellationToken);
-            if (bytesRead == 0)
-                break;
-
-            var combined = new byte[bytesRead + carry.Length];
-            Buffer.BlockCopy(buffer, 0, combined, 0, bytesRead);
-
-            if (carry.Length > 0)
-                Buffer.BlockCopy(carry, 0, combined, bytesRead, carry.Length);
-
-            var combinedText = encoding.GetString(combined);
-            var lines = combinedText.Split('\n');
-            carry = encoding.GetBytes(lines[0]);
-
-            for (var index = lines.Length - 1; index >= 1; index--)
+            while (position > 0)
             {
-                var line = lines[index].TrimEnd('\r');
-                if (line.StartsWith(recordPrefix, StringComparison.Ordinal))
-                    return line;
+                cancellationToken.ThrowIfCancellationRequested();
+
+                var readSize = (int)Math.Min(blockSize, position);
+                position -= readSize;
+                stream.Seek(position, SeekOrigin.Begin);
+
+                var bytesRead = await stream.ReadAsync(buffer.AsMemory(0, readSize), cancellationToken);
+                if (bytesRead == 0)
+                    break;
+                
+                var combinedLen = bytesRead + carryLen;
+                var combined = ArrayPool<byte>.Shared.Rent(combinedLen);
+                try
+                {
+                    Buffer.BlockCopy(buffer, 0, combined, 0, bytesRead);
+                    if (carryLen > 0)
+                        Buffer.BlockCopy(carry, 0, combined, bytesRead, carryLen);
+                    
+                    var endIdx = combinedLen;
+                    var firstNl = -1;
+                    for (var i = combinedLen - 1; i >= 0; i--)
+                    {
+                        if (combined[i] != (byte)'\n') continue;
+                        var lineStart = i + 1;
+                        var lineLen = endIdx - lineStart;
+
+                        if (lineLen > 0 && combined[lineStart + lineLen - 1] == (byte)'\r') lineLen--;
+                        if (lineLen > 0)
+                        {
+                            var line = encoding.GetString(combined, lineStart, lineLen);
+                            if (line.StartsWith(recordPrefix, StringComparison.OrdinalIgnoreCase))
+                                return line;
+                        }
+
+                        endIdx = i;
+                        firstNl = i;
+                    }
+                    
+                    var carryNeed = firstNl < 0 ? combinedLen : firstNl;
+                    if (carryNeed > carry.Length)
+                    {
+                        ArrayPool<byte>.Shared.Return(carry);
+                        carry = ArrayPool<byte>.Shared.Rent(carryNeed);
+                    }
+
+                    Buffer.BlockCopy(combined, 0, carry, 0, carryNeed);
+                    carryLen = carryNeed;
+                }
+                finally
+                {
+                    ArrayPool<byte>.Shared.Return(combined);
+                }
+            }
+
+            if (carryLen > 0)
+            {
+                var tailLen = carryLen;
+                if (tailLen > 0 && carry[tailLen - 1] == (byte)'\n') tailLen--;
+                if (tailLen > 0 && carry[tailLen - 1] == (byte)'\r') tailLen--;
+                if (tailLen > 0)
+                {
+                    var tail = encoding.GetString(carry, 0, tailLen);
+                    if (tail.StartsWith(recordPrefix, StringComparison.OrdinalIgnoreCase))
+                        return tail;
+                }
             }
         }
+        finally
+        {
+            ArrayPool<byte>.Shared.Return(buffer);
+            ArrayPool<byte>.Shared.Return(carry);
+        }
 
-        var tail = encoding.GetString(carry).TrimEnd('\r', '\n');
-        if (tail.StartsWith(recordPrefix, StringComparison.Ordinal))
-            return tail;
-
-        throw new FileIngestionRecordNotFoundFromEndException(_localizer.Get("FileIngestion.RecordNotFoundFromEnd", recordPrefix));
+        throw new FileIngestionRecordNotFoundFromEndException(_localizer.Get("FileIngestion.RecordNotFoundFromEnd",
+            recordPrefix));
     }
 
     private static bool IsUniqueConstraintViolation(DbUpdateException ex)
@@ -2778,6 +3820,7 @@ public class FileIngestionOrchestrator : IFileIngestionService
         CancellationToken cancellationToken)
     {
         const int ioBufferSize = 128 * 1024;
+        const int initialLineBufferSize = 4 * 1024;
 
         var preamble = encoding.GetPreamble();
         if (preamble.Length > 0 && stream.CanSeek && stream.Position == 0 && stream.Length >= preamble.Length)
@@ -2790,50 +3833,66 @@ public class FileIngestionOrchestrator : IFileIngestionService
         }
 
         var buffer = ArrayPool<byte>.Shared.Rent(ioBufferSize);
-        await using var lineBuffer = new MemoryStream();
+        var lineBuffer = ArrayPool<byte>.Shared.Rent(initialLineBufferSize);
+        var lineLen = 0;
 
         try
         {
             while (true)
             {
+                cancellationToken.ThrowIfCancellationRequested();
+
                 var bytesRead = await stream.ReadAsync(buffer.AsMemory(0, buffer.Length), cancellationToken);
                 if (bytesRead == 0)
                     break;
 
-                for (var index = 0; index < bytesRead; index++)
+                var pos = 0;
+                while (pos < bytesRead)
                 {
-                    cancellationToken.ThrowIfCancellationRequested();
-                    var currentByte = buffer[index];
+                    var remaining = bytesRead - pos;
+                    var nlAbs = Array.IndexOf(buffer, (byte)'\n', pos, remaining);
 
-                    if (currentByte == (byte)'\n')
+                    if (nlAbs < 0)
                     {
-                        yield return DecodeBufferedLine(lineBuffer, encoding);
-                        lineBuffer.SetLength(0);
-                        continue;
+                        EnsureLineBufferCapacity(ref lineBuffer, lineLen, remaining);
+                        Buffer.BlockCopy(buffer, pos, lineBuffer, lineLen, remaining);
+                        lineLen += remaining;
+                        break;
                     }
 
-                    lineBuffer.WriteByte(currentByte);
+                    var lineSegmentLen = nlAbs - pos;
+                    if (lineSegmentLen > 0)
+                    {
+                        EnsureLineBufferCapacity(ref lineBuffer, lineLen, lineSegmentLen);
+                        Buffer.BlockCopy(buffer, pos, lineBuffer, lineLen, lineSegmentLen);
+                        lineLen += lineSegmentLen;
+                    }
+
+                    yield return DecodeBufferedLine(lineBuffer, lineLen, encoding);
+                    lineLen = 0;
+                    pos = nlAbs + 1;
                 }
             }
 
-            if (lineBuffer.Length > 0)
-                yield return DecodeBufferedLine(lineBuffer, encoding);
+            if (lineLen > 0)
+                yield return DecodeBufferedLine(lineBuffer, lineLen, encoding);
         }
         finally
         {
             ArrayPool<byte>.Shared.Return(buffer);
+            ArrayPool<byte>.Shared.Return(lineBuffer);
         }
     }
 
-    private static string DecodeBufferedLine(MemoryStream lineBuffer, Encoding encoding)
+    private static string DecodeBufferedLine(byte[] lineBuffer, int lineLen, Encoding encoding)
     {
-        var lineBytes = lineBuffer.ToArray();
-        var lineLength = lineBytes.Length;
+        var effective = lineLen;
+        if (effective > 0 && lineBuffer[effective - 1] == (byte)'\r')
+            effective--;
 
-        if (lineLength > 0 && lineBytes[^1] == (byte)'\r')
-            lineLength--;
-
-        return encoding.GetString(lineBytes, 0, lineLength);
+        return effective == 0
+            ? string.Empty
+            : encoding.GetString(new ReadOnlySpan<byte>(lineBuffer, 0, effective));
     }
 
     private FileIngestionResponse CreateErrorResponse(
@@ -2886,6 +3945,7 @@ public class FileIngestionOrchestrator : IFileIngestionService
         public long ErrorCount { get; set; }
         public long LastProcessedLineNumber { get; set; }
         public long LastProcessedByteOffset { get; set; }
+        public int BatchSequence { get; set; }
     }
 
     private sealed class TargetWriter
@@ -2920,7 +3980,15 @@ public class FileIngestionOrchestrator : IFileIngestionService
                 _logger.LogError(ex, _localizer.Get("FileIngestion.TargetArchiveWriteFailed"), ex.Message);
                 ErrorMessage = BuildDetailedErrorMessage(ex);
                 ErrorStep = "ARCHIVE_STREAM_WRITE";
-                try { await _stream.DisposeAsync(); } catch { /* best-effort cleanup */ }
+                try
+                {
+                    await _stream.DisposeAsync();
+                }
+                catch
+                {
+                    /* best-effort cleanup */
+                }
+
                 _stream = null;
             }
         }

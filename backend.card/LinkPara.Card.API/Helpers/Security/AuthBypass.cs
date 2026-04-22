@@ -1,4 +1,4 @@
-using LinkPara.Card.Application.Commons.Models.AuthBypass;
+using LinkPara.Card.Application.Commons.Models.AppConfiguration;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc.Controllers;
 using Microsoft.Extensions.Options;
@@ -8,12 +8,12 @@ namespace LinkPara.Card.API.Helpers.Security;
 public class AuthBypass
 {
     private readonly RequestDelegate _next;
-    private readonly AuthBypassOptions _options;
+    private readonly CardConfigOptions.AuthBypassSection _options;
 
-    public AuthBypass(RequestDelegate next, IOptions<AuthBypassOptions> options)
+    public AuthBypass(RequestDelegate next, IOptions<CardConfigOptions> options)
     {
         _next = next;
-        _options = options.Value;
+        _options = options.Value.Application.AuthBypass;
     }
 
     public async Task InvokeAsync(HttpContext context)

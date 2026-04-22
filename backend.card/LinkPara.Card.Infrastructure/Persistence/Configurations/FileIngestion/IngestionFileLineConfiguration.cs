@@ -22,6 +22,7 @@ public class IngestionFileLineConfiguration : IEntityTypeConfiguration<Ingestion
         builder.HasIndex(x => x.ReconciliationStatus);
         builder.HasIndex(x => new { x.FileId, x.LineType, x.ReconciliationStatus, x.UpdateDate });
         builder.HasIndex(x => x.MatchedClearingLineId);
+        builder.HasIndex(x => new { x.FileId, x.LineType, x.Status, x.ReconciliationStatus });
         builder.HasOne(x => x.IngestionFile)
             .WithMany()
             .HasForeignKey(x => x.FileId);

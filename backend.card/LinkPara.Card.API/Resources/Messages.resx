@@ -618,6 +618,48 @@
   <data name="Reporting.InternalError" xml:space="preserve">
     <value>An internal reporting error occurred.</value>
   </data>
+  <data name="Reporting.Dynamic.UnknownReportName" xml:space="preserve">
+    <value>Unknown reportName '{0}'.</value>
+  </data>
+  <data name="Reporting.Dynamic.InvalidFilters" xml:space="preserve">
+    <value>Invalid filters.</value>
+  </data>
+  <data name="Reporting.Dynamic.FilterFieldRequired" xml:space="preserve">
+    <value>filters[{0}].field is required.</value>
+  </data>
+  <data name="Reporting.Dynamic.FilterOperatorRequired" xml:space="preserve">
+    <value>filters[{0}].operator is required.</value>
+  </data>
+  <data name="Reporting.Dynamic.FilterFieldNotAllowed" xml:space="preserve">
+    <value>filters[{0}].field '{1}' is not allowed for this report.</value>
+  </data>
+  <data name="Reporting.Dynamic.FilterOperatorNotAllowedForField" xml:space="preserve">
+    <value>filters[{0}].operator '{1}' is not allowed for field '{2}'.</value>
+  </data>
+  <data name="Reporting.Dynamic.FilterOperatorMustNotHaveValue" xml:space="preserve">
+    <value>filters[{0}] operator '{1}' must not have a value.</value>
+  </data>
+  <data name="Reporting.Dynamic.FilterBetweenRequiresTwoValues" xml:space="preserve">
+    <value>filters[{0}] operator 'between' requires an array of exactly 2 values.</value>
+  </data>
+  <data name="Reporting.Dynamic.FilterInRequiresNonEmptyArray" xml:space="preserve">
+    <value>filters[{0}] operator 'in' requires a non-empty array.</value>
+  </data>
+  <data name="Reporting.Dynamic.FilterOperatorStringOnly" xml:space="preserve">
+    <value>filters[{0}] operator '{1}' is only allowed on string fields.</value>
+  </data>
+  <data name="Reporting.Dynamic.FilterRequiresValue" xml:space="preserve">
+    <value>filters[{0}] requires a value.</value>
+  </data>
+  <data name="FileIngestion.RowRetryLimitTruncatedDetail" xml:space="preserve">
+    <value>Reported first {0} exhausted rows; additional exhausted rows omitted from response.</value>
+  </data>
+  <data name="Reconciliation.OperationStatusDetail" xml:space="preserve">
+    <value>Operation status: {0}.</value>
+  </data>
+  <data name="Reconciliation.OperationAttemptDetail" xml:space="preserve">
+    <value>Operation code: {0}, Attempt: {1}.</value>
+  </data>
 
   <data name="Handler.Reporting.Financial.DailyTransactionVolumeFailed" xml:space="preserve">
     <value>Failed to retrieve daily transaction volume report. See errors for details.</value>

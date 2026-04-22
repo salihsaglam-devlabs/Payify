@@ -1,7 +1,7 @@
 using LinkPara.Card.Application.Commons.Extensions;
 using LinkPara.Card.Application.Commons.Interfaces.Reconciliation;
 using LinkPara.Card.Application.Commons.Localization;
-using LinkPara.Card.Application.Commons.Models.Archive.Configuration;
+using LinkPara.Card.Application.Commons.Models.AppConfiguration;
 using LinkPara.Card.Application.Commons.Models.Archive.Contracts.Requests;
 using LinkPara.Card.Application.Commons.Models.Reconciliation.Contracts.Requests;
 using LinkPara.Card.Application.Commons.Models.Reconciliation.Contracts.Responses;
@@ -25,7 +25,7 @@ namespace LinkPara.Card.Application.Features.Reconciliation.Commands.Execute
         private readonly IReconciliationService _service;
         private readonly IReconciliationErrorMapper _errorMapper;
         private readonly IServiceScopeFactory _serviceScopeFactory;
-        private readonly ArchiveOptions _archiveOptions;
+        private readonly CardConfigOptions.OperationsExecuteEndpoint _executeOptions;
         private readonly ILogger<ExecuteCommandHandler> _logger;
         private readonly IStringLocalizer _localizer;
 
@@ -33,14 +33,14 @@ namespace LinkPara.Card.Application.Features.Reconciliation.Commands.Execute
             IReconciliationService service,
             IReconciliationErrorMapper errorMapper,
             IServiceScopeFactory serviceScopeFactory,
-            IOptions<ArchiveOptions> archiveOptions,
+            IOptions<CardConfigOptions> options,
             ILogger<ExecuteCommandHandler> logger,
             Func<LocalizerResource, IStringLocalizer> localizerFactory)
         {
             _service = service;
             _errorMapper = errorMapper;
             _serviceScopeFactory = serviceScopeFactory;
-            _archiveOptions = archiveOptions.Value;
+            _executeOptions = options.Value.Endpoints.Reconciliation.OperationsExecute;
             _logger = logger;
             _localizer = localizerFactory(LocalizerResource.Messages);
         }
@@ -93,7 +93,7 @@ namespace LinkPara.Card.Application.Features.Reconciliation.Commands.Execute
 
         private bool ShouldRunArchive(ExecuteResponse response)
         {
-            return _archiveOptions.AutoArchiveAfterExecute == true
+            return _executeOptions.AutoArchiveAfterExecute == true
                    && response.TotalSucceeded > 0;
         }
     }

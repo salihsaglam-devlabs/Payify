@@ -1,6 +1,6 @@
 using LinkPara.Card.Application.Commons.Exceptions;
 using LinkPara.Card.Application.Commons.Extensions;
-using LinkPara.Card.Application.Commons.Models.Archive.Configuration;
+using LinkPara.Card.Application.Commons.Models.AppConfiguration;
 using LinkPara.Card.Application.Commons.Models.Archive.Contracts.Responses;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
@@ -9,14 +9,15 @@ namespace LinkPara.Card.Infrastructure.Services.Archive;
 
 internal sealed class ArchiveEligibilityEvaluator
 {
-    private readonly ArchiveOptions _options;
+    private readonly CardConfigOptions.ArchiveRunEndpoint _options;
 
     public ArchiveEligibilityEvaluator(
-        IOptions<ArchiveOptions> options,
+        IOptions<CardConfigOptions> options,
         Func<LinkPara.Card.Application.Commons.Localization.LocalizerResource, IStringLocalizer> localizerFactory)
     {
         var localizer = localizerFactory(LinkPara.Card.Application.Commons.Localization.LocalizerResource.Messages);
-        _options = options.Value ?? throw new ArchiveOptionsNotConfiguredException(localizer.Get("Config.Archive.OptionsNotConfigured"));
+        _options = options.Value?.Endpoints?.Archive?.Run
+            ?? throw new ArchiveOptionsNotConfiguredException(localizer.Get("Config.Archive.OptionsNotConfigured"));
     }
 
     public ArchiveEligibilityResult Evaluate(ArchiveAggregateSnapshot? snapshot, DateTime now)

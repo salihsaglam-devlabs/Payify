@@ -18,6 +18,7 @@ public class ReconciliationOperationConfiguration : IEntityTypeConfiguration<Rec
         builder.HasIndex(x => new { x.Status, x.NextAttemptAt, x.LeaseExpiresAt });
         builder.HasIndex(x => x.LeaseOwner);
         builder.HasIndex(x => x.IdempotencyKey);
+        builder.HasIndex(x => new { x.IdempotencyKey, x.Status });
 
         builder.HasOne(x => x.IngestionFileLine)
             .WithMany()

@@ -1,12 +1,29 @@
 using System.Collections;
 using System.Text.Json;
+using LinkPara.Card.Application.Commons.Extensions;
+using LinkPara.Card.Application.Commons.Localization;
 using LinkPara.Card.Application.Commons.Models.Reporting.Dynamic;
+using Microsoft.Extensions.Localization;
 
 namespace LinkPara.Card.Application.Commons.Helpers.Reporting;
 
-public static class DynamicReportingValidator
+public interface IDynamicReportingValidator
 {
-    public static IReadOnlyList<string> Validate(
+    IReadOnlyList<string> Validate(
+        DynamicReportRequestContract contract,
+        IReadOnlyList<DynamicReportingFilter>? filters);
+}
+
+public sealed class DynamicReportingValidator : IDynamicReportingValidator
+{
+    private readonly IStringLocalizer _localizer;
+
+    public DynamicReportingValidator(Func<LocalizerResource, IStringLocalizer> localizerFactory)
+    {
+        _localizer = localizerFactory(LocalizerResource.Messages);
+    }
+
+    public IReadOnlyList<string> Validate(
         DynamicReportRequestContract contract,
         IReadOnlyList<DynamicReportingFilter>? filters)
     {
@@ -21,22 +38,22 @@ public static class DynamicReportingValidator
 
             if (string.IsNullOrWhiteSpace(f.Field))
             {
-                errors.Add($"filters[{i}].field is required");
+                errors.Add(_localizer.Get("Reporting.Dynamic.FilterFieldRequired", i));
                 continue;
             }
             if (string.IsNullOrWhiteSpace(f.Operator))
             {
-                errors.Add($"filters[{i}].operator is required");
+                errors.Add(_localizer.Get("Reporting.Dynamic.FilterOperatorRequired", i));
                 continue;
             }
             if (!fieldMap.TryGetValue(f.Field, out var desc))
             {
-                errors.Add($"filters[{i}].field '{f.Field}' is not allowed for this report");
+                errors.Add(_localizer.Get("Reporting.Dynamic.FilterFieldNotAllowed", i, f.Field));
                 continue;
             }
             if (!desc.Operators.Contains(f.Operator, StringComparer.Ordinal))
             {
-                errors.Add($"filters[{i}].operator '{f.Operator}' is not allowed for field '{f.Field}'");
+                errors.Add(_localizer.Get("Reporting.Dynamic.FilterOperatorNotAllowedForField", i, f.Operator, f.Field));
                 continue;
             }
 
@@ -45,14 +62,14 @@ public static class DynamicReportingValidator
                 case DynamicReportingOperators.IsNull:
                 case DynamicReportingOperators.IsNotNull:
                     if (!IsNullValue(f.Value))
-                        errors.Add($"filters[{i}] operator '{f.Operator}' must not have a value");
+                        errors.Add(_localizer.Get("Reporting.Dynamic.FilterOperatorMustNotHaveValue", i, f.Operator));
                     break;
 
                 case DynamicReportingOperators.Between:
                 {
                     var arr = AsArray(f.Value);
                     if (arr.Count != 2)
-                        errors.Add($"filters[{i}] operator 'between' requires an array of exactly 2 values");
+                        errors.Add(_localizer.Get("Reporting.Dynamic.FilterBetweenRequiresTwoValues", i));
                     break;
                 }
 
@@ -60,7 +77,7 @@ public static class DynamicReportingValidator
                 {
                     var arr = AsArray(f.Value);
                     if (arr.Count == 0)
-                        errors.Add($"filters[{i}] operator 'in' requires a non-empty array");
+                        errors.Add(_localizer.Get("Reporting.Dynamic.FilterInRequiresNonEmptyArray", i));
                     break;
                 }
 
@@ -68,14 +85,14 @@ public static class DynamicReportingValidator
                 case DynamicReportingOperators.StartsWith:
                 case DynamicReportingOperators.EndsWith:
                     if (desc.Type != DynamicReportingTypes.String)
-                        errors.Add($"filters[{i}] operator '{f.Operator}' is only allowed on string fields");
+                        errors.Add(_localizer.Get("Reporting.Dynamic.FilterOperatorStringOnly", i, f.Operator));
                     if (IsNullValue(f.Value))
-                        errors.Add($"filters[{i}] requires a value");
+                        errors.Add(_localizer.Get("Reporting.Dynamic.FilterRequiresValue", i));
                     break;
 
                 default:
                     if (IsNullValue(f.Value))
-                        errors.Add($"filters[{i}] requires a value");
+                        errors.Add(_localizer.Get("Reporting.Dynamic.FilterRequiresValue", i));
                     break;
             }
         }
@@ -98,4 +115,3 @@ public static class DynamicReportingValidator
         return new() { v };
     }
 }
-

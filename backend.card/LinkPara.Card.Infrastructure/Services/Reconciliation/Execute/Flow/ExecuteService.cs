@@ -4,7 +4,7 @@ using LinkPara.Card.Application.Commons.Helpers;
 using LinkPara.Card.Application.Commons.Interfaces;
 using Microsoft.Extensions.Localization;
 using LinkPara.Card.Application.Commons.Interfaces.Reconciliation;
-using LinkPara.Card.Application.Commons.Models.Reconciliation.Configuration;
+using LinkPara.Card.Application.Commons.Models.AppConfiguration;
 using LinkPara.Card.Application.Commons.Models.Reconciliation.Contracts.Requests;
 using LinkPara.Card.Application.Commons.Models.Reconciliation.Contracts.Responses;
 using LinkPara.Card.Application.Commons.Models.Reconciliation.Shared;
@@ -17,6 +17,7 @@ using LinkPara.Card.Infrastructure.Services.Reconciliation.Evaluate.Core;
 using LinkPara.Card.Infrastructure.Services.Reconciliation.Execute.Core;
 using LinkPara.SharedModels.Persistence;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 
 namespace LinkPara.Card.Infrastructure.Services.Reconciliation.Execute.Flow;
@@ -24,6 +25,8 @@ namespace LinkPara.Card.Infrastructure.Services.Reconciliation.Execute.Flow;
 internal sealed class ExecuteService
 {
     private const int BaseRetrySeconds = 30;
+    private static readonly int MaxEvaluationParallelism =
+        Math.Clamp(Environment.ProcessorCount * 2, 4, 16);
     private static readonly string WorkerLeaseOwner = BuildWorkerLeaseOwner();
 
     private readonly CardDbContext _dbContext;
@@ -33,7 +36,8 @@ internal sealed class ExecuteService
     private readonly IReconciliationErrorMapper _errorMapper;
     private readonly IStringLocalizer _localizer;
     private readonly ITimeProvider _timeProvider;
-    private readonly ReconciliationOptions _options;
+    private readonly IServiceScopeFactory _serviceScopeFactory;
+    private readonly CardConfigOptions.OperationsExecuteEndpoint _options;
 
     public ExecuteService(
         CardDbContext dbContext,
@@ -41,8 +45,9 @@ internal sealed class ExecuteService
         IAlertService alertService,
         IAuditStampService auditStampService,
         ITimeProvider timeProvider,
-        IOptions<ReconciliationOptions> options,
+        IOptions<CardConfigOptions> options,
         IReconciliationErrorMapper errorMapper,
+        IServiceScopeFactory serviceScopeFactory,
         Func<LinkPara.Card.Application.Commons.Localization.LocalizerResource, IStringLocalizer> localizerFactory)
     {
         _dbContext = dbContext;
@@ -50,8 +55,9 @@ internal sealed class ExecuteService
         _alertService = alertService;
         _auditStampService = auditStampService;
         _timeProvider = timeProvider;
-        _options = options.Value;
+        _options = options.Value.Endpoints.Reconciliation.OperationsExecute;
         _errorMapper = errorMapper;
+        _serviceScopeFactory = serviceScopeFactory;
         _localizer = localizerFactory(LinkPara.Card.Application.Commons.Localization.LocalizerResource.Messages);
     }
 
@@ -70,16 +76,130 @@ internal sealed class ExecuteService
             Errors = errors
         };
 
-        var remaining = executeOptions.MaxEvaluations.Value;
+        var maxEvaluations = executeOptions.MaxEvaluations.Value;
+        var leaseSeconds = executeOptions.LeaseSeconds.Value;
 
         var evaluationIds = await ResolveTargetEvaluationIdsAsync(
             selection,
             now,
-            executeOptions.MaxEvaluations.Value,
+            maxEvaluations,
             cancellationToken);
 
+        if (evaluationIds.Length == 0)
+        {
+            await RunAlertServiceSafelyAsync(errors, cancellationToken);
+            response.ErrorCount = errors.Count;
+            return response;
+        }
+        
+        var remaining = maxEvaluations;
+        var remainingLock = new object();
+        var resultsLock = new object();
+        var errorsLock = new object();
+
+        var dop = Math.Min(MaxEvaluationParallelism, evaluationIds.Length);
+        if (dop <= 1)
+        {
+            await ExecuteEvaluationsSequentiallyAsync(
+                evaluationIds, selection, now, leaseSeconds,
+                response, errors, () => remaining,
+                consumed => remaining = Math.Max(0, remaining - consumed),
+                cancellationToken);
+        }
+        else
+        {
+            await Parallel.ForEachAsync(
+                evaluationIds,
+                new ParallelOptions
+                {
+                    MaxDegreeOfParallelism = dop,
+                    CancellationToken = cancellationToken
+                },
+                async (evaluationId, ct) =>
+                {
+                    int budget;
+                    lock (remainingLock)
+                    {
+                        budget = remaining;
+                    }
+
+                    if (budget <= 0)
+                    {
+                        return;
+                    }
+
+                    using var scope = _serviceScopeFactory.CreateScope();
+                    var worker = scope.ServiceProvider.GetRequiredService<ExecuteService>();
+
+                    List<OperationExecutionResult> evalResults;
+                    try
+                    {
+                        evalResults = await worker.RunSingleEvaluationAsync(
+                            evaluationId,
+                            now,
+                            budget,
+                            leaseSeconds,
+                            selection,
+                            errors,
+                            errorsLock,
+                            ct);
+                    }
+                    catch (OperationCanceledException) when (ct.IsCancellationRequested)
+                    {
+                        throw;
+                    }
+                    catch (Exception ex)
+                    {
+                        lock (errorsLock)
+                        {
+                            errors.Add(_errorMapper.MapException(
+                                ex,
+                                "EXECUTION_EVALUATION",
+                                evaluationId: evaluationId,
+                                message: _localizer.Get("Reconciliation.EvaluationExecutionFailed", evaluationId)));
+                        }
+                        return;
+                    }
+
+                    lock (resultsLock)
+                    {
+                        foreach (var result in evalResults)
+                        {
+                            UpdateExecutionTotals(response, result);
+
+                            if (IsFailedResult(result))
+                            {
+                                response.Results.Add(result);
+                            }
+                        }
+                    }
+
+                    lock (remainingLock)
+                    {
+                        remaining = Math.Max(0, maxEvaluations - response.TotalAttempted);
+                    }
+                });
+        }
+
+        await RunAlertServiceSafelyAsync(errors, cancellationToken);
+        response.ErrorCount = errors.Count;
+        return response;
+    }
+
+    private async Task ExecuteEvaluationsSequentiallyAsync(
+        Guid[] evaluationIds,
+        ExecutionSelection selection,
+        DateTime now,
+        int leaseSeconds,
+        ExecuteResponse response,
+        List<ReconciliationErrorDetail> errors,
+        Func<int> getRemaining,
+        Action<int> consumeRemaining,
+        CancellationToken cancellationToken)
+    {
         foreach (var evaluationId in evaluationIds)
         {
+            var remaining = getRemaining();
             if (remaining <= 0)
             {
                 break;
@@ -92,7 +212,7 @@ internal sealed class ExecuteService
                     evaluationId,
                     now,
                     remaining,
-                    executeOptions.LeaseSeconds.Value,
+                    leaseSeconds,
                     selection,
                     errors,
                     cancellationToken);
@@ -121,9 +241,48 @@ internal sealed class ExecuteService
                 }
             }
 
-            remaining = executeOptions.MaxEvaluations.Value - response.TotalAttempted;
+            consumeRemaining(results.Count);
         }
+    }
+    
+    private async Task<List<OperationExecutionResult>> RunSingleEvaluationAsync(
+        Guid evaluationId,
+        DateTime now,
+        int remainingLimit,
+        int leaseSeconds,
+        ExecutionSelection selection,
+        List<ReconciliationErrorDetail> sharedErrors,
+        object sharedErrorsLock,
+        CancellationToken cancellationToken)
+    {
+        var localErrors = new List<ReconciliationErrorDetail>();
+        try
+        {
+            return await ExecuteEvaluationAsync(
+                evaluationId,
+                now,
+                remainingLimit,
+                leaseSeconds,
+                selection,
+                localErrors,
+                cancellationToken);
+        }
+        finally
+        {
+            if (localErrors.Count > 0)
+            {
+                lock (sharedErrorsLock)
+                {
+                    sharedErrors.AddRange(localErrors);
+                }
+            }
+        }
+    }
 
+    private async Task RunAlertServiceSafelyAsync(
+        List<ReconciliationErrorDetail> errors,
+        CancellationToken cancellationToken)
+    {
         try
         {
             await _alertService.ExecuteAsync(cancellationToken);
@@ -132,8 +291,6 @@ internal sealed class ExecuteService
         {
             errors.Add(_errorMapper.MapException(ex, "RECONCILIATION_ALERT_SERVICE_EXECUTE"));
         }
-        response.ErrorCount = errors.Count;
-        return response;
     }
 
     private async Task<Guid[]> ResolveTargetEvaluationIdsAsync(
@@ -164,12 +321,11 @@ internal sealed class ExecuteService
         {
             query = query.Where(x => selection.GroupIds.Contains(x.GroupId));
         }
-
+        
         return await query
-            .OrderBy(x => x.EvaluationId)
-            .ThenBy(x => x.SequenceNumber)
             .Select(x => x.EvaluationId)
             .Distinct()
+            .OrderBy(id => id)
             .Take(maxEvaluations)
             .ToArrayAsync(cancellationToken);
     }
@@ -184,15 +340,12 @@ internal sealed class ExecuteService
         CancellationToken cancellationToken)
     {
         var results = new List<OperationExecutionResult>();
+        
+        _dbContext.ChangeTracker.Clear();
+        var operations = await LoadEvaluationOperationWindowAsync(evaluationId, cancellationToken);
 
         while (results.Count < remainingLimit)
         {
-            _dbContext.ChangeTracker.Clear();
-
-            var operations = await LoadEvaluationOperationWindowAsync(
-                evaluationId,
-                cancellationToken);
-
             if (operations.Count == 0)
             {
                 break;
@@ -207,6 +360,8 @@ internal sealed class ExecuteService
 
             if (!await TryClaimOperationAsync(nextOperation, now, leaseSeconds, cancellationToken))
             {
+                _dbContext.ChangeTracker.Clear();
+                operations = await LoadEvaluationOperationWindowAsync(evaluationId, cancellationToken);
                 continue;
             }
 
@@ -244,7 +399,7 @@ internal sealed class ExecuteService
         DateTime now,
         ExecutionSelection selection)
     {
-        foreach (var operation in operations.OrderBy(x => x.SequenceNumber))
+        foreach (var operation in operations)
         {
             if (operation.Status is OperationStatus.Completed or OperationStatus.Cancelled or OperationStatus.Failed)
             {
@@ -376,7 +531,11 @@ internal sealed class ExecuteService
             return false;
         }
         
-        await _dbContext.Entry(operation).ReloadAsync(cancellationToken);
+        operation.Status = OperationStatus.Executing;
+        operation.LeaseOwner = WorkerLeaseOwner;
+        operation.LeaseExpiresAt = leaseExpiresAt;
+        operation.UpdateDate = auditStamp.Timestamp;
+        operation.LastModifiedBy = auditStamp.UserId;
         return true;
     }
 
@@ -430,13 +589,14 @@ internal sealed class ExecuteService
                     cancellationToken);
             }
 
-            var alreadyApplied = await _dbContext.ReconciliationOperations
-                .AsNoTracking()
-                .AnyAsync(x =>
-                        x.Id != operation.Id &&
-                        x.IdempotencyKey == operation.IdempotencyKey &&
-                        x.Status == OperationStatus.Completed,
-                    cancellationToken);
+            var alreadyApplied = !string.IsNullOrEmpty(operation.IdempotencyKey) &&
+                                 await _dbContext.ReconciliationOperations
+                                     .AsNoTracking()
+                                     .AnyAsync(x =>
+                                             x.Id != operation.Id &&
+                                             x.IdempotencyKey == operation.IdempotencyKey &&
+                                             x.Status == OperationStatus.Completed,
+                                         cancellationToken);
 
             if (alreadyApplied)
             {
@@ -475,7 +635,7 @@ internal sealed class ExecuteService
                     fileLineId: operation.FileLineId,
                     operationId: operation.Id,
                     evaluationId: operation.EvaluationId,
-                    detail: $"Operation code: {operation.Code}, Attempt: {attemptNumber}"));
+                    detail: _localizer.Get("Reconciliation.OperationAttemptDetail", operation.Code, attemptNumber)));
             }
 
             execution.Status = handlerResult.IsSkipped
@@ -739,9 +899,9 @@ internal sealed class ExecuteService
         };
     }
 
-    private ExecuteOptions ResolveExecuteOptions(ExecuteRequest request)
+    private CardConfigOptions.OperationsExecuteEndpoint ResolveExecuteOptions(ExecuteRequest request)
     {
-        return request.Options ?? _options.Execute;
+        return request.Options ?? _options;
     }
 
     private static void UpdateExecutionTotals(
@@ -807,6 +967,7 @@ internal sealed class ExecuteService
         string? message,
         CancellationToken cancellationToken)
     {
+        await Task.CompletedTask;
         var alert = new ReconciliationAlert
         {
             Id = Guid.NewGuid(),
@@ -819,7 +980,7 @@ internal sealed class ExecuteService
             Message = message
         };
         _auditStampService.StampForCreate(alert);
-        await _dbContext.ReconciliationAlerts.AddAsync(alert, cancellationToken);
+        _dbContext.ReconciliationAlerts.Add(alert);
     }
 
     private static OperationExecutionResult CreateOperationResult(

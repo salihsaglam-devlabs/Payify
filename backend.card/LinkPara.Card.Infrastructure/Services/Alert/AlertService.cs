@@ -3,7 +3,7 @@ using System.Text;
 using LinkPara.Card.Application.Commons.Extensions;
 using LinkPara.Card.Application.Commons.Helpers;
 using LinkPara.Card.Application.Commons.Interfaces;
-using LinkPara.Card.Application.Commons.Models.Reconciliation.Configuration;
+using LinkPara.Card.Application.Commons.Models.AppConfiguration;
 using LinkPara.Card.Domain.Entities.Reconciliation.Persistence;
 using LinkPara.Card.Domain.Enums.Reconciliation;
 using LinkPara.Card.Infrastructure.Persistence;
@@ -23,7 +23,7 @@ internal sealed class AlertService : IAlertService
     private readonly CardDbContext _dbContext;
     private readonly INotificationEmailService _notificationEmailService;
     private readonly IAuditStampService _auditStampService;
-    private readonly ReconciliationOptions _options;
+    private readonly CardConfigOptions.AlertsEndpoint _options;
     private readonly ILogger<AlertService> _logger;
     private readonly IStringLocalizer _localizer;
     private readonly ITimeProvider _timeProvider;
@@ -33,7 +33,7 @@ internal sealed class AlertService : IAlertService
         INotificationEmailService notificationEmailService,
         IAuditStampService auditStampService,
         ITimeProvider timeProvider,
-        IOptions<ReconciliationOptions> options,
+        IOptions<CardConfigOptions> options,
         ILogger<AlertService> logger,
         Func<LinkPara.Card.Application.Commons.Localization.LocalizerResource, IStringLocalizer> localizerFactory)
     {
@@ -42,13 +42,13 @@ internal sealed class AlertService : IAlertService
         _auditStampService = auditStampService;
         _timeProvider = timeProvider;
         _logger = logger;
-        _options = options.Value;
+        _options = options.Value.Endpoints.Reconciliation.Alerts;
         _localizer = localizerFactory(LinkPara.Card.Application.Commons.Localization.LocalizerResource.Messages);
     }
 
     public async Task ExecuteAsync(CancellationToken cancellationToken = default)
     {
-        var alertOptions = _options.Alert;
+        var alertOptions = _options;
 
         if (alertOptions.Enabled != true)
         {

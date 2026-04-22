@@ -3,7 +3,7 @@ using LinkPara.Card.Application.Commons.Exceptions;
 using LinkPara.Card.Application.Commons.Extensions;
 using LinkPara.Card.Application.Commons.Interfaces;
 using LinkPara.Card.Application.Commons.Interfaces.Archive;
-using LinkPara.Card.Application.Commons.Models.Archive.Configuration;
+using LinkPara.Card.Application.Commons.Models.AppConfiguration;
 using LinkPara.Card.Application.Commons.Models.Archive.Contracts.Requests;
 using LinkPara.Card.Application.Commons.Models.Archive.Contracts.Responses;
 using LinkPara.Card.Infrastructure.Services.Audit;
@@ -20,7 +20,7 @@ internal sealed class ArchiveService : IArchiveService
 
     private readonly ArchiveAggregateReader _reader;
     private readonly ArchiveEligibilityEvaluator _evaluator;
-    private readonly ArchiveOptions _options;
+    private readonly CardConfigOptions.ArchiveEndpoints _options;
     private readonly IArchiveErrorMapper _errorMapper;
     private readonly IStringLocalizer _localizer;
     private readonly IServiceProvider _serviceProvider;
@@ -30,7 +30,7 @@ internal sealed class ArchiveService : IArchiveService
     public ArchiveService(
         ArchiveAggregateReader reader,
         ArchiveEligibilityEvaluator evaluator,
-        IOptions<ArchiveOptions> options,
+        IOptions<CardConfigOptions> options,
         IArchiveErrorMapper errorMapper,
         Func<LinkPara.Card.Application.Commons.Localization.LocalizerResource, IStringLocalizer> localizerFactory,
         IServiceProvider serviceProvider,
@@ -41,7 +41,8 @@ internal sealed class ArchiveService : IArchiveService
         _evaluator = evaluator;
         _errorMapper = errorMapper;
         _localizer = localizerFactory(LinkPara.Card.Application.Commons.Localization.LocalizerResource.Messages);
-        _options = options.Value ?? throw new ArchiveOptionsNotConfiguredException(_localizer.Get("Config.Archive.OptionsNotConfigured"));
+        _options = options.Value?.Endpoints?.Archive
+            ?? throw new ArchiveOptionsNotConfiguredException(_localizer.Get("Config.Archive.OptionsNotConfigured"));
         _serviceProvider = serviceProvider;
         _auditStampService = auditStampService;
         _timeProvider = timeProvider;
@@ -57,7 +58,7 @@ internal sealed class ArchiveService : IArchiveService
             var effectiveRequest = request ?? new ArchivePreviewRequest();
             var effectiveBeforeDate = ResolveBeforeDate(effectiveRequest.BeforeDate);
             var effectiveLimit = effectiveRequest.Limit is null or 0
-                ? _options.Defaults.PreviewLimit.Value
+                ? _options.Preview.PreviewLimit.Value
                 : Math.Clamp(effectiveRequest.Limit.Value, 1, 10000);
             var candidateIds = await _reader.ResolveCandidateFileIdsAsync(
                 effectiveRequest.IngestionFileIds ?? Array.Empty<Guid>(),
@@ -122,9 +123,9 @@ internal sealed class ArchiveService : IArchiveService
             var effectiveRequest = request ?? new ArchiveRunRequest();
             var effectiveBeforeDate = ResolveBeforeDate(effectiveRequest.BeforeDate);
             var effectiveMaxFiles = effectiveRequest.MaxFiles is null or 0
-                ? _options.Defaults.MaxRunCount.Value
+                ? _options.Run.Defaults.MaxRunCount.Value
                 : Math.Clamp(effectiveRequest.MaxFiles.Value, 1, 10000);
-            var continueOnError = effectiveRequest.ContinueOnError ?? _options.Defaults.ContinueOnError.Value;
+            var continueOnError = effectiveRequest.ContinueOnError ?? _options.Run.Defaults.ContinueOnError.Value;
             var candidateIds = await _reader.ResolveCandidateFileIdsAsync(
                 effectiveRequest.IngestionFileIds ?? Array.Empty<Guid>(),
                 effectiveBeforeDate,
@@ -137,7 +138,7 @@ internal sealed class ArchiveService : IArchiveService
             foreach (var candidateId in candidateIds)
             {
                 ArchiveRunItemResult item = null!;
-                var maxAttempts = _options.Defaults.MaxRetryPerFile!.Value + 1;
+                var maxAttempts = _options.Run.Defaults.MaxRetryPerFile!.Value + 1;
 
                 for (var attempt = 1; attempt <= maxAttempts; attempt++)
                 {
@@ -161,7 +162,7 @@ internal sealed class ArchiveService : IArchiveService
                     if (item.Status != "Failed" || attempt >= maxAttempts)
                         break;
 
-                    await Task.Delay(TimeSpan.FromSeconds(_options.Defaults.RetryDelaySeconds!.Value), cancellationToken);
+                    await Task.Delay(TimeSpan.FromSeconds(_options.Run.Defaults.RetryDelaySeconds!.Value), cancellationToken);
                 }
 
                 response.Items.Add(item);
@@ -214,7 +215,7 @@ internal sealed class ArchiveService : IArchiveService
 
     private DateTime? ResolveBeforeDate(DateTime? requestBeforeDate)
     {
-        if (_options.Defaults.UseConfiguredBeforeDateOnly.Value)
+        if (_options.Run.Defaults.UseConfiguredBeforeDateOnly.Value)
         {
             return ResolveConfiguredBeforeDate();
         }
@@ -224,7 +225,7 @@ internal sealed class ArchiveService : IArchiveService
 
     private DateTime? ResolveConfiguredBeforeDate()
     {
-        var strategy = _options.Defaults.DefaultBeforeDateStrategy;
+        var strategy = _options.Run.Defaults.DefaultBeforeDateStrategy;
 
         if (!SupportedBeforeDateStrategies.Contains(strategy))
         {
@@ -234,7 +235,7 @@ internal sealed class ArchiveService : IArchiveService
 
         return strategy switch
         {
-            "RetentionDays" => _timeProvider.Now.AddDays(-_options.Rules.RetentionDays.Value),
+            "RetentionDays" => _timeProvider.Now.AddDays(-_options.Run.Rules.RetentionDays.Value),
             "None" => null,
             _ => throw new ArchiveUnsupportedBeforeDateStrategyException(
                 _localizer.Get("Archive.UnsupportedBeforeDateStrategy", strategy, string.Join(", ", SupportedBeforeDateStrategies)))

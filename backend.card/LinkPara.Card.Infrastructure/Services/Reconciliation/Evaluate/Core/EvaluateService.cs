@@ -5,7 +5,7 @@ using LinkPara.Card.Application.Commons.Extensions;
 using LinkPara.Card.Application.Commons.Helpers;
 using LinkPara.Card.Application.Commons.Interfaces;
 using LinkPara.Card.Application.Commons.Interfaces.Reconciliation;
-using LinkPara.Card.Application.Commons.Models.Reconciliation.Configuration;
+using LinkPara.Card.Application.Commons.Models.AppConfiguration;
 using LinkPara.Card.Application.Commons.Models.Reconciliation.Contracts.Requests;
 using LinkPara.Card.Application.Commons.Models.Reconciliation.Contracts.Responses;
 using LinkPara.Card.Application.Commons.Models.Reconciliation.Shared;
@@ -32,7 +32,7 @@ internal sealed class EvaluateService : IEvaluateService
     private readonly IReconciliationErrorMapper _errorMapper;
     private readonly IStringLocalizer _localizer;
     private readonly ITimeProvider _timeProvider;
-    private readonly ReconciliationOptions _options = new();
+    private readonly CardConfigOptions.EvaluateEndpoint _options;
 
     public EvaluateService(
         CardDbContext dbContext,
@@ -40,7 +40,7 @@ internal sealed class EvaluateService : IEvaluateService
         EvaluatorResolver evaluatorResolver,
         IAuditStampService auditStampService,
         ITimeProvider timeProvider,
-        IOptions<ReconciliationOptions> options,
+        IOptions<CardConfigOptions> options,
         IReconciliationErrorMapper errorMapper,
         Func<LinkPara.Card.Application.Commons.Localization.LocalizerResource, IStringLocalizer> localizerFactory)
     {
@@ -49,7 +49,7 @@ internal sealed class EvaluateService : IEvaluateService
         _evaluatorResolver = evaluatorResolver;
         _auditStampService = auditStampService;
         _timeProvider = timeProvider;
-        _options = options.Value;
+        _options = options.Value.Endpoints.Reconciliation.Evaluate;
         _errorMapper = errorMapper;
         _localizer = localizerFactory(LinkPara.Card.Application.Commons.Localization.LocalizerResource.Messages);
     }
@@ -87,13 +87,17 @@ internal sealed class EvaluateService : IEvaluateService
                 }
 
                 var successfulEvaluations = new List<SuccessfulEvaluationPersistence>();
+                const int refreshEveryNRows = 50;
+                var rowIndex = 0;
 
                 foreach (var row in rows)
                 {
                     cancellationToken.ThrowIfCancellationRequested();
                     try
                     {
-                        await RefreshClaimAsync(new List<Guid> { row.Id }, cancellationToken);
+                        rowIndex++;
+                        if (rowIndex % refreshEveryNRows == 0)
+                            await RefreshClaimAsync(new List<Guid> { row.Id }, cancellationToken);
 
                         if (!contextMap.TryGetValue(row.Id, out var context))
                         {
@@ -144,7 +148,7 @@ internal sealed class EvaluateService : IEvaluateService
         int chunkSize,
         CancellationToken cancellationToken)
     {
-        var maxAttempts = Math.Max(1, _options.Evaluate.ClaimRetryCount.Value);
+        var maxAttempts = Math.Max(1, _options.ClaimRetryCount.Value);
 
         for (var attempt = 0; attempt < maxAttempts; attempt++)
         {
@@ -170,13 +174,13 @@ internal sealed class EvaluateService : IEvaluateService
     {
         var auditStamp = _auditStampService.CreateStamp();
         var claimMarker = $"{ClaimMarkerPrefix}{Guid.NewGuid():N}";
-        var claimTimeout = TimeSpan.FromSeconds(Math.Max(30, _options.Evaluate.ClaimTimeoutSeconds.Value));
+        var claimTimeout = TimeSpan.FromSeconds(Math.Max(30, _options.ClaimTimeoutSeconds.Value));
         var staleCutoff = auditStamp.Timestamp.Add(-claimTimeout);
 
         var strategy = _dbContext.Database.CreateExecutionStrategy();
         return await strategy.ExecuteAsync(async () =>
         {
-            await using var transaction = await _dbContext.Database.BeginTransactionAsync(IsolationLevel.Serializable, cancellationToken);
+            await using var transaction = await _dbContext.Database.BeginTransactionAsync(IsolationLevel.ReadCommitted, cancellationToken);
 
             var candidateIds = await _dbContext.IngestionFileLines
                 .AsNoTracking()
@@ -405,33 +409,32 @@ internal sealed class EvaluateService : IEvaluateService
         var correlations = rows
             .Where(r => !string.IsNullOrWhiteSpace(r.CorrelationKey) && !string.IsNullOrWhiteSpace(r.CorrelationValue))
             .GroupBy(r => r.CorrelationKey!)
-            .ToDictionary(g => g.Key, g => g.Select(r => r.CorrelationValue!).Distinct().ToArray());
+            .ToDictionary(g => g.Key, g => g.Select(r => r.CorrelationValue!).Distinct().ToHashSet());
 
         if (correlations.Count == 0)
         {
             return new HashSet<Guid>();
         }
+        
+        var lookupKeys = correlations.Keys.ToArray();
+        var allValues = correlations.Values.SelectMany(v => v).Distinct().ToArray();
+
+        var rawMatches = await _dbContext.IngestionFileLines
+            .AsNoTracking()
+            .Where(x => x.LineType == "D"
+                        && lookupKeys.Contains(x.CorrelationKey!)
+                        && allValues.Contains(x.CorrelationValue!)
+                        && x.IngestionFile.FileType == FileType.Clearing
+                        && x.IngestionFile.Status == FileStatus.Success)
+            .Select(x => new { Key = x.CorrelationKey!, Value = x.CorrelationValue! })
+            .Distinct()
+            .ToListAsync(cancellationToken);
 
         var matchedValues = new HashSet<(string Key, string Value)>();
-        foreach (var pair in correlations)
+        foreach (var m in rawMatches)
         {
-            var key = pair.Key;
-            var values = pair.Value;
-            var found = await _dbContext.IngestionFileLines
-                .AsNoTracking()
-                .Where(x => x.LineType == "D"
-                            && x.CorrelationKey == key
-                            && values.Contains(x.CorrelationValue)
-                            && x.IngestionFile.FileType == FileType.Clearing
-                            && x.IngestionFile.Status == FileStatus.Success)
-                .Select(x => x.CorrelationValue!)
-                .Distinct()
-                .ToListAsync(cancellationToken);
-
-            foreach (var v in found)
-            {
-                matchedValues.Add((key, v));
-            }
+            if (correlations.TryGetValue(m.Key, out var allowed) && allowed.Contains(m.Value))
+                matchedValues.Add((m.Key, m.Value));
         }
 
         if (matchedValues.Count == 0)
@@ -529,7 +532,7 @@ internal sealed class EvaluateService : IEvaluateService
                 Branch = operation.Branch,
                 Status = status,
                 RetryCount = 0,
-                MaxRetries = _options.Evaluate.OperationMaxRetries!.Value,
+                MaxRetries = _options.OperationMaxRetries!.Value,
                 IdempotencyKey = ResolveIdempotencyKey(row, operation)
             });
         }
@@ -786,7 +789,7 @@ internal sealed class EvaluateService : IEvaluateService
 
     private int ResolveChunkSize(EvaluateRequest request)
     {
-        return Math.Clamp(request.Options?.ChunkSize ?? _options.Evaluate.ChunkSize.Value, 100, 10_000);
+        return Math.Clamp(request.Options?.ChunkSize ?? _options.ChunkSize.Value, 100, 10_000);
     }
 
     private EvaluateResponse CreateResponse(

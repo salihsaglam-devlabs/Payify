@@ -64,26 +64,45 @@ internal sealed class ContextBuilder : IContextBuilder
             .ToList();
 
         var correlatedGroups = new Dictionary<string, IReadOnlyList<IngestionFileLine>>();
-        foreach (var group in correlationPairs.GroupBy(x => x.Key, x => x.Value, StringComparer.Ordinal))
+        
+        var allKeys = correlationPairs.Select(p => p.Key).Distinct(StringComparer.Ordinal).ToArray();
+        var allValuesArr = correlationPairs.Select(p => p.Value).Distinct(StringComparer.Ordinal).ToArray();
+        var allowedPairs = new HashSet<(string Key, string Value)>(
+            correlationPairs.Select(p => (p.Key, p.Value)));
+
+        if (allKeys.Length > 0 && allValuesArr.Length > 0)
         {
-            var values = group
-                .Distinct(StringComparer.Ordinal)
-                .ToArray();
-
-            foreach (var batch in Batch(values, CorrelationLookupBatchSize))
+            const int safeBatch = 1000;
+            for (var keyOffset = 0; keyOffset < allKeys.Length; keyOffset += safeBatch)
             {
-                var rowsByKey = await _dbContext.IngestionFileLines
-                    .AsNoTracking()
-                    .Include(x => x.IngestionFile)
-                    .Where(x => x.LineType == "D")
-                    .Where(x => x.CorrelationKey == group.Key && batch.Contains(x.CorrelationValue))
-                    .OrderBy(x => x.LineNumber)
-                    .ThenBy(x => x.Id)
-                    .ToListAsync(cancellationToken);
+                var keyChunk = allKeys.Skip(keyOffset).Take(safeBatch).ToArray();
 
-                foreach (var rowGroup in rowsByKey.GroupBy(x => $"{x.CorrelationKey}::{x.CorrelationValue}"))
+                for (var valOffset = 0; valOffset < allValuesArr.Length; valOffset += safeBatch)
                 {
-                    correlatedGroups[rowGroup.Key] = rowGroup.ToList();
+                    var valChunk = allValuesArr.Skip(valOffset).Take(safeBatch).ToArray();
+
+                    var rowsBatch = await _dbContext.IngestionFileLines
+                        .AsNoTracking()
+                        .Include(x => x.IngestionFile)
+                        .Where(x => x.LineType == "D")
+                        .Where(x => keyChunk.Contains(x.CorrelationKey!) && valChunk.Contains(x.CorrelationValue!))
+                        .OrderBy(x => x.LineNumber)
+                        .ThenBy(x => x.Id)
+                        .ToListAsync(cancellationToken);
+
+                    foreach (var x in rowsBatch)
+                    {
+                        if (x.CorrelationKey is null || x.CorrelationValue is null) continue;
+                        if (!allowedPairs.Contains((x.CorrelationKey, x.CorrelationValue))) continue;
+
+                        var groupKey = $"{x.CorrelationKey}::{x.CorrelationValue}";
+                        if (!correlatedGroups.TryGetValue(groupKey, out var existing))
+                        {
+                            existing = new List<IngestionFileLine>();
+                            correlatedGroups[groupKey] = existing;
+                        }
+                        ((List<IngestionFileLine>)existing).Add(x);
+                    }
                 }
             }
         }

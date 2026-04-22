@@ -1,4 +1,4 @@
-using LinkPara.Card.Application.Commons.Models.Reconciliation.Configuration;
+using LinkPara.Card.Application.Commons.Models.AppConfiguration;
 
 namespace LinkPara.Card.Application.Commons.Models.Reconciliation.Contracts.Requests;
 
@@ -10,5 +10,5 @@ public class ExecuteRequest
 
     public Guid[] OperationIds { get; set; } = Array.Empty<Guid>();
 
-    public ExecuteOptions? Options { get; set; }
+    public CardConfigOptions.OperationsExecuteEndpoint? Options { get; set; }
 }

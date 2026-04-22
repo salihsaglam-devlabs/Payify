@@ -47,11 +47,6 @@ using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using System.Reflection;
 using LinkPara.Card.Application.Commons.Models.AppConfiguration;
-using LinkPara.Card.Application.Commons.Models.Archive.Configuration;
-using LinkPara.Card.Application.Commons.Models.AuthBypass;
-using LinkPara.Card.Application.Commons.Models.DatabaseConfiguration;
-using LinkPara.Card.Application.Commons.Models.FileIngestion.Configuration;
-using LinkPara.Card.Application.Commons.Models.Reconciliation.Configuration;
 using LinkPara.Card.Application.Features.PaycoreServices.CardPinServices.Services;
 using LinkPara.Card.Infrastructure.Consumers.FileIngestionAndReconciliation;
 using LinkPara.Card.Infrastructure.Services.Alert;
@@ -103,38 +98,25 @@ public static class DependencyInjection
         IConfiguration configuration,
         IVaultClient vaultClient)
     {
-        var reconciliation = vaultClient.GetSecretValue<ReconciliationOptions>("CardSecrets", ReconciliationOptions.SectionName, null)
-            ?? new ReconciliationOptions();
-        reconciliation.ValidateAndApplyDefaults();
-
-        var fileIngestion = vaultClient.GetSecretValue<FileIngestionOptions>("CardSecrets", FileIngestionOptions.SectionName, null)
-            ?? throw new FileIngestionVaultConfigMissingException("Vault key missing: CardSecrets/FileIngestion (Connections and Profiles are required)");
-        fileIngestion.ValidateAndApplyDefaults();
-
-        var archive = vaultClient.GetSecretValue<ArchiveOptions>("CardSecrets", ArchiveOptions.SectionName, null)
-            ?? new ArchiveOptions();
-        archive.ValidateAndApplyDefaults();
-
-        var appConfig = vaultClient.GetSecretValue<AppConfigOptions>("CardSecrets", AppConfigOptions.SectionName, null);
-        if (appConfig != null)
+        var cardConfig = vaultClient.GetSecretValue<CardConfigOptions>(
+            "CardSecrets", CardConfigOptions.SectionName, null)
+            ?? throw new FileIngestionVaultConfigMissingException(
+                $"Vault key missing: CardSecrets/{CardConfigOptions.SectionName} " +
+                "(unified Card configuration is required: Application + Endpoints).");
+        
+        if (cardConfig.Application is null ||
+            (cardConfig.Application.AuthBypass is null && cardConfig.Application.Database is null))
         {
-            appConfig.ValidateAndApplyDefaults();
-        }
-        else
-        {
-            appConfig = new AppConfigOptions
+            cardConfig.Application = new CardConfigOptions.ApplicationSection
             {
-                AuthBypass = configuration.GetSection(AuthBypassOptions.SectionName).Get<AuthBypassOptions>(),
-                Database = configuration.GetSection(DatabaseOptions.SectionName).Get<DatabaseOptions>()
+                AuthBypass = configuration.GetSection("AuthBypass").Get<CardConfigOptions.AuthBypassSection>(),
+                Database = configuration.GetSection("Database").Get<CardConfigOptions.DatabaseSection>()
             };
-            appConfig.ValidateAndApplyDefaults();
         }
 
-        services.AddSingleton<IOptions<ReconciliationOptions>>(Options.Create(reconciliation));
-        services.AddSingleton<IOptions<FileIngestionOptions>>(Options.Create(fileIngestion));
-        services.AddSingleton<IOptions<ArchiveOptions>>(Options.Create(archive));
-        services.AddSingleton<IOptions<AuthBypassOptions>>(Options.Create(appConfig.AuthBypass));
-        services.AddSingleton<IOptions<DatabaseOptions>>(Options.Create(appConfig.Database));
+        cardConfig.ValidateAndApplyDefaults();
+
+        services.AddSingleton<IOptions<CardConfigOptions>>(Options.Create(cardConfig));
     }
 
 
@@ -198,6 +180,7 @@ public static class DependencyInjection
         services.AddScoped<IReportingService, ReportingService>();
         
         services.AddScoped<DynamicReportingSqlBuilder>();
+        services.AddScoped<IDynamicReportingValidator, DynamicReportingValidator>();
         services.AddScoped<IDynamicReportingDialect>(sp =>
         {
             var db = sp.GetRequiredService<CardDbContext>();

@@ -1,7 +1,7 @@
 # LinkPara Card — Güncel Sistem Referansı
 
-**Son doğrulama tarihi:** 21 Nisan 2026  
-**Kaynaklar:** `LinkPara.Card.API`, `LinkPara.Card.Application`, `LinkPara.Card.Infrastructure`, `LinkPara.Card.Domain`, `LinkPara.Card.Infrastructure/Persistence/SqlMigrations/PostgreSql/V1_0_4__ReportingViews.sql`, mevcut controller / service / validator / DTO / enum tanımları
+**Son doğrulama tarihi:** 22 Nisan 2026  
+**Kaynaklar:** `LinkPara.Card.API`, `LinkPara.Card.Application`, `LinkPara.Card.Infrastructure`, `LinkPara.Card.Domain`, `LinkPara.Card.Infrastructure/Persistence/SqlMigrations/PostgreSql/V1_0_4__ReportingViews.sql`, `LinkPara.Card.Application/Commons/Models/AppConfiguration/CardConfigOptions.cs`, `LinkPara.Card.Application/Commons/Models/FileIngestion/Configuration/*.cs`, `LinkPara.Card.Infrastructure/DependencyInjection.cs`, mevcut controller / service / validator / DTO / enum tanımları
 
 > Bu belge yalnızca kaynak kod ve repository içindeki SQL/dokümantasyon dosyalarından doğrulanan davranışları anlatır. Kodda görünmeyen veya daha alt sistemde saklı olan davranışlar için özellikle belirtilmiştir.
 
@@ -451,6 +451,325 @@ Mesaj sözleşmesi `FileIngestionAndReconciliationJobRequest` içinde taşınır
 - **Create** policy’si yalnız veri üretmek için değil, reconciliation’da **evaluate ve execute operasyonlarını başlatmak** için de kullanılır.
 - **Delete** policy’si archive run’da kullanılır; bunun sebebi archive run’ın canlı aggregate’i silmesidir.
 - Reporting için ayrı bir `Reporting:*` ailesi yoktur; okuma yetkisi reconciliation read-all ile aynı havuza bağlanmıştır.
+
+---
+
+## Konfigürasyon — `CardConfigOptions`
+
+> Bu bölüm tüm runtime davranışını tetikleyen tek konfigürasyon ağacını ([`CardConfigOptions.cs`](LinkPara.Card.Application/Commons/Models/AppConfiguration/CardConfigOptions.cs)) baştan sona belgeler. Buradaki her parametre koddaki `ValidateAndApplyDefaults()` zincirinden geçer; eksik bırakılan alanlar listelenmiş **kod default'larına** düşer, geçersiz değerler ise yine listelenmiş **`*InvalidException`** türleri ile sistemi açılış anında durdurur.
+
+### Yükleme akışı (Vault + appsettings)
+
+`Infrastructure.AddInfrastructure → ConfigureFileIngestionAndReconciliationOptions` ([`DependencyInjection.cs`](LinkPara.Card.Infrastructure/DependencyInjection.cs)) şu sırada çalışır:
+
+1. Vault'tan `CardSecrets` mount → `CardConfig` (sabit `CardConfigOptions.SectionName`) anahtarı `CardConfigOptions` tipine deserialize edilir. Bulunamazsa **`FileIngestionVaultConfigMissingException`** fırlatılır; servis ayağa kalkmaz.
+2. `Application.AuthBypass` ve `Application.Database` Vault'ta yoksa, geriye dönük uyumluluk için bunlar `appsettings.{Environment}.json` içindeki **kök seviye** `AuthBypass` ve `Database` section'larından doldurulur. Bu fallback yalnız "her ikisi de Vault'ta yoksa" devreye girer; biri Vault'ta varsa diğeri Vault'ta tanımlanmak zorundadır.
+3. `cardConfig.ValidateAndApplyDefaults()` çağrılır; her seviye `??=` ile null-koalesce edilip default'lara, sonra range-check'lere tabi tutulur. Pozitiflik / non-negativity ihlalleri ilgili `*InvalidException` ile patlar.
+4. Sonuç **singleton `IOptions<CardConfigOptions>`** olarak DI'ye konur; runtime'da hot reload **yoktur** — değişiklik için pod restart gerekir.
+
+> **Kısmi config tuzağı:** Validate adımı her node'da `??=` ile çalıştığı için, bir alt section'ı **kısmen** yazıp diğer alanları yazmadığında o alt section bütün olarak default'a düşmez — yalnız null bıraktığın alanlar default'a düşer. Bu davranış `AlertsEndpoint.ToEmails` gibi "boş array" anlamlı olan alanlarda silent davranışa yol açar (alt başlıkta uyarılır).
+
+### Konfigürasyon ağacı (genel görünüm)
+
+```
+CardConfig
+├── Application
+│   ├── AuthBypass              → API/Helpers/Security/AuthBypass middleware
+│   └── Database                → Infrastructure migration boot
+└── Endpoints
+    ├── FileIngestion
+    │   └── Ingest
+    │       ├── Connections     → Source / Target (Local/FTP/SFTP)
+    │       ├── Processing      → Batch / paralel ingestion ayarları
+    │       └── Profiles{}      → profileKey = FileType+FileContentType
+    ├── Reconciliation
+    │   ├── Evaluate            → EvaluateService chunk + claim parametreleri
+    │   │   └── Consumer        → MassTransit response davranışı
+    │   ├── OperationsExecute   → ExecuteService lease + auto-archive
+    │   └── Alerts              → AlertService teslim hattı
+    ├── Archive
+    │   ├── Preview             → ArchiveService preview limiti
+    │   └── Run
+    │       ├── Defaults        → run-bazlı varsayılanlar (max, retry, strategy)
+    │       ├── Rules           → retention + min update age + purge mode
+    │       └── TerminalStatuses→ aggregate başına eligibility statü kümeleri
+    └── Reporting               → şu an boş; ileride genişleme yeri
+```
+
+Tüketici eşleşmeleri:
+
+| Sınıf | Tüketici |
+|---|---|
+| `AuthBypassSection` | `LinkPara.Card.API/Helpers/Security/AuthBypass.cs` (middleware) |
+| `DatabaseSection` | Infrastructure migration konfigürasyonu (boot-time auto migrate) |
+| `IngestEndpoint` | `FileTransferClientResolver`, `SftpFileTransferClient`, `FileIngestionOrchestrator` |
+| `ProcessingOptions` | `FileIngestionOrchestrator` (batch / bulk / paralelizm) |
+| `ProfileOptions` (Profiles dictionary) | `FileIngestionOrchestrator.MatchesProfile*` (regex + extension + parsing) |
+| `EvaluateEndpoint` | `EvaluateService`, `EvaluateCommand` ([`ExecuteCommand.cs`](LinkPara.Card.Application/Features/Reconciliation/Commands/Execute/ExecuteCommand.cs) eşdeğeri) |
+| `EvaluateEndpoint.Consumer` | `FileIngestionAndReconciliationConsumer` |
+| `OperationsExecuteEndpoint` | `ExecuteService`, `ExecuteCommand` |
+| `AlertsEndpoint` | `AlertService` (`Reconciliation:ReadAll` listeleme ayrı; bu section gönderimi yönetir) |
+| `ArchivePreviewEndpoint` | `ArchiveService.PreviewAsync` |
+| `ArchiveRunEndpoint.{Defaults,Rules,TerminalStatuses}` | `ArchiveExecutor`, `ArchiveEligibilityEvaluator`, `ArchiveAggregateReader`, `ArchiveVerifier` |
+
+---
+
+### `Application` section
+
+Uygulama düzeyi (endpoint dışı) çapraz-kesen davranışlar.
+
+#### `Application.AuthBypass`
+
+Middleware ([`AuthBypass.cs`](LinkPara.Card.API/Helpers/Security/AuthBypass.cs)) `Enabled=true` ise listelenen controller'larda authorization handler'ını es geçer. **Yalnız geliştirme / yerel test ortamı içindir.**
+
+| Parametre | Tip | Default | İzinli değerler | Ne işe yarar | Ne zaman değiştirilir |
+|---|---|---:|---|---|---|
+| `Enabled` | `bool?` | `false` | `true` / `false` | true ise `Controllers` listesinde geçen controller'lara gelen istekler authorization handler'ını atlar | **Sadece local/dev/CI smoke test**. Staging/prod'da **mutlaka `false`**; aksi halde tüm policy duvarı düşer. |
+| `Controllers` | `string[]` | `[]` | Controller adları (örn. `"FileIngestion"`, `"Reconciliation"`) | Bypass kapsamını sınırlar; boş liste hiçbir bypass yapmaz (Enabled=true olsa bile etki yok) | Bir feature'ın auth'suz hızlı denenmesi gerektiğinde geçici olarak doldurulur; PR sonrası temizlenmelidir. |
+
+> **Operasyonel uyarı:** `Enabled=true` ile `Controllers=[]` kombinasyonu sessizce no-op'tur — config gözden kaçabilir; bu yüzden CI'de `Enabled` üretim değeri (`false`) sabitlenmelidir.
+
+#### `Application.Database`
+
+Veritabanı boot davranışı.
+
+| Parametre | Tip | Default | İzinli değerler | Ne işe yarar | Ne zaman değiştirilir |
+|---|---|---:|---|---|---|
+| `EnableAutoMigrate` | `bool?` | `false` | `true` / `false` | true ise uygulama açılışında pending EF migration'lar otomatik çalışır | **Dev / test / CI'de `true`** kabul edilebilir. **Üretimde `false`** önerilir; migration insan onaylı pipeline ile çalıştırılır (race / rollback kontrolü için). |
+
+---
+
+### `Endpoints.FileIngestion.Ingest`
+
+Dosya alım yolunun tamamını belirler. **Vault'ta `Connections` ve `Profiles` zorunlu**; yoksa ingestion ayağa kalkmaz.
+
+| Üst alan | Yokluğunda | Anlam |
+|---|---|---|
+| `Connections` | `FileIngestionConfigConnectionsMissingException` | Kaynak ve hedef transport (Local / FTP / SFTP) |
+| `Profiles` | `FileIngestionConfigProfilesMissingException` | profileKey → format/profile (regex, encoding, extensions, parsing kuralı) |
+| `Processing` | yoksa default'larla doldurulur | Batch / paralelizm / retry parametreleri |
+
+#### `Connections` (`ConnectionsOptions`)
+
+```
+Connections
+├── Source (EndpointOptions)   → dosyaların okunduğu yer
+└── Target (EndpointOptions)   → arşiv kopyasının yazıldığı yer
+```
+
+Her `EndpointOptions` zorunlu olarak `Protocol` ister (`"Local" | "Ftp" | "Sftp"`); aksi `FileIngestionConfigProtocolMissingException`. Protokol seçimine göre `Local` / `Ftp` / `Sftp` alt section'ı doldurulur (ilgili dosyalar: [`LocalOptions.cs`](LinkPara.Card.Application/Commons/Models/FileIngestion/Configuration/LocalOptions.cs), [`FtpOptions.cs`](LinkPara.Card.Application/Commons/Models/FileIngestion/Configuration/FtpOptions.cs), [`SftpOptions.cs`](LinkPara.Card.Application/Commons/Models/FileIngestion/Configuration/SftpOptions.cs)).
+
+`SftpOptions` (en sık kullanılan transport) için:
+
+| Parametre | Tip | Default | İzinli değer / sınır | Anlam | Senaryo |
+|---|---|---:|---|---|---|
+| `Host` | `string` | (zorunlu) | DNS / IP | SFTP sunucu adresi | Provider DNS değişiminde güncellenir |
+| `Port` | `int?` | `22` | `> 0` | TCP portu | Provider non-standard port istiyorsa |
+| `Username` / `Password` / `PrivateKeyPath` / `PrivateKeyPassphrase` / `KnownHostFingerprint` | `string` | — | — | Kimlik doğrulama (parola **veya** anahtar) + host pinning | Anahtar tabanlı auth tercihi; fingerprint pinning MITM koruması |
+| `TimeoutSeconds` | `int?` | `300` | `> 0` | Bağlantı kurma timeout'u | Yavaş hat / VPN'de artırılır |
+| `OperationTimeoutSeconds` | `int?` | `600` | `> 0` | Tek dosya transfer timeout'u | Çok büyük dosyalarda artırılır |
+| `RetryCount` | `int?` | `3` | `>= 0` | Bağlantı/transfer retry sayısı | Kararsız hatlarda artırılır; 0 = retry yok |
+| `RetryDelaySeconds` | `int?` | `10` | `>= 0` | Retry'ler arası bekleme | Provider rate-limit feedback'ine göre |
+| `Paths` | `Dictionary<string,string>` | — | profileKey → uzak dizin | profile başına remote path haritası | Yeni profil eklenince burada karşılığı tanımlanmalı |
+
+> **`LocalOptions` / `FtpOptions`** için aynı pattern: zorunlu alanlar (`BasePath` / `Host`) eksikse tip-spesifik exception fırlar; ayrıntı için [Configuration klasörü](LinkPara.Card.Application/Commons/Models/FileIngestion/Configuration/).
+
+#### `Processing` ([`ProcessingOptions.cs`](LinkPara.Card.Application/Commons/Models/FileIngestion/Configuration/ProcessingOptions.cs))
+
+| Parametre | Tip | Default | İzinli sınır | Anlam | Senaryo |
+|---|---|---:|---|---|---|
+| `BatchSize` | `int?` | `50_000` | `> 0` | Bulk insert sayfa boyutu | Bellek baskısı varsa düşürülür; SQL Server `BulkCopyTimeout=600s` sabit, Postgres COPY için aktif tx gerekir (Bölüm 6) |
+| `RetryBatchSize` | `int?` | `10_000` | `> 0` | Failed-row retry tarama sayfası | Tek bozuk kayıt çok ise küçültülür (commit dane sayısı) |
+| `FailedRowMaxRetryCount` | `int?` | `3` | herhangi int (servis `Math.Max(1, …)` uygular) | Satır seviyesi maksimum retry | Geçici hatalar yüksekse artırılır; `0` yazılsa bile en az **1** denenir |
+| `UseBulkInsert` | `bool?` | `true` | `true`/`false` | SqlBulkCopy / PG COPY kullanımı | Bulk yetkisi/lisansı yoksa veya enum kolonları integer'a dönmüşse `false` (Bölüm 6 enum text uyarısı) |
+| `EnableParallelProcessing` | `bool?` | `true` | `true`/`false` | Birden fazla dosya paralel işlenir | Kaynak (CPU/IO) sınırlıysa `false` |
+| `MaxDegreeOfParallelism` | `int?` | `8` | `> 0` | Paralel dosya sayısı (semaphore) | DB connection pool ve SFTP eşzamanlı bağlantı sınırlarına göre |
+| `CheckpointEveryNBatches` | `int?` | `1` | `> 0` (geçersizse default'a döner) | Kaç batch'te bir `LastProcessedByteOffset` kalıcılaştırılır | Çok küçük dosya ile 1 yeterli; çok büyük dosyalarda I/O azaltmak için artırılır |
+
+#### `Profiles` (`Dictionary<string, ProfileOptions>`)
+
+Anahtar **profileKey = `{FileType}{FileContentType}`** (örn. `"CardBkm"`, `"ClearingVisa"`). Her değer ([`ProfileOptions.cs`](LinkPara.Card.Application/Commons/Models/FileIngestion/Configuration/ProfileOptions.cs)):
+
+| Parametre | Tip | Anlam | Senaryo / Kural |
+|---|---|---|---|
+| `Pattern` | `string` (regex) | Dosya adı eşleşme regex'i | **Regex sabit `IgnoreCase + CultureInvariant + Compiled`** ile derlenir (Bölüm 1); pattern sonundaki `$` sessizce soyulup extension alternasyonu eklenir. Yeni format eklenince burada tanımlanır. |
+| `DefaultEncoding` | `string` | Encoding (`utf-8`, `iso-8859-9`, …) | Provider farklı encoding üretirse değiştirilir; UTF-8 BOM otomatik tüketilir |
+| `FileExtensions` | `List<string>` | İzinli uzantılar | `.` öneki opsiyonel; karşılaştırma `OrdinalIgnoreCase`. `.TXT.gz` gibi çift uzantı için iki ayrı giriş gerekir |
+| `Parsing` ([`ParsingOptions.cs`](LinkPara.Card.Application/Commons/Models/FileIngestion/Configuration/ParsingOptions.cs)) | `ParsingOptions` | Header/footer/detail record şemaları | Yeni dosya formatında field offset'leri burada tanımlanır |
+| `SourceDateSubfolderFormat` | `string` | Tarih bazlı alt dizin formatı (örn. `yyyyMMdd`) | Provider günlük subfolder kullanıyorsa; yoksa boş bırakılır |
+
+> **Yeni format ekleme reçetesi:** `Profiles["CardYeniFormat"] = { Pattern, DefaultEncoding, FileExtensions, Parsing, SourceDateSubfolderFormat }` → ilgili evaluator/parser kodu eklendiğinde profileKey otomatik tanınır.
+
+---
+
+### `Endpoints.Reconciliation.Evaluate`
+
+`POST /v1/Reconciliation/Evaluate` davranışını belirler. Validator override aralıkları için **Bölüm 22**'ye bakınız; aşağıdaki "Default" sütunu bu config seviyesinin başlangıç değeridir.
+
+| Parametre | Tip | Default | Servis sınırı / clamp | Anlam | Senaryo |
+|---|---|---:|---|---|---|
+| `ChunkSize` | `int?` | `50_000` | API request override **`[100, 10_000]`** ile clamp; doğrudan servis çağrısında kod default'u kullanılır | Tek `claim` döngüsünde işlenecek satır sayısı | Bellek baskısı varsa azaltılır; transaction süresi uzun ise küçültülür. **Validator/config uyumsuzluk tuzağı**: prod'da config 50.000 ama API üzerinden gelen istek 10.000'e clamp olur |
+| `ClaimTimeoutSeconds` | `int?` | `1_800` (30 dk) | Servis ek olarak `Math.Max(30, …)` taban uygular; API override `[30, 3600]` | Stale claim devralma eşiği | Worker'ın gerçek işlem süresinden büyük tutulmalı; düşük değer paralel claim çakışması yaratır |
+| `ClaimRetryCount` | `int?` | `5` | API override `[1, 10]` | `DbUpdateException`/`InvalidOperationException` üzerinde claim transaction yeniden deneme sayısı | Yüksek concurrency varsa artırılır |
+| `OperationMaxRetries` | `int?` | `5` | API override `[0, 50]` | Operasyon başarısızlığı sonrası global retry sınırı (Execute tarafından okunur) | Geçici Paycore/Emoney hataları sıkça yaşanıyorsa artırılır; idempotent olmayan handler eklendiyse düşürülür |
+
+`ChunkSize <= 0` → `ReconciliationEvaluateChunkSizeInvalidException`; benzer şekilde diğerleri için tip-spesifik exception.
+
+#### `Evaluate.Consumer` (`ConsumerSection`)
+
+| Parametre | Tip | Default | Anlam | Senaryo |
+|---|---|---:|---|---|
+| `RespondToContext` | `bool?` | `false` | MassTransit `FileIngestionAndReconciliationConsumer` içinde `RespondIfEnabled` davranışını açar/kapar; `false` iken response no-op | Request/Response pattern'i tüketen consumer varsa `true`. Saf publish kullanılıyorsa `false` (default) trafik ve gereksiz response handler'ı engeller |
+
+---
+
+### `Endpoints.Reconciliation.OperationsExecute`
+
+`POST /v1/Reconciliation/Operations/Execute` ve auto-archive davranışı.
+
+| Parametre | Tip | Default | Servis sınırı | Anlam | Senaryo |
+|---|---|---:|---|---|---|
+| `MaxEvaluations` | `int?` | `500_000` | API override **`[1, 100_000]`** ile clamp; consumer/direct çağrılar tavanı aşabilir (Bölüm 22 tuzağı) | Tek execute çağrısında işlenecek **maksimum evaluation** sayısı | Büyük backlog'da artırılır; kısa SLA için düşürülür |
+| `LeaseSeconds` | `int?` | `900` (15 dk) | API override `[1, 3600]` | Bir operasyonun lease süresi (`LeaseExpiresAt = now + LeaseSeconds`) | Handler'lar uzun (chargeback iki fazlı, refund) ise artırılır; kısa handler'larda azaltılarak crash sonrası reclaim hızlandırılır |
+| `AutoArchiveAfterExecute` | `bool?` | `false` | — | Execute sonu `TotalSucceeded > 0` ise arka planda boş `ArchiveRunRequest` gönderilir (`Task.Run` + `CancellationToken.None`) | Sürekli ingestion + execute akışında storage büyümesini sınırlamak için `true`; manuel arşiv penceresi tercih ediliyorsa `false`. **Uyarı:** hatalar `LogError` ile yutulur (Bölüm 13) |
+
+`MaxEvaluations <= 0` → `ReconciliationExecuteMaxEvaluationsInvalidException`; `LeaseSeconds <= 0` → `ReconciliationExecuteLeaseSecondsInvalidException`.
+
+---
+
+### `Endpoints.Reconciliation.Alerts`
+
+`AlertService.ExecuteAsync` davranışı (Bölüm 15 ile birlikte okunmalı).
+
+| Parametre | Tip | Default | İzinli değer / sınır | Anlam | Senaryo |
+|---|---|---:|---|---|---|
+| `Enabled` | `bool?` | `true` | `true` / `false` | `false` ise `ExecuteAsync` sessizce early-exit; alert persist edilmez | Kanıt/dış sistem henüz hazır değilse `false` (geliştirme); prod'da `true` |
+| `TemplateName` | `string` | `"ReconciliationAlertTemplate"` | Bildirim sistemindeki template adı | Notification template seçimi (30+ token) | Yeni template tasarımı yapıldığında veya birden fazla ortam için A/B template kullanıldığında değiştirilir |
+| `ToEmails` | `string[]` | `[]` | E-posta adresleri (her eleman `;` ile ayrı çoklu adres içerebilir) | Hedef alıcı listesi | Operasyon DL'i + risk DL'i. **Boş bırakılırsa** `Enabled=true` olsa bile gönderim sessizce skip olur — bu yüzden config review'da mutlaka kontrol edilmelidir |
+| `BatchSize` | `int?` | `10_000_000` | `> 0` | Tek run'da çekilecek maksimum aday alert sayısı | Pratikte "tüm pending"; throttling istiyorsanız azaltılır (Bölüm 22 uyarısı) |
+| `IncludeFailed` | `bool?` | `true` | `true` / `false` | `true` ise `Pending` ek olarak `Failed` alert'ler de yeniden gönderilir (sonsuz retry; attempt counter yok) | Kanal kırıldığında `false`'a çekip dead-letter'ı manuel temizlemek; sağlıklı durumda `true` (kayıp olmaması için) |
+
+`BatchSize <= 0` → `ReconciliationAlertBatchSizeInvalidException`.
+
+---
+
+### `Endpoints.Archive`
+
+`Archive.Preview` ve `Archive.Run` davranışı; eligibility kuralları ve terminal status kümeleri.
+
+#### `Archive.Preview`
+
+| Parametre | Tip | Default | İzinli sınır | Anlam | Senaryo |
+|---|---|---:|---|---|---|
+| `PreviewLimit` | `int?` | `5_000` | `> 0`; servis ayrıca `Math.Clamp(1, 10_000)` uygular | Preview snapshot satır sayısı (eligibility hesaplaması) | UI'de büyük örnek görmek için artırılır; küçük tutulması preview maliyetini düşürür |
+
+`PreviewLimit <= 0` → `ArchivePreviewLimitInvalidException`.
+
+#### `Archive.Run`
+
+`Enabled` (root): `false` ise her aday için `ARCHIVE_DISABLED` failure reason yazılır; preview snapshot yine yüklenir ama eligibility geçmez. Default `true` (üst section sabitinden gelir).
+
+##### `Archive.Run.Defaults` (`ArchiveRunDefaults`)
+
+| Parametre | Tip | Default | İzinli sınır | Anlam | Senaryo |
+|---|---|---:|---|---|---|
+| `MaxRunCount` | `int?` | `50_000` | `> 0`; API override **`[0, 10_000]`** (0 = "default kullan"); servis `Math.Clamp(1, 10_000)` uygular | Tek run'da arşivlenecek maksimum dosya | Pencere kısaltmak / DB yükünü kontrol için düşürülür; backlog büyükse artırılır (ama servis tavanı 10k) |
+| `ContinueOnError` | `bool?` | `false` | `true` / `false` | İlk failed item sonrası süreç durur (`false`) veya devam eder (`true`) | Sebep tek hatayı izole etmekse `false`; parçalı kapanış kabul edilebilirse `true` |
+| `UseConfiguredBeforeDateOnly` | `bool?` | `false` | `true` / `false` | `true` ise request'teki `BeforeDate` **tamamen yok sayılır**; yalnız strategy hesaplanır | Operatörün yanlışlıkla geniş tarih vermesini engellemek için (kontrollü prod'da `true`) |
+| `DefaultBeforeDateStrategy` | `string` | `"RetentionDays"` | `"None"` veya `"RetentionDays"` (`OrdinalIgnoreCase`) | Request `BeforeDate` boşken kullanılacak strateji; `"RetentionDays"` → `now - Rules.RetentionDays` | `None` ile yalnız min-update-age kuralı işler; `RetentionDays` ile yaş tabanlı pencere |
+| `MaxRetryPerFile` | `int?` | `1` | `>= 0` | Dosya başına ek retry sayısı; **toplam deneme = `MaxRetryPerFile + 1`** (Bölüm 16 tuzağı) | Geçici DB kilidi varsa artırılır; deterministic hata varsa `0` |
+| `RetryDelaySeconds` | `int?` | `2` | `>= 0` | Retry'ler arası **sabit linear** bekleme (exponential değil) | Yoğun saatte artırılır |
+
+İhlal exception'ları: `ArchiveMaxRunCountInvalidException`, `ArchiveMaxRetryPerFileInvalidException`, `ArchiveRetryDelaySecondsInvalidException`. `DefaultBeforeDateStrategy` için bilinmeyen değer **runtime'da** `ArchiveUnsupportedBeforeDateStrategyException` (config load'da değil).
+
+##### `Archive.Run.Rules` (`ArchiveRulesSection`)
+
+| Parametre | Tip | Default | İzinli sınır | Anlam | Senaryo |
+|---|---|---:|---|---|---|
+| `RetentionDays` | `int?` | `90` | `>= 0` | Eligibility için minimum dosya yaşı (gün); `snapshot.FileCreateDate > now - RetentionDays` ise `RETENTION_WINDOW_NOT_REACHED` | Saklama politikası (regülasyon) ile aynı tutulur; aylık denetim için 90 yaygın |
+| `MinLastUpdateAgeHours` | `int?` | `72` | `>= 0` | Aggregate son güncelleme eşiği; `snapshot.LastUpdate > now - MinLastUpdateAgeHours` ise `MIN_LAST_UPDATE_AGE_NOT_REACHED` | Halen müdahale alabilen kayıtların erken arşivlenmesini engeller; SLA penceresinden uzun olmalı |
+| `RetentionOnlyMode` | `bool?` | `false` | `true` / `false` | `true` ise terminal status kontrollerinin **8'i de atlanır**; yalnız retention + min-update-age işler | **Acil purge** senaryosu (storage dolmuş, regülasyon zorunluluğu); operation consistency feda edilir — bilinçli tetiklenmeli |
+
+İhlal exception'ları: `ArchiveRetentionDaysInvalidException`, `ArchiveMinUpdateAgeInvalidException`.
+
+##### `Archive.Run.TerminalStatuses` (`ArchiveTerminalStatusesSection`)
+
+Aggregate başına "arşive uygun" sayılan statü kümeleri. Her alan null bırakılırsa kod default'una düşer.
+
+| Alan | Default küme | Override senaryosu |
+|---|---|---|
+| `IngestionFile` | `["Success", "Failed"]` | Yalnız `Success` arşivlemek için `["Success"]`; `Failed` dosyaları forensic analiz için tutmak isterseniz |
+| `IngestionFileLine` | `["Success", "Failed"]` | Aynı mantık (üst dosya seçimi ile uyumlu olmalı) |
+| `IngestionFileLineReconciliation` | `["Success", "Failed"]` | `AwaitingClearing` satırları **dahil edilmez** (terminal değil); özel ihtiyaç yoksa değiştirme |
+| `ReconciliationEvaluation` | `["Completed", "Failed"]` | `Pending`/`Evaluating`/`Planned` arşivlenmez |
+| `ReconciliationOperation` | `["Completed", "Failed", "Cancelled"]` | `Blocked`/`Planned`/`Executing` arşivlenmez (canlı akış) |
+| `ReconciliationReview` | `["Approved", "Rejected", "Cancelled"]` | `Pending` review'lar arşivlenmez |
+| `ReconciliationOperationExecution` | `["Completed", "Failed", "Skipped"]` | `Started` execution arşivlenmez |
+| `ReconciliationAlert` | `["Consumed", "Failed", "Ignored"]` | `Pending`/`Processing` arşivlenmez (henüz teslim edilmemiş alert kaybı önlenir) |
+
+> **Override uyarısı:** Bir aggregate'in seti diğerleriyle tutarsız olursa (örn. `IngestionFile=["Success"]` ama `IngestionFileLine=["Success","Failed"]`), `ArchiveExecutor` bağımlılık sırası nedeniyle parent kayıt yokken child arşivlemeye çalışırsa transaction `RepeatableRead` izolasyonunda rollback olur. Bu nedenle override yapacaksanız **tüm zinciri uyumlu** kurun.
+
+---
+
+### `Endpoints.Reporting`
+
+Şu anda parametresizdir (`ReportingEndpoints` boş sınıf). Reporting kompozisyonu **runtime contract / view**'lar üzerinden çalıştığı için Vault konfigürasyonu gerektirmez. İleride `Dynamic.SafetyRowLimit` veya `Documentation.Locale` gibi alanlar eklenirse bu section genişletilecektir; `SafetyRowLimit = 10_000` şu an [`DynamicReportingSqlBuilder`](LinkPara.Card.Infrastructure/Services/Reporting/) içinde **hardcoded**.
+
+---
+
+### Çapraz uyarılar ve referanslar
+
+- **Default vs Validator tavanı uyumsuzlukları** için **Bölüm 22 (Config / Validator Uyumsuzluk Tuzakları)** ana kaynaktır; özellikle `Evaluate.ChunkSize`, `Execute.MaxEvaluations`, `Archive.MaxRunCount` farklı yollardan farklı tavan görür.
+- **Sessiz davranış listesi** için **Bölüm 23**: `AlertsEndpoint.ToEmails=[]` skip, `Archive.Enabled=false` her aday için `ARCHIVE_DISABLED`, `AutoArchiveAfterExecute` hatası `LogError` ile yutulur, vs.
+- **Hot reload yok**: `IOptions<CardConfigOptions>` singleton kayıtlıdır; Vault değişikliği için pod restart gerekir.
+- **Vault eksikse fırlayan exception kataloğu** (boot fail):
+  - `FileIngestionVaultConfigMissingException` → `CardSecrets/CardConfig` yok
+  - `FileIngestionConfigConnectionsMissingException` → `Endpoints.FileIngestion.Ingest.Connections` yok
+  - `FileIngestionConfigProfilesMissingException` → `Endpoints.FileIngestion.Ingest.Profiles` yok
+  - `FileIngestionConfigSourceMissingException` / `…TargetMissingException` → `Connections.Source` / `Target` yok
+  - `FileIngestionConfigProtocolMissingException` → bir endpoint'te `Protocol` boş
+
+### Minimal örnek (yalnız değişen / zorunlu alanlar)
+
+```jsonc
+{
+  "CardConfig": {
+    "Application": {
+      "AuthBypass": { "Enabled": false, "Controllers": [] },
+      "Database":   { "EnableAutoMigrate": false }
+    },
+    "Endpoints": {
+      "FileIngestion": {
+        "Ingest": {
+          "Connections": {
+            "Source": { "Protocol": "Sftp", "Sftp": { "Host": "sftp.example", "Username": "u", "PrivateKeyPath": "/secrets/id_rsa", "Paths": { "CardBkm": "/in/bkm" } } },
+            "Target": { "Protocol": "Local", "Local": { "BasePath": "/data/archive" } }
+          },
+          "Processing": { "MaxDegreeOfParallelism": 4 },
+          "Profiles": {
+            "CardBkm": { "Pattern": "^BKM_\\d{8}", "DefaultEncoding": "utf-8", "FileExtensions": ["txt"] }
+          }
+        }
+      },
+      "Reconciliation": {
+        "Evaluate":         { "ChunkSize": 10000, "Consumer": { "RespondToContext": false } },
+        "OperationsExecute":{ "MaxEvaluations": 100000, "LeaseSeconds": 900, "AutoArchiveAfterExecute": false },
+        "Alerts":           { "Enabled": true, "ToEmails": ["ops@example;risk@example"], "IncludeFailed": true }
+      },
+      "Archive": {
+        "Preview": { "PreviewLimit": 5000 },
+        "Run": {
+          "Enabled": true,
+          "Defaults": { "MaxRunCount": 10000, "DefaultBeforeDateStrategy": "RetentionDays" },
+          "Rules":    { "RetentionDays": 90, "MinLastUpdateAgeHours": 72, "RetentionOnlyMode": false }
+        }
+      }
+    }
+  }
+}
+```
+
+> Yazılmayan tüm alanlar bu README'de listelenen **kod default'larına** düşer; hiçbir alan "çıkarmak" amacıyla null bırakılmamalıdır — çıkarmak için ilgili semantiği `false` / `[]` / `0` ile **açıkça** ifade edin.
 
 ---
 
@@ -1749,6 +2068,8 @@ Mevcut reporting service kodunda order çoğu endpoint için sabittir. Query mod
 - `IsSuccessful(List<FileIngestionResponse>)` **tüm dosyaların `FileId` non-empty** olmasını ister; tek dosya bile partial-fail ise false.
 
 ### 22) Config / Validator Uyumsuzluk Tuzakları (Özet)
+
+> Tüm parametrelerin default'ları, tipleri ve iş senaryoları için **"Konfigürasyon — `CardConfigOptions`"** bölümüne bakın. Bu tablo yalnız config default'u ile API validator tavanı arasındaki **uyumsuzlukları** vurgular.
 
 | Alan | Config Default | Validator Tavan | Risk |
 |---|---|---|---|

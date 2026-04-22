@@ -618,6 +618,48 @@
   <data name="Reporting.InternalError" xml:space="preserve">
     <value>Dahili raporlama hatası oluştu.</value>
   </data>
+  <data name="Reporting.Dynamic.UnknownReportName" xml:space="preserve">
+    <value>Bilinmeyen rapor adı: '{0}'.</value>
+  </data>
+  <data name="Reporting.Dynamic.InvalidFilters" xml:space="preserve">
+    <value>Geçersiz filtreler.</value>
+  </data>
+  <data name="Reporting.Dynamic.FilterFieldRequired" xml:space="preserve">
+    <value>filters[{0}].field zorunludur.</value>
+  </data>
+  <data name="Reporting.Dynamic.FilterOperatorRequired" xml:space="preserve">
+    <value>filters[{0}].operator zorunludur.</value>
+  </data>
+  <data name="Reporting.Dynamic.FilterFieldNotAllowed" xml:space="preserve">
+    <value>filters[{0}].field '{1}' bu rapor için izinli değil.</value>
+  </data>
+  <data name="Reporting.Dynamic.FilterOperatorNotAllowedForField" xml:space="preserve">
+    <value>filters[{0}].operator '{1}' '{2}' alanı için izinli değil.</value>
+  </data>
+  <data name="Reporting.Dynamic.FilterOperatorMustNotHaveValue" xml:space="preserve">
+    <value>filters[{0}] '{1}' operatörü değer almamalıdır.</value>
+  </data>
+  <data name="Reporting.Dynamic.FilterBetweenRequiresTwoValues" xml:space="preserve">
+    <value>filters[{0}] 'between' operatörü tam olarak 2 değerli bir dizi gerektirir.</value>
+  </data>
+  <data name="Reporting.Dynamic.FilterInRequiresNonEmptyArray" xml:space="preserve">
+    <value>filters[{0}] 'in' operatörü boş olmayan bir dizi gerektirir.</value>
+  </data>
+  <data name="Reporting.Dynamic.FilterOperatorStringOnly" xml:space="preserve">
+    <value>filters[{0}] '{1}' operatörü yalnızca string alanlarda kullanılabilir.</value>
+  </data>
+  <data name="Reporting.Dynamic.FilterRequiresValue" xml:space="preserve">
+    <value>filters[{0}] bir değer gerektirir.</value>
+  </data>
+  <data name="FileIngestion.RowRetryLimitTruncatedDetail" xml:space="preserve">
+    <value>İlk {0} tükenmiş satır raporlandı; ek tükenmiş satırlar yanıttan çıkarıldı.</value>
+  </data>
+  <data name="Reconciliation.OperationStatusDetail" xml:space="preserve">
+    <value>İşlem durumu: {0}.</value>
+  </data>
+  <data name="Reconciliation.OperationAttemptDetail" xml:space="preserve">
+    <value>İşlem kodu: {0}, Deneme: {1}.</value>
+  </data>
 
   <data name="Handler.Reporting.Financial.DailyTransactionVolumeFailed" xml:space="preserve">
     <value>Günlük işlem hacim raporu alınamadı. Ayrıntılar için hatalara bakın.</value>

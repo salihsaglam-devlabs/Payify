@@ -8,24 +8,25 @@ using System.Net;
 using System.Text;
 using System.Text.RegularExpressions;
 using LinkPara.Card.Application.Commons.Extensions;
+using LinkPara.Card.Application.Commons.Models.AppConfiguration;
 using LinkPara.Card.Application.Commons.Models.FileIngestion.Configuration;
 
 namespace LinkPara.Card.Infrastructure.Services.FileIngestion.Transports;
 
 public class FtpFileTransferClient : IFileTransferClient
 {
-    private readonly FileIngestionOptions _options;
+    private readonly CardConfigOptions.IngestEndpoint _options;
     private readonly IStringLocalizer _localizer;
     private readonly ITimeProvider _timeProvider;
     private readonly ILogger<FtpFileTransferClient> _logger;
 
     public FtpFileTransferClient(
-        IOptions<FileIngestionOptions> options,
+        IOptions<CardConfigOptions> options,
         ITimeProvider timeProvider,
         ILogger<FtpFileTransferClient> logger,
         Func<LinkPara.Card.Application.Commons.Localization.LocalizerResource, IStringLocalizer> localizerFactory)
     {
-        _options = options.Value;
+        _options = options.Value.Endpoints.FileIngestion.Ingest;
         _timeProvider = timeProvider;
         _logger = logger;
         _localizer = localizerFactory(LinkPara.Card.Application.Commons.Localization.LocalizerResource.Messages);

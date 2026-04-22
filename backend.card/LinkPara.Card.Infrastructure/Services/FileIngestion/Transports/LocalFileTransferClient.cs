@@ -7,19 +7,20 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.RegularExpressions;
 using LinkPara.Card.Application.Commons.Extensions;
+using LinkPara.Card.Application.Commons.Models.AppConfiguration;
 using LinkPara.Card.Application.Commons.Models.FileIngestion.Configuration;
 
 namespace LinkPara.Card.Infrastructure.Services.FileIngestion.Transports;
 
 public class LocalFileTransferClient : IFileTransferClient
 {
-    private readonly FileIngestionOptions _options;
+    private readonly CardConfigOptions.IngestEndpoint _options;
     private readonly IStringLocalizer _localizer;
     private readonly ITimeProvider _timeProvider;
 
-    public LocalFileTransferClient(IOptions<FileIngestionOptions> options, ITimeProvider timeProvider, Func<LinkPara.Card.Application.Commons.Localization.LocalizerResource, IStringLocalizer> localizerFactory)
+    public LocalFileTransferClient(IOptions<CardConfigOptions> options, ITimeProvider timeProvider, Func<LinkPara.Card.Application.Commons.Localization.LocalizerResource, IStringLocalizer> localizerFactory)
     {
-        _options = options.Value;
+        _options = options.Value.Endpoints.FileIngestion.Ingest;
         _timeProvider = timeProvider;
         _localizer = localizerFactory(LinkPara.Card.Application.Commons.Localization.LocalizerResource.Messages);
     }
